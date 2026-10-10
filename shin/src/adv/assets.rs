@@ -15,6 +15,7 @@ use crate::{
 pub struct AdvAssets {
     pub scenario: Arc<Scenario>,
     pub fonts: AdvFonts,
+    pub menu_textures: Arc<super::character_view::CharacterTextures>,
     pub messagebox_textures: Arc<MessageboxTextures>,
 }
 
@@ -31,12 +32,14 @@ impl AdvAssets {
             asset_server.load(asset_paths::SCENARIO),
             AdvFonts::load(asset_server),
             asset_server.load(asset_paths::MSGTEX),
+            asset_server.load("/adv.txa"),
         )?;
 
         Ok(Self {
             scenario: result.0,
             fonts: result.1,
             messagebox_textures: result.2,
+            menu_textures: result.3,
         })
     }
 }

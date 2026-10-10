@@ -5,9 +5,11 @@ use shin_core::{
         info::{MaskId, MaskIdOpt},
         instruction_elements::UntypedNumberArray,
     },
+    time::Ticks,
     vm::command::types::{
         LAYERBANKS_COUNT, LAYERS_COUNT, LayerId, LayerIdOpt, LayerType, LayerbankId,
         LayerbankIdOpt, MaskFlags, PLANES_COUNT, PlaneId, PlaneIdOpt, VLayerId, VLayerIdRepr,
+        WipeFlags,
     },
 };
 use smallvec::{SmallVec, smallvec};
@@ -200,23 +202,44 @@ impl LayerbankAllocator {
             };
             let layer_id = self.layerbank_id_to_layer_id[layerbank_id].unwrap().layer;
             f(layer_id, layerbank_id);
+            // Native202d8 returns after the singleton callback; falling
+            // through visits the same bank again and queues every tween twice.
+            return;
         }
 
         if !self.range_cache.is_hit(plane, from, to) {
             self.range_cache.clear();
 
-            let mut position = from;
-            while position <= to {
-                if let Some(layerbank_id) = self.get_layerbank_id(plane, position) {
-                    self.range_cache.push(position, layerbank_id);
+            // Native20310 selects bank order when allocated <= (to-from),
+            // otherwise logical-layer order. Ordering affects callback state
+            // and is part of the protocol, not merely an optimization.
+            let span = i32::from(to.raw()) - i32::from(from.raw());
+            if self.allocated_layerbanks as i32 <= span {
+                for (layerbank, full_id) in &self.layerbank_id_to_layer_id {
+                    if full_id.plane == PlaneIdOpt::some(plane) {
+                        let layer = full_id.layer.unwrap();
+                        if from <= layer && layer <= to {
+                            self.range_cache.push(layer, layerbank);
+                        }
+                    }
                 }
+            } else {
+                let mut position = from;
+                while position <= to {
+                    if let Some(layerbank_id) = self.get_layerbank_id(plane, position) {
+                        self.range_cache.push(position, layerbank_id);
+                    }
 
-                let Some(next_position) = position.try_next() else {
-                    // assuming this can only happen if to is at max
-                    break;
-                };
-                position = next_position;
+                    let Some(next_position) = position.try_next() else {
+                        break;
+                    };
+                    position = next_position;
+                }
             }
+            // Native203f4..203fc publish the key after rebuilding the range.
+            self.range_cache.plane = PlaneIdOpt::some(plane);
+            self.range_cache.from = from;
+            self.range_cache.to = to;
         }
 
         for (layer_id, layerbank_id) in self.range_cache.iter() {
@@ -373,6 +396,7 @@ pub struct LayerbankState {
     pub params: UntypedNumberArray,
     pub properties: LayerPropertiesState,
     pub is_interation_completed: bool,
+    pub interaction_result: Option<i32>,
 }
 
 impl LayerbankState {
@@ -385,6 +409,26 @@ impl LayerbankState {
             params: (0, 0, 0, 0, 0, 0, 0, 0),
             properties: LayerPropertiesState::new(),
             is_interation_completed: false,
+            interaction_result: None,
+        }
+    }
+}
+
+/// Native37d8..3800, written by TRANSSET and consumed by LAYERLOAD.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct LayerTransitionSettings {
+    pub ty: i32,
+    pub flags: WipeFlags,
+    pub duration: Ticks,
+    pub params: UntypedNumberArray,
+}
+impl Default for LayerTransitionSettings {
+    fn default() -> Self {
+        Self {
+            ty: 0,
+            flags: WipeFlags::empty(),
+            duration: Ticks::ZERO,
+            params: (0, 0, 0, 0, 0, 0, 0, 0),
         }
     }
 }
@@ -395,8 +439,7 @@ pub struct LayersState {
     pub screen_layer: LayerPropertiesState,
     pub page_layer: LayerPropertiesState,
     pub plane_layergroups: EnumMap<PlaneId, PlaneLayerGroupState>,
-    // NB: missing wiper state set by TRANSSET here
-    // probably not a problem with umineko not utilizing this system
+    pub transition: LayerTransitionSettings,
     pub layerbank_allocator: LayerbankAllocator,
     pub layer_selection: LayerSelection,
     pub current_plane: PlaneId,
@@ -412,6 +455,7 @@ pub const ITER_VLAYER_SMALL_VECTOR_SIZE: usize = 0x10;
 impl LayersState {
     pub fn new() -> Self {
         Self {
+            transition: LayerTransitionSettings::default(),
             root_layer_group: LayerPropertiesState::new(),
             screen_layer: LayerPropertiesState::new(),
             page_layer: LayerPropertiesState::new(),
@@ -426,3 +470,6 @@ impl LayersState {
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
