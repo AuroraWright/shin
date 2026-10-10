@@ -1,4 +1,13 @@
+#[cfg(test)]
+mod delayed_tests;
+#[cfg(test)]
+mod native_copy_tests;
+mod transition;
+#[cfg(test)]
+mod update_tests;
+use crate::wiper::AnyWiper;
 use std::sync::Arc;
+use transition::SlotLayer;
 
 use glam::{Mat4, Vec3, Vec3Swizzles as _, vec2, vec3};
 use shin_core::{
@@ -6,7 +15,6 @@ use shin_core::{
     time::Ticks,
     vm::command::types::{LayerProperty, LayerbankId, MaskFlags},
 };
-use shin_derive::RenderClone;
 use shin_render::{
     ColorBlendType, DepthStencilState, DrawPrimitive, LayerShaderOutputKind, PassKind,
     RenderProgramWithArguments, RenderRequestBuilder, StencilFunction, StencilMask,
@@ -14,6 +22,7 @@ use shin_render::{
     quad_vertices::build_quad_vertices,
     render_pass::RenderPass,
     shaders::types::{
+        RenderClone, RenderCloneCtx,
         buffer::VertexSource,
         texture::{DepthStencilTarget, TextureTarget},
         vertices::{MaskVertex, PosTexVertex, PosVertex},
@@ -34,13 +43,14 @@ use crate::{
     update::{AdvUpdatable, AdvUpdateContext},
 };
 
-#[derive(Clone, RenderClone)]
+#[derive(RenderClone)]
 struct LayerItem<T> {
-    pub layerbank_id: LayerbankId,
-    // this is probably how delayed removal is implemented?
-    // pub some_countdown: Ticks,
+    // None represents native child ID -1: retained for rendering and updating,
+    // but no longer reachable through its original layer bank.
+    pub layerbank_id: Option<LayerbankId>,
+    removal_delay: Ticks,
     #[render_clone(needs_render)]
-    pub layer: T,
+    pub layer: SlotLayer<T>,
 }
 
 #[derive(Clone, Copy)]
@@ -50,15 +60,13 @@ struct LayerRenderItem {
     pub stencil_ref_relative: u8,
 }
 
-#[derive(RenderClone)]
 pub struct LayerGroup<T = UserLayer> {
-    #[render_clone(needs_render)]
+    update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
     layers: Vec<LayerItem<T>>,
 
     stencil_bump: u8,
     layers_to_render: Vec<LayerRenderItem>,
 
-    #[render_clone(needs_render)]
     new_drawable_state: NewDrawableLayerState,
     mask_texture: Option<Arc<MaskTexture>>,
     mask_flags: MaskFlags,
@@ -66,9 +74,191 @@ pub struct LayerGroup<T = UserLayer> {
     label: String,
 }
 
+impl<T: DrawableLayer + RenderClone> RenderClone for LayerGroup<T> {
+    fn render_clone(&self, context: &mut RenderCloneCtx) -> Self {
+        // Native79cb8 copies the drawable base before the children at79d34.
+        // Slot copies can initialize properties lazily, consuming RNG draws;
+        // copying the parent's prepared properties first preserves their seeds.
+        let props = self.props.clone();
+        let new_drawable_state = self.new_drawable_state.render_clone(context);
+        let layers = self.layers.render_clone(context);
+        Self {
+            update_tracker: self.update_tracker.clone(),
+            layers,
+            stencil_bump: self.stencil_bump,
+            // Native79ce8/79cec leave the prepared render list empty.
+            layers_to_render: Vec::new(),
+            new_drawable_state,
+            mask_texture: self.mask_texture.clone(),
+            mask_flags: self.mask_flags,
+            props,
+            label: self.label.clone(),
+        }
+    }
+}
+
 impl<T> LayerGroup<T> {
+    fn pre_render_slot_batch(
+        &mut self,
+        indices: &[usize],
+        lower: &[usize],
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+    ) where
+        T: Layer,
+    {
+        // Native7ca30/806b0 retain pairs in a transient render batch. The
+        // semantic children stay in this group; borrow them for the same two
+        // captures and store the result in the first slot's scratch holders.
+        for source_side in [true, false] {
+            let mut pending: Vec<(usize, Option<bool>)> =
+                lower.iter().map(|&i| (i, None)).collect();
+            for &index in indices {
+                if self.layers[index].layer.batch_layer(source_side).is_none() {
+                    continue;
+                }
+                let (left, current_and_right) = self.layers.split_at_mut(index);
+                let (current, right) = current_and_right.split_first_mut().unwrap();
+                let lower = pending
+                    .iter()
+                    .filter_map(|&(i, side)| {
+                        let item = if i < index {
+                            &left[i]
+                        } else {
+                            &right[i - index - 1]
+                        };
+                        side.map_or(Some(&item.layer as &dyn Layer), |s| {
+                            item.layer.batch_layer(s)
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                let consumed =
+                    current
+                        .layer
+                        .pre_render_batch_layer(source_side, context, transform, &lower);
+                if consumed {
+                    pending.clear();
+                }
+                pending.push((index, Some(source_side)));
+            }
+            let index = indices[0];
+            let (left, current_and_right) = self.layers.split_at_mut(index);
+            let (current, right) = current_and_right.split_first_mut().unwrap();
+            let SlotLayer {
+                source,
+                target,
+                wiper,
+                source_texture,
+                target_texture,
+                ..
+            } = &mut current.layer;
+            let layers = pending
+                .iter()
+                .filter_map(|&(i, side)| {
+                    if i == index {
+                        let source_side = side.unwrap();
+                        if source_side && wiper.is_some() {
+                            source.as_deref().map(|s| s as &dyn Layer)
+                        } else {
+                            Some(&*target as &dyn Layer)
+                        }
+                    } else {
+                        let item = if i < index {
+                            &left[i]
+                        } else {
+                            &right[i - index - 1]
+                        };
+                        side.map_or(Some(&item.layer as &dyn Layer), |s| {
+                            item.layer.batch_layer(s)
+                        })
+                    }
+                })
+                .collect::<Vec<_>>();
+            let holder = if source_side {
+                source_texture
+            } else {
+                target_texture
+            };
+            let texture = holder.get_or_init(context);
+            let mut pass = context.begin_pass(
+                texture.as_texture_target(),
+                Some(context.depth_stencil),
+                "SlotLayer/batch",
+            );
+            pass.clear(None, Some(0), None);
+            crate::layer::render_layers(&mut pass, transform, &layers, FloatColor4::BLACK, 0);
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_owner_leaves(&self) -> Vec<&T> {
+        let mut leaves = Vec::new();
+        for item in &self.layers {
+            item.layer.reference_owner_leaves(&mut leaves);
+        }
+        leaves
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_owner_entry_words(&self) -> Vec<(i32, u32, bool)> {
+        self.layers
+            .iter()
+            .map(|entry| {
+                let bank = entry.layerbank_id.map_or(-1, |b| i32::from(b.raw()));
+                (
+                    bank,
+                    if bank < 0 {
+                        entry.removal_delay.as_f32().to_bits()
+                    } else {
+                        0
+                    },
+                    entry.layer.wiper.is_some(),
+                )
+            })
+            .collect()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_transition_words(&self) -> Vec<[u32; 7]> {
+        let mut words = Vec::new();
+        for item in &self.layers {
+            item.layer.reference_transition_words(&mut words);
+        }
+        words
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_advance_transition_clocks(&mut self, delta: f32) {
+        for item in &mut self.layers {
+            item.layer.reference_advance_clocks(delta);
+        }
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_prepare_transition_textures(
+        &mut self,
+        device: &wgpu::Device,
+        resize: &shin_render::resize::SurfaceResizeSource,
+    ) -> usize {
+        self.layers
+            .iter_mut()
+            .map(|i| i.layer.reference_prepare_textures(device, resize))
+            .sum()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_dissolve_seed(&self) -> u32 {
+        self.new_drawable_state.reference_dissolve_seed()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_effect_phases(&self) -> [f32; 3] {
+        self.new_drawable_state.reference_effect_phases()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_retained_layer_count(&self) -> usize {
+        self.layers
+            .iter()
+            .filter(|item| item.layerbank_id.is_none())
+            .count()
+    }
     pub fn new(label: Option<String>) -> Self {
         Self {
+            update_tracker: Default::default(),
             layers: vec![],
             stencil_bump: 0,
             layers_to_render: vec![],
@@ -80,63 +270,104 @@ impl<T> LayerGroup<T> {
         }
     }
 
-    // NB: original game also accepts a `Wiper` argument which causes the layer to be wrapped in `LayerGroup::TransitionLayer`
-    // umineko uses a different transition system, so this is not implemented
     pub fn add_layer(&mut self, layerbank_id: LayerbankId, layer: T) {
-        match self
-            .layers
-            .binary_search_by_key(&layerbank_id, |item| item.layerbank_id)
-        {
-            Ok(index) => {
-                self.layers[index].layer = layer;
-            }
-            Err(index) => {
-                self.layers.insert(index, LayerItem {
-                    layerbank_id,
-                    layer,
-                });
-            }
-        }
+        self.add_layer_with_wiper(layerbank_id, layer, None);
     }
 
-    pub fn remove_layer(&mut self, layerbank_id: LayerbankId, delay_time: Ticks) -> Option<T> {
-        if delay_time != Ticks::ZERO {
-            // this is never used in umineko
-            unimplemented!("LayerGroup::remove_layer: delay_time is not implemented");
-        }
+    /// Native 7a6e0 retains the previous slot beneath a replacement wiper.
+    pub fn add_layer_with_wiper(
+        &mut self,
+        layerbank_id: LayerbankId,
+        layer: T,
+        wiper: Option<AnyWiper>,
+    ) {
+        let (index, source) = match self
+            .layers
+            .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
+        {
+            Ok(index) => (index, Some(self.layers.remove(index).layer)),
+            Err(index) => (index, None),
+        };
+        self.layers.insert(
+            index,
+            LayerItem {
+                layerbank_id: Some(layerbank_id),
+                removal_delay: Ticks::ZERO,
+                layer: SlotLayer::new(layer, source, wiper),
+            },
+        );
+    }
 
-        self.layers
-            .binary_search_by_key(&layerbank_id, |item| item.layerbank_id)
-            .map(|index| self.layers.remove(index).layer)
-            .ok()
+    /// Immediate removal returns the target. Delayed removal retains the whole
+    /// slot under native ID -1 and returns None; its old bank is free for reuse.
+    pub fn remove_layer(&mut self, layerbank_id: LayerbankId, delay_time: Ticks) -> Option<T> {
+        let index = self
+            .layers
+            .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
+            .ok()?;
+        let mut removed = self.layers.remove(index);
+        if delay_time == Ticks::ZERO {
+            Some(removed.layer.target)
+        } else {
+            // Native7b510..7b520 stores ID -1 and the float countdown, then
+            // 7b6e4..7b6f4 inserts the retained entry at the vector beginning.
+            removed.layerbank_id = None;
+            removed.removal_delay = delay_time;
+            self.layers.insert(0, removed);
+            None
+        }
     }
 
     pub fn get_layer(&self, layerbank_id: LayerbankId) -> Option<&T> {
         self.layers
-            .binary_search_by_key(&layerbank_id, |item| item.layerbank_id)
-            .map(|index| &self.layers[index].layer)
+            .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
+            .map(|index| &self.layers[index].layer.target)
             .ok()
     }
 
     pub fn get_layer_mut(&mut self, layerbank_id: LayerbankId) -> Option<&mut T> {
         self.layers
-            .binary_search_by_key(&layerbank_id, |item| item.layerbank_id)
-            .map(|index| &mut self.layers[index].layer)
+            .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
+            .map(|index| &mut self.layers[index].layer.target)
             .ok()
     }
 
-    #[expect(unused)] // for future stuff
     pub fn get_used_layerbank_ids(&self) -> Vec<LayerbankId> {
-        self.layers.iter().map(|item| item.layerbank_id).collect()
+        self.layers
+            .iter()
+            .filter_map(|item| item.layerbank_id)
+            .collect()
     }
 
     pub fn clear_layers(&mut self) {
         self.layers.clear();
     }
 
-    #[expect(unused)] // for future stuff
-    pub fn has_wiper_for_layerbank(&self, _layerbank_id: LayerbankId) -> bool {
-        false
+    #[cfg(test)]
+    pub(crate) fn reference_slot_properties(
+        &self,
+        bank: LayerbankId,
+        property: LayerProperty,
+    ) -> Vec<(usize, f32)>
+    where
+        T: DrawableLayer,
+    {
+        let mut output = Vec::new();
+        if let Ok(index) = self
+            .layers
+            .binary_search_by_key(&Some(bank), |item| item.layerbank_id)
+        {
+            self.layers[index]
+                .layer
+                .property_trace(property, &mut output);
+        }
+        output
+    }
+
+    pub fn has_wiper_for_layerbank(&self, layerbank_id: LayerbankId) -> bool {
+        self.layers
+            .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
+            .is_ok_and(|index| self.layers[index].layer.is_transition_active())
     }
 
     pub fn set_mask_texture(&mut self, mask_texture: Arc<MaskTexture>, flags: MaskFlags) {
@@ -146,6 +377,11 @@ impl<T> LayerGroup<T> {
 
     pub fn clear_mask_texture(&mut self) {
         self.mask_texture = None;
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_mask_state(&self) -> (Option<&Arc<MaskTexture>>, MaskFlags) {
+        (self.mask_texture.as_ref(), self.mask_flags)
     }
 
     #[allow(clippy::len_zero)]
@@ -468,20 +704,27 @@ where
     T: AdvUpdatable,
 {
     fn update(&mut self, context: &AdvUpdateContext) {
+        if !self.update_tracker.update(context.frame_id) {
+            return;
+        }
         self.props.update(context);
-        self.new_drawable_state.update(context);
+        self.new_drawable_state.update(context, &self.props);
 
         for layer in &mut self.layers {
             layer.layer.update(context);
         }
 
-        // this code handles the delayed layer removal
-        // don't need it
-        // for layer in &mut self.layers {
-        //     if layer.layerbank_id < 0 {
-        //         todo!("Run the timer and do something with TransitionLayers")
-        //     }
-        // }
+        // Native7bd44..7bdd0 advances timers after every child update. A
+        // finished timer keeps its transition wrapper while the wipe is alive.
+        self.layers.retain_mut(|item| {
+            if item.layerbank_id.is_some() {
+                return true;
+            }
+            item.removal_delay = Ticks::from_f32(
+                (item.removal_delay.as_f32() - context.delta_ticks.as_f32()).max(0.0),
+            );
+            item.removal_delay.as_f32().abs() >= f32::EPSILON || item.layer.is_transition_active()
+        });
     }
 }
 
@@ -495,6 +738,9 @@ where
         for layer in self.layers.iter_mut() {
             layer.layer.fast_forward();
         }
+        // Native7baf4..7bc68 removes every negative-ID entry after forwarding
+        // all children, regardless of countdown or retained wipe identity.
+        self.layers.retain(|item| item.layerbank_id.is_some());
     }
 
     fn get_stencil_bump(&self) -> u8 {
@@ -507,12 +753,10 @@ where
         layers.sort_by(|&left, &right| {
             let get_values = |index: usize| {
                 let layer = &self.layers[index];
-                let prop = layer.layer.properties();
-
-                let id = layer.layerbank_id;
-                let render_position = prop.get_value(LayerProperty::RenderPosition);
-
-                (render_position, id)
+                // Native comparator81274/81348 reads drawable properties+20,
+                // not the group's storage bank. Non-drawable root children
+                // use native position/ID sentinels instead.
+                layer.layer.render_order_key()
             };
 
             let (left_position, left_id) = get_values(left);
@@ -520,7 +764,7 @@ where
 
             // if positions are close, compare by id
             if (left_position - right_position).abs() < f32::EPSILON {
-                left_id.cmp(&right_id).reverse()
+                left_id.cmp(&right_id)
             } else {
                 left_position
                     .partial_cmp(&right_position)
@@ -529,25 +773,69 @@ where
             }
         });
 
-        // The original implementations handles `LayerGroup::TransitionLayer` here according to `Effectable` rules
-        // This is not necessary for running umineko (it uses a different system for transition), so this is not implemented
-
-        let props = self.properties();
-        let self_transform = props.get_composed_transform_params(transform);
-
-        for &index in &layers {
-            self.layers[index]
+        let self_transform = self.properties().get_composed_transform_params(transform);
+        let mut pending: Vec<usize> = Vec::new();
+        let mut position = 0;
+        while position < layers.len() {
+            let index = layers[position];
+            let mut end = position + 1;
+            while end < layers.len()
+                && self.layers[index]
+                    .layer
+                    .can_batch_with(&self.layers[layers[end]].layer)
+            {
+                end += 1;
+            }
+            if end > position + 1 {
+                self.pre_render_slot_batch(
+                    &layers[position..end],
+                    &pending,
+                    context,
+                    &self_transform,
+                );
+                pending.push(index);
+                position = end;
+                continue;
+            }
+            position += 1;
+            // Native7c540..7c558 only supplies the batch to Effectable layers.
+            // Ordinary authored scenes should not allocate every prefix here.
+            if !self.layers[index].layer.needs_lower_capture() {
+                self.layers[index]
+                    .layer
+                    .pre_render(context, &self_transform);
+                pending.push(index);
+                continue;
+            }
+            // Split by storage index while retaining the native rendering order.
+            // Lower siblings are borrowed: captures never advance them a second time.
+            let (left, current_and_right) = self.layers.split_at_mut(index);
+            let (current, right) = current_and_right.split_first_mut().unwrap();
+            let lower = pending
+                .iter()
+                .map(|&lower_index| {
+                    let item = if lower_index < index {
+                        &left[lower_index]
+                    } else {
+                        &right[lower_index - index - 1]
+                    };
+                    &item.layer as &dyn Layer
+                })
+                .collect::<Vec<_>>();
+            let consumed = current
                 .layer
-                .pre_render(context, &self_transform);
-            // NB: if the current layer is `Effectable` (like `LayerGroup::TransitionLayer`), we need to call a special pre-render function and pass the lower layers to it
-            // This is not necessary for umineko
+                .pre_render_with_lower(context, &self_transform, &lower);
+            if consumed {
+                pending.clear();
+            }
+            pending.push(index);
         }
 
         self.layers_to_render.clear();
         let mut layers_to_render = std::mem::take(&mut self.layers_to_render);
 
         let mut stencil_value = 1;
-        for &index in &layers {
+        for &index in &pending {
             layers_to_render.push(LayerRenderItem {
                 layer_index: index,
                 stencil_ref_relative: stencil_value,
@@ -745,7 +1033,8 @@ impl<T> LayerGroup<T> {
             render_transparent,
         );
 
-        assert_eq!(props.get_clip_mode(), DrawableClipMode::None);
+        let clip = props.get_clip_params();
+        clip.begin(pass, &transform_params);
 
         // all the layer transforms were already applied during the pre-rendering
         // so we just take a simple blank slate transform
@@ -832,7 +1121,7 @@ impl<T> LayerGroup<T> {
             }
         }
 
-        // NB: finish_clip
+        clip.end(pass);
 
         finish_mask_for_onscreen(pass);
 

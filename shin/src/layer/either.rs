@@ -63,6 +63,18 @@ impl<L: Layer, R: Layer> Layer for EitherLayer<L, R> {
 }
 
 impl<L: DrawableLayer, R: DrawableLayer> DrawableLayer for EitherLayer<L, R> {
+    fn retains_property_owner(&self) -> bool {
+        match self {
+            Self::Left(left) => left.retains_property_owner(),
+            Self::Right(right) => right.retains_property_owner(),
+        }
+    }
+    fn set_properties(&mut self, properties: crate::layer::LayerProperties) {
+        match self {
+            Self::Left(left) => left.set_properties(properties),
+            Self::Right(right) => right.set_properties(properties),
+        }
+    }
     #[inline]
     fn properties(&self) -> &crate::layer::LayerProperties {
         match self {

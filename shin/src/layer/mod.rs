@@ -2,12 +2,14 @@ mod either;
 mod layer_group;
 pub mod message_layer;
 mod new_drawable_layer;
+pub(crate) mod owner;
 mod page_layer;
 mod properties;
 pub mod render_params;
 #[expect(unused)]
 mod root_layer_group;
 mod screen_layer;
+mod update_tracker;
 pub mod user;
 mod wobbler;
 
@@ -44,6 +46,33 @@ pub trait Layer: AdvUpdatable {
         #[expect(unused)] transform: &TransformParams,
     ) {
     }
+    /// Whether preparation needs the preceding render batch. The native RTTI
+    /// implements Effectable only for EffectLayer and replacement wrappers.
+    fn needs_lower_capture(&self) -> bool {
+        false
+    }
+    /// Native Layer::Effectable: prepare using the preceding render batch.
+    /// True consumes that batch; ordinary layers retain it.
+    fn pre_render_with_lower(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        _lower: &[&dyn Layer],
+    ) -> bool {
+        self.pre_render(context, transform);
+        false
+    }
+    /// Capture stable child owners when the caller owns a deferred render batch.
+    /// Ordinary layers still prepare synchronously through the borrowed hook.
+    fn pre_render_with_owned_lower(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[owner::RetainedLayer],
+    ) -> bool {
+        let borrowed: Vec<&dyn Layer> = lower.iter().map(|l| l as &dyn Layer).collect();
+        self.pre_render_with_lower(context, transform, &borrowed)
+    }
     fn render(
         &self,
         pass: &mut RenderPass,
@@ -54,6 +83,25 @@ pub trait Layer: AdvUpdatable {
 }
 
 impl<T: Layer> Layer for Box<T> {
+    fn pre_render_with_owned_lower(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[owner::RetainedLayer],
+    ) -> bool {
+        (**self).pre_render_with_owned_lower(context, transform, lower)
+    }
+    fn needs_lower_capture(&self) -> bool {
+        (**self).needs_lower_capture()
+    }
+    fn pre_render_with_lower(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[&dyn Layer],
+    ) -> bool {
+        (**self).pre_render_with_lower(context, transform, lower)
+    }
     #[inline]
     fn fast_forward(&mut self) {
         (**self).fast_forward()
@@ -85,13 +133,37 @@ impl<T: Layer> Layer for Box<T> {
 ///
 /// Yes, really, this trait doesn't have anything to do with drawing.
 pub trait DrawableLayer: Layer {
+    /// Native group ordering uses drawable position/ID, with a separate key
+    /// for layers that expose no native drawable properties (message layers).
+    fn render_order_key(&self) -> (f32, i32) {
+        let props = self.properties();
+        (
+            props.get_value(shin_core::vm::command::types::LayerProperty::RenderPosition),
+            i32::from(props.get_layer_id().raw()),
+        )
+    }
     // fn init(&mut self);
     // fn set_properties(&mut self, properties: LayerProperties);
     fn properties(&self) -> &LayerProperties;
     fn properties_mut(&mut self) -> &mut LayerProperties;
+    fn set_properties(&mut self, properties: LayerProperties) {
+        *self.properties_mut() = properties;
+    }
+    fn retains_property_owner(&self) -> bool {
+        false
+    }
 }
 
 impl<T: DrawableLayer> DrawableLayer for Box<T> {
+    fn render_order_key(&self) -> (f32, i32) {
+        (**self).render_order_key()
+    }
+    fn retains_property_owner(&self) -> bool {
+        (**self).retains_property_owner()
+    }
+    fn set_properties(&mut self, properties: LayerProperties) {
+        (**self).set_properties(properties);
+    }
     #[inline]
     fn properties(&self) -> &LayerProperties {
         (**self).properties()
@@ -255,7 +327,6 @@ pub fn render_layer_without_bg(
     render_layers_with_bg(pass, transform, &[layers], |_, _, _| {}, true, stencil_ref);
 }
 
-#[expect(unused)] // for future stuff
 pub fn render_layers(
     pass: &mut RenderPass,
     transform: &TransformParams,

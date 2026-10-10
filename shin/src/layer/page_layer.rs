@@ -3,12 +3,12 @@ use shin_core::{
     primitives::color::{FloatColor4, UnormColor},
     vm::command::types::{PLANES_COUNT, PlaneId},
 };
-use shin_derive::RenderClone;
 use shin_render::{
     DepthStencilState, DrawPrimitive, PassKind, RenderProgramWithArguments, RenderRequestBuilder,
     StencilFunction, StencilMask, StencilOperation, StencilPipelineState, StencilState,
     render_pass::RenderPass,
     shaders::types::{
+        RenderClone, RenderCloneCtx,
         buffer::VertexSource,
         texture::{DepthStencilTarget, TextureTarget},
         vertices::PosVertex,
@@ -32,35 +32,83 @@ struct LayerRenderItem {
     pub stencil_ref_relative: u8,
 }
 
-#[derive(RenderClone)]
 pub struct PageLayer {
-    #[render_clone(needs_render)]
+    update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
     planes: Vec<LayerGroup>,
 
     stencil_bump: u8,
     needs_force_blending: bool,
     layers_to_render: Vec<LayerRenderItem>,
 
-    #[render_clone(needs_render)]
     new_drawable_state: NewDrawableLayerState,
     props: LayerProperties,
 }
 
+impl RenderClone for PageLayer {
+    fn render_clone(&self, context: &mut RenderCloneCtx) -> Self {
+        // Native9ed38 copies the drawable base before any plane groups.
+        let props = self.props.clone();
+        let new_drawable_state = self.new_drawable_state.render_clone(context);
+        let planes = self.planes.render_clone(context);
+        Self {
+            update_tracker: self.update_tracker.clone(),
+            planes,
+            stencil_bump: self.stencil_bump,
+            needs_force_blending: self.needs_force_blending,
+            layers_to_render: self.layers_to_render.clone(),
+            new_drawable_state,
+            props,
+        }
+    }
+}
+
 impl PageLayer {
+    #[cfg(test)]
+    pub(crate) fn reference_dissolve_seed(&self) -> u32 {
+        self.new_drawable_state.reference_dissolve_seed()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_effect_phases(&self) -> [f32; 3] {
+        self.new_drawable_state.reference_effect_phases()
+    }
+
     pub fn new(plane_count: usize) -> Self {
         // can't support more, the `PlaneId` type is specialized to 4 planes
         // ideally I would like to only support 4 planes, but `BustupMode` at least uses 1
         assert!(plane_count <= PLANES_COUNT);
 
+        // Native9e970 constructs the seeded drawable before its plane groups.
+        let new_drawable_state = NewDrawableLayerState::new();
+
         Self {
+            update_tracker: Default::default(),
             planes: (0..plane_count)
                 .map(|i| LayerGroup::new(Some(format!("PageLayer/Plane{}", i))))
                 .collect(),
             stencil_bump: 1,
             needs_force_blending: false,
             layers_to_render: vec![],
-            new_drawable_state: NewDrawableLayerState::new(),
+            new_drawable_state,
             props: LayerProperties::new(),
+        }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn collect_voice_positions(
+        &self,
+        _parent: &TransformParams,
+        positions: &mut Vec<(i32, f32)>,
+    ) {
+        for plane in &self.planes {
+            for id in plane.get_used_layerbank_ids() {
+                if let Some(crate::layer::user::UserLayer::Bustup(layer)) = plane.get_layer(id) {
+                    let transform = layer.properties().get_transform_params();
+                    positions.push((
+                        layer.inner_ref().character_id(),
+                        character_voice_pan(&transform),
+                    ));
+                }
+            }
         }
     }
 
@@ -150,8 +198,11 @@ impl NewDrawableLayer for PageLayerNewDrawableDelegate<'_> {
 
 impl AdvUpdatable for PageLayer {
     fn update(&mut self, context: &AdvUpdateContext) {
+        if !self.update_tracker.update(context.frame_id) {
+            return;
+        }
         self.props.update(context);
-        self.new_drawable_state.update(context);
+        self.new_drawable_state.update(context, &self.props);
 
         for plane in self.planes.iter_mut() {
             plane.update(context);
@@ -213,7 +264,7 @@ impl Layer for PageLayer {
         };
 
         self.new_drawable_state
-            .pre_render(context, &self.props, &mut delegate, &self_transform);
+            .pre_render(context, &self.props, &mut delegate, transform);
 
         self.layers_to_render = delegate.layers_to_render;
     }
@@ -243,14 +294,17 @@ impl Layer for PageLayer {
 
         let self_transform = props.get_composed_transform_params(transform);
 
-        pass.push_debug(&format!("PageLayer/{}", match pass_kind {
-            PassKind::Opaque => {
-                "opaque"
+        pass.push_debug(&format!(
+            "PageLayer/{}",
+            match pass_kind {
+                PassKind::Opaque => {
+                    "opaque"
+                }
+                PassKind::Transparent => {
+                    "transparent"
+                }
             }
-            PassKind::Transparent => {
-                "transparent"
-            }
-        }));
+        ));
 
         match pass_kind {
             PassKind::Opaque => {
@@ -333,5 +387,75 @@ impl DrawableLayer for PageLayer {
 
     fn properties_mut(&mut self) -> &mut LayerProperties {
         &mut self.props
+    }
+}
+
+// Native bustup 0x369a0 applies its local property projection to local origin,
+// before the texture's origin offset, then clamps clip X to [-1, 1].
+#[cfg(test)]
+fn character_voice_pan(transform: &TransformParams) -> f32 {
+    transform
+        .compute_final_transform()
+        .transform_point3(glam::Vec3::ZERO)
+        .x
+        .clamp(-1.0, 1.0)
+}
+
+#[cfg(test)]
+mod voice_pan_tests {
+    use super::*;
+    use crate::{
+        asset::bustup::{Bustup, CharacterId},
+        layer::{DrawableLayer, user::BustupLayer},
+    };
+    use shin_core::vm::command::types::{LayerProperty, LayerbankId};
+    use std::sync::Arc;
+
+    #[test]
+    fn voice_pan_uses_local_properties_without_parent_composition() {
+        let mut page = PageLayer::new(1);
+        page.props
+            .property_tweener_mut(LayerProperty::TranslateX)
+            .fast_forward_to(240.0);
+        let plane = page.get_plane_mut(PlaneId::new(0));
+        plane
+            .properties_mut()
+            .property_tweener_mut(LayerProperty::TranslateX)
+            .fast_forward_to(120.0);
+        let asset = Arc::new(Bustup {
+            character_id: CharacterId::new(19),
+            origin_x: 1000,
+            origin_y: 500,
+            effective_width: 0,
+            effective_height: 0,
+            bustup_id: shin_core::format::bustup::BustupId::new(0),
+            base_blocks: vec![],
+            face1: None,
+            face2: None,
+            mouth_blocks: vec![],
+            eye_blocks: vec![],
+        });
+        let mut bustup = BustupLayer::new(asset, None);
+        bustup
+            .properties_mut()
+            .property_tweener_mut(LayerProperty::TranslateX)
+            .fast_forward_to(-600.0);
+        plane.add_layer(LayerbankId::new(0), bustup.into());
+        let parent = TransformParams {
+            wobble_translation: glam::vec2(-240.0, 0.0),
+            ..Default::default()
+        };
+        let mut positions = Vec::new();
+        page.collect_voice_positions(&parent, &mut positions);
+        assert_eq!(positions.len(), 1);
+        assert_eq!(positions[0].0, 19);
+        assert!((positions[0].1 + 0.625).abs() < 0.00001, "{positions:?}");
+        for (x, expected) in [(-1920.0, -1.0), (0.0, 0.0), (480.0, 0.5), (1920.0, 1.0)] {
+            let params = TransformParams {
+                transform: glam::Mat4::from_translation(glam::vec3(x, 0.0, 0.0)),
+                ..Default::default()
+            };
+            assert!((character_voice_pan(&params) - expected).abs() < 0.00001);
+        }
     }
 }

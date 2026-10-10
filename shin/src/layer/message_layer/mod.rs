@@ -2,6 +2,19 @@ mod blocks;
 mod interpolators;
 mod layout;
 mod messagebox;
+pub(crate) mod outline;
+#[cfg(test)]
+mod tests;
+#[cfg(test)]
+pub(crate) use tests::reference_authored_truth_color_render;
+#[cfg(test)]
+pub(crate) use tests::reference_live_frame_guard;
+#[cfg(test)]
+pub(crate) use tests::reference_live_msgclose;
+#[cfg(test)]
+pub(crate) use tests::reference_live_msgset;
+#[cfg(test)]
+pub(crate) use tests::reference_live_msgsync;
 
 use std::sync::Arc;
 
@@ -10,7 +23,10 @@ use glam::{Mat4, Vec2, vec2, vec3, vec4};
 use interpolators::{Countdown, HeightInterpolator, SlideInterpolator, SlideInterpolatorDirection};
 use itertools::{Either, Itertools};
 use shin_core::{
-    format::scenario::{Scenario, instruction_elements::MessageId},
+    format::{
+        save::Settings,
+        scenario::{Scenario, instruction_elements::MessageId},
+    },
     layout::{
         LayoutParams, MessageLayerLayouter, MessageTextLayouterDefaults,
         commands::{CharFontType, Command},
@@ -68,7 +84,7 @@ pub struct MessageboxTextures {
 bitflags! {
     #[derive(Copy, Clone, Debug, Default)]
     pub struct MessageFlags: u32 {
-        const UNUSED_FLAG = 0x1;
+        const READ = 0x1;
         const IGNORE_INPUT = 0x2;
     }
 }
@@ -100,7 +116,28 @@ pub struct MsgsetParams {
 
 const VERTICES_PER_CHARACTER: usize = 4;
 
+fn voice_sync_waiting(
+    total_voices: u32,
+    current: i32,
+    requested: i32,
+    status: AudioWaitStatus,
+    position_millis: u64,
+    sync_time: i32,
+) -> bool {
+    // Native b19b0: the message's parsed voice count gates the command.
+    // Unequal indices compare signed values even without an active player.
+    if total_voices == 0 {
+        return false;
+    }
+    if current != requested {
+        return current < requested;
+    }
+    // 57ec sign-extends the target; b1a4c then compares it unsigned.
+    status.contains(AudioWaitStatus::PLAYING) && (i64::from(sync_time) as u64) > position_millis
+}
+
 pub struct MessageLayer {
+    update_tracker: shin_core::primitives::update::UpdateTracker,
     messagebox_textures: Arc<MessageboxTextures>,
     props: LayerProperties,
     // TODO: how should we handle the ownership for the listener?
@@ -140,10 +177,12 @@ pub struct MessageLayer {
     // NB: "some_unused_mode"
     //
     message_flags: MessageFlags,
+    settings: Settings,
 
     messagebox_type: MessageboxType,
     text_layout: MessageTextLayout,
     message_id: MessageId,
+    completed_messages: Vec<MessageId>,
     chars: Vec<layout::Char>,
     lines: Vec<layout::LineInfo>,
     blocks: Vec<Block>,
@@ -160,12 +199,21 @@ pub struct MessageLayer {
 }
 
 impl MessageLayer {
+    pub fn voice_player(&self) -> &VoicePlayer {
+        &self.voice_player
+    }
+
+    pub fn voice_player_mut(&mut self) -> &mut VoicePlayer {
+        &mut self.voice_player
+    }
+
     pub fn new(
         adv_fonts: AdvFonts,
         messagebox_textures: Arc<MessageboxTextures>,
         voice_player: VoicePlayer,
     ) -> Self {
         Self {
+            update_tracker: shin_core::primitives::update::UpdateTracker::new(),
             messagebox_textures,
             props: LayerProperties::new(),
             message_layer_listener: (), // TODO
@@ -194,9 +242,11 @@ impl MessageLayer {
             voice_block_index: 0,
             voice_counter: 0,
             message_flags: MessageFlags::default(),
+            settings: Settings::default(),
             messagebox_type: MessageboxType::Neutral,
             text_layout: MessageTextLayout::Justify,
             message_id: MessageId(0),
+            completed_messages: Vec::new(),
             chars: vec![],
             lines: vec![],
             blocks: vec![],
@@ -288,6 +338,19 @@ impl MessageLayer {
         ));
     }
 
+    #[cfg(test)]
+    pub(crate) fn reference_modal_clock(&self) -> (f32, f32) {
+        (self.modal_slide.value(), self.current_time)
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_update_ticks(&self) -> Ticks {
+        self.ticks_since_last_wait
+    }
+    pub fn set_modal_hidden(&mut self, hidden: bool) {
+        self.modal_slide
+            .set_direction(SlideInterpolatorDirection::from_is_increasing(!hidden));
+    }
+
     pub fn is_interested_in_input(&self) -> bool {
         // messagebox is in the process of being hidden or is not fully shown yet
         // TODO: can this be a function on SimpleInterpolator?
@@ -328,8 +391,7 @@ impl MessageLayer {
                 self.blocks[voice_index].ty
             )
         };
-        // TODO: need a settings handle here
-        let voicevol = 90;
+        let voicevol = self.settings.v2_voicevol;
         if self.disable_voice == true || voicevol == 0 {
             return;
         }
@@ -431,6 +493,35 @@ impl MessageLayer {
         }
     }
 
+    /// Restore already displayed text without playing its voice again. Retain
+    /// the final key wait so loading a message boundary cannot advance the VM.
+    pub fn restore_message(
+        &mut self,
+        ctx: &PreRenderContext,
+        scenario: &Arc<Scenario>,
+        message: &str,
+        params: MsgsetParams,
+        received_syncs: u32,
+    ) {
+        self.on_msgset(ctx, scenario, message, params, false);
+        self.received_syncs = received_syncs;
+        let completed_count = self.completed_messages.len();
+        self.fast_forward();
+        self.completed_messages.truncate(completed_count);
+        self.disable_voice = true;
+        if self.current_block_index == self.blocks.len()
+            && !params.flags.contains(MessageFlags::IGNORE_INPUT)
+        {
+            if let Some(index) = self.blocks.iter().rposition(|block| {
+                matches!(&block.ty, BlockType::Wait(wait) if wait.is_last_wait && !wait.is_auto_click)
+            }) {
+                self.current_block_index = index;
+                self.wait_kind = Some(WaitKind::Last);
+                self.ticks_since_last_wait = Ticks::ZERO;
+            }
+        }
+    }
+
     fn set_message(&mut self, ctx: &PreRenderContext, message: &str) {
         let layout_params = LayoutParams {
             layout_width: 1500.0,
@@ -450,7 +541,7 @@ impl MessageLayer {
             draw_speed: if self.messagebox_type == MessageboxType::NoText {
                 100
             } else {
-                80 // TODO: this comes from settings
+                i32::from(self.settings.v9_msgspeed)
             },
             fade: 200,
         };
@@ -501,37 +592,12 @@ impl MessageLayer {
                     };
                     let info = glyph.info();
 
-                    // TODO: maybe support v8=1 setting, which changes the shape of the outline
-
-                    let v_distance = 1.5 / char.scale / info.actual_height as f32
-                        * info.actual_size_normalized().y;
-                    let h_distance = 1.5 / char.horizontal_scale / info.actual_width as f32
-                        * info.actual_size_normalized().x;
-
-                    // prepare a set of 8 displacements for font outline border shader
-                    // they go in a circle, just in a weird order:
-                    //
-                    //         |
-                    //         2
-                    //      1  |  3
-                    // ---4---------5---> x
-                    //      6  |  8
-                    //         7
-                    //         |
-                    //        \/  y
-                    #[rustfmt::skip]
-                    let border_distances = [
-                        /* 1 */ vec2(-1.0, -1.0),
-                        /* 2 */ vec2( 0.0, -1.0),
-                        /* 3 */ vec2( 1.0, -1.0),
-                        /* 4 */ vec2(-1.0,  0.0),
-                        /* 5 */ vec2( 1.0,  0.0),
-                        /* 6 */ vec2(-1.0,  1.0),
-                        /* 7 */ vec2( 0.0,  1.0),
-                        /* 8 */ vec2( 1.0,  1.0),
-                    ]
-                    .map(|v| v / v.length()) // normalize the length
-                    .map(|v| v * vec2(h_distance, v_distance)); // apply the scaling for each axis
+                    let border_distances = outline::distances(
+                        vec2(char.horizontal_scale, char.scale),
+                        info.actual_size_f32(),
+                        info.actual_size_normalized(),
+                        self.settings.v8,
+                    );
 
                     if !char.is_rubi {
                         wait_auto_delay += 0.05;
@@ -571,15 +637,18 @@ impl MessageLayer {
                     time: sync.time,
                     ty: BlockType::Sync(blocks::Sync { index: sync.index }),
                 }),
-                Command::Voice(voice) => self.blocks.push(Block {
-                    time: voice.time,
-                    ty: BlockType::Voice(blocks::Voice {
-                        filename: voice.filename,
-                        volume: Volume(voice.volume),
-                        lipsync_enabled: voice.lipsync_enabled,
-                        segment_duration: voice.segment_duration,
-                    }),
-                }),
+                Command::Voice(voice) => {
+                    self.total_voices_count += 1;
+                    self.blocks.push(Block {
+                        time: voice.time,
+                        ty: BlockType::Voice(blocks::Voice {
+                            filename: voice.filename,
+                            volume: Volume(voice.volume),
+                            lipsync_enabled: voice.lipsync_enabled,
+                            segment_duration: voice.segment_duration,
+                        }),
+                    });
+                }
                 Command::VoiceSync(voice_sync) => self.blocks.push(Block {
                     time: voice_sync.time,
                     ty: BlockType::VoiceSync(blocks::VoiceSync {
@@ -629,6 +698,39 @@ impl MessageLayer {
         self.reset_message();
     }
 
+    pub fn close_is_waiting(&self) -> bool {
+        // Native b1a60..b1acc checks the natural slide and every retained
+        // outgoing window. The independent modal slide is not a close clock.
+        self.natural_slide.value() > 0.0
+            || self
+                .sliding_out_messageboxes
+                .iter()
+                .any(|window| window.slide_out.value() > 0.0)
+    }
+
+    pub fn set_settings(&mut self, settings: &Settings) {
+        self.settings = settings.clone();
+    }
+
+    #[cfg(test)]
+    pub(crate) fn final_wait_time(&self) -> f32 {
+        self.blocks
+            .iter()
+            .find_map(|block| match &block.ty {
+                BlockType::Wait(wait) if wait.is_last_wait => Some(block.time),
+                _ => None,
+            })
+            .expect("Message has no final wait")
+    }
+
+    pub fn take_completed_messages(&mut self) -> Vec<MessageId> {
+        std::mem::take(&mut self.completed_messages)
+    }
+
+    pub fn request_autoplay(&mut self) {
+        self.autoplay_requested = true;
+    }
+
     pub fn try_advance(&mut self) -> bool {
         if !self
             .modal_slide
@@ -673,15 +775,12 @@ impl MessageLayer {
                     self.autoplay_voice_delay.set_time_left(0.0);
                 }
                 WaitKind::Last | WaitKind::AutoClick => {
-                    // TODO: we need a settings handle here
-                    let v6 = false;
-                    if !v6 {
+                    if !self.settings.v6 {
                         self.voice_player.stop();
                         self.is_voice_playing = false;
                         self.autoplay_voice_delay.set_time_left(0.0);
                     }
-                    // TODO: notify the message listener
-                    // self.message_layer_listener.on_message_done();
+                    self.completed_messages.push(self.message_id);
                 }
             }
 
@@ -691,7 +790,7 @@ impl MessageLayer {
         }
 
         // if all else fails - try to stop/advance the voice
-        if self.blocks.len() >= self.current_block_index {
+        if self.current_block_index >= self.blocks.len() {
             return true;
         }
         match &self.blocks[self.current_block_index].ty {
@@ -720,6 +819,17 @@ impl MessageLayer {
         true
     }
 
+    pub fn voice_sync_is_waiting(&self, voice_index: i32, sync_time: i32) -> bool {
+        voice_sync_waiting(
+            self.total_voices_count,
+            self.voice_counter,
+            voice_index,
+            self.voice_player.get_wait_status(),
+            self.voice_player.position_millis(),
+            sync_time,
+        )
+    }
+
     pub fn recv_sync_is_waiting(&self, signal_index: i32) -> bool {
         // all blocks are done, so nothing should be waiting
         if self.current_block_index >= self.blocks.len() {
@@ -739,17 +849,15 @@ impl MessageLayer {
     }
 }
 
-impl Clone for MessageLayer {
-    fn clone(&self) -> Self {
-        // while some parts of MessageLayer would be okay to be cloned, `VoicePlayer` is not
-        // the ownership will end up being all weird
-        // It's not like we would actually _need_ to clone it though, as transitions can't be applied to root layer group
-        unimplemented!("MessageLayer is not supposed to be cloned")
-    }
-}
-
 impl AdvUpdatable for MessageLayer {
     fn update(&mut self, context: &AdvUpdateContext) {
+        // Native virtual +10 dispatches through 6aa40 before b2090. Front and
+        // back roots can own the same message, so guard the entire body before
+        // consuming input requests, advancing voices or moving message clocks.
+        if !self.update_tracker.update(context.frame_id) {
+            return;
+        }
+        self.voice_player.update(context.delta_ticks);
         let dt = context.delta_ticks;
 
         let autoplay_requested = self.autoplay_requested;
@@ -781,8 +889,11 @@ impl AdvUpdatable for MessageLayer {
                 .get_wait_status()
                 .contains(AudioWaitStatus::PLAYING)
             {
-                // TODO: need to access the settings here
-                // if voice volume is set to 0, stop the player & reset all the voice stuff
+                if self.settings.v2_voicevol == 0 {
+                    self.voice_player.stop();
+                    self.is_voice_playing = false;
+                    self.autoplay_voice_delay.set_time_left(0.0);
+                }
             } else {
                 // voice player no longer playing, auto mode can proceed
                 self.is_voice_playing = false;
@@ -805,7 +916,7 @@ impl AdvUpdatable for MessageLayer {
                 && self.autoplay_voice_delay.update(dt)
             {
                 if matches!(wait_kind, WaitKind::Last | WaitKind::AutoClick) {
-                    // TODO: notify the listener that the message is done
+                    self.completed_messages.push(self.message_id);
                 }
                 self.wait_kind = None;
                 self.current_block_index += 1;
@@ -854,8 +965,7 @@ impl AdvUpdatable for MessageLayer {
                             });
 
                             self.ticks_since_last_wait = Ticks::ZERO;
-                            // TODO: need to access the settings here to get v10_skipspeed
-                            let skip_speed = 80;
+                            let skip_speed = i32::from(self.settings.v10_skipspeed);
                             self.time_to_skip_wait.set_time_left(
                                 wait.wait_auto_delay * (100 - skip_speed) as f32 * 0.01,
                             );
@@ -870,7 +980,7 @@ impl AdvUpdatable for MessageLayer {
                             break;
                         }
                         if wait.is_last_wait {
-                            // TODO: notify the listener that the message is done
+                            self.completed_messages.push(self.message_id);
                         }
                     }
                     BlockType::Section(section) => {
@@ -966,7 +1076,7 @@ impl Layer for MessageLayer {
                 }
                 BlockType::Wait(wait) => {
                     if wait.is_last_wait {
-                        // TODO: notify the listener that the message is done
+                        self.completed_messages.push(self.message_id);
                     }
                 }
                 BlockType::Section(section) => {
@@ -1044,11 +1154,16 @@ impl Layer for MessageLayer {
         for &messagebox in &self.sliding_out_messageboxes {
             self.render_messagebox(pass, builder, transform, messagebox.into());
         }
-        self.render_messagebox(pass, builder, transform, Messagebox {
-            ty: self.messagebox_type,
-            natural_slide: self.natural_slide.value(),
-            height: self.height.value(),
-        });
+        self.render_messagebox(
+            pass,
+            builder,
+            transform,
+            Messagebox {
+                ty: self.messagebox_type,
+                natural_slide: self.natural_slide.value(),
+                height: self.height.value(),
+            },
+        );
         pass.pop_debug();
 
         // if the messagebox is not fully shown - don't try to render the message and keywait
@@ -1138,6 +1253,9 @@ impl Layer for MessageLayer {
         pass.push_debug("MessageLayer/text/border");
         // draw the borders...
         for char in &self.chars {
+            let Ok(glyph_texture) = char.glyph.as_texture_source() else {
+                continue;
+            };
             pass.run(builder.build(
                 RenderProgramWithArguments::FontBorder {
                     vertices: VertexSource::VertexBuffer {
@@ -1146,7 +1264,7 @@ impl Layer for MessageLayer {
                             VERTICES_PER_CHARACTER,
                         ),
                     },
-                    glyph: char.glyph.as_texture_source(),
+                    glyph: glyph_texture,
                     transform,
                     distances: char.border_distances,
                     color: FloatColor4::from_rgba(0.0, 0.0, 0.0, char.current_progress),
@@ -1159,6 +1277,9 @@ impl Layer for MessageLayer {
         pass.push_debug("MessageLayer/text/normal");
         // and the characters themselves
         for char in &self.chars {
+            let Ok(glyph_texture) = char.glyph.as_texture_source() else {
+                continue;
+            };
             pass.run(builder.build(
                 RenderProgramWithArguments::Font {
                     vertices: VertexSource::VertexBuffer {
@@ -1167,7 +1288,7 @@ impl Layer for MessageLayer {
                             VERTICES_PER_CHARACTER,
                         ),
                     },
-                    glyph: char.glyph.as_texture_source(),
+                    glyph: glyph_texture,
                     transform,
                     color1:
                         FloatColor4::from_unorm(char.color_rgba).with_alpha(char.current_progress),
@@ -1190,5 +1311,144 @@ impl DrawableLayer for MessageLayer {
 
     fn properties_mut(&mut self) -> &mut LayerProperties {
         &mut self.props
+    }
+}
+
+#[cfg(test)]
+impl MessageLayer {
+    pub(crate) fn assert_reference_outline(
+        &mut self,
+        context: &mut PreRenderContext,
+        scenario: &Arc<Scenario>,
+    ) {
+        use shin_core::primitives::color::UnormColor;
+        use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
+        let target = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Message outline reference"),
+            size: wgpu::Extent3d {
+                width: 1920,
+                height: 1080,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let view = target.create_view(&Default::default());
+        let mut frames = Vec::new();
+        for mode in 0..4 {
+            let mut settings = Settings::default();
+            settings.v8 = mode;
+            self.set_settings(&settings);
+            self.on_msgset(
+                context,
+                scenario,
+                "右代宮　金蔵　ABC",
+                MsgsetParams {
+                    flags: MessageFlags::empty(),
+                    messagebox_type: MessageboxType::Neutral,
+                    text_layout: MessageTextLayout::Justify,
+                    message_id: MessageId(0),
+                },
+                false,
+            );
+            assert!(self.chars.len() > 5);
+            for char in &mut self.chars {
+                char.current_progress = 1.0;
+            }
+            self.rebuild_vertices(context);
+            let buffer = self.vertex_buffer.as_ref().unwrap();
+            {
+                let mut pass = context.begin_pass(
+                    TextureTarget {
+                        view: &view,
+                        kind: TextureTargetKind::Screen,
+                    },
+                    Some(context.depth_stencil),
+                    "Native message outline",
+                );
+                pass.clear(
+                    Some(UnormColor::from_rgba(128, 128, 128, 255)),
+                    Some(0),
+                    Some(1.0),
+                );
+                let builder = RenderRequestBuilder::new()
+                    .color_blend_type(ColorBlendType::Layer1)
+                    .depth_stencil_shorthand(1, true, true);
+                let transform = crate::render::top_left_projection_matrix()
+                    * Mat4::from_translation(vec3(128.0, 128.0, 0.0));
+                for char in &self.chars {
+                    let Ok(glyph_texture) = char.glyph.as_texture_source() else {
+                        continue;
+                    };
+                    pass.run(builder.build(
+                        RenderProgramWithArguments::FontBorder {
+                            vertices: VertexSource::VertexBuffer {
+                                vertices: buffer.as_sliced_buffer_ref(
+                                    char.vertex_buffer_offset,
+                                    VERTICES_PER_CHARACTER,
+                                ),
+                            },
+                            glyph: glyph_texture,
+                            transform,
+                            distances: char.border_distances,
+                            color: FloatColor4::from_rgba(0.0, 0.0, 0.0, 1.0),
+                        },
+                        DrawPrimitive::TrianglesStrip,
+                    ));
+                }
+                for char in &self.chars {
+                    let Ok(glyph_texture) = char.glyph.as_texture_source() else {
+                        continue;
+                    };
+                    pass.run(builder.build(
+                        RenderProgramWithArguments::Font {
+                            vertices: VertexSource::VertexBuffer {
+                                vertices: buffer.as_sliced_buffer_ref(
+                                    char.vertex_buffer_offset,
+                                    VERTICES_PER_CHARACTER,
+                                ),
+                            },
+                            glyph: glyph_texture,
+                            transform,
+                            color1: FloatColor4::WHITE,
+                            color2: FloatColor4::WHITE,
+                        },
+                        DrawPrimitive::TrianglesStrip,
+                    ));
+                }
+            }
+            frames.push(crate::layer::user::readback_test_texture(context, &target));
+        }
+        assert_eq!(frames[0], frames[2], "Onlymode1 uses the shifted outline");
+        assert_eq!(frames[0], frames[3]);
+        let changed = frames[0]
+            .chunks_exact(4)
+            .zip(frames[1].chunks_exact(4))
+            .filter(|(a, b)| a != b)
+            .count();
+        assert!(
+            changed > 100,
+            "Saved outline mode must alter visible glyph border pixels: {changed}"
+        );
+        let fill = |pixels: &[u8]| {
+            pixels
+                .chunks_exact(4)
+                .filter(|pixel| pixel[..3].iter().all(|&channel| channel > 250))
+                .count()
+        };
+        assert!(fill(&frames[0]) > 100);
+        assert_eq!(
+            fill(&frames[0]),
+            fill(&frames[1]),
+            "Glyph fill remains intact while the border changes"
+        );
+        println!(
+            "Native saved message outline:{} real font glyphs,mode1 changes{changed} pixels;mode0/2/3 retain identical geometry",
+            self.chars.len()
+        );
     }
 }

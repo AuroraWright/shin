@@ -34,18 +34,37 @@ pub enum WobbleMode {
 #[derive(Debug, Clone)]
 pub struct Wobbler {
     mode: WobbleMode,
-    #[allow(unused)]
     seed: i32,
-    period: Ticks,
     /// Time, measured in periods
     time: f32,
 }
 impl Wobbler {
+    #[cfg(test)]
+    pub(super) fn reference_copy_words(&self) -> [u32; 3] {
+        [self.seed as u32, self.mode as u32, self.time.to_bits()]
+    }
+    #[cfg(test)]
+    pub(super) fn reference_with_state(seed: u32, mode: i32, time: f32) -> Self {
+        Self {
+            seed: seed as i32,
+            mode: WobbleMode::from_i32(mode).unwrap(),
+            time,
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn reference_state(&self) -> (i32, f32, f32) {
+        (self.mode as i32, self.time, self.value())
+    }
+
     pub fn new() -> Self {
+        Self::with_seed(crate::engine_random::next_seed())
+    }
+
+    fn with_seed(seed: u32) -> Self {
         Self {
             mode: WobbleMode::Disabled,
-            seed: 0, // TODO: initialize to a non-zero seed
-            period: Ticks::ZERO,
+            seed: seed as i32,
             time: 0.0,
         }
     }
@@ -84,7 +103,7 @@ impl Wobbler {
     }
 
     pub fn active(&self) -> bool {
-        self.mode != WobbleMode::Disabled && self.period > Ticks::ZERO
+        self.mode != WobbleMode::Disabled
     }
 
     pub fn value_opt(&self) -> Option<f32> {
@@ -103,35 +122,30 @@ impl Wobbler {
             WobbleMode::Disabled
         });
 
-        if mode != self.mode || period != self.period {
+        // Native c7330 resets only when the normalized mode changes.
+        // A zero period freezes an active oscillator; negative periods reverse it.
+        if mode != self.mode {
             self.mode = mode;
-            self.period = period;
             self.time = 0.0;
         }
-
-        if !self.active() {
+        if period == Ticks::ZERO || !self.active() {
             return;
         }
 
-        let time = self.time + delta_time / period;
-        let time_int = time.floor();
-        let time_frac = time - time_int;
-
-        let time_frac = if time_frac < 0.0 {
-            // could this actually happen??
-            1.0 + time_frac
+        // c734c uses reciprocal then multiplication, followed by two modff calls.
+        // Preserve that rounding and truncation, including signed time and wrap.
+        let time = self.time + (1.0 / period.as_f32()) * delta_time.as_f32();
+        let fraction = time.fract();
+        let fraction = if fraction < 0.0 {
+            fraction + 1.0
         } else {
-            time_frac
+            fraction
         };
-
-        // round the integral part at 1000 periods
-        let time_int = time_int % 1000.0;
-        let time_int = if time_int < 0.0 {
-            1000.0 + time_int
-        } else {
-            time_int
-        };
-
-        self.time = time_int + time_frac;
+        let cycles = (time.trunc() * 0.001).fract();
+        let cycles = if cycles < 0.0 { cycles + 1.0 } else { cycles };
+        self.time = fraction + cycles * 1000.0;
     }
 }
+
+#[cfg(test)]
+mod tests;
