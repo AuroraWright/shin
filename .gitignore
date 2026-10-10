@@ -4,3 +4,14 @@ heaptrack.*.zst
 .flatpak-builder
 *.snr
 *.cap
+
+# Reverse-engineering evidence and agent working files
+/reverse-engineering/
+AGENTS.md
+CLAUDE.md
+/HANDOFF*.md
+WORKTREE.md
+/instructions.xlsx
+/.claude/
+/.codex/
+/.agents/
