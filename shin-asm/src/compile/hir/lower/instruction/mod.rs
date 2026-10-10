@@ -167,6 +167,29 @@ mod tests {
     }
 
     #[test]
+    fn test_switch_unary_instructions() {
+        for (name, ty) in [
+            ("sin", UnaryOperationType::Sin),
+            ("cos", UnaryOperationType::Cos),
+            ("tan", UnaryOperationType::Tan),
+            ("asin", UnaryOperationType::ASin),
+            ("acos", UnaryOperationType::ACos),
+            ("atan", UnaryOperationType::ATan),
+            ("popcnt", UnaryOperationType::CountOnes),
+            ("ctz", UnaryOperationType::TrailingZeros),
+        ] {
+            check_from_hir_ok(
+                &format!("{name} $v0, $v1"),
+                Instruction::uo(UnaryOperation {
+                    ty,
+                    destination: "$v0".parse().unwrap(),
+                    source: NumberSpec::register("$v1".parse().unwrap()),
+                }),
+            );
+        }
+    }
+
+    #[test]
     fn test_type_error() {
         check_from_hir_err(
             "zero 42",

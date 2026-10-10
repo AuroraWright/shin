@@ -237,9 +237,12 @@ pub fn resolve_global_registers(
         node_info: FxHashMap::default(),
     };
 
-    global_registers
-        .iter()
-        .map(|(name, &_)| {
+    // Alias-cycle diagnostics must not depend on hash-map iteration order.
+    let mut names = global_registers.keys().collect::<Vec<_>>();
+    names.sort_by_key(|name| name.to_string());
+    names
+        .into_iter()
+        .map(|name| {
             let result = register_resolver.resolve(name.clone(), None);
 
             (name.clone(), result)

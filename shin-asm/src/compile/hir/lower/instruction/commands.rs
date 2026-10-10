@@ -5,7 +5,6 @@ use shin_core::{
         scenario::instruction_elements::{MessageId, NumberSpec, U8Bool},
         text::U16FixupString,
     },
-    time::Ticks,
     vm::command::{
         compiletime::{EXIT, MSGINIT, MSGSET, WAIT},
         types::MessageboxStyle,
@@ -22,7 +21,7 @@ fn EXIT() -> CompiletimeCommand {
     })
 }
 
-fn WAIT((wait_amount,): (NumberSpec<Ticks>,)) -> CompiletimeCommand {
+fn WAIT((wait_amount,): (NumberSpec,)) -> CompiletimeCommand {
     CompiletimeCommand::WAIT(WAIT {
         allow_interrupt: U8Bool(false),
         wait_amount,

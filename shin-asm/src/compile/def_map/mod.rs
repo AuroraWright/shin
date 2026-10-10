@@ -279,7 +279,7 @@ def $b = $a
 
         expect![[r#"
             building def map produced errors:
-            source-level: [Diagnostic { message: "Encountered a loop while resolving register $b", location: Span(WithFile { value: 10..12, file: File(Id { value: 1 }) }), additional_labels: [] }]
+            source-level: [Diagnostic { message: "Encountered a loop while resolving register $a", location: Span(WithFile { value: 22..24, file: File(Id { value: 1 }) }), additional_labels: [] }]
             hir-level: []"#]]
             .assert_eq(errors.as_deref().unwrap());
 

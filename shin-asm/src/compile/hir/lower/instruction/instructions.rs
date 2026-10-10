@@ -18,6 +18,14 @@ fn unary_op(instr_name: &str, (destination, source): (Register, NumberSpec)) -> 
         "not16" => UnaryOperationType::Not16,
         "neg" => UnaryOperationType::Negate,
         "abs" => UnaryOperationType::Abs,
+        "sin" => UnaryOperationType::Sin,
+        "cos" => UnaryOperationType::Cos,
+        "tan" => UnaryOperationType::Tan,
+        "asin" => UnaryOperationType::ASin,
+        "acos" => UnaryOperationType::ACos,
+        "atan" => UnaryOperationType::ATan,
+        "popcnt" => UnaryOperationType::CountOnes,
+        "ctz" => UnaryOperationType::TrailingZeros,
         _ => unreachable!(),
     };
 
@@ -38,5 +46,13 @@ pub fn instructions(builder: RouterBuilder<impl Router>) -> RouterBuilder<impl R
         .add("not16", unary_op)
         .add("neg", unary_op)
         .add("abs", unary_op)
+        .add("sin", unary_op)
+        .add("cos", unary_op)
+        .add("tan", unary_op)
+        .add("asin", unary_op)
+        .add("acos", unary_op)
+        .add("atan", unary_op)
+        .add("popcnt", unary_op)
+        .add("ctz", unary_op)
         .add("j", jump)
 }
