@@ -2,14 +2,14 @@ use std::cell::RefCell;
 
 use bevy_utils::HashMap;
 use egui::{
-    ahash::HashMapExt, style::WidgetVisuals, ClippedPrimitive, CollapsingHeader, Color32, Context,
-    CornerRadius, FontFamily, FontId, InnerResponse, Pos2, Rect, Stroke, TextureId, Ui, ViewportId,
-    ViewportIdMap,
+    ClippedPrimitive, CollapsingHeader, Color32, Context, CornerRadius, FontFamily, FontId,
+    InnerResponse, Pos2, Rect, Stroke, TextureId, Ui, ViewportId, ViewportIdMap, ahash::HashMapExt,
+    style::WidgetVisuals,
 };
 use egui_wgpu::{Renderer, ScreenDescriptor};
-use enum_map::{enum_map, Enum};
+use enum_map::{Enum, enum_map};
 use glam::vec2;
-use shin_input::{inputs::MouseButton, Action, ActionState, RawInputState};
+use shin_input::{Action, ActionState, RawInputState, inputs::MouseButton};
 use winit::keyboard::KeyCode;
 
 use crate::time::Time;

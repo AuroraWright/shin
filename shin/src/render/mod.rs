@@ -51,6 +51,7 @@ pub fn normalized_projection_matrix() -> Mat4 {
 
 pub struct PreRenderContext<'immutable, 'pipelines, 'dynbuffer, 'encoder> {
     pub device: &'immutable wgpu::Device,
+    pub breakup_texture: Option<&'immutable shin_render::gpu_texture::GpuTexture>,
     pub queue: &'immutable wgpu::Queue,
     pub resize_source: &'immutable SurfaceResizeSource,
     pub sampler_store: &'immutable TextureSamplerStore,

@@ -1,9 +1,23 @@
 /target
+.DS_Store
+__pycache__/
+*.py[cod]
+/*.mp4
+/umineko_switch_files/
+/higurashi/*.rom
+/higurashi/uncompressed_executable*
+/builds/manual-engine/shin
+/builds/manual-engine/Shin.app/
+/builds/manual-engine/assets*/
+/builds/manual-engine/saves*/
+/builds/manual-engine/saves/
+/builds/manual-engine/logs/
 .idea
 heaptrack.*.zst
 .flatpak-builder
 *.snr
 *.cap
+/shin-core/test_assets/*.fnt
 
 # Reverse-engineering evidence and agent working files
 /reverse-engineering/

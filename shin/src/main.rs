@@ -1,5 +1,8 @@
 // this is noisy & not well-supported by IDEs
 #![allow(clippy::uninlined_format_args)]
+// Retained scene/asset futures include the recursive wgpu resource graph when
+// Rust proves Send/Sync for asynchronous scene loading.
+#![recursion_limit = "256"]
 
 extern crate self as shin;
 
@@ -12,14 +15,23 @@ mod app;
 mod asset;
 mod audio;
 mod cli;
+mod engine_random;
 #[expect(unused)]
 mod fps_counter;
 mod layer;
 mod render;
 mod time;
+#[expect(unused)]
+mod title;
 mod update;
 mod wiper;
 // mod window;
+
+#[cfg(test)]
+pub(crate) fn init_test_task_pools() {
+    static POOLS: std::sync::Once = std::sync::Once::new();
+    POOLS.call_once(shin_tasks::create_task_pools);
+}
 
 fn main() {
     shin_window::init_tracing();

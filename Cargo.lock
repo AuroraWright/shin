@@ -5388,6 +5388,7 @@ dependencies = [
  "anyhow",
  "anymap3",
  "bevy_utils",
+ "binrw",
  "bitflags 2.8.0",
  "cfg-if",
  "clap",
@@ -5413,6 +5414,7 @@ dependencies = [
  "parking_lot 0.12.3",
  "rayon",
  "replace_with",
+ "serde_json",
  "shin-audio",
  "shin-core",
  "shin-derive",
@@ -5463,6 +5465,7 @@ name = "shin-audio"
 version = "0.8.1"
 dependencies = [
  "anyhow",
+ "cpal",
  "kira",
  "parking_lot 0.12.3",
  "ringbuf 0.4.7",
@@ -5639,6 +5642,7 @@ name = "shin-video"
 version = "0.8.1"
 dependencies = [
  "anyhow",
+ "async-channel",
  "async-process",
  "cfg-if",
  "dpi",
@@ -5678,6 +5682,7 @@ dependencies = [
  "dpi",
  "enum-map",
  "glam 0.29.2",
+ "objc2",
  "shin-input",
  "shin-primitives",
  "shin-render",
