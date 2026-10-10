@@ -14,19 +14,23 @@ use shin_render::{gpu_texture::GpuTexture, shaders::types::texture::TextureSourc
 
 use crate::asset::system::{
     Asset, AssetDataAccessor, AssetLoadContext,
-    cache::{AssetCache, CacheHandle},
+    cache::{CacheHandle, CacheLoaderHandle},
 };
+
+mod cache;
+pub use cache::FontGlyphCache;
+use cache::GlyphKey;
 
 pub struct GpuFontLazy {
     font: FontLazy,
-    glyph_cache: AssetCache<GlyphId, GpuFontGlyph>,
+    glyph_cache: Arc<FontGlyphCache>,
 }
 
 impl GpuFontLazy {
     pub fn new(font: FontLazy) -> Self {
         Self {
             font,
-            glyph_cache: AssetCache::new(),
+            glyph_cache: Arc::new(FontGlyphCache::default()),
         }
     }
 
@@ -43,36 +47,49 @@ impl GpuFontLazy {
             return Vec::new();
         }
 
-        let glyph_map = self.font.get_character_mapping();
-
         let mut glyphs = Vec::with_capacity(characters.len());
         let mut glyphs_dedup = IndexSet::new();
         for &char in characters {
-            let glyph = glyph_map[char as usize];
+            let glyph = GlyphKey {
+                font: self.font.get_character_table_crc(),
+                codepoint: char,
+            };
             glyphs.push(glyph);
             glyphs_dedup.insert(glyph);
         }
 
         let (need_loading_list, mut loading_list): (Vec<_>, Vec<_>) = glyphs_dedup
             .iter()
-            .map(|&id| (id, self.glyph_cache.lookup(id)))
-            .partition_map(|(id, result)| {
+            .map(|&key| (key, self.glyph_cache.lookup(key)))
+            .partition_map(|(key, result)| {
                 Either::from(result.try_into_cache_handle()).map_either(
-                    |l| (id, l),
+                    |l| (key, l),
                     |handle| {
+                        let id = self.font.get_character_mapping()[key.codepoint as usize];
                         let info = self.font.get_glyph(id).unwrap().get_info();
 
-                        GpuFontGlyphHandle { id, info, handle }
+                        GpuFontGlyphHandle {
+                            key,
+                            id,
+                            info,
+                            handle,
+                        }
                     },
                 )
             });
 
         if !need_loading_list.is_empty() {
-            for &(id, ref need_loading) in &need_loading_list {
+            for &(key, ref need_loading) in &need_loading_list {
+                let id = self.font.get_character_mapping()[key.codepoint as usize];
                 let info = self.font.get_glyph(id).unwrap().get_info();
 
                 let handle = need_loading.get_handle();
-                loading_list.push(GpuFontGlyphHandle { id, info, handle });
+                loading_list.push(GpuFontGlyphHandle {
+                    key,
+                    id,
+                    info,
+                    handle,
+                });
             }
 
             // actually load the stuff
@@ -81,19 +98,19 @@ impl GpuFontLazy {
                 // spawn a rayon task because `for_each` will block otherwise
                 need_loading_list
                     .into_par_iter()
-                    .for_each(|(id, need_loading)| {
-                        let glyph = self.font.get_glyph(id).unwrap();
-                        let glyph = glyph.decompress();
-                        let glyph = Arc::new(GpuFontGlyph::load(&device, &queue, id, glyph));
-
-                        self.glyph_cache.finish_load(need_loading, glyph);
+                    .for_each(|(key, need_loading)| {
+                        let id = self.font.get_character_mapping()[key.codepoint as usize];
+                        self.complete_glyph_load(key, need_loading, || {
+                            let glyph = self.font.get_glyph(id).context("Missing font glyph")?;
+                            Ok(GpuFontGlyph::load(&device, &queue, id, glyph.decompress()))
+                        });
                     });
             });
         }
 
         let mut glyph_handles = IndexMap::new();
         for glyph_handle in loading_list {
-            glyph_handles.insert(glyph_handle.id, glyph_handle);
+            glyph_handles.insert(glyph_handle.key, glyph_handle);
         }
 
         let mut result = Vec::new();
@@ -104,6 +121,34 @@ impl GpuFontLazy {
         }
 
         result
+    }
+
+    fn complete_glyph_load(
+        &self,
+        key: GlyphKey,
+        producer: CacheLoaderHandle<GlyphKey, GpuFontGlyph>,
+        load: impl FnOnce() -> anyhow::Result<GpuFontGlyph>,
+    ) {
+        // Catch each glyph independently: a failed decoder/upload must not
+        // unwind a detached Rayon job or cancel other glyphs in the batch.
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(load))
+            .map_err(|panic| {
+                let message = panic
+                    .downcast_ref::<String>()
+                    .map(String::as_str)
+                    .or_else(|| panic.downcast_ref::<&str>().copied())
+                    .unwrap_or("unknown panic");
+                anyhow::anyhow!("Glyph worker failed: {message}")
+            })
+            .and_then(|result| result);
+        match result {
+            Ok(glyph) => self.glyph_cache.finish_load(key, producer, Arc::new(glyph)),
+            Err(error) => {
+                let error = Arc::new(error.context(format!("Loading glyph {:?}", key.codepoint)));
+                tracing::error!(font = key.font, glyph = ?key.codepoint, error = %error, "Font glyph load failed");
+                self.glyph_cache.fail_load(producer, error);
+            }
+        }
     }
 }
 
@@ -146,6 +191,7 @@ impl GpuFontGlyph {
 
 #[derive(Debug, Clone)]
 pub struct GpuFontGlyphHandle {
+    key: GlyphKey,
     id: GlyphId,
     info: GlyphInfo,
     handle: CacheHandle<GpuFontGlyph>,
@@ -156,16 +202,19 @@ impl GpuFontGlyphHandle {
         &self.info
     }
 
-    pub fn as_texture_source(&self) -> TextureSource {
-        self.handle.wait_ref().texture.as_source()
+    pub fn as_texture_source(&self) -> anyhow::Result<TextureSource<'_>> {
+        Ok(self.handle.try_wait_ref()?.texture.as_source())
     }
 }
+
+#[cfg(test)]
+pub(crate) mod tests;
 
 impl Asset for GpuFontLazy {
     type Args = ();
 
     async fn load(
-        _context: &Arc<AssetLoadContext>,
+        context: &Arc<AssetLoadContext>,
         _args: (),
         _name: &str,
         data: AssetDataAccessor,
@@ -173,6 +222,9 @@ impl Asset for GpuFontLazy {
         let lazy_font =
             read_lazy_font(&mut Cursor::new(data.read_all().await)).context("Reading font")?;
 
-        Ok(Self::new(lazy_font))
+        Ok(Self {
+            font: lazy_font,
+            glyph_cache: context.font_cache.clone(),
+        })
     }
 }

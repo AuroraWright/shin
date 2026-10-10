@@ -6,7 +6,7 @@ use tracing::{debug, instrument, trace};
 use crate::asset::system::LayeredAssetIo;
 
 #[instrument]
-fn try_assets_directory(path: &Path) -> anyhow::Result<Option<LayeredAssetIo>> {
+pub(super) fn try_assets_directory(path: &Path) -> anyhow::Result<Option<LayeredAssetIo>> {
     debug!("Trying assets directory {:?}...", path);
     if !path.is_dir() {
         debug!("Cannot use {:?} as assets directory, not a directory", path);

@@ -1,7 +1,10 @@
 mod accessor;
 mod context;
+#[cfg(test)]
+mod registry_reference_tests;
 
 use std::{
+    borrow::Cow,
     fmt::Debug,
     fs::File,
     future::Future,
@@ -60,14 +63,21 @@ pub struct AssetServer {
     io: AssetIo,
     context: Arc<AssetLoadContext>,
     loaded_assets: RwLock<anymap3::Map<dyn core::any::Any + Send + Sync>>,
+    #[cfg(test)]
+    requested_paths: std::sync::Mutex<Vec<String>>,
 }
 
 impl AssetServer {
+    pub fn context(&self) -> &AssetLoadContext {
+        &self.context
+    }
     pub fn new(io: AssetIo, context: AssetLoadContext) -> Self {
         Self {
             io,
             context: Arc::new(context),
             loaded_assets: RwLock::new(anymap3::Map::new()),
+            #[cfg(test)]
+            requested_paths: std::sync::Mutex::new(Vec::new()),
         }
     }
 
@@ -84,6 +94,8 @@ impl AssetServer {
         args: T::Args,
     ) -> Result<Arc<T>> {
         let path = path.as_ref();
+        #[cfg(test)]
+        self.requested_paths.lock().unwrap().push(path.to_string());
 
         let asset_map_key = (path.to_string(), args.clone());
 
@@ -120,6 +132,11 @@ impl AssetServer {
             .insert(asset_map_key, Arc::downgrade(&asset));
 
         Ok(asset)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_requested_paths(&self) -> Vec<String> {
+        self.requested_paths.lock().unwrap().clone()
     }
 
     /// Load an asset synchronously. This is useful for assets not requiring much CPU time to load.
@@ -226,9 +243,15 @@ impl RomAssetIo {
 
     fn read_file(&self, path: &str) -> Result<AssetDataAccessor> {
         // 1. find the file in the ROM
+        // Native ROM open (27db0) normalizes separators before raw index lookup.
+        let normalized = if path.contains('\\') {
+            Cow::Owned(path.replace('\\', "/"))
+        } else {
+            Cow::Borrowed(path)
+        };
         let file = self
             .rom
-            .find_file(path)
+            .find_file(&normalized)
             .with_context(|| format!("Finding asset {:?}", path))?;
         let file = RomFileReader::new(self.rom.clone(), file);
         Ok(AssetDataAccessor::from_rom_file(file))
@@ -278,5 +301,100 @@ impl LayeredAssetIo {
             path,
             errors
         ))
+    }
+}
+
+#[cfg(test)]
+mod update_reference_tests {
+    #[test]
+    #[ignore = "requires supplied base and 1.03 patch ROMs (SHIN_REFERENCE_ROM)"]
+    fn reference_update_103_overlay_and_asset_decoding() {
+        use super::*;
+        use crate::asset::system::locate_assets;
+        use shin_core::format::{
+            audio::{AudioDecoder, AudioFrameSource, AudioSource, read_audio},
+            picture::{SimpleMergedPicture, read_picture},
+            rom::{IndexEntry, RomReader},
+            scenario::Scenario,
+            texture_archive::read_texture_archive,
+        };
+        use shin_core::primitives::stateless_reader::StatelessFile;
+        use std::{io::Read, sync::Arc};
+        let base = PathBuf::from(std::env::var_os("SHIN_REFERENCE_ROM").unwrap());
+        let directory = base.parent().unwrap();
+        let patch = directory.join("patch.rom");
+        let mut rom =
+            RomReader::new(StatelessFile::new(std::fs::File::open(patch).unwrap()).unwrap())
+                .unwrap();
+        let layered = locate_assets(Some(directory)).unwrap();
+        let paths: Vec<_> = rom
+            .traverse()
+            .filter_map(|(path, entry)| matches!(entry, IndexEntry::File(_)).then_some(path))
+            .collect();
+        assert_eq!(paths.len(), 7);
+        for path in paths {
+            let mut bytes = Vec::new();
+            rom.open_file(rom.find_file(&path).unwrap())
+                .unwrap()
+                .read_to_end(&mut bytes)
+                .unwrap();
+            assert_eq!(
+                layered.read_file(&path).unwrap().read_all_sync(),
+                bytes,
+                "Patch precedence {path}"
+            );
+            match &bytes[..4] {
+                b"SNR " => {
+                    let scenario = Scenario::new(bytes.into()).unwrap();
+                    let mut reader = scenario.instruction_reader(scenario.entrypoint_address());
+                    for _ in 0..16 {
+                        reader.read().unwrap();
+                    }
+                    println!(
+                        "1.03 scenario tables and first16 instructions parse; entry{:?}",
+                        scenario.entrypoint_address()
+                    );
+                }
+                b"PIC4" => {
+                    let picture = read_picture::<SimpleMergedPicture>(&bytes, ()).unwrap();
+                    assert!(picture.image.width() > 0 && picture.image.height() > 0);
+                    println!(
+                        "1.03 {path}: decoded{}x{}",
+                        picture.image.width(),
+                        picture.image.height()
+                    );
+                }
+                b"TXA4" => {
+                    let archive = read_texture_archive(&bytes).unwrap();
+                    assert!(!archive.textures.is_empty());
+                    println!("1.03 {path}: decoded{} textures", archive.textures.len());
+                }
+                b"NXA1" => {
+                    let file = Arc::new(read_audio(&bytes).unwrap());
+                    let count = file.info().num_samples;
+                    let mut source = AudioSource::new(AudioDecoder::new_pcm16(file).unwrap());
+                    let mut frames = 0;
+                    while source.read_sample().is_some() {
+                        frames += 1;
+                    }
+                    assert!(!source.inner().is_failed());
+                    assert_eq!(frames, count);
+                    println!("1.03 {path}: decoded{frames} signed16 source frames");
+                }
+                other => panic!("Unexpected patch format {other:?}"),
+            }
+        }
+        let mut base_rom =
+            RomReader::new(StatelessFile::new(std::fs::File::open(base).unwrap()).unwrap())
+                .unwrap();
+        let fallback = "/bgm/umib_001.nxa";
+        let mut bytes = Vec::new();
+        base_rom
+            .open_file(base_rom.find_file(fallback).unwrap())
+            .unwrap()
+            .read_to_end(&mut bytes)
+            .unwrap();
+        assert_eq!(layered.read_file(fallback).unwrap().read_all_sync(), bytes);
+        println!("1.03 patch precedence and base BGM fallback pass; no audio device opened");
     }
 }

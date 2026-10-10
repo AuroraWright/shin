@@ -11,6 +11,10 @@ pub trait TextureArchiveBuilder {
 
     fn new() -> Self;
     fn add_texture(&mut self, name: &str, texture: GpuTexture);
+    /// Preserve authored texture indexes for archives addressed by index as well as name.
+    fn add_texture_with_index(&mut self, _index: usize, name: &str, texture: GpuTexture) {
+        self.add_texture(name, texture);
+    }
     fn build(self) -> Self::Output;
 }
 
@@ -46,7 +50,7 @@ impl<T: TextureArchive> Asset for T {
                     texture,
                 );
 
-                builder.add_texture(&tex_name, texture);
+                builder.add_texture_with_index(index, &tex_name, texture);
             }
 
             Ok(builder.build())

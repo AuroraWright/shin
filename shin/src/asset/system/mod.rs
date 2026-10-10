@@ -2,6 +2,7 @@
 
 pub mod cache;
 mod locate;
+pub mod resource_cache;
 mod server;
 
 pub use self::{

@@ -37,7 +37,7 @@ struct MaskTextureVertexOffsets {
     pub transparent_count: usize,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 enum MaskVertexKind {
     Black,
     White,
@@ -91,7 +91,9 @@ impl MaskTexture {
         flags: MaskRenderFlags,
     ) {
         let mut render_impl = |required_flags, vertex_kind| {
-            if flags.contains(required_flags) {
+            if flags.contains(required_flags)
+                && self.offsets.get_offset_and_count(vertex_kind).1 > 0
+            {
                 pass.push_debug(&format!("{}/{:?}", self.label, vertex_kind));
                 let vertices = self.offsets.slice_vertex_and_index(
                     &self.vertex_buffer,
@@ -118,15 +120,9 @@ impl MaskTexture {
 const VERTICES_PER_RECT: usize = 4;
 const INDICES_PER_RECT: usize = 6;
 
-fn load_vertices(
-    context: &AssetLoadContext,
+fn vertex_data(
     region_data: &RegionData,
-    label: &str,
-) -> (
-    OwnedVertexBuffer<PosColVertex>,
-    OwnedIndexBuffer,
-    MaskTextureVertexOffsets,
-) {
+) -> (Vec<PosColVertex>, Vec<u16>, MaskTextureVertexOffsets) {
     let black_count = region_data.black_regions.rect_count as usize;
     let white_count = region_data.white_regions.rect_count as usize;
     let transparent_count = region_data.transparent_regions.rect_count as usize;
@@ -170,17 +166,6 @@ fn load_vertices(
         index_buffer.extend(indices);
     }
 
-    let vertex_buffer = OwnedVertexBuffer::allocate_vertex(
-        &context.wgpu_device,
-        &vertex_buffer,
-        Some(&format!("{}/vertex", label)),
-    );
-    let index_buffer = OwnedIndexBuffer::allocate_index(
-        &context.wgpu_device,
-        &index_buffer,
-        Some(&format!("{}/index", label)),
-    );
-
     let offsets = MaskTextureVertexOffsets {
         black_offset,
         black_count,
@@ -192,6 +177,33 @@ fn load_vertices(
 
     (vertex_buffer, index_buffer, offsets)
 }
+
+fn load_vertices(
+    context: &AssetLoadContext,
+    region_data: &RegionData,
+    label: &str,
+) -> (
+    OwnedVertexBuffer<PosColVertex>,
+    OwnedIndexBuffer,
+    MaskTextureVertexOffsets,
+) {
+    let (vertices, indices, offsets) = vertex_data(region_data);
+    let vertex_buffer = OwnedVertexBuffer::allocate_vertex(
+        &context.wgpu_device,
+        &vertices,
+        Some(&format!("{}/vertex", label)),
+    );
+    let index_buffer = OwnedIndexBuffer::allocate_index(
+        &context.wgpu_device,
+        &indices,
+        Some(&format!("{}/index", label)),
+    );
+    (vertex_buffer, index_buffer, offsets)
+}
+
+#[cfg(test)]
+#[path = "mask_native_load_tests.rs"]
+mod native_load_tests;
 
 impl Asset for MaskTexture {
     type Args = ();

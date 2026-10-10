@@ -1,13 +1,10 @@
-use std::{
-    marker::PhantomData,
-    sync::{Arc, Weak},
-};
+use std::{marker::PhantomData, sync::Arc};
 
 use anyhow::{Context, Result};
 use bevy_utils::HashMap;
 use glam::{Vec2, vec2};
 use indexmap::IndexMap;
-use once_cell::sync::OnceCell;
+use parking_lot::Mutex;
 use shin_core::format::{
     bustup::{
         BustupBlockId, BustupBlockPromise, BustupBlockPromiseToken, BustupBuilder, BustupId,
@@ -20,7 +17,7 @@ use crate::asset::{
     picture::{GpuPictureBlock, GpuTextureBuilderContext},
     system::{
         Asset, AssetDataAccessor, AssetLoadContext,
-        cache::{AssetCache, CacheLoadHandle, CacheLoaderHandle, CacheLookupResult},
+        cache::{AssetCache, CacheHandle, CacheLoadHandle, CacheLoaderHandle, CacheLookupResult},
     },
 };
 
@@ -32,9 +29,26 @@ type BlockCacheLoaderHandle = CacheLoaderHandle<BustupBlockId, GpuPictureBlock>;
 pub struct CharacterId(i32);
 
 impl CharacterId {
+    /// Native metadata factories20804/3adf4 sign-extend the stored16-bit ID.
+    pub fn from_metadata(id: u16) -> Self {
+        Self(i32::from(id as i16))
+    }
+    pub fn raw(self) -> i32 {
+        self.0
+    }
+
     pub fn new(id: i32) -> Self {
         Self(id)
     }
+}
+
+/// Native357d8/358dc reserves descriptor0 for the non-animated portrait.
+/// Select promises before materializing them so unused frames are not decoded.
+fn animation_frames<T>(frames: Vec<T>, disable_animations: bool) -> impl Iterator<Item = T> {
+    frames
+        .into_iter()
+        .skip(usize::from(!disable_animations))
+        .take(if disable_animations { 1 } else { usize::MAX })
 }
 
 struct GpuBustupBuilder<'b> {
@@ -48,6 +62,7 @@ struct GpuBustupBuilderArgs<'a> {
     expression: String,
     character_id: CharacterId,
     disable_animations: bool,
+    pending: Mutex<HashMap<BustupBlockId, BlockCacheLoaderHandle>>,
 }
 
 struct GpuBustupSkeleton<'a> {
@@ -67,47 +82,45 @@ struct GpuBustupSkeleton<'a> {
 enum GpuBustupBlockPromise<'a> {
     Loaded(Arc<GpuPictureBlock>),
     Loading(BlockCacheLoadHandle),
-    LoadRequired(BlockCacheLoaderHandle, BustupBlockPromise<'a>),
+    LoadRequired(BustupBlockPromise<'a>),
 }
 
-pub struct Bustup {
+pub struct Bustup<T = Arc<GpuPictureBlock>> {
+    pub character_id: CharacterId,
     pub origin_x: i16,
     pub origin_y: i16,
     pub effective_width: u16,
     pub effective_height: u16,
     pub bustup_id: BustupId,
 
-    pub base_blocks: Vec<Arc<GpuPictureBlock>>,
-    pub face1: Option<Arc<GpuPictureBlock>>,
-    pub face2: Option<Arc<GpuPictureBlock>>,
-    pub mouth_blocks: Vec<Arc<GpuPictureBlock>>,
-    pub eye_blocks: Vec<Arc<GpuPictureBlock>>,
+    pub base_blocks: Vec<T>,
+    pub face1: Option<T>,
+    pub face2: Option<T>,
+    pub mouth_blocks: Vec<T>,
+    pub eye_blocks: Vec<T>,
 }
 
 impl<'a> GpuBustupBlockPromise<'a> {
-    pub fn new(cache: &BlockCache, promise: BustupBlockPromise<'a>) -> Self {
-        match cache.lookup(promise.get_id()) {
+    pub fn new(args: &GpuBustupBuilderArgs, promise: BustupBlockPromise<'a>) -> Self {
+        match args.cache.lookup(promise.get_id()) {
             CacheLookupResult::Loaded(block) => Self::Loaded(block),
             CacheLookupResult::Loading(load_handle) => Self::Loading(load_handle),
             CacheLookupResult::LoadRequired(loader_handle) => {
-                Self::LoadRequired(loader_handle, promise)
+                args.pending.lock().insert(promise.get_id(), loader_handle);
+                Self::LoadRequired(promise)
             }
         }
     }
 
     pub fn materialize(
         self,
-        cache: &BlockCache,
         token: &BustupBlockPromiseToken<Arc<GpuPictureBlock>>,
-    ) -> Arc<GpuPictureBlock> {
+    ) -> CacheHandle<GpuPictureBlock> {
         match self {
-            GpuBustupBlockPromise::Loaded(block) => block,
-            GpuBustupBlockPromise::Loading(load_handle) => load_handle.wait(),
-            GpuBustupBlockPromise::LoadRequired(loader_handle, promise) => {
-                let block = promise.get(token).clone();
-                cache.finish_load(loader_handle, block.clone());
-
-                block
+            GpuBustupBlockPromise::Loaded(block) => CacheHandle::Loaded(block),
+            GpuBustupBlockPromise::Loading(handle) => CacheHandle::Loading(handle),
+            GpuBustupBlockPromise::LoadRequired(promise) => {
+                CacheHandle::Loaded(promise.get(token).clone())
             }
         }
     }
@@ -117,7 +130,7 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
     type Args = GpuBustupBuilderArgs<'b>;
     type Skeleton<'a> = GpuBustupSkeleton<'a>;
     type BlockType = Arc<GpuPictureBlock>;
-    type Output = Bustup;
+    type Output = Bustup<CacheHandle<GpuPictureBlock>>;
 
     fn new<'a>(args: &Self::Args, skeleton: BustupSkeleton<'a>) -> Self::Skeleton<'a> {
         let BustupSkeleton {
@@ -130,8 +143,7 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
             mut expressions,
         } = skeleton;
 
-        let lower_block =
-            |block: BustupBlockPromise<'a>| GpuBustupBlockPromise::new(args.cache, block);
+        let lower_block = |block: BustupBlockPromise<'a>| GpuBustupBlockPromise::new(args, block);
 
         let base_blocks = base_blocks.into_iter().map(lower_block).collect::<Vec<_>>();
 
@@ -143,12 +155,12 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
         if let Some(expression) = expressions.swap_remove(&args.expression) {
             face1 = expression.face1.map(lower_block);
             face2 = expression.face2.map(lower_block);
-            mouth_blocks = expression
-                .mouth_blocks
-                .into_iter()
+            mouth_blocks = animation_frames(expression.mouth_blocks, args.disable_animations)
                 .map(lower_block)
                 .collect();
-            eye_blocks = expression.eye_blocks.into_iter().map(lower_block).collect();
+            eye_blocks = animation_frames(expression.eye_blocks, args.disable_animations)
+                .map(lower_block)
+                .collect();
         }
 
         GpuBustupSkeleton {
@@ -173,6 +185,30 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
         )))
     }
 
+    fn new_block_with_id(
+        args: &Self::Args,
+        data_offset: u32,
+        id: BustupBlockId,
+        block: PicBlock,
+    ) -> Result<Self::BlockType> {
+        let block = Self::new_block(args, data_offset, block)?;
+        // Publish each job before any portrait assembles its ordered layers.
+        // Other workers may own remaining IDs in the same portrait.
+        let handle = args.pending.lock().remove(&id);
+        if let Some(handle) = handle {
+            args.cache.finish_load(handle, block.clone());
+        }
+        Ok(block)
+    }
+
+    fn on_error(args: &Self::Args, error: &anyhow::Error) {
+        let error = Arc::new(anyhow::anyhow!("Decoding {}: {error:#}", args.label));
+        let pending = std::mem::take(&mut *args.pending.lock());
+        for handle in pending.into_values() {
+            args.cache.fail_load(handle, error.clone());
+        }
+    }
+
     fn build(
         args: &Self::Args,
         skeleton: Self::Skeleton<'_>,
@@ -191,7 +227,7 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
             eye_blocks,
         } = skeleton;
 
-        let lower_block = |block: GpuBustupBlockPromise| block.materialize(args.cache, &token);
+        let lower_block = |block: GpuBustupBlockPromise| block.materialize(&token);
 
         let base_blocks = base_blocks.into_iter().map(lower_block).collect::<Vec<_>>();
         let face1 = face1.map(|block| lower_block(block));
@@ -203,6 +239,7 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
         let eye_blocks = eye_blocks.into_iter().map(lower_block).collect::<Vec<_>>();
 
         Ok(Bustup {
+            character_id: args.character_id,
             origin_x,
             origin_y,
             effective_width,
@@ -217,12 +254,70 @@ impl<'b> BustupBuilder for GpuBustupBuilder<'b> {
     }
 }
 
+impl Bustup<CacheHandle<GpuPictureBlock>> {
+    async fn resolve(self) -> Result<Bustup> {
+        let resolve_blocks = |blocks: Vec<CacheHandle<GpuPictureBlock>>| {
+            futures::future::try_join_all(blocks.into_iter().map(CacheHandle::wait_async))
+        };
+        // Pending cache IDs await outside the compute pool. Even a one-thread
+        // pool can finish a queued producer while this portrait is waiting.
+        Ok(Bustup {
+            character_id: self.character_id,
+            origin_x: self.origin_x,
+            origin_y: self.origin_y,
+            effective_width: self.effective_width,
+            effective_height: self.effective_height,
+            bustup_id: self.bustup_id,
+            base_blocks: resolve_blocks(self.base_blocks).await?,
+            face1: match self.face1 {
+                Some(block) => Some(block.wait_async().await?),
+                None => None,
+            },
+            face2: match self.face2 {
+                Some(block) => Some(block.wait_async().await?),
+                None => None,
+            },
+            mouth_blocks: resolve_blocks(self.mouth_blocks).await?,
+            eye_blocks: resolve_blocks(self.eye_blocks).await?,
+        })
+    }
+}
+
+fn prepare_bustup(
+    data: &[u8],
+    args: GpuBustupBuilderArgs,
+) -> Result<Bustup<CacheHandle<GpuPictureBlock>>> {
+    // Decoder/upload panics must not escape a detached Rayon job and abort the
+    // process. Producer guards cancel and wake pending IDs while unwinding.
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        shin_core::format::bustup::read_bustup::<GpuBustupBuilder>(data, args)
+    }))
+    .map_err(|panic| {
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&str>().copied())
+            .unwrap_or("unknown panic");
+        anyhow::anyhow!("Bustup worker failed: {message}")
+    })?
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct BustupArgs {
     pub expression: String,
     pub character_id: CharacterId,
+    /// Select static descriptor0 rather than animated descriptors1..N.
     pub disable_animations: bool,
 }
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(test)]
+mod native_load_tests;
+
+#[cfg(test)]
+mod cache_tests;
 
 impl Asset for Bustup {
     type Args = BustupArgs;
@@ -248,10 +343,13 @@ impl Asset for Bustup {
                 expression: args.expression,
                 character_id: args.character_id,
                 disable_animations: args.disable_animations,
+                pending: Mutex::new(HashMap::default()),
             };
 
-            shin_core::format::bustup::read_bustup::<GpuBustupBuilder>(&data, args)
+            prepare_bustup(&data, args)
         })
+        .await?
+        .resolve()
         .await
     }
 }

@@ -1,8 +1,14 @@
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    io::{Read, Seek, SeekFrom},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use glam::{Vec2, vec2};
-use shin_core::format::picture::{PicBlock, PicBlockRect, PictureBuilder};
+use shin_core::format::picture::{
+    PicBlock, PicBlockRect, PictureBuilder, read_picture_header_prefix,
+};
 use shin_render::{
     gpu_texture::GpuTexture,
     shaders::types::{
@@ -26,56 +32,7 @@ impl GpuPictureBlock {
     pub const INDICES_PER_RECT: usize = 6;
 
     pub fn new(context: GpuTextureBuilderContext, block: PicBlock, label: &str) -> Self {
-        let rect_count = block.opaque_rects.len() + block.transparent_rects.len();
-
-        let mut vertex_buffer = Vec::with_capacity(rect_count * Self::VERTICES_PER_RECT);
-        let mut index_buffer = Vec::with_capacity(rect_count * Self::INDICES_PER_RECT);
-
-        let offset_x = block.offset_x as f32;
-        let offset_y = block.offset_y as f32;
-
-        let width = block.data.width() as f32;
-        let height = block.data.height() as f32;
-
-        let mut emit_rect = |PicBlockRect {
-                                 from_x,
-                                 from_y,
-                                 to_x,
-                                 to_y,
-                             }: PicBlockRect| {
-            let from_x = from_x as f32;
-            let to_x = to_x as f32;
-            let from_y = from_y as f32;
-            let to_y = to_y as f32;
-
-            let x_left = (offset_x + from_x, (from_x + 1.0) / width);
-            let x_right = (offset_x + to_x + 0.5, (to_x + 0.5 + 1.0) / width);
-            let y_top = (offset_y + from_y, (from_y + 1.0) / height);
-            let y_bottom = (offset_y + to_y + 0.5, (to_y + 0.5 + 1.0) / height);
-
-            let vertices: [_; Self::VERTICES_PER_RECT] = [
-                (x_left, y_top),
-                (x_right, y_top),
-                (x_left, y_bottom),
-                (x_right, y_bottom),
-            ];
-
-            let index_base = vertex_buffer.len() as u16;
-            let indices: [u16; Self::INDICES_PER_RECT] = [0, 1, 2, 3, 2, 1].map(|i| index_base + i);
-
-            vertex_buffer.extend(vertices.map(|((px, tx), (py, ty))| PosTexVertex {
-                position: vec2(px, py),
-                texture_position: vec2(tx, ty),
-            }));
-            index_buffer.extend(indices);
-        };
-
-        block.opaque_rects.iter().cloned().for_each(&mut emit_rect);
-        block
-            .transparent_rects
-            .iter()
-            .cloned()
-            .for_each(&mut emit_rect);
+        let (vertex_buffer, index_buffer) = vertex_data(&block);
 
         let vertex_buffer = Buffer::allocate_vertex(
             context.wgpu_device,
@@ -105,6 +62,84 @@ impl GpuPictureBlock {
     }
 }
 
+pub(super) fn vertex_data(block: &PicBlock) -> (Vec<PosTexVertex>, Vec<u16>) {
+    let rect_count = block.opaque_rects.len() + block.transparent_rects.len();
+
+    let mut vertex_buffer = Vec::with_capacity(rect_count * GpuPictureBlock::VERTICES_PER_RECT);
+    let mut index_buffer = Vec::with_capacity(rect_count * GpuPictureBlock::INDICES_PER_RECT);
+
+    // Native block geometry sign-extends both 16-bit offsets and computes each
+    // reciprocal once. Dividing every UV separately differs by an f32 ULP.
+    let offset_x = block.offset_x as u16 as i16 as f32;
+    let offset_y = block.offset_y as u16 as i16 as f32;
+
+    let width = block.data.width() as f32;
+    let height = block.data.height() as f32;
+    let inverse_width = 1.0 / width;
+    let inverse_height = 1.0 / height;
+
+    let mut emit_rect = |PicBlockRect {
+                             from_x,
+                             from_y,
+                             to_x,
+                             to_y,
+                         }: PicBlockRect| {
+        let from_x = from_x as f32;
+        let to_x = to_x as f32;
+        let from_y = from_y as f32;
+        let to_y = to_y as f32;
+
+        let x_left = (offset_x + from_x, inverse_width * (from_x + 1.0));
+        let x_right = (
+            (to_x + 0.5) + offset_x,
+            inverse_width * ((to_x + 0.5) + 1.0),
+        );
+        let y_top = (offset_y + from_y, inverse_height * (from_y + 1.0));
+        let y_bottom = (
+            (to_y + 0.5) + offset_y,
+            inverse_height * ((to_y + 0.5) + 1.0),
+        );
+
+        let vertices: [_; GpuPictureBlock::VERTICES_PER_RECT] = [
+            (x_left, y_top),
+            (x_right, y_top),
+            (x_left, y_bottom),
+            (x_right, y_bottom),
+        ];
+
+        let index_base = vertex_buffer.len() as u16;
+        let indices: [u16; GpuPictureBlock::INDICES_PER_RECT] =
+            [0, 1, 2, 3, 2, 1].map(|i| index_base + i);
+
+        vertex_buffer.extend(vertices.map(|((px, tx), (py, ty))| PosTexVertex {
+            position: vec2(px, py),
+            texture_position: vec2(tx, ty),
+        }));
+        index_buffer.extend(indices);
+    };
+
+    block.opaque_rects.iter().cloned().for_each(&mut emit_rect);
+    block
+        .transparent_rects
+        .iter()
+        .cloned()
+        .for_each(&mut emit_rect);
+
+    (vertex_buffer, index_buffer)
+}
+
+#[cfg(test)]
+#[path = "picture_native_load_tests.rs"]
+mod native_load_tests;
+
+#[cfg(test)]
+#[path = "picture_cache_tests.rs"]
+mod cache_tests;
+
+#[cfg(test)]
+#[path = "picture_header_tests.rs"]
+mod header_tests;
+
 #[derive(Copy, Clone)]
 pub struct GpuTextureBuilderContext<'a> {
     pub wgpu_device: &'a wgpu::Device,
@@ -114,93 +149,95 @@ pub struct GpuTextureBuilderContext<'a> {
 struct GpuPictureBuilder<'a> {
     context: GpuTextureBuilderContext<'a>,
     label: String,
-    effective_width: u32,
-    effective_height: u32,
-    origin_x: i32,
-    origin_y: i32,
-    blocks: BTreeMap<u32, (Vec<Vec2>, GpuPictureBlock)>,
+    blocks: PictureBlocks,
 }
 
 impl<'a> PictureBuilder for GpuPictureBuilder<'a> {
     type Args = (GpuTextureBuilderContext<'a>, String);
-    type Output = Picture;
+    type Output = PictureBlocks;
 
     fn new(
         (context, label): Self::Args,
-        effective_width: u32,
-        effective_height: u32,
-        origin_x: i32,
-        origin_y: i32,
+        _effective_width: u32,
+        _effective_height: u32,
+        _origin_x: i32,
+        _origin_y: i32,
         _picture_id: u32,
     ) -> Self {
         GpuPictureBuilder {
             context,
             label,
-            effective_width,
-            effective_height,
-            origin_x,
-            origin_y,
-            blocks: BTreeMap::new(),
+            blocks: PictureBlocks {
+                blocks: BTreeMap::new(),
+                placements: Vec::new(),
+            },
         }
     }
 
     fn add_block(
         &mut self,
         data_offset: u32,
-        positions: Vec<(u32, u32)>,
+        _positions: Vec<(u32, u32)>,
         block: PicBlock,
     ) -> Result<()> {
+        // The native block constructor returns null before decoding/uploading
+        // when neither rectangle group has geometry.
+        if block.opaque_rects.is_empty() && block.transparent_rects.is_empty() {
+            return Ok(());
+        }
         let block = GpuPictureBlock::new(
             self.context,
             block,
             &format!("{}/{}", self.label, data_offset),
         );
-        let positions = positions
-            .into_iter()
-            .map(|(x, y)| vec2(x as f32, y as f32))
-            .collect::<Vec<_>>();
-
-        assert!(
-            self.blocks
-                .insert(data_offset, (positions, block))
-                .is_none()
-        );
+        assert!(self.blocks.blocks.insert(data_offset, block).is_none());
 
         Ok(())
     }
 
+    fn set_placements(&mut self, placements: Vec<(u32, (u32, u32))>) {
+        self.blocks.placements = placements
+            .into_iter()
+            .map(|(offset, (x, y))| (offset, vec2(x as f32, y as f32)))
+            .collect();
+    }
+
     fn build(self) -> Result<Self::Output> {
-        let Self {
-            context: _,
-            label,
-            effective_width,
-            effective_height,
-            origin_x,
-            origin_y,
-            blocks,
-        } = self;
-        Ok(Picture {
-            label,
-            effective_width,
-            effective_height,
-            origin_x,
-            origin_y,
-            blocks,
+        Ok(self.blocks)
+    }
+}
+
+pub struct PictureBlocks {
+    blocks: BTreeMap<u32, GpuPictureBlock>,
+    placements: Vec<(u32, Vec2)>,
+}
+
+impl PictureBlocks {
+    #[cfg(test)]
+    pub fn len(&self) -> usize {
+        self.blocks.len()
+    }
+
+    pub fn iter_placements(&self) -> impl Iterator<Item = (u32, Vec2, &GpuPictureBlock)> {
+        self.placements.iter().filter_map(|&(offset, position)| {
+            self.blocks
+                .get(&offset)
+                .map(|block| (offset, position, block))
         })
     }
 }
 
-/// A Picture, uploaded to GPU on demand (because doing it in the asset loading context is awkward)
+/// Per-file metadata and native-ID shared placement/GPU block ownership.
 pub struct Picture {
     #[expect(unused)] // labels are nice for debugging
     pub label: String,
-    #[expect(unused)] // for future stuff
     pub effective_width: u32,
-    #[expect(unused)] // for future stuff
     pub effective_height: u32,
     pub origin_x: i32,
     pub origin_y: i32,
-    pub blocks: BTreeMap<u32, (Vec<Vec2>, GpuPictureBlock)>,
+    pub flags: u32,
+    pub scale: f32,
+    pub blocks: Arc<PictureBlocks>,
 }
 
 impl Asset for Picture {
@@ -213,26 +250,45 @@ impl Asset for Picture {
         data: AssetDataAccessor,
     ) -> Result<Self> {
         let label = format!("Pic[{}]", name);
-        let data = data.read_all().await;
-
-        // TODO: lookup if there's already a picture with this ID in the cache
-        // Not sure if it makes sense to do so though: we are already caching pictures by their name
-        // I don't think it's possible to have two pictures with the same ID but different names (why would they do it?)
-
-        // Move the read_picture to compute task pool since it spawns rayon tasks
-        let context = context.clone();
-        shin_tasks::compute::spawn(move || {
-            shin_core::format::picture::read_picture::<GpuPictureBuilder>(
-                &data,
-                (
-                    GpuTextureBuilderContext {
-                        wgpu_device: &context.wgpu_device,
-                        wgpu_queue: &context.wgpu_queue,
-                    },
-                    label,
-                ),
-            )
+        let mut cursor = data.cursor();
+        let size = cursor.seek(SeekFrom::End(0))?;
+        cursor.seek(SeekFrom::Start(0))?;
+        let mut prefix = [0; 36];
+        cursor.read_exact(&mut prefix)?;
+        let header = read_picture_header_prefix(&prefix, size)?;
+        let load_label = label.clone();
+        let load_context = context.clone();
+        let blocks = context
+            .picture_cache
+            .get_or_load(header.picture_id, || async move {
+                // Cache hits need only the fixed header, as in the native loader.
+                // Decode/upload runs on compute workers without blocking awaiters.
+                shin_tasks::compute::spawn(move || {
+                    let mut data = prefix.to_vec();
+                    cursor.read_to_end(&mut data)?;
+                    shin_core::format::picture::read_picture::<GpuPictureBuilder>(
+                        &data,
+                        (
+                            GpuTextureBuilderContext {
+                                wgpu_device: &load_context.wgpu_device,
+                                wgpu_queue: &load_context.wgpu_queue,
+                            },
+                            load_label,
+                        ),
+                    )
+                })
+                .await
+            })
+            .await?;
+        Ok(Self {
+            label,
+            effective_width: header.effective_width.into(),
+            effective_height: header.effective_height.into(),
+            origin_x: header.origin_x.into(),
+            origin_y: header.origin_y.into(),
+            flags: header.flags,
+            scale: header.scale as f32 * (1.0 / 4096.0),
+            blocks,
         })
-        .await
     }
 }
