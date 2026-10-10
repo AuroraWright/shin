@@ -39,7 +39,32 @@ impl AdvUpdatable for MaskWiperImpl {
     fn update(&mut self, _context: &AdvUpdateContext) {}
 }
 
+// Native a1854..a1890 computes old-scene weights at mask texels0 and1.
+// Inversion changes the direction of the wipe while preserving its endpoints.
+fn mask_weights(param2: MaskParam, flags: MaskFlags, progress: f32) -> glam::Vec2 {
+    let inverse = 1.0 / param2.0;
+    let span = inverse + 1.0;
+    if flags.contains(MaskFlags::INVERT) {
+        let first = span * (1.0 - progress);
+        vec2(first, first - inverse)
+    } else {
+        let first = 1.0 - progress * span;
+        vec2(first, first + inverse)
+    }
+}
+
 impl TimedWiper for MaskWiperImpl {
+    #[cfg(test)]
+    fn reference_set_batch_words(&mut self, words: &[u32]) {
+        self.param2 = MaskParam(f32::from_bits(words[3]));
+        self.flags = MaskFlags::from_bits_retain(words[4] as i32);
+    }
+
+    fn batch_parameters_match(&self, other: &Self) -> bool {
+        Arc::ptr_eq(&self.mask, &other.mask)
+            && self.param2.0 == other.param2.0
+            && self.flags.bits() == other.flags.bits()
+    }
     fn render(
         &self,
         pass: &mut RenderPass,
@@ -48,26 +73,16 @@ impl TimedWiper for MaskWiperImpl {
         texture_source: TextureSource,
         progress: f32,
     ) {
-        let inv_param2 = 1.0 / self.param2.0;
-        let mut min = 1.0 - progress * (inv_param2 + 1.0);
-        let mut max = min + inv_param2;
-
-        if self.flags.contains(MaskFlags::INVERT) {
-            std::mem::swap(&mut min, &mut max);
-        }
-
+        let minmax = mask_weights(self.param2, self.flags, progress);
         let mask_size = self.mask.texture.size_vec();
-
         let transform = top_left_projection_matrix();
-
         let [mut x1, mut y1] = [0.0, 0.0];
-
-        let [mut x2, mut y2] = if self.flags.contains(MaskFlags::SCALE) {
+        // Native a18dc tests bit3 here; MASKLOAD independently uses bit4.
+        let [mut x2, mut y2] = if self.flags.contains(MaskFlags::WIPE_NATIVE_SIZE) {
             (VIRTUAL_CANVAS_SIZE_VEC / mask_size).to_array()
         } else {
             [1.0, 1.0]
         };
-
         if self.flags.contains(MaskFlags::FLIP_X) {
             std::mem::swap(&mut x1, &mut x2);
         }
@@ -108,7 +123,7 @@ impl TimedWiper for MaskWiperImpl {
                         texture_target,
                         texture_mask: self.mask.texture.as_source(),
                         transform,
-                        minmax: vec2(min, max),
+                        minmax,
                     },
                     DrawPrimitive::TrianglesStrip,
                 ),
@@ -135,3 +150,6 @@ impl MaskWiper {
         )
     }
 }
+
+#[cfg(test)]
+mod tests;

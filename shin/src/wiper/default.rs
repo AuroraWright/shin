@@ -20,6 +20,9 @@ impl AdvUpdatable for DefaultWiperImpl {
 }
 
 impl TimedWiper for DefaultWiperImpl {
+    fn batch_parameters_match(&self, _other: &Self) -> bool {
+        true
+    }
     fn render(
         &self,
         pass: &mut RenderPass,
@@ -55,6 +58,14 @@ impl TimedWiper for DefaultWiperImpl {
 pub type DefaultWiper = TimedWiperWrapper<DefaultWiperImpl>;
 
 impl DefaultWiper {
+    #[cfg(test)]
+    pub(crate) fn reference_time_words(&self) -> [u32; 2] {
+        self.state.reference_time_words()
+    }
+    pub(crate) fn advance_ticks(&mut self, delta: f32) {
+        self.state.update(true, Ticks::from_f32(delta));
+    }
+
     pub fn new(duration: Ticks) -> Self {
         Self::from_inner(DefaultWiperImpl, duration)
     }
