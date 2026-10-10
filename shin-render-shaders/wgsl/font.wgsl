@@ -30,7 +30,9 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let color1 = params.color1_;
     let color2 = params.color2_;
 
-    let tint = input.color * (color2 - color1) + color1;
+    // Native program3 rounds the endpoint subtraction, then uses FFMA for
+    // each RGBA channel before multiplying glyph coverage into alpha.
+    let tint = fma(vec4<f32>(input.color), color2 - color1, color1);
 
     let sampled = textureSample(glyph_texture, glyph_sampler, input.texture_position).x;
 

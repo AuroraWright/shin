@@ -278,6 +278,14 @@ pub fn impl_command(input: Structure) -> TokenStream {
 
     // this is for some reason necessary... Otherwise a strange error in the quote! machinery pops out
     let into_runtime_form = &INTO_RUNTIME_FORM;
+    let read_opcode_arms = variants.iter().map(|variant| {
+        let opcode = variant.meta.opcode;
+        let name = &variant.name;
+        quote! {
+            #opcode => <compiletime::#name as #BIN_READ>::read_options(reader, endian, ())
+                .map(Self::#name),
+        }
+    });
 
     quote! {
         /// This module contains compile-time representation of commands.
@@ -309,6 +317,23 @@ pub fn impl_command(input: Structure) -> TokenStream {
         #[derive(#BIN_READ, #BIN_WRITE, PartialEq, Eq, Clone, Debug)]
         pub enum CompiletimeCommand {
             #(#variant_names(compiletime::#variant_names)),*
+        }
+
+        impl CompiletimeCommand {
+            /// Select the command before parsing its fields. The cursor still
+            /// points at the opcode; each generated struct checks its magic.
+            pub fn read_opcode<R: std::io::Read + std::io::Seek>(
+                reader: &mut R,
+                endian: binrw::Endian,
+                opcode: u8,
+            ) -> binrw::BinResult<Self> {
+                match opcode {
+                    #(#read_opcode_arms)*
+                    _ => Err(binrw::Error::BadMagic {
+                        pos: reader.stream_position()?, found: Box::new(opcode),
+                    }),
+                }
+            }
         }
 
         /// Enum over all possible commands (runtime representation).

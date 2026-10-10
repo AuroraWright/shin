@@ -1,11 +1,11 @@
-use glam::{Mat4, Vec2, vec2, vec3};
+use glam::{vec2, vec3, Mat4, Vec2, Vec4};
 use shin_primitives::color::UnormColor;
 use shin_render_shader_types::{
     buffer::VertexSource, texture::TextureSource, vertices::PosColTexVertex,
 };
 
 use crate::{
-    DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder, render_pass::RenderPass,
+    render_pass::RenderPass, DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder,
 };
 
 /// A struct that stores a quad and allows to more easily dispatch various rendering commands, generating the correct vertex data under the hood.
@@ -64,6 +64,12 @@ impl QuadVertices {
         self
     }
 
+    /// Set the depth of all four vertices without changing their XY/UV values.
+    pub fn with_z(mut self, z: f32) -> Self {
+        for vertex in &mut self.vertices { vertex.position.z = z; }
+        self
+    }
+
     pub fn with_tex_box(mut self, left: f32, top: f32, right: f32, bottom: f32) -> Self {
         self.vertices[TOP_LEFT].texture_position.x = left;
         self.vertices[TOP_LEFT].texture_position.y = top;
@@ -115,6 +121,28 @@ impl QuadVertices {
             },
             DrawPrimitive::TrianglesStrip,
         ))
+    }
+    pub fn render_button(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        texture: TextureSource,
+        transform: Mat4,
+        flash1: Vec4,
+        flash2: Vec4,
+    ) {
+        pass.run(builder.build(
+            RenderProgramWithArguments::Button {
+                vertices: VertexSource::VertexData {
+                    vertices: &self.vertices,
+                },
+                texture,
+                transform,
+                flash1,
+                flash2,
+            },
+            DrawPrimitive::TrianglesStrip,
+        ));
     }
 }
 

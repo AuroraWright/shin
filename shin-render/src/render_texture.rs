@@ -1,12 +1,12 @@
 use shin_render_shader_types::{
-    RenderClone, RenderCloneCtx,
     texture::{TextureSampler, TextureSource, TextureTarget, TextureTargetKind},
+    RenderClone, RenderCloneCtx,
 };
 
 use crate::{
-    TEXTURE_FORMAT,
     resize::{CanvasSize, ResizeHandle},
     resizeable_texture::ResizeableTexture,
+    TEXTURE_FORMAT,
 };
 
 const TEXTURE_USAGES: wgpu::TextureUsages = {
@@ -53,6 +53,11 @@ impl RenderTexture {
             sampler,
             label,
         }
+    }
+
+    pub fn dimensions(&self) -> (u32, u32) {
+        let texture = self.inner_texture.get_texture();
+        (texture.width(), texture.height())
     }
 
     pub fn as_texture_source(&self) -> TextureSource {

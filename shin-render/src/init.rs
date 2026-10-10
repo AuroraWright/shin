@@ -25,9 +25,16 @@ impl ResizeableSurface<'_> {
         &mut self,
     ) -> Result<((f32, f32, f32, f32), SurfaceTextureWithView), wgpu::SurfaceError> {
         if let Some(new_size) = self.resize_handle.update() {
+            if new_size.width == 0 || new_size.height == 0 {
+                return Err(wgpu::SurfaceError::Outdated);
+            }
             self.surface_config.width = new_size.width;
             self.surface_config.height = new_size.height;
             self.surface.configure(&self.device, &self.surface_config);
+        }
+        let size = self.resize_handle.get_without_update();
+        if size.width == 0 || size.height == 0 {
+            return Err(wgpu::SurfaceError::Outdated);
         }
 
         let viewport = self.resize_handle.get_viewport();
@@ -37,7 +44,9 @@ impl ResizeableSurface<'_> {
             Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => {
                 debug!("Surface error, recreating surface");
                 self.surface.configure(&self.device, &self.surface_config);
-                return self.get_current_texture();
+                // Fullscreen/Space transitions may stay unavailable for more
+                // than one frame. Retry once, then let the window loop wait.
+                self.surface.get_current_texture()?
             }
             Err(e) => return Err(e),
         };
@@ -180,12 +189,11 @@ pub async fn init_wgpu<'window>(
                 label: None,
                 // this enables SPIRV_SHADER_PASSTHROUGH if available
                 required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-                required_limits: wgpu::Limits {
-                    // This is required in order to support higher resolutions
-                    // TODO: make it configurable for lower-end devices
-                    max_texture_dimension_2d: 4096,
-                    ..wgpu::Limits::downlevel_webgl2_defaults()
-                },
+                // Retina fullscreen can exceed4096 physical pixels even
+                // during its animation. Use the adapter's texture dimensions
+                // while retaining conservative non-resolution requirements.
+                required_limits: wgpu::Limits::downlevel_webgl2_defaults()
+                    .using_resolution(adapter.limits()),
                 memory_hints: Default::default(),
             },
             trace_path,

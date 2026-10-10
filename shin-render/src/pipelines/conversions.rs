@@ -72,6 +72,7 @@ impl From<StencilMask> for u32 {
         match value {
             StencilMask::All => 0xff,
             StencilMask::SignOnly => 0x80,
+            StencilMask::ClipOnly => 0x40,
         }
     }
 }

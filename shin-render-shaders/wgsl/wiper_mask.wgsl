@@ -1,5 +1,4 @@
 #import types::{MaskVertex, WiperMaskUniformParams}
-#import utils::map
 
 @group(0) @binding(0)
 var<uniform> params: WiperMaskUniformParams;
@@ -41,9 +40,9 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let sampled_mask = textureSample(mask_texture, mask_sampler, input.mask_position).x;
 
-    let remapped_mask = 1.0 - clamp(map(sampled_mask, params.minmax.xy), 0.0, 1.0);
-
-    let mixed = mix(sampled_source, sampled_target, remapped_mask);
-
-    return mixed;
+    // Native program37 uses FFMA.SAT for the outgoing weight, then
+    // new - weight*new followed by weight*old + that result for all RGBA.
+    let old_weight = clamp(fma(sampled_mask, params.minmax.y - params.minmax.x, params.minmax.x), 0.0, 1.0);
+    let incoming_part = fma(vec4<f32>(-old_weight), sampled_target, sampled_target);
+    return fma(vec4<f32>(old_weight), sampled_source, incoming_part);
 }

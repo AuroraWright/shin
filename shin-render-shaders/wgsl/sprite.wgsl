@@ -21,7 +21,8 @@ fn vertex_main(input: PosColTexVertex) -> VertexOutput {
     var output: VertexOutput;
 
     output.clip_position = params.transform * vec4<f32>(input.position, 1.0);
-    output.color = input.color.zyxw; // funny swizzing...
+    // UnormColor stores RGBA bytes, matching the Unorm8x4 vertex attribute.
+    output.color = input.color;
     output.texture_position = input.texture_position;
 
     return output;

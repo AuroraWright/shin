@@ -34,7 +34,8 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let alpha = params.alpha.x;
 
-    let mixed = mix(sampled_source, sampled_target, alpha);
-
-    return mixed;
+    // Native program36 weights outgoing RGBA with FFMA(-alpha, source,
+    // source), then adds the incoming RGBA in a second fused stage.
+    let outgoing = fma(vec4<f32>(-alpha), sampled_source, sampled_source);
+    return fma(vec4<f32>(alpha), sampled_target, outgoing);
 }

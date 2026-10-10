@@ -4,24 +4,33 @@ use shin_render_shader_types::{
     buffer::VertexSource,
     texture::{DepthStencilTarget, TextureSamplerStore, TextureTarget, TextureTargetKind},
     uniforms::{
+        BlendUniformParams, BlurUniformParams, ButtonUniformParams, CharacterPortraitUniformParams,
         ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontUniformParams,
-        LayerUniformParams, MaskUniformParams, MovieUniformParams, SpriteUniformParams,
-        WiperDefaultUniformParams, WiperMaskUniformParams,
+        LayerUniformParams, MaskUniformParams, MosaicUniformParams, MovieUniformParams,
+        RasterUniformParams, RippleUniformParams, SpriteUniformParams, TapRippleUniformParams,
+        WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
+        WiperRippleUniformParams, WiperWaveUniformParams, WiperWhirlUniformParams,
+        ZoomBlurUniformParams,
     },
     vertices::PosVertex,
 };
 use shin_render_shaders::{
-    Clear, ClearBindings, Fill, FillBindings, Font, FontBindings, FontBorder, FontBorderBindings,
-    Layer, LayerBindings, Mask, MaskBindings, Movie, MovieBindings, Shader, Sprite, SpriteBindings,
-    WiperDefault, WiperDefaultBindings, WiperMask, WiperMaskBindings,
+    Blend, BlendBindings, Blur, BlurBindings, Button, ButtonBindings, CharacterPortrait,
+    CharacterPortraitBindings, Clear, ClearBindings, Dissolve, DissolveBindings, Fill,
+    FillBindings, Font, FontBindings, FontBorder, FontBorderBindings, Layer, LayerBindings, Mask,
+    MaskBindings, Mosaic, MosaicBindings, Movie, MovieBindings, Raster, RasterBindings, Ripple,
+    RippleBindings, ScreenCurtain, ScreenCurtainBindings, Shader, Sprite, SpriteBindings,
+    TapRipple, TapRippleBindings, WiperDefault, WiperDefaultBindings, WiperGlass,
+    WiperGlassBindings, WiperMask, WiperMaskBindings, WiperRipple, WiperRippleBindings, WiperWave,
+    WiperWaveBindings, WiperWhirl, WiperWhirlBindings, ZoomBlur, ZoomBlurBindings,
 };
 
 use crate::{
+    dynamic_buffer::DynamicBuffer,
+    pipelines::{PipelineStorage, PipelineStorageKey},
     ColorBlendType, CullFace, DepthFunction, DepthState, DepthStencilState, DrawPrimitive,
     RenderProgramWithArguments, RenderRequest, RenderRequestBuilder, StencilFunction,
     StencilOperation, StencilPipelineState, StencilState,
-    dynamic_buffer::DynamicBuffer,
-    pipelines::{PipelineStorage, PipelineStorageKey},
 };
 
 pub struct RenderPass<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder> {
@@ -93,6 +102,11 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
             device,
             pass,
         }
+    }
+
+    /// Set the native half-target viewport used by downsampling effects.
+    pub fn set_viewport(&mut self, width: f32, height: f32) {
+        self.pass.set_viewport(0.0, 0.0, width, height, 0.0, 1.0);
     }
 
     pub fn push_debug(&mut self, label: &str) {
@@ -169,6 +183,26 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 SpriteBindings {
                     params: &SpriteUniformParams { transform },
                     sprite,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Blend {
+                vertices,
+                texture1,
+                texture2,
+                transform,
+                blend,
+                flash,
+            } => self.run_impl::<Blend>(
+                key,
+                BlendBindings {
+                    params: &BlendUniformParams {
+                        transform,
+                        blend,
+                        flash,
+                    },
+                    texture1,
+                    texture2,
                 },
                 vertices,
             ),
@@ -256,6 +290,150 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 },
                 vertices,
             ),
+            RenderProgramWithArguments::TapRipple {
+                vertices,
+                texture,
+                transform,
+                center_scale,
+                wave_params,
+            } => self.run_impl::<TapRipple>(
+                key,
+                TapRippleBindings {
+                    params: &TapRippleUniformParams {
+                        transform,
+                        center_scale,
+                        wave_params,
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Ripple {
+                vertices,
+                texture,
+                transform,
+                wave,
+            } => self.run_impl::<Ripple>(
+                key,
+                RippleBindings {
+                    params: &RippleUniformParams { transform, wave },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Blur {
+                vertices,
+                texture,
+                transform,
+                step,
+            } => self.run_impl::<Blur>(
+                key,
+                BlurBindings {
+                    params: &BlurUniformParams { transform, step },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::ZoomBlur {
+                vertices,
+                texture,
+                transform,
+                center,
+                scales,
+            } => self.run_impl::<ZoomBlur>(
+                key,
+                ZoomBlurBindings {
+                    params: &ZoomBlurUniformParams {
+                        transform,
+                        center,
+                        scales_first: scales[0],
+                        scales_last: scales[1],
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Raster {
+                vertices,
+                texture,
+                transform,
+                amplitude_frequency,
+                phase,
+            } => self.run_impl::<Raster>(
+                key,
+                RasterBindings {
+                    params: &RasterUniformParams {
+                        transform,
+                        amplitude_frequency,
+                        phase,
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Mosaic {
+                vertices,
+                texture,
+                transform,
+                step,
+            } => self.run_impl::<Mosaic>(
+                key,
+                MosaicBindings {
+                    params: &MosaicUniformParams { transform, step },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Dissolve {
+                vertices,
+                texture,
+                breakup,
+                transform,
+            } => self.run_impl::<Dissolve>(
+                key,
+                DissolveBindings {
+                    params: &SpriteUniformParams { transform },
+                    source: texture,
+                    breakup,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Button {
+                vertices,
+                texture,
+                transform,
+                flash1,
+                flash2,
+            } => self.run_impl::<Button>(
+                key,
+                ButtonBindings {
+                    params: &ButtonUniformParams {
+                        transform,
+                        flash1,
+                        flash2,
+                    },
+                    button: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::CharacterPortrait {
+                vertices,
+                portrait,
+                frame,
+                transform,
+                mode,
+            } => self.run_impl::<CharacterPortrait>(
+                key,
+                CharacterPortraitBindings {
+                    params: &CharacterPortraitUniformParams {
+                        transform,
+                        effect: vec4(f32::from(mode), 0.0, 0.0, 0.0),
+                    },
+                    portrait: portrait,
+                    frame: frame,
+                },
+                vertices,
+            ),
             RenderProgramWithArguments::Movie {
                 vertices,
                 texture_luma,
@@ -263,6 +441,9 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 transform,
                 color_bias,
                 color_transform,
+                color_multiplier,
+                alpha_mode,
+                texture_size,
             } => self.run_impl::<Movie>(
                 key,
                 MovieBindings {
@@ -270,6 +451,9 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                         transform,
                         color_bias,
                         color_transform,
+                        color_multiplier,
+                        alpha_mode: u32::from(alpha_mode),
+                        texture_size,
                     },
                     luma: texture_luma,
                     chroma: texture_chroma,
@@ -277,6 +461,79 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 vertices,
             ),
 
+            RenderProgramWithArguments::WiperGlass {
+                vertices,
+                texture,
+                transform,
+                model,
+                effect,
+            } => self.run_impl::<WiperGlass>(
+                key,
+                WiperGlassBindings {
+                    params: &WiperGlassUniformParams {
+                        transform,
+                        model,
+                        effect,
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::WiperRipple {
+                vertices,
+                texture_source,
+                texture_target,
+                transform,
+                center_scale,
+                wave_params,
+            } => self.run_impl::<WiperRipple>(
+                key,
+                WiperRippleBindings {
+                    params: &WiperRippleUniformParams {
+                        transform,
+                        center_scale,
+                        wave_params,
+                    },
+                    source: texture_source,
+                    target: texture_target,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::WiperWave {
+                vertices,
+                texture_source,
+                texture_target,
+                transform,
+                center_scale,
+                front_width,
+            } => self.run_impl::<WiperWave>(
+                key,
+                WiperWaveBindings {
+                    params: &WiperWaveUniformParams {
+                        transform,
+                        center_scale,
+                        front_width,
+                    },
+                    source: texture_source,
+                    target: texture_target,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::WiperWhirl {
+                vertices,
+                texture_source,
+                texture_target,
+                transform,
+                effect,
+            } => self.run_impl::<WiperWhirl>(
+                key,
+                WiperWhirlBindings {
+                    params: &WiperWhirlUniformParams { transform, effect },
+                    source: texture_source,
+                    target: texture_target,
+                },
+                vertices,
+            ),
             RenderProgramWithArguments::WiperDefault {
                 vertices,
                 texture_source,
@@ -316,16 +573,34 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 },
                 vertices,
             ),
+            RenderProgramWithArguments::ScreenCurtain {
+                vertices,
+                texture,
+                mask,
+                transform,
+                minmax,
+            } => self.run_impl::<ScreenCurtain>(
+                key,
+                ScreenCurtainBindings {
+                    params: &WiperMaskUniformParams {
+                        transform,
+                        minmax: minmax.extend(0.0).extend(0.0),
+                    },
+                    texture,
+                    mask,
+                },
+                vertices,
+            ),
             _ => todo!(),
         }
     }
 
     #[tracing::instrument(skip_all)]
     pub fn clear(&mut self, color: Option<UnormColor>, stencil: Option<u8>, depth: Option<f32>) {
-        let z = match depth {
-            Some(z) => z + z - 1.0,
-            None => 1.0,
-        };
+        // Clear's shader writes clip coordinates directly. wgpu accepts
+        // depth in 0..1; converting zero to OpenGL's -1 clips the triangle
+        // away and leaves depth masks unable to clip scrolling content.
+        let z = depth.unwrap_or(1.0);
         // draw a single full-screen triangle
         // https://stackoverflow.com/questions/2588875/whats-the-best-way-to-draw-a-fullscreen-quad-in-opengl-3-2
         let vertices = &[

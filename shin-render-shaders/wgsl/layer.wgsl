@@ -37,7 +37,7 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let tinted = sampled * params.color;
     // the fragment shader won't change the alpha channel
-    let value = evaluate_fragment_shader(tinted.xyz, params.fragment_operation, params.fragment_param);
+    let value = evaluate_fragment_shader(sampled.xyz, params.color.xyz, params.fragment_operation, params.fragment_param);
     let processed = vec4<f32>(value, tinted.w);
 
     if params.output_type == 0 || params.output_type == 2 {

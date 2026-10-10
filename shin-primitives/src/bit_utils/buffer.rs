@@ -17,7 +17,9 @@ macro_rules! impl_bit_int {
                     value as $ty
                 }
                 fn into_u64(self) -> u64 {
-                    self as u64
+                    // Preserve the type's two's-complement representation
+                    // without sign-extending narrower signed integers to u64.
+                    self as u64 & (u64::MAX >> (64 - Self::BITS))
                 }
             }
         )*
@@ -368,6 +370,24 @@ impl BitBuffer {
 #[cfg(test)]
 mod tests {
     use super::BitBuffer;
+
+    #[test]
+    fn writes_signed_values_at_their_native_width() {
+        let mut writer = BitBuffer::empty();
+        writer.write_bool(true);
+        writer.write_int(8, -1i8);
+        writer.write_int(16, i16::MIN);
+        writer.write_int(32, -1i32);
+        writer.write_int(64, i64::MIN);
+        let (data, bits) = writer.into_data();
+        assert_eq!(bits, 121);
+        let mut reader = BitBuffer::with_data(data, 0);
+        assert!(reader.read_bool().unwrap());
+        assert_eq!(reader.read_int::<i8>(8).unwrap(), -1);
+        assert_eq!(reader.read_int::<i16>(16).unwrap(), i16::MIN);
+        assert_eq!(reader.read_int::<i32>(32).unwrap(), -1);
+        assert_eq!(reader.read_int::<i64>(64).unwrap(), i64::MIN);
+    }
 
     #[test]
     fn read_one_byte() {

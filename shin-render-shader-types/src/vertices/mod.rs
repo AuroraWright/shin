@@ -235,3 +235,33 @@ impl VertexType for MaskVertex {
         },
     ];
 }
+
+/// Native Glass prism vertex: position, face normal, and source scene UV.
+#[derive(Copy, Clone, Debug, NoUninit)]
+#[repr(C, packed)]
+pub struct GlassVertex {
+    pub position: Vec3,
+    pub normal: Vec3,
+    pub texture_position: Vec2,
+}
+impl VertexType for GlassVertex {
+    const NAME: &'static str = "GlassVertex";
+    const ATTRIBUTE_NAMES: &'static [&'static str] = &["position", "normal", "texture_position"];
+    const ATTRIBUTES: &'static [wgpu::VertexAttribute] = &[
+        wgpu::VertexAttribute {
+            format: wgpu::VertexFormat::Float32x3,
+            offset: 0,
+            shader_location: 0,
+        },
+        wgpu::VertexAttribute {
+            format: wgpu::VertexFormat::Float32x3,
+            offset: 12,
+            shader_location: 1,
+        },
+        wgpu::VertexAttribute {
+            format: wgpu::VertexFormat::Float32x2,
+            offset: 24,
+            shader_location: 2,
+        },
+    ];
+}

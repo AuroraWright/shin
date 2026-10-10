@@ -1,6 +1,6 @@
-use enum_map::{enum_map, EnumMap};
+use enum_map::{EnumMap, enum_map};
 use gilrs::{EventType, GamepadId, Gilrs};
-use glam::{vec2, Vec2};
+use glam::{Vec2, vec2};
 use indexmap::IndexMap;
 use petitset::PetitSet;
 use tracing::{error, warn};
@@ -43,6 +43,23 @@ impl UnifiedGamepadState {
             axes: enum_map! { _ => 0.0 },
             virtual_keys: enum_map! { _ => false },
         }
+    }
+
+    fn merge(&mut self, other: &Self) {
+        self.buttons = self
+            .buttons
+            .map(|button, held| held || other.buttons[button]);
+        self.virtual_keys = self
+            .virtual_keys
+            .map(|key, held| held || other.virtual_keys[key]);
+        self.axes = self.axes.map(|axis, value| {
+            let candidate = other.axes[axis];
+            if candidate.abs() > value.abs() {
+                candidate
+            } else {
+                value
+            }
+        });
     }
 
     fn update_virtual_keys(&mut self) {
@@ -146,6 +163,8 @@ impl RawInputAccumulator {
             }
             WindowEvent::Focused(false) => {
                 state.keyboard.clear();
+                state.mouse.buttons = EnumMap::default();
+                state.mouse.scroll_amount = 0.0;
             }
             WindowEvent::CursorMoved { position, .. } => {
                 state.mouse.position = vec2(position.x as f32, position.y as f32);
@@ -228,16 +247,9 @@ impl RawInputAccumulator {
                 gamepads
                     .gamepads
                     .values()
-                    .fold(UnifiedGamepadState::new(), |acc, gamepad| {
-                        UnifiedGamepadState {
-                            buttons: acc
-                                .buttons
-                                .map(|button, value| gamepad.buttons[button] | value),
-                            axes: acc.axes.map(|axis, value| gamepad.axes[axis].max(value)),
-                            virtual_keys: acc
-                                .virtual_keys
-                                .map(|key, value| gamepad.virtual_keys[key] | value),
-                        }
+                    .fold(UnifiedGamepadState::new(), |mut acc, gamepad| {
+                        acc.merge(gamepad);
+                        acc
                     });
         }
 
@@ -322,5 +334,64 @@ fn convert_winit_mouse_button(winit: winit::event::MouseButton) -> Option<MouseB
         // TODO: how should we model those?
         winit::event::MouseButton::Back | winit::event::MouseButton::Forward => None,
         winit::event::MouseButton::Other(_) => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn losing_focus_clears_captured_mouse_buttons_and_scroll() {
+        use super::*;
+        let mut input = RawInputAccumulator {
+            gilrs: None,
+            state: RawInputState::new(),
+        };
+        input.state.keyboard.insert(KeyCode::ControlLeft);
+        input.state.mouse.buttons[MouseButton::Left] = true;
+        input.state.mouse.buttons[MouseButton::WheelUp] = true;
+        input.state.mouse.scroll_amount = 3.0;
+        input.on_winit_event(&WindowEvent::Focused(false));
+        let frame = input.start_frame();
+        assert!(frame.keyboard.is_empty());
+        assert!(frame.mouse.buttons.values().all(|held| !held));
+        assert_eq!(frame.mouse.scroll_amount, 0.0);
+    }
+    use super::*;
+    #[test]
+    fn merged_controllers_keep_signed_strongest_axes_and_button_unions() {
+        let mut unified = UnifiedGamepadState::new();
+        let mut first = UnifiedGamepadState::new();
+        first.axes[GamepadAxis::RightStickY] = -0.8;
+        first.buttons[GamepadButton::A] = true;
+        first.update_virtual_keys();
+        unified.merge(&first);
+        assert_eq!(unified.axes[GamepadAxis::RightStickY], -0.8);
+        let mut second = UnifiedGamepadState::new();
+        second.axes[GamepadAxis::RightStickY] = 0.5;
+        second.buttons[GamepadButton::B] = true;
+        second.update_virtual_keys();
+        unified.merge(&second);
+        assert_eq!(unified.axes[GamepadAxis::RightStickY], -0.8);
+        assert!(unified.buttons[GamepadButton::A] && unified.buttons[GamepadButton::B]);
+        assert!(unified.virtual_keys[VirtualGamepadButton::StickRDown]);
+        second.axes[GamepadAxis::RightStickY] = 0.9;
+        unified.merge(&second);
+        assert_eq!(unified.axes[GamepadAxis::RightStickY], 0.9);
+    }
+    #[test]
+    fn signed_stick_thresholds_preserve_native_hysteresis() {
+        let mut pad = UnifiedGamepadState::new();
+        for (value, held) in [
+            (-0.69, false),
+            (-0.7, true),
+            (-0.4, true),
+            (-0.39, false),
+            (0.7, false),
+        ] {
+            pad.axes[GamepadAxis::LeftStickX] = value;
+            pad.update_virtual_keys();
+            assert_eq!(pad.virtual_keys[VirtualGamepadButton::StickLLeft], held);
+        }
+        assert!(pad.virtual_keys[VirtualGamepadButton::StickLRight]);
     }
 }

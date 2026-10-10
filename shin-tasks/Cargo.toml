@@ -27,3 +27,6 @@ futures-channel = "0.3"
 
 [lints]
 workspace = true
+
+[features]
+reference-tests = []

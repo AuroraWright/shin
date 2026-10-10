@@ -3,6 +3,7 @@ use enum_iterator::Sequence;
 #[derive(Debug)]
 pub struct TextureSamplerStore {
     pub linear: wgpu::Sampler,
+    pub linear_mirror_u: wgpu::Sampler,
 }
 
 impl TextureSamplerStore {
@@ -15,12 +16,25 @@ impl TextureSamplerStore {
             ..Default::default()
         });
 
-        Self { linear }
+        let linear_mirror_u = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Linear Mirror U Sampler"),
+            address_mode_u: wgpu::AddressMode::MirrorRepeat,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
+
+        Self {
+            linear,
+            linear_mirror_u,
+        }
     }
 
     pub fn get(&self, sampler: TextureSampler) -> &wgpu::Sampler {
         match sampler {
             TextureSampler::Linear => &self.linear,
+            TextureSampler::LinearMirrorU => &self.linear_mirror_u,
         }
     }
 }
@@ -28,6 +42,7 @@ impl TextureSamplerStore {
 #[derive(Debug, Copy, Clone)]
 pub enum TextureSampler {
     Linear,
+    LinearMirrorU,
 }
 
 #[derive(Debug, Copy, Clone)]

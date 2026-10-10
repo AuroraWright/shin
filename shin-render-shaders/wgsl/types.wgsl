@@ -1,3 +1,9 @@
+struct GlassVertex {
+    @location(0) position: vec3<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) texture_position: vec2<f32>,
+}
+
 struct PosVertex {
     @location(0) position: vec3<f32>,
 }
@@ -52,6 +58,80 @@ struct SpriteUniformParams {
     transform: mat4x4<f32>,
 }
 
+struct ButtonUniformParams {
+    transform: mat4x4<f32>,
+    flash1_: vec4<f32>,
+    flash2_: vec4<f32>,
+}
+
+struct BlendUniformParams {
+    transform: mat4x4<f32>,
+    blend: vec4<f32>,
+    flash: vec4<f32>,
+}
+
+struct MosaicUniformParams {
+    transform: mat4x4<f32>,
+    step: vec4<f32>,
+}
+
+struct RasterUniformParams {
+    transform: mat4x4<f32>,
+    amplitude_frequency: vec4<f32>,
+    phase: vec4<f32>,
+}
+
+struct RippleUniformParams {
+    transform: mat4x4<f32>,
+    wave: vec4<f32>,
+}
+
+struct TapRippleUniformParams {
+    transform: mat4x4<f32>,
+    center_scale: vec4<f32>,
+    wave_params: vec4<f32>,
+}
+
+struct BlurUniformParams {
+    transform: mat4x4<f32>,
+    step: vec4<f32>,
+}
+
+struct ZoomBlurUniformParams {
+    transform: mat4x4<f32>,
+    center: vec4<f32>,
+    scales_first: vec4<f32>,
+    scales_last: vec4<f32>,
+}
+
+struct WiperWhirlUniformParams {
+    transform: mat4x4<f32>,
+    effect: vec4<f32>,
+}
+
+struct WiperWaveUniformParams {
+    transform: mat4x4<f32>,
+    center_scale: vec4<f32>,
+    front_width: vec4<f32>,
+}
+
+struct WiperRippleUniformParams {
+    transform: mat4x4<f32>,
+    center_scale: vec4<f32>,
+    wave_params: vec4<f32>,
+}
+
+struct CharacterPortraitUniformParams {
+    transform: mat4x4<f32>,
+    effect: vec4<f32>,
+}
+
+struct WiperGlassUniformParams {
+    transform: mat4x4<f32>,
+    model: mat4x4<f32>,
+    effect: vec4<f32>,
+}
+
 struct FontUniformParams {
     transform: mat4x4<f32>,
     color1_: vec4<f32>,
@@ -84,6 +164,9 @@ struct MovieUniformParams {
     transform: mat4x4<f32>,
     color_bias: vec4<f32>,
     color_transform: array<vec4<f32>, 3>,
+    color_multiplier: vec4<f32>,
+    alpha_mode: u32,
+    texture_size: vec4<f32>,
 }
 
 struct WiperDefaultUniformParams {

@@ -31,8 +31,24 @@ fn vertex_main(input: PosTexVertex) -> VertexOutput {
 
 @fragment
 fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let luma = textureSample(luma_texture, luma_sampler, input.texture_position).x;
-    let chroma = textureSample(chroma_texture, chroma_sampler, input.texture_position).xy;
+    var luma_uv = input.texture_position;
+    var chroma_uv = input.texture_position;
+    var alpha = 1.0;
+    if params.alpha_mode != 0u {
+        let luma_height = params.texture_size.y;
+        let chroma_height = params.texture_size.w;
+        let region_height = 0.5 - 4.0 / luma_height;
+        let mask_start = 0.5 + 4.0 / luma_height;
+        luma_uv.y = min(input.texture_position.y * region_height, region_height - 0.5 / luma_height);
+        chroma_uv.y = min(input.texture_position.y * region_height, region_height - 0.5 / chroma_height);
+        let alpha_uv = vec2<f32>(input.texture_position.x,
+            max(input.texture_position.y * region_height + mask_start, mask_start + 0.5 / luma_height));
+        let mask = textureSample(luma_texture, luma_sampler, alpha_uv).x;
+        // The grayscale mask is encoded as video-range luma: black16, white235.
+        alpha = clamp((mask - 16.0 / 255.0) * (255.0 / 219.0), 0.0, 1.0);
+    }
+    let luma = textureSample(luma_texture, luma_sampler, luma_uv).x;
+    let chroma = textureSample(chroma_texture, chroma_sampler, chroma_uv).xy;
 
     let biased_yuv = vec3<f32>(luma, chroma.x, chroma.y) - params.color_bias.xyz;
 
@@ -40,5 +56,5 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let g = dot(biased_yuv, params.color_transform[1].xyz);
     let b = dot(biased_yuv, params.color_transform[2].xyz);
 
-    return vec4<f32>(r, g, b, 1.0);
+    return vec4<f32>(r, g, b, alpha) * params.color_multiplier;
 }

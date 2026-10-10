@@ -11,20 +11,24 @@ use heck::ToPascalCase;
 use indexmap::IndexMap;
 use itertools::{EitherOrBoth, Itertools};
 use naga::{
-    Handle, ShaderStage, Type, UniqueArena,
     valid::{Capabilities, ValidationFlags},
+    Handle, ShaderStage, Type, UniqueArena,
 };
-use quote::{TokenStreamExt, quote};
+use quote::{quote, TokenStreamExt};
 use shin_render_shader_types::{
     uniforms::{
-        ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontUniformParams,
-        LayerUniformParams, MaskUniformParams, MovieUniformParams, SpriteUniformParams,
-        UniformType, WiperDefaultUniformParams, WiperMaskUniformParams,
         metadata::{ArraySchema, PrimitiveType, StructSchema, TypeSchema},
+        BlendUniformParams, BlurUniformParams, ButtonUniformParams, CharacterPortraitUniformParams,
+        ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontUniformParams,
+        LayerUniformParams, MaskUniformParams, MosaicUniformParams, MovieUniformParams,
+        RasterUniformParams, RippleUniformParams, SpriteUniformParams, TapRippleUniformParams,
+        UniformType, WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
+        WiperRippleUniformParams, WiperWaveUniformParams, WiperWhirlUniformParams,
+        ZoomBlurUniformParams,
     },
     vertices::{
-        BlendVertex, MaskVertex, PosColTexVertex, PosColVertex, PosTexVertex, PosVertex,
-        TextVertex, VertexType, WindowVertex,
+        BlendVertex, GlassVertex, MaskVertex, PosColTexVertex, PosColVertex, PosTexVertex,
+        PosVertex, TextVertex, VertexType, WindowVertex,
     },
 };
 
@@ -167,12 +171,14 @@ impl GenCtx {
         };
         let handle = self.type_arena.insert(ty, naga::Span::UNDEFINED);
 
-        self.known_structs
-            .insert(schema.name.to_string(), KnownStructInfo {
+        self.known_structs.insert(
+            schema.name.to_string(),
+            KnownStructInfo {
                 schema: *schema,
                 handle,
                 fully_qualified_rust_name: fully_qualified_rust_name.to_string(),
-            });
+            },
+        );
 
         handle
     }
@@ -274,6 +280,7 @@ struct WgslSchema {
 fn generate_wgsl_types() -> WgslSchema {
     let mut ctx = GenCtx::new();
 
+    ctx.gen_vertex::<GlassVertex>();
     ctx.gen_vertex::<PosVertex>();
     ctx.gen_vertex::<PosTexVertex>();
     ctx.gen_vertex::<PosColVertex>();
@@ -286,6 +293,19 @@ fn generate_wgsl_types() -> WgslSchema {
     ctx.gen_uniform::<ClearUniformParams>();
     ctx.gen_uniform::<FillUniformParams>();
     ctx.gen_uniform::<SpriteUniformParams>();
+    ctx.gen_uniform::<ButtonUniformParams>();
+    ctx.gen_uniform::<BlendUniformParams>();
+    ctx.gen_uniform::<MosaicUniformParams>();
+    ctx.gen_uniform::<RasterUniformParams>();
+    ctx.gen_uniform::<RippleUniformParams>();
+    ctx.gen_uniform::<TapRippleUniformParams>();
+    ctx.gen_uniform::<BlurUniformParams>();
+    ctx.gen_uniform::<ZoomBlurUniformParams>();
+    ctx.gen_uniform::<WiperWhirlUniformParams>();
+    ctx.gen_uniform::<WiperWaveUniformParams>();
+    ctx.gen_uniform::<WiperRippleUniformParams>();
+    ctx.gen_uniform::<CharacterPortraitUniformParams>();
+    ctx.gen_uniform::<WiperGlassUniformParams>();
     ctx.gen_uniform::<FontUniformParams>();
     ctx.gen_uniform::<FontBorderUniformParams>();
     ctx.gen_uniform::<LayerUniformParams>();
@@ -590,10 +610,13 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
                         // assert_eq!(binding.binding, 0);
                         assert_eq!(arrayed, false);
                         assert_eq!(dim, naga::ImageDimension::D2);
-                        assert_eq!(class, naga::ImageClass::Sampled {
-                            kind: naga::ScalarKind::Float,
-                            multi: false
-                        });
+                        assert_eq!(
+                            class,
+                            naga::ImageClass::Sampled {
+                                kind: naga::ScalarKind::Float,
+                                multi: false
+                            }
+                        );
 
                         texture_bindings.insert(name.to_string(), binding.binding);
                     }
@@ -622,11 +645,14 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
                         let fully_qualified_rust_name =
                             wgsl_schema.struct_rust_names.get(type_name).unwrap();
 
-                        struct_bindings.insert(var.name.clone().unwrap(), StructBindingInfo {
-                            binding: binding.binding,
-                            fully_qualified_rust_ty: fully_qualified_rust_name.clone(),
-                            size: ty.inner.size(module.to_ctx()),
-                        });
+                        struct_bindings.insert(
+                            var.name.clone().unwrap(),
+                            StructBindingInfo {
+                                binding: binding.binding,
+                                fully_qualified_rust_ty: fully_qualified_rust_name.clone(),
+                                size: ty.inner.size(module.to_ctx()),
+                            },
+                        );
                     }
                     e => panic!("unsupported global variable type {:?}", e),
                 }
@@ -640,11 +666,14 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
 
             for (name, info) in struct_bindings.into_iter() {
                 assert_eq!(
-                    bindings_unified.insert(name, ShaderBindingGroupDescriptor::Uniform {
-                        binding: info.binding,
-                        ty: info.fully_qualified_rust_ty,
-                        size: info.size,
-                    },),
+                    bindings_unified.insert(
+                        name,
+                        ShaderBindingGroupDescriptor::Uniform {
+                            binding: info.binding,
+                            ty: info.fully_qualified_rust_ty,
+                            size: info.size,
+                        },
+                    ),
                     None
                 );
             }
@@ -657,11 +686,13 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
             {
                 match v {
                     EitherOrBoth::Both((name, texture_binding), (_, sampler_binding)) => {
-                        let existing =
-                            bindings_unified.insert(name, ShaderBindingGroupDescriptor::Texture {
+                        let existing = bindings_unified.insert(
+                            name,
+                            ShaderBindingGroupDescriptor::Texture {
                                 texture_binding,
                                 sampler_binding,
-                            });
+                            },
+                        );
                         assert_eq!(existing, None);
                     }
                     EitherOrBoth::Left((texture_name, _)) => {
@@ -965,6 +996,21 @@ fn codegen_shaders_file(shaders: &[ShaderWithDescriptor]) -> String {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=wgsl/dissolve.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/mosaic.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/raster.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/ripple.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/tap_ripple.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/blur.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/zoom_blur.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/wiper_whirl.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/wiper_wave.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/wiper_ripple.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/wiper_glass.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/character_portrait.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/button.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/blend.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/screen_curtain.wgsl");
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let manifest_dir = Path::new(manifest_dir.as_str());
     let wgsl_dir = manifest_dir.join("wgsl");
