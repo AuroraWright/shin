@@ -6,23 +6,21 @@ use shin_render::{
     ColorBlendType, DrawPrimitive, LayerBlendType, LayerFragmentShader, LayerShaderOutputKind,
     PassKind, RenderProgramWithArguments, RenderRequestBuilder,
     render_pass::RenderPass,
-    shaders::types::{
-        RenderClone,
-        buffer::VertexSource,
-        texture::{DepthStencilTarget, TextureTarget},
-    },
+    shaders::types::{RenderClone, buffer::VertexSource},
 };
 
 use crate::{
     asset::picture::{GpuPictureBlock, Picture},
     layer::{
-        LayerProperties, NewDrawableLayerWrapper,
+        NewDrawableLayerWrapper,
         new_drawable_layer::{
             NewDrawableLayer, NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass,
         },
-        render_params::{DrawableClipMode, DrawableClipParams, DrawableParams, TransformParams},
+        render_params::{
+            DrawableClipMode, DrawableClipParams, DrawableParams, TransformParams,
+            multiply_transforms,
+        },
     },
-    render::PreRenderContext,
     update::{AdvUpdatable, AdvUpdateContext},
 };
 
@@ -169,6 +167,18 @@ impl PictureLayerImpl {
         }
     }
 
+    fn local_transform(&self, parent: Mat4) -> Mat4 {
+        // Native c5ea0: header origin, then per-file scale, then the incoming
+        // layer transform. Placement translation precedes that composition.
+        let translation = Mat4::from_translation(Vec3::new(
+            -self.picture.origin_x as f32,
+            -self.picture.origin_y as f32,
+            0.0,
+        ));
+        let scale = Mat4::from_scale(Vec3::new(self.picture.scale, self.picture.scale, 1.0));
+        multiply_transforms(parent, multiply_transforms(scale, translation))
+    }
+
     fn render_blocks(
         &self,
         pass: &mut RenderPass,
@@ -176,16 +186,6 @@ impl PictureLayerImpl {
         params: PictureBlockParams,
         transform: Mat4,
     ) {
-        let translation = Mat4::from_translation(Vec3::new(
-            -self.picture.origin_x as f32,
-            -self.picture.origin_y as f32,
-            0.0,
-        ));
-        // NOTE: this scale is combination of a scale from the header (anything besides 1.0 is rejected by shin-core rn) and ¿device-specific? scale (which is 1.0 on switch)
-        let scale = Mat4::from_scale(Vec3::new(1.0, 1.0, 1.0));
-
-        let transform = transform * scale * translation;
-
         pass.push_debug(&format!(
             "PictureLayer[{}]/{}",
             &self.label,
@@ -195,21 +195,48 @@ impl PictureLayerImpl {
                 PictureBlockPassKind::OpaqueAndTransparent => "opaque_and_transparent",
             }
         ));
-        for (&offset, (positions, block)) in &self.picture.blocks {
+        for (offset, block, placement) in self.placement_transforms(transform) {
             pass.push_debug(&format!("Block[{}]", offset));
-            for position in positions {
-                let transform = transform * Mat4::from_translation(position.extend(0.0));
-                render_block(block, pass, builder, params, transform);
-            }
+            render_block(block, pass, builder, params, placement);
             pass.pop_debug();
         }
         pass.pop_debug();
+    }
+
+    fn placement_transforms(
+        &self,
+        parent: Mat4,
+    ) -> impl Iterator<Item = (u32, &GpuPictureBlock, Mat4)> {
+        let transform = self.local_transform(parent);
+        self.picture
+            .blocks
+            .iter_placements()
+            .map(move |(offset, position, block)| {
+                let placement =
+                    multiply_transforms(transform, Mat4::from_translation(position.extend(0.0)));
+                (offset, block, placement)
+            })
     }
 }
 
 pub type PictureLayer = NewDrawableLayerWrapper<PictureLayerImpl>;
 
 impl PictureLayer {
+    #[cfg(test)]
+    pub(crate) fn reference_placement_transforms(&self, parent: Mat4) -> Vec<(u32, Mat4)> {
+        self.inner_ref()
+            .placement_transforms(parent)
+            .map(|(offset, _, matrix)| (offset, matrix))
+            .collect()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_resource_owner(&self) -> std::sync::Weak<Picture> {
+        Arc::downgrade(&self.inner_ref().picture)
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_resource_identity(&self) -> usize {
+        Arc::as_ptr(&self.inner_ref().picture) as usize
+    }
     pub fn new(picture: Arc<Picture>, picture_name: Option<String>) -> Self {
         Self::from_inner(PictureLayerImpl::new(picture, picture_name))
     }
@@ -218,18 +245,6 @@ impl PictureLayer {
 impl NewDrawableLayerNeedsSeparatePass for PictureLayerImpl {}
 
 impl NewDrawableLayer for PictureLayerImpl {
-    #[tracing::instrument(skip_all)]
-    fn render_drawable_indirect(
-        &mut self,
-        _context: &mut PreRenderContext,
-        _props: &LayerProperties,
-        _target: TextureTarget,
-        _depth_stencil: DepthStencilTarget,
-        _transform: &TransformParams,
-    ) -> PassKind {
-        todo!()
-    }
-
     #[tracing::instrument(skip_all)]
     fn render_drawable_direct(
         &self,

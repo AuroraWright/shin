@@ -1,0 +1,352 @@
+//! Genuine native populated Sakura particle owner copies compared with desktop.
+use super::super::UserLayer;
+use super::*;
+use crate::{
+    asset::system::{AssetLoadContext, LayeredAssetIo, cache::AssetCache},
+    layer::{DrawableLayer, Layer, LayerGroup},
+    update::AdvUpdateContext,
+    wiper::DefaultWiper,
+};
+use shin_core::{
+    primitives::update::FrameId,
+    time::{Ticks, Tween},
+    vm::command::types::{LayerProperty, LayerbankId},
+};
+use shin_render::shaders::types::{RenderClone, RenderCloneCtx};
+use std::{collections::BTreeSet, path::Path};
+
+enum Root {
+    Animation(UserLayer),
+    Group(LayerGroup),
+}
+impl Root {
+    fn leaves(&self) -> Vec<&UserLayer> {
+        match self {
+            Self::Animation(l) => vec![l],
+            Self::Group(g) => g.reference_owner_leaves(),
+        }
+    }
+    fn target(&mut self) -> &mut UserLayer {
+        match self {
+            Self::Animation(l) => l,
+            Self::Group(g) => g.get_layer_mut(LayerbankId::new(0)).unwrap(),
+        }
+    }
+    fn copied(&self, ctx: &mut RenderCloneCtx) -> Self {
+        match self {
+            Self::Animation(l) => Self::Animation(l.render_clone(ctx)),
+            Self::Group(g) => Self::Group(g.render_clone(ctx)),
+        }
+    }
+    fn forward(&mut self) {
+        match self {
+            Self::Animation(l) => l.fast_forward(),
+            Self::Group(g) => g.fast_forward(),
+        }
+    }
+    fn slots(&self) -> usize {
+        match self {
+            Self::Animation(_) => 0,
+            Self::Group(g) => g.reference_transition_words().len(),
+        }
+    }
+}
+fn animation(l: &UserLayer) -> &SakuraLayer {
+    let UserLayer::Animation(l) = l else {
+        panic!("Expected actual Animation variant")
+    };
+    l
+}
+fn animation_mut(l: &mut UserLayer) -> &mut SakuraLayer {
+    let UserLayer::Animation(l) = l else {
+        panic!("Expected actual Animation variant")
+    };
+    l
+}
+fn make_animation(textures: &Arc<SakuraTextures>, mode: i32, populated: bool) -> UserLayer {
+    let mut l: UserLayer = PreparedSakuraLayer {
+        textures: textures.clone(),
+        mode,
+    }
+    .construct()
+    .into();
+    let particles = animation_mut(&mut l).inner_mut().particles.get_mut();
+    assert!(particles.particles.len() >= 2);
+    particles.particles.last_mut().unwrap().alive = false;
+    if populated {
+        for i in 0..90 {
+            let mut t = l
+                .properties_mut()
+                .property_tweener_mut(<LayerProperty as enum_map::Enum>::from_usize(i));
+            t.fast_forward_to(100.0 + i as f32);
+            for j in 1..=2 {
+                t.enqueue(
+                    100.0 + i as f32 + j as f32,
+                    Tween::linear(Ticks::from_f32(10.0)),
+                );
+            }
+        }
+    }
+    l
+}
+fn prepare_root(textures: &Arc<SakuraTextures>, mode: i32, populated: bool, graph: usize) -> Root {
+    if graph == 0 {
+        return Root::Animation(make_animation(textures, mode, populated));
+    }
+    let mut group = LayerGroup::new(None);
+    group.add_layer(
+        LayerbankId::new(0),
+        make_animation(textures, mode, populated),
+    );
+    if graph == 2 {
+        let mut next = make_animation(textures, mode, populated);
+        if populated {
+            next.set_properties(
+                group
+                    .get_layer(LayerbankId::new(0))
+                    .unwrap()
+                    .properties()
+                    .share(),
+            );
+        }
+        group.add_layer_with_wiper(
+            LayerbankId::new(0),
+            next,
+            Some(DefaultWiper::new(Ticks::from_f32(30.0)).into()),
+        );
+    }
+    Root::Group(group)
+}
+fn snapshot(
+    id: usize,
+    phase: &str,
+    roots: &[Option<Root>; 3],
+    textures: &Arc<SakuraTextures>,
+    last_rng: &mut usize,
+) -> String {
+    let now = crate::engine_random::seed_call_count();
+    let mut words = vec![
+        "A".into(),
+        id.to_string(),
+        phase.into(),
+        (now - *last_rng).to_string(),
+    ];
+    *last_rng = now;
+    let mut owners = Vec::new();
+    let mut pointers = BTreeSet::new();
+    let mut live = 0;
+    let mut slots = 0;
+    for root in roots {
+        let leaves = root.as_ref().map_or_else(Vec::new, Root::leaves);
+        words.extend([
+            usize::from(root.is_some()).to_string(),
+            leaves.len().to_string(),
+        ]);
+        if let Some(root) = root {
+            slots += root.slots();
+        }
+        for l in leaves {
+            live += 1;
+            let f = animation(l);
+            let model = f.inner_ref().particles.lock();
+            assert!(
+                pointers.insert(model.particles.as_ptr() as usize),
+                "Every live layer owns a separate particle buffer"
+            );
+            let props = l.properties();
+            let owner = props.initialized_identity();
+            owners.push(owner);
+            words.extend([
+                usize::from(owner.is_some()).to_string(),
+                format!("{:08x}", f.reference_dissolve_seed()),
+                format!("{:08x}", model.elapsed.to_bits()),
+                model.reference_seed().to_string(),
+                model.mode.to_string(),
+                format!("{:08x}", model.reference_owner_emission().to_bits()),
+                model.particles.len().to_string(),
+            ]);
+            for p in &model.particles {
+                words.extend([usize::from(p.alive).to_string(), p.variant.to_string()]);
+                for v in [
+                    p.origin.x,
+                    p.origin.y,
+                    p.travel_speed,
+                    p.travel_angle,
+                    p.radius,
+                    p.scale,
+                    p.spin_angle,
+                    p.spin_speed,
+                    p.age,
+                ] {
+                    words.push(format!("{:08x}", v.to_bits()));
+                }
+            }
+            if owner.is_some() {
+                for i in 0..90 {
+                    let t = props
+                        .reference_tweener_snapshot(<LayerProperty as enum_map::Enum>::from_usize(
+                            i,
+                        ))
+                        .unwrap();
+                    words.extend([
+                        format!("{:08x}", t.value().to_bits()),
+                        usize::from(!t.is_idle()).to_string(),
+                    ]);
+                }
+            }
+        }
+    }
+    for a in &owners {
+        for b in &owners {
+            words.push(usize::from(a.is_some() && a == b).to_string());
+        }
+    }
+    words.push(slots.to_string());
+    assert_eq!(
+        Arc::strong_count(textures),
+        live + 1,
+        "Desktop policy: explicit fixture atlas plus layer-owned Arcs"
+    );
+    words.join(" ")
+}
+
+#[test]
+#[ignore = "supplied ROM,native Animation ownership traces and Metal;no audio/window/saves"]
+fn reference_native_animation_clone_group_slot_and_final_retirement() {
+    crate::init_test_task_pools();
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let output = std::path::PathBuf::from(std::env::var_os("SHIN_ANIMATION_OWNER_OUTPUT").unwrap());
+    let request = std::fs::read_to_string(output.join("request.txt")).unwrap();
+    let instance = wgpu::Instance::default();
+    let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
+    let (device, queue) =
+        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+    let mut total = 0;
+    for version in ["original", "1.03"] {
+        let mut io = LayeredAssetIo::new();
+        io.try_with_rom(root.join("umineko_switch_files/data.rom"))
+            .unwrap();
+        if version == "1.03" {
+            io.try_with_rom(root.join("umineko_switch_files/patch.rom"))
+                .unwrap();
+        }
+        let server = Arc::new(AssetServer::new(
+            io.into(),
+            AssetLoadContext {
+                wgpu_device: device.clone(),
+                wgpu_queue: queue.clone(),
+                bustup_cache: AssetCache::new(),
+                picture_cache: Default::default(),
+                font_cache: Default::default(),
+            },
+        ));
+        let textures: Arc<SakuraTextures> =
+            shin_tasks::block_on(server.load("/effects.txa")).unwrap();
+        let weak = Arc::downgrade(&textures);
+        assert_eq!(weak.strong_count(), 1);
+        let mut actual = Vec::new();
+        let mut frame = FrameId::default();
+        let mut advance = |root: &mut Root, allowed: bool| {
+            frame.advance();
+            let update = AdvUpdateContext {
+                frame_id: frame,
+                delta_ticks: Ticks::from_f32(5.0),
+                asset_server: &server,
+                device: &device,
+                queue: &queue,
+                are_animations_allowed: allowed,
+                voice_callback: None,
+                movie_volume_settings: Default::default(),
+            };
+            root.target().update(&update);
+        };
+        for (id, line) in request.lines().enumerate() {
+            let p: Vec<usize> = line
+                .split_whitespace()
+                .map(|w| w.parse().unwrap())
+                .collect();
+            let (mode, populated, graph, order, allowed) =
+                (p[0] as i32, p[1] != 0, p[2], p[3], p[4] != 0);
+            crate::engine_random::with_reference_seed(5489, || {
+                let mut last_rng = crate::engine_random::seed_call_count();
+                let mut roots = [
+                    Some(prepare_root(&textures, mode, populated, graph)),
+                    None,
+                    None,
+                ];
+                actual.push(snapshot(id, "source", &roots, &textures, &mut last_rng));
+                let mut encoder = device.create_command_encoder(&Default::default());
+                let mut ctx = RenderCloneCtx {
+                    device: &device,
+                    encoder: &mut encoder,
+                };
+                for g in 1..3 {
+                    roots[g] = Some(roots[g - 1].as_ref().unwrap().copied(&mut ctx));
+                }
+                queue.submit(Some(encoder.finish()));
+                actual.push(snapshot(id, "copies", &roots, &textures, &mut last_rng));
+                advance(roots[1].as_mut().unwrap(), allowed);
+                actual.push(snapshot(
+                    id,
+                    "advance-copy",
+                    &roots,
+                    &textures,
+                    &mut last_rng,
+                ));
+                animation_mut(roots[1].as_mut().unwrap().target())
+                    .inner_mut()
+                    .particles
+                    .get_mut()
+                    .reference_owner_mutate();
+                actual.push(snapshot(
+                    id,
+                    "mutate-copy",
+                    &roots,
+                    &textures,
+                    &mut last_rng,
+                ));
+                roots[1].as_mut().unwrap().forward();
+                actual.push(snapshot(
+                    id,
+                    "forward-copy",
+                    &roots,
+                    &textures,
+                    &mut last_rng,
+                ));
+                for i in 0..3 {
+                    let g = if order != 0 { 2 - i } else { i };
+                    drop(roots[g].take());
+                    actual.push(snapshot(id, "drop", &roots, &textures, &mut last_rng));
+                    for root in roots.iter_mut().flatten() {
+                        advance(root, allowed);
+                    }
+                    actual.push(snapshot(id, "survivors", &roots, &textures, &mut last_rng));
+                }
+                assert_eq!(weak.strong_count(), 1);
+                total += 1;
+            });
+        }
+        std::fs::write(
+            output.join(format!("{version}.port.trace")),
+            actual.join("\n") + "\n",
+        )
+        .unwrap();
+        let native = std::fs::read_to_string(output.join(format!("{version}.trace"))).unwrap();
+        let expected: Vec<_> = native.lines().filter(|l| l.starts_with("A ")).collect();
+        assert_eq!(actual.len(), expected.len());
+        for (i, (a, b)) in actual.iter().zip(expected).enumerate() {
+            assert_eq!(a, b, "{version} native Animation row{i}");
+        }
+        drop(textures);
+        assert_eq!(
+            weak.strong_count(),
+            0,
+            "Desktop final effects atlas fixture owner retired"
+        );
+        drop(server);
+        device.poll(wgpu::Maintain::Wait);
+    }
+    println!(
+        "Animation ownership:{total} cases;populated particles/queued properties/Group/Slot copies independent;two final desktop atlas fixtures retired"
+    );
+}
