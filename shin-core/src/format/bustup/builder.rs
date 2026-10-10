@@ -141,6 +141,20 @@ pub trait BustupBuilder {
         block: PicBlock,
     ) -> anyhow::Result<Self::BlockType>;
 
+    /// Publish a selected block independently of the final portrait assembly.
+    /// The descriptor ID is authoritative even when payload offsets alias.
+    fn new_block_with_id(
+        args: &Self::Args,
+        data_offset: u32,
+        _block_id: BustupBlockId,
+        block: PicBlock,
+    ) -> anyhow::Result<Self::BlockType> {
+        Self::new_block(args, data_offset, block)
+    }
+
+    /// Retire reservations when parsing, decoding or assembly fails.
+    fn on_error(_args: &Self::Args, _error: &anyhow::Error) {}
+
     fn build(
         args: &Self::Args,
         skeleton: Self::Skeleton<'_>,

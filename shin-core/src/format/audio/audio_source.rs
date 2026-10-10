@@ -89,6 +89,22 @@ impl AudioBufferReader {
 
 /// An audio source providing audio in frames
 pub trait AudioFrameSource {
+    /// Exclusive authored end for repeating playback; other sources loop at EOF.
+    fn loop_end(&self) -> Option<u32> {
+        None
+    }
+    /// A latched decoder failure, distinct from normal end of input.
+    /// Failed voices remain owned but stop consuming samples until retired.
+    /// Sources may clear the latch after an explicit successful seek/reset.
+    fn is_failed(&self) -> bool {
+        false
+    }
+    /// Whether a latched failure ends logical playback while the backend voice
+    /// remains owned. NXA players report state2 on decode failure; movie audio
+    /// retains its playing voice until its separate movie owner retires it.
+    fn failure_ends_playback(&self) -> bool {
+        false
+    }
     /// Maximum size of the frame
     ///
     /// Used to allocate the audio buffer
@@ -102,7 +118,8 @@ pub trait AudioFrameSource {
 
     /// Read & decode one frame into the buffer
     ///
-    /// Returns `true` if the frame was read successfully, `false` if the end of the file was reached
+    /// Returns `true` for a decoded frame, `false` for EOF or latched failure.
+    /// Call `is_failed` to distinguish failure from EOF.
     fn read_frame(&mut self, destination: &mut AudioBuffer) -> bool;
 
     /// Seeks to the frame corresponding to the sample position
@@ -111,6 +128,13 @@ pub trait AudioFrameSource {
     ///
     /// The sample position does not take the pre-skip into account, meaning to seek to the first sample of the file, the caller should pass the `pre_skip`
     fn samples_seek(&mut self, sample_position: u32) -> Result<u32>;
+    /// Prepare a logical seek, returning raw samples to discard before playback.
+    /// Sources with native packet warmup rules can override the default pre-roll.
+    fn prepare_samples_seek(&mut self, sample_position: u32) -> Result<u32> {
+        let raw_position = sample_position + self.pre_skip();
+        let pre_roll = self.pre_roll().min(raw_position);
+        Ok(self.samples_seek(raw_position - pre_roll)? + pre_roll)
+    }
     /// Returns the number of the first sample in the next frame
     fn current_sample_position(&self) -> u32;
 }
@@ -141,34 +165,27 @@ impl<S: AudioFrameSource> AudioSource<S> {
     /// Seek to the sample position, taking the pre-skip into account (to seek to the first sample of the file, pass 0)
     pub fn samples_seek(&mut self, sample_position: u32) -> Result<()> {
         self.reader.clear();
-        let pre_skip = self.source.pre_skip();
-        let pre_roll = self.source.pre_roll();
-
-        // compute the "raw" position (without pre-skip removed)
-        let raw_position = sample_position + pre_skip;
-
-        // compute the pre-roll (the number of samples to skip after seeking, to make sure the decoder converges)
-        let pre_roll = std::cmp::min(pre_roll, raw_position);
-
-        // seek to the raw position, minus the pre-roll, but include the pre-roll in the skip
-        let skip = self.source.samples_seek(raw_position - pre_roll)? + pre_roll;
+        let skip = self.source.prepare_samples_seek(sample_position)?;
         self.skip_left = self.reader.skip_samples(skip);
         Ok(())
     }
 
     pub fn read_sample(&mut self) -> Option<Sample> {
-        if self.skip_left > 0 {
-            self.skip_left = self.reader.skip_samples(self.skip_left);
-        }
-
-        match self.reader.read_sample() {
-            Some(sample) => Some(sample),
-            None => {
-                self.reader.clear();
-                if !self.source.read_frame(self.reader.inner_mut()) {
-                    return None;
-                }
-                self.read_sample()
+        // Decoders may consume packets that publish no samples (pre-skip or
+        // declared-length padding). Iteration keeps those reads off the stack.
+        loop {
+            if self.source.is_failed() {
+                return None;
+            }
+            if self.skip_left > 0 {
+                self.skip_left = self.reader.skip_samples(self.skip_left);
+            }
+            if let Some(sample) = self.reader.read_sample() {
+                return Some(sample);
+            }
+            self.reader.clear();
+            if !self.source.read_frame(self.reader.inner_mut()) {
+                return None;
             }
         }
     }

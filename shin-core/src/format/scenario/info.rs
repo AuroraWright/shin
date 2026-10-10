@@ -11,10 +11,10 @@
 use std::io::{Read, Seek, Write};
 
 use anyhow::anyhow;
-use binrw::{BinRead, BinResult, BinWrite, Endian, FilePtr32, file_ptr::FilePtrArgs};
+use binrw::{file_ptr::FilePtrArgs, BinRead, BinResult, BinWrite, Endian, FilePtr32};
 
 use crate::format::{
-    scenario::types::{U8SmallList, U16SmallList},
+    scenario::types::{U16SmallList, U8SmallList},
     text::U16String,
 };
 
@@ -156,7 +156,9 @@ pub struct MovieInfoItem {
     pub name: U16String,
 
     /// The ID of the picture (indexing into [`PictureInfo`]) that will be displayed instead of the movie after the movie has finished playing. This is only really relevant for movies used in animations; the movies used in cutscenes have this set to 0. This is not treated specially by the game; the PicId 0 corresponds to a black screen.
-    pub linked_picture_id: PictureId,
+    /// Native lookup sign-extends this field. Negative or missing IDs leave the
+    /// movie without a still image; they do not reject the movie itself.
+    pub linked_picture_id: PictureIdOpt,
 
     /// Which volume setting to use when playing audio for this movie.
     pub volume_source: MovieVolumeSource,
@@ -206,7 +208,8 @@ pub struct MusicBoxInfoItem {
     /// The index of the name to be displayed on the button for this entry, to be loaded from the `title*` textures in `bgmmode.txa`.
     pub name_index: u16,
 
-    /// If this flag is set to 1, the BGM track will play only once instead of looping at the end. This is used e.g. for opening themes.
+    /// Native total playback count: 0 loops indefinitely, 1 plays once (e.g.
+    /// opening themes), and larger counts loop before the final pass to EOF.
     pub once_flag: u16,
 }
 pub type MusicBoxInfo = Vec<MusicBoxInfoItem>;
@@ -236,11 +239,12 @@ pub enum CharacterBoxSegment {
     #[brw(magic = 0x2u8)]
     EndExpressionGroup,
 
-    /// Ends a group of poses (ポーズ).
+    /// Ends the current expression list and its group of poses (ポーズ).
     #[brw(magic = 0x12u8)]
     EndPoseGroup,
 
-    /// Ends either the list of background definitions at the beginning, or ends an individual character definition, corresponding to a group of outfits (衣装).
+    /// Ends the initial background list, or closes the current expression list, pose group,
+    /// and character definition (a group of outfits, 衣装).
     #[brw(magic = 0x22u8)]
     EndDefinition,
 }
@@ -715,6 +719,10 @@ info_id_newtypes!(
 );
 
 impl ScenarioInfoTables {
+    /// Native ea230 returns null for IDs outside the mask metadata table.
+    pub fn mask_info_opt(&self, msk_id: MaskId) -> Option<&MaskInfoItem> {
+        self.mask_info.get(msk_id.0 as usize)
+    }
     pub fn mask_info(&self, msk_id: MaskId) -> &MaskInfoItem {
         &self.mask_info[msk_id.0 as usize]
     }

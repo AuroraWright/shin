@@ -45,10 +45,18 @@ use std::io;
 
 use bytes::Buf;
 
+#[cfg(test)]
+#[path = "lz77_reference.rs"]
+pub(crate) mod reference;
+
 pub fn decompress<const OFFSET_BITS: u32>(input: &[u8], output: &mut Vec<u8>) {
+    #[cfg(test)]
+    let encoded_input = input;
+    #[cfg(test)]
+    let output_begin = output.len();
     let mut input = io::Cursor::new(input);
 
-    while input.has_remaining() {
+    'tokens: while input.has_remaining() {
         let map = input.get_u8();
         for i in 0..8 {
             if !input.has_remaining() {
@@ -60,6 +68,11 @@ pub fn decompress<const OFFSET_BITS: u32>(input: &[u8], output: &mut Vec<u8>) {
                 output.push(input.get_u8());
             } else {
                 /* back seek */
+                // Native a03e4..a03e8 stops before reading a partial final
+                // reference. Preserve the bytes already decoded.
+                if input.remaining() < 2 {
+                    break 'tokens;
+                }
                 let backseek_spec = input.get_u16(); // big endian Oo
 
                 /*  MSB  XXXXXXXX          YYYYYYYY    LSB
@@ -81,4 +94,9 @@ pub fn decompress<const OFFSET_BITS: u32>(input: &[u8], output: &mut Vec<u8>) {
             }
         }
     }
+    #[cfg(test)]
+    reference::compare_native_lz77_if_enabled::<OFFSET_BITS>(
+        encoded_input,
+        &output[output_begin..],
+    );
 }

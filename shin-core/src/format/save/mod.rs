@@ -4,14 +4,28 @@ use anyhow::Result;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, Timelike};
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
-use shin_primitives::bit_utils::{BitBuffer, BitReadError, bit_read, bit_write};
+use shin_primitives::bit_utils::{bit_read, bit_write, BitBuffer};
 
 use crate::{crc32, format::save::index_set::IndexSet};
 
 pub mod index_set;
+#[cfg(test)]
+mod native_codec_tests;
 mod obfuscation;
+mod route;
+pub use route::{RouteReader, RouteRecorder};
 
 const GAME_KEY: u32 = SaveData::obfuscation_key_from_seed("うみねこのなく頃に咲");
+
+/// Native LoadGame distinguishes unsupported versions from corrupt bytes.
+#[derive(Debug)]
+pub struct UnsupportedSaveVersion(pub u32);
+impl std::fmt::Display for UnsupportedSaveVersion {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "Unsupported save data version: {}", self.0)
+    }
+}
+impl std::error::Error for UnsupportedSaveVersion {}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SaveData {
@@ -23,6 +37,21 @@ pub struct SaveData {
     pub auto_save_slot: Option<GameData>,
     #[serde(with = "BigArray")]
     pub manual_save_slots: [Option<GameData>; 100],
+}
+
+impl Default for SaveData {
+    fn default() -> Self {
+        // Native constructor 0xd2190 and the version-zero reset at 0xd24b8.
+        Self {
+            save_menu_position: 0,
+            play_seconds: 0,
+            persist_data: PersistData::default(),
+            save_vectors: SaveVectors::default(),
+            settings: Settings::default(),
+            auto_save_slot: None,
+            manual_save_slots: std::array::from_fn(|_| None),
+        }
+    }
 }
 
 impl SaveData {
@@ -86,13 +115,13 @@ impl SaveData {
         deobfuscated_data
     }
 
-    fn read(reader: &mut BitBuffer) -> Result<Self, BitReadError> {
-        let some_ctr: u32 = reader.read_int(8)?;
-        if some_ctr == 0 {
-            todo!("Construct default Savedata")
+    fn read(reader: &mut BitBuffer) -> Result<Self> {
+        let version: u32 = reader.read_int(8)?;
+        if version == 0 {
+            return Ok(Self::default());
         }
-        if some_ctr > 1 {
-            panic!("Invalid Savedata: some_ctr > 1")
+        if version != 1 {
+            return Err(UnsupportedSaveVersion(version).into());
         }
 
         let save_menu_position = reader.read_int(7)?;
@@ -167,10 +196,11 @@ impl PersistData {
     pub fn set(&mut self, index: usize, value: i32) {
         if self.0.len() <= index {
             // allocate more space, round up to 64
-            let new_len = index.next_multiple_of(Self::ALLOC_AHEAD);
+            let new_len = (index + 1).next_multiple_of(Self::ALLOC_AHEAD);
             self.0.resize(new_len, 0);
         }
-        self.0[index] = value.try_into().expect("value too large");
+        // The reference setter (0xd1350) uses STRH: only the low 16 bits persist.
+        self.0[index] = value as i16;
     }
 
     fn read(reader: &mut BitBuffer) -> bit_read::Result<Self> {
@@ -204,6 +234,19 @@ pub struct SaveVectors {
     pub unlocked_bgms: IndexSet,
     /// This stores indices of unlocked movies
     pub unlocked_movies: IndexSet,
+}
+
+impl Default for SaveVectors {
+    fn default() -> Self {
+        Self {
+            seen_messages: IndexSet::new(),
+            select_seen_choices: IndexSet::new(),
+            select_last_choices: Vec::new(),
+            unlocked_cgs: IndexSet::new(),
+            unlocked_bgms: IndexSet::new(),
+            unlocked_movies: IndexSet::new(),
+        }
+    }
 }
 
 impl SaveVectors {
@@ -265,21 +308,67 @@ pub struct Settings {
     pub v5_voicepanapot: bool,
     pub v6: bool,
     pub v7: u8,
+    /// Text outline mode:1 shifts the eight sample taps;other values are centered.
     pub v8: u8,
     pub v9_msgspeed: u8,
     pub v10_skipspeed: u8,
     pub v11_disallowskipunread: bool,
     pub v12: bool,
+    /// Textured message-window opacity percentage;Novel retains its fixed overlay.
     pub v13_msgwinalpha: u8,
+    /// Legacy name: native Config title band19 toggles the scene-title display.
     pub v14_showroutenavi: bool,
+    /// Enables the native BGM title overlay (renderer0x9e654 readsbyte+0xbf).
     pub v15: bool,
     pub v16_showtoucheffect: bool,
+    /// Legacy name: Config title band17 controls touch effects (native27300).
     pub v17_showscenetitle: bool,
+    /// Legacy name: Config title band12 suppresses automatic sleep during
+    /// Auto Mode and MusicBox playback; enabling it shows an informational dialog.
     pub v18_showsongtitle: bool,
+    /// Enabled character voices, checked against voice-mapping IDs (native0xea690).
     pub v19: u32,
 }
 
+impl Default for Settings {
+    fn default() -> Self {
+        // Packed byte stores in the native settings constructor at 0xd1400.
+        Self {
+            v0_bgmvol: 70,
+            v1_sfxvol: 70,
+            v2_voicevol: 90,
+            v3_sysvol: 55,
+            v4_voicefocus: false,
+            v5_voicepanapot: true,
+            v6: false,
+            v7: 0,
+            v8: 0,
+            v9_msgspeed: 50,
+            v10_skipspeed: 50,
+            v11_disallowskipunread: true,
+            v12: true,
+            v13_msgwinalpha: 85,
+            v14_showroutenavi: true,
+            v15: true,
+            v16_showtoucheffect: true,
+            v17_showscenetitle: true,
+            v18_showsongtitle: false,
+            v19: u32::MAX,
+        }
+    }
+}
+
 impl Settings {
+    /// Native d1440 compares settings by their original serialized bytes.
+    pub fn serialized_eq(&self, other: &Self) -> bool {
+        let encode = |value: &Self| {
+            let mut writer = BitBuffer::empty();
+            value.write(&mut writer);
+            writer.into_data()
+        };
+        encode(self) == encode(other)
+    }
+
     fn read(reader: &mut BitBuffer) -> bit_read::Result<Self> {
         reader.align();
 
@@ -379,28 +468,60 @@ impl Settings {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GameData {
     pub date_time: NaiveDateTime,
+    /// The native active index selects the final serialized entry. All save
+    /// loading, previews and backlog replay use this entry's scenario and route.
     pub entry: GameDataEntry,
+    /// When the native one-bit active index is one, retain entry zero as well.
+    /// Its runtime lifetime is separate from the active entry; never discard it
+    /// while decoding or rewriting the containing progress file.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub primary_entry: Option<GameDataEntry>,
 }
 
 impl GameData {
+    pub fn refresh_timestamp(&mut self) {
+        self.date_time = chrono::Local::now().naive_local();
+    }
+
+    pub fn from_entry(entry: GameDataEntry) -> Self {
+        Self {
+            date_time: chrono::Local::now().naive_local(),
+            entry,
+            primary_entry: None,
+        }
+    }
+
     fn read(reader: &mut BitBuffer) -> bit_read::Result<Self> {
         let date = read_date_time(reader)?;
-        let v6_arr_count: u32 = reader.read_int(1)?;
-        assert_eq!(v6_arr_count, 0);
-
-        let entry = GameDataEntry::read(reader)?;
+        // Native 6ac40/6aba0 reads entries inclusively through the active
+        // index, so zero means one entry and one means two entries.
+        let secondary_active = reader.read_bool()?;
+        let first = GameDataEntry::read(reader)?;
+        let (primary_entry, entry) = if secondary_active {
+            (Some(first), GameDataEntry::read(reader)?)
+        } else {
+            (None, first)
+        };
 
         Ok(Self {
             date_time: date,
             entry,
+            primary_entry,
         })
     }
 
     fn write(&self, writer: &mut BitBuffer) {
-        let Self { date_time, entry } = self;
+        let Self {
+            date_time,
+            entry,
+            primary_entry,
+        } = self;
 
         write_date_time(date_time, writer);
-        writer.write_int(1, 0); // v6_arr_count
+        writer.write_bool(primary_entry.is_some());
+        if let Some(primary) = primary_entry {
+            GameDataEntry::write(primary, writer);
+        }
         GameDataEntry::write(entry, writer)
     }
 }
@@ -472,7 +593,7 @@ impl GameDataEntry {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct RouteData(Vec<u8>);
 
 impl RouteData {
@@ -511,5 +632,110 @@ mod tests {
         let reencoded = decoded.encode_raw();
 
         assert_eq!(&reencoded, &deobfuscated);
+    }
+
+    #[test]
+    fn new_save_marker_initializes_empty_slots_and_roundtrips() {
+        let decoded = SaveData::decode_raw(vec![0]).unwrap();
+        assert_eq!(decoded.save_menu_position, 0);
+        assert_eq!(decoded.play_seconds, 0);
+        assert!(decoded.persist_data.0.is_empty());
+        assert!(decoded.save_vectors.seen_messages.iter().next().is_none());
+        assert!(decoded
+            .save_vectors
+            .select_seen_choices
+            .iter()
+            .next()
+            .is_none());
+        assert!(decoded.save_vectors.select_last_choices.is_empty());
+        assert!(decoded.save_vectors.unlocked_cgs.iter().next().is_none());
+        assert!(decoded.save_vectors.unlocked_bgms.iter().next().is_none());
+        assert!(decoded.save_vectors.unlocked_movies.iter().next().is_none());
+        assert!(decoded.auto_save_slot.is_none());
+        assert!(decoded.manual_save_slots.iter().all(Option::is_none));
+        let encoded = decoded.encode();
+        assert_eq!(SaveData::decode(&encoded).unwrap().encode(), encoded);
+        assert!(SaveData::decode_raw(vec![]).is_err());
+        assert!(SaveData::decode_raw(vec![1]).is_err());
+        for version in 2..=255 {
+            assert!(SaveData::decode_raw(vec![version]).is_err());
+        }
+    }
+
+    #[test]
+    #[ignore = "requires supplied Switch executable"]
+    fn reference_save_defaults_match_native_constructor() {
+        use shin_primitives::bit_utils::BitBuffer;
+
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap()
+            .join("umineko_switch_files/uncompressed_executable");
+        let executable = std::fs::read(path).unwrap();
+        let instruction = |address: usize| {
+            u32::from_le_bytes(executable[address + 256..address + 260].try_into().unwrap())
+        };
+        // Recover immediates from the MOVZ/MOVK instructions rather than copying
+        // the default settings from the Rust constructor.
+        let packed = |addresses: &[usize]| {
+            let mut value = 0u64;
+            for &address in addresses {
+                let word = instruction(address);
+                assert_eq!((word >> 23) & 0x3f, 0x25); // move-wide immediate
+                let shift = ((word >> 21) & 3) * 16;
+                value = (value & !(0xffff << shift)) | ((((word >> 5) & 0xffff) as u64) << shift);
+                if (word >> 29) & 3 == 0 {
+                    value = !value; // MOVN, used for the final all-ones setting
+                }
+            }
+            value.to_le_bytes()
+        };
+        let mut native = [0u8; 24];
+        native[..8].copy_from_slice(&packed(&[0xd1400, 0xd1404, 0xd1408]));
+        native[8..12].copy_from_slice(&packed(&[0xd1410, 0xd1414])[..4]);
+        native[12..14].copy_from_slice(&packed(&[0xd141c])[..2]);
+        assert_eq!(instruction(0xd1424), 0x3200c3e8); // ORR w8, wzr, #0x1010101
+        native[14..18].fill(1);
+        native[20..24].copy_from_slice(&packed(&[0xd142c])[..4]);
+        assert_eq!(instruction(0xd2424), 0x7100041f); // CMP w0, #1
+        assert_eq!(instruction(0xd2444), 0x340003a0); // CBZ w0, reset
+
+        let widths = [7, 7, 7, 7, 1, 1, 1, 2, 2, 7, 7, 1, 1, 7, 1, 1, 1, 1, 1];
+        let mut expected = BitBuffer::empty();
+        for (value, width) in native.iter().zip(widths) {
+            expected.write_int(width, *value);
+        }
+        expected.write_int(32, u32::from_le_bytes(native[20..24].try_into().unwrap()));
+        let mut actual = BitBuffer::empty();
+        super::Settings::default().write(&mut actual);
+        assert_eq!(actual.into_data(), expected.into_data());
+    }
+}
+
+#[cfg(test)]
+mod persistent_register_tests {
+    use super::PersistData;
+
+    #[test]
+    fn stores_low_sixteen_bits_and_sign_extends_reads() {
+        let mut data = PersistData::new();
+        for value in [32768, 65535, 65536, -32769, i32::MIN, i32::MAX] {
+            data.set(0, value);
+            assert_eq!(data.get(0), value as i16 as i32);
+        }
+    }
+
+    #[test]
+    fn grows_at_zero_and_allocation_boundaries_without_losing_values() {
+        let mut data = PersistData::new();
+        for (index, value) in [(0, 17), (63, -32768), (64, 32767), (127, -1), (128, 23)] {
+            data.set(index, value);
+            assert_eq!(data.get(index), value);
+            assert_eq!(data.0.len() % 64, 0);
+        }
+        assert_eq!(data.get(0), 17);
+        assert_eq!(data.get(63), -32768);
+        assert_eq!(data.get(64), 32767);
+        assert_eq!(data.get(1000), 0);
     }
 }

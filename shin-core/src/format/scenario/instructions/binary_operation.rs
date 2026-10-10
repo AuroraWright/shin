@@ -25,7 +25,7 @@ pub enum BinaryOperationType {
     Divide = 0x05,
     /// `L mod R`: Return the modulo of the left operand divided by the right operand
     ///
-    /// Modulo is defined as `L - R * floor(L / R)`
+    /// Modulo is defined as `L - R * trunc(L / R)`; a zero divisor returns L.
     Modulo = 0x06,
     /// `L & R`: Bitwise AND the left and right operands
     BitwiseAnd = 0x07,
@@ -37,11 +37,11 @@ pub enum BinaryOperationType {
     LeftShift = 0x0a,
     /// `L >> R`: Shift the left operand right by the right operand
     RightShift = 0x0b,
-    /// `unreal(real(L) * real(R))`: Add the left and right operands as real numbers
+    /// `wrapping(L * R) / 1000`: Multiply the operands as fixed point numbers
     ///
     /// Real numbers are represented as fixed point numbers with 3 decimal places. (e.g. `1.234` is represented as `1234`)
     MultiplyReal = 0x0c,
-    /// `unreal(real(L) / real(R))`: Divide the left operand by the right operand as real numbers
+    /// `wrapping(L * 1000) / R`: Divide the operands as fixed point numbers
     ///
     /// Real numbers are represented as fixed point numbers with 3 decimal places. (e.g. `1.234` is represented as `1234`)
     DivideReal = 0x0d,
@@ -53,7 +53,8 @@ pub enum BinaryOperationType {
     ClearBit = 0x10,
     /// Defined as `ctz((0xffffffff << R) & L)`
     ///
-    /// For the love of god, I can't figure out what this is supposed to do.
+    /// Finds the first set bit at or after R (shift count masked to 5 bits).
+    /// Returns -1 when no bit is found.
     ACursedOperation = 0x11,
 }
 

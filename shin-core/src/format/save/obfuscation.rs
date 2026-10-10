@@ -1,7 +1,7 @@
 //! Implements "crypto" used by savefiles
 //! (it's just a bunch of XORs, actually)
 
-use anyhow::{Result, bail};
+use anyhow::{bail, ensure, Result};
 use array_util::SliceExt;
 
 use crate::crc32::crc32;
@@ -53,6 +53,9 @@ fn encode_once(data: &mut [u8], key: u32) {
 }
 
 pub fn decode(data: &[u8], key: u32) -> Result<Vec<u8>> {
+    // Native LoadGame rejects files of at most three bytes before either
+    // decryption stage. Avoid slicing/subtracting past a truncated CRC.
+    ensure!(data.len() >= 4, "save data too short for obfuscation CRC");
     let mut stage1 = data.to_vec();
     decode_once(&mut stage1, key);
     let stage2_len = stage1.len() - 4;
@@ -83,6 +86,13 @@ pub fn encode(data: &[u8], key: u32) -> Vec<u8> {
 mod test {
     use insta::assert_debug_snapshot;
     use rand::{Rng, RngCore, SeedableRng};
+
+    #[test]
+    fn truncated_crc_returns_an_error_instead_of_panicking() {
+        for size in 0..4 {
+            assert!(super::decode(&[0; 3][..size], 0).is_err());
+        }
+    }
 
     fn decode_once(data: &str, key: u32) -> String {
         let mut data = hex::decode(data).unwrap();

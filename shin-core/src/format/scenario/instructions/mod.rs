@@ -18,7 +18,7 @@ pub use self::{
 use crate::{
     format::scenario::{
         instruction_elements::{CodeAddress, NumberSpec, Register},
-        types::{Pad4, U8SmallList, U8SmallNumberList, U16SmallList},
+        types::{Pad4, U16SmallList, U8SmallList, U8SmallNumberList},
     },
     vm::command::CompiletimeCommand,
 };
@@ -140,4 +140,70 @@ pub enum Instruction {
 
     /// Send command to the game engine
     Command(CompiletimeCommand),
+}
+
+impl Instruction {
+    /// Dispatch before reading operands, using the same field parsers as BinRead.
+    /// The cursor points at the opcode on entry, including for engine commands.
+    pub(super) fn read_opcode<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        opcode: u8,
+    ) -> binrw::BinResult<Self> {
+        let endian = binrw::Endian::Little;
+        if opcode == 0 || opcode >= 0x80 {
+            return CompiletimeCommand::read_opcode(reader, endian, opcode).map(Self::Command);
+        }
+        let position = reader.stream_position()?;
+        let actual = u8::read_options(reader, endian, ())?;
+        debug_assert_eq!(actual, opcode);
+        macro_rules! field {
+            () => {
+                BinRead::read_options(reader, endian, ())?
+            };
+        }
+        Ok(match opcode {
+            0x40 => Self::uo(field!()),
+            0x41 => Self::bo(field!()),
+            0x42 => Self::exp {
+                dest: field!(),
+                expr: field!(),
+            },
+            0x44 => Self::gt {
+                dest: field!(),
+                index: field!(),
+                table: field!(),
+            },
+            0x46 => Self::jc {
+                cond: field!(),
+                left: field!(),
+                right: field!(),
+                target: field!(),
+            },
+            0x47 => Self::j { target: field!() },
+            0x48 => Self::gosub { target: field!() },
+            0x49 => Self::retsub {},
+            0x4a => Self::jt {
+                index: field!(),
+                table: field!(),
+            },
+            0x4c => Self::rnd {
+                dest: field!(),
+                min: field!(),
+                max: field!(),
+            },
+            0x4d => Self::push { values: field!() },
+            0x4e => Self::pop { dest: field!() },
+            0x4f => Self::call {
+                target: field!(),
+                args: field!(),
+            },
+            0x50 => Self::r#return {},
+            _ => {
+                return Err(binrw::Error::BadMagic {
+                    pos: position,
+                    found: Box::new(opcode),
+                })
+            }
+        })
+    }
 }

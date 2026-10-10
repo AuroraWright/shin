@@ -10,12 +10,24 @@ use crate::format::scenario::instruction_elements::{NumberSpec, Register, Untype
 pub enum UnaryOperationType {
     /// Ignore the source and return 0
     Zero = 0,
-    /// Xor the input with 0xFFFF
+    /// Complement all 32 bits of the input (historical name retained for compatibility)
     Not16 = 1,
     /// Negate the input
     Negate = 2,
     /// Take the absolute value of the input
     Abs = 3,
+    /// Sine of an angle in thousandths of a turn, returned in thousandths.
+    Sin = 4,
+    Cos = 5,
+    Tan = 6,
+    /// Inverse sine of a value in thousandths, returned in thousandths of a turn.
+    ASin = 7,
+    ACos = 8,
+    ATan = 9,
+    /// Count the set bits in the 32-bit input.
+    CountOnes = 10,
+    /// Count trailing zero bits; returns 32 for zero.
+    TrailingZeros = 11,
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -40,7 +52,7 @@ impl BinRead for UnaryOperation {
         let ty = UnaryOperationType::from_u8(temp & 0x7f).ok_or_else(|| {
             binrw::Error::Io(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("unknown binary operation type: {}", temp & 0x7f),
+                format!("unknown unary operation type: {}", temp & 0x7f),
             ))
         })?;
         let destination = Register::read_options(reader, endian, ())?;
@@ -125,5 +137,24 @@ mod tests {
             },
             "8300102a",
         );
+        for (ty, opcode) in [
+            (UnaryOperationType::Sin, 4),
+            (UnaryOperationType::Cos, 5),
+            (UnaryOperationType::Tan, 6),
+            (UnaryOperationType::ASin, 7),
+            (UnaryOperationType::ACos, 8),
+            (UnaryOperationType::ATan, 9),
+            (UnaryOperationType::CountOnes, 10),
+            (UnaryOperationType::TrailingZeros, 11),
+        ] {
+            assert_enc_dec_pair(
+                &UnaryOperation {
+                    ty,
+                    destination: "$v0".parse().unwrap(),
+                    source: NumberSpec::register("$v0".parse().unwrap()),
+                },
+                &format!("{opcode:02x}0000"),
+            );
+        }
     }
 }

@@ -33,8 +33,6 @@ impl BinRead for UntypedNumberSpec {
 
     //noinspection SpellCheckingInspection
     fn read_options<R: io::Read + Seek>(reader: &mut R, endian: Endian, _: ()) -> BinResult<Self> {
-        let pos = reader.stream_position()?;
-
         let t = u8::read_options(reader, endian, ())?;
         // t=TXXXXXXX
         // T=0 => XXXXXXX is a 7-bit signed constant
@@ -51,6 +49,8 @@ impl BinRead for UntypedNumberSpec {
             // P=3 => 4-bit regular register, KKKK is the index
             // P=4 => 12-bit regular register, KKKK denotes the upper 4 bits, lsb is read from the next byte
             // P=5 => 4-bit argument register, KKKK is the index
+            // P=6 => i32::MIN (the low nibble is ignored)
+            // P=7 => zero (the low nibble is ignored)
             match p {
                 0 => Self::Constant(u8::read_options(reader, endian, ())? as i32 | (k_sext << 8)),
                 1 => {
@@ -71,12 +71,9 @@ impl BinRead for UntypedNumberSpec {
                     u8::read_options(reader, endian, ())? as u16 | (k as u16) << 8,
                 )),
                 5 => Self::Register(Register::from_argument(k as u16)),
-                _ => {
-                    return Err(binrw::Error::AssertFail {
-                        message: format!("Unknown NumberSpec type: t=0x{:02x}, P={}", t, p),
-                        pos,
-                    })
-                }
+                6 => Self::Constant(i32::MIN),
+                7 => Self::Constant(0),
+                _ => unreachable!(),
             }
         } else {
             // signed 7-bit integer
@@ -110,6 +107,8 @@ impl BinWrite for UntypedNumberSpec {
         let mut write_byte = |b: u8| -> BinResult<()> { b.write_options(writer, endian, ()) };
 
         match *self {
+            // The native reader reserves the one-byte 0xe0 family for MIN.
+            Constant(i32::MIN) => write_byte(0xe0),
             // 7-bit signed constant
             Constant(val @ -0x40..=0x3f) => write_byte((val as i8 as u8) & 0x7f),
             // 12-bit signed constant
@@ -340,17 +339,23 @@ mod tests {
         assert_out_of_range_error(134217728);
         assert_out_of_range_error(-134217729);
         assert_out_of_range_error(i32::MAX);
-        assert_out_of_range_error(i32::MIN);
     }
 
     #[test]
-    fn dec_unknown_type() {
-        match UntypedNumberSpec::read_le(&mut NoSeek::new(Cursor::new([0xf0, 0x00]))).unwrap_err() {
-            binrw::Error::AssertFail { message, pos } => {
-                assert_eq!(message, "Unknown NumberSpec type: t=0xf0, P=7".to_string());
-                assert_eq!(pos, 0);
-            }
-            v => panic!("unexpected error: {:?}", v),
-        };
+    fn native_special_literal_tags_preserve_instruction_alignment() {
+        assert_enc_dec_pair(&Constant(i32::MIN), "e0");
+        for tag in 0xe0..=0xff {
+            let mut reader = Cursor::new([tag, 0x35]);
+            let expected = if tag < 0xf0 { i32::MIN } else { 0 };
+            assert_eq!(
+                UntypedNumberSpec::read_le(&mut reader).unwrap(),
+                Constant(expected)
+            );
+            assert_eq!(reader.position(), 1);
+            assert_eq!(
+                UntypedNumberSpec::read_le(&mut reader).unwrap(),
+                Constant(53)
+            );
+        }
     }
 }

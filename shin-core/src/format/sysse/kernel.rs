@@ -11,9 +11,14 @@ bitfield! {
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     pub struct BlockHeader(pub u8) : Debug {
         pub shift: u8 @ 0..4,
-        pub filter: usize @ 4..7,
+        // Nativefe6c8/fe6cc includes bit7 when indexing coefficient pairs.
+        pub filter: usize @ 4..8,
     }
 }
+
+#[cfg(test)]
+#[path = "reference.rs"]
+mod reference;
 
 #[derive(Copy, Clone)]
 struct Fir2 {
@@ -162,11 +167,22 @@ fn decode_block(history: &mut History, block_data: [u8; BLOCK_SIZE_BYTES]) -> [i
 
 #[inline]
 fn convert_sample(sample: i16) -> f32 {
-    (sample as f32 / i16::MAX as f32).clamp(-1.0, 1.0)
+    // Native SYSSE queues PCM16 unchanged. Represent that integer domain in
+    // CPAL's normalized float format, preserving every signed16 value exactly.
+    sample as f32 / 32768.0
 }
 
 pub trait DecoderKernel {
     fn decode_block(&mut self) -> Option<[(f32, f32); BLOCK_SIZE]>;
+}
+
+fn complete_block_data(mut data: Vec<u8>, block_bytes: usize) -> Vec<u8> {
+    // Nativefe4c0/fe69c checks that an entire channel block fits before
+    // reading it. Keep its complete prefix and ignore a partial final block.
+    data.truncate(data.len() / block_bytes * block_bytes);
+    // cast_vec also requires capacity to be a block multiple. Sound payloads
+    // with a partial tail can have an exact, now incompatible byte capacity.
+    data.into_boxed_slice().into_vec()
 }
 
 pub struct MonoDecoderKernel {
@@ -176,7 +192,7 @@ pub struct MonoDecoderKernel {
 
 impl MonoDecoderKernel {
     fn new(data: Vec<u8>) -> Self {
-        let data = bytemuck::cast_vec(data);
+        let data = bytemuck::cast_vec(complete_block_data(data, 16));
 
         Self {
             data: data.into_iter(),
@@ -202,7 +218,7 @@ pub struct StereoDecoderKernel {
 
 impl StereoDecoderKernel {
     fn new(data: Vec<u8>) -> Self {
-        let data = bytemuck::cast_vec(data);
+        let data = bytemuck::cast_vec(complete_block_data(data, 32));
 
         Self {
             data: data.into_iter(),

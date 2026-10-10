@@ -4,10 +4,10 @@
 //!
 //! It also stores a list of transparent and opaque rectangular regions of each block, allowing for a more efficient two-pass rendering.
 
-use std::{borrow::Cow, collections::BTreeMap, io};
+use std::{borrow::Cow, collections::{btree_map::Entry, BTreeMap}, io};
 
-use anyhow::{Context, Result, bail};
-use binrw::{Endian, prelude::*};
+use anyhow::{Context, Result};
+use binrw::{prelude::*, Endian};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, RgbaImage};
@@ -15,16 +15,23 @@ use itertools::Itertools;
 use parking_lot::Mutex;
 use rayon::prelude::*;
 
+#[cfg(test)]
+pub(crate) mod reference;
+
 #[derive(BinRead, BinWrite, Debug)]
-#[brw(little, magic = b"PIC4")]
+#[brw(little)]
 struct PicHeader {
-    version: u32,
-    file_size: u32,
+    // Native c5140 reads these bytes without checking them. Decode uses the
+    // fixed PIC4 layout even when signature/version/declared size differ.
+    _signature: u32,
+    _version: u32,
+    _file_size: u32,
     origin_x: i16,
     origin_y: i16,
     effective_width: u16,
     effective_height: u16,
-    /// Some sort of flags. Varying bit (1 << 0) seen in files, the game has code to handle the (1 << 1) bit somehow
+    /// Native bit1 enables a transformed viewport-coverage check after capture.
+    /// All PICs in the supplied original/1.03 archives have flags=1 (bit1 clear).
     field_20: u32,
     block_count: u32,
     picture_id: u32,
@@ -62,12 +69,9 @@ impl BinRead for CompressionFlags {
         _: (),
     ) -> BinResult<Self> {
         let flags = u16::read_options(reader, endian, ())?;
-        CompressionFlags::from_bits(flags).ok_or_else(|| {
-            binrw::Error::Io(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Invalid compression flags: {}", flags),
-            ))
-        })
+        // Native block decode tests bits0/1 individually; other stored bits
+        // do not reject the block or change its dictionary/alpha branches.
+        Ok(CompressionFlags::from_bits_truncate(flags))
     }
 }
 impl BinWrite for CompressionFlags {
@@ -153,6 +157,9 @@ pub trait PictureBuilder: Send {
         positions: Vec<(u32, u32)>,
         block: PicBlock,
     ) -> Result<()>;
+
+    /// Record authored placement order independently of parallel block decoding.
+    fn set_placements(&mut self, _placements: Vec<(u32, (u32, u32))>) {}
 
     fn build(self) -> Result<Self::Output>;
 }
@@ -304,6 +311,11 @@ fn decode_dict(
     width: usize,
     stride: usize,
 ) {
+    // Both native dictionary branches return before reading input when either
+    // dimension is zero. image::rows_mut() cannot iterate zero-width rows.
+    if image.width() == 0 || image.height() == 0 {
+        return;
+    }
     if let Some(alpha_data) = alpha_data {
         assert_eq!(alpha_data.len(), encoded_data.len());
 
@@ -328,6 +340,32 @@ fn decode_dict(
             for (index, dest_pixel) in row[..width].iter().cloned().zip_eq(dest_row) {
                 *dest_pixel = dict[index as usize].into();
             }
+        }
+    }
+}
+
+/// Native 0x101760: first row is raw RGBA; subsequent rows contain bytewise
+/// deltas from the preceding decoded row. The native SIMD byte ADD wraps,
+/// including alpha. Aligned source padding never contributes to image pixels.
+fn decode_differential(image: &mut RgbaImage, data: &[u8], stride: usize) {
+    let row_bytes = image.width() as usize * 4;
+    let height = image.height() as usize;
+    assert!(stride >= row_bytes);
+    assert!(data.len() >= stride.checked_mul(height).expect("Texture size overflow"));
+    if row_bytes == 0 || height == 0 {
+        return;
+    }
+
+    let output: &mut [u8] = image.as_mut();
+    output[..row_bytes].copy_from_slice(&data[..row_bytes]);
+    for y in 1..height {
+        let (decoded, remaining) = output.split_at_mut(y * row_bytes);
+        let previous = &decoded[decoded.len() - row_bytes..];
+        let delta = &data[y * stride..y * stride + row_bytes];
+        for ((destination, previous), delta) in
+            remaining[..row_bytes].iter_mut().zip(previous).zip(delta)
+        {
+            *destination = previous.wrapping_add(*delta);
         }
     }
 }
@@ -382,13 +420,11 @@ pub fn read_texture(
         let dictionary = bytemuck::pod_read_unaligned::<[Rgba8; 0x100]>(dictionary);
 
         if !use_inline_alpha {
-            debug_assert!(
-                dictionary
-                    .iter()
-                    // if we have inline alpha we can't have any transparent pixels
-                    // (the second case is for empty dictionary entries, where all the components are 0)
-                    .all(|v| v.a == 0xff || v == &Rgba8::default())
-            );
+            debug_assert!(dictionary
+                .iter()
+                // if we have inline alpha we can't have any transparent pixels
+                // (the second case is for empty dictionary entries, where all the components are 0)
+                .all(|v| v.a == 0xff || v == &Rgba8::default()));
         }
 
         decode_dict(
@@ -398,9 +434,17 @@ pub fn read_texture(
             alpha_data,
             width as usize,
             stride,
-        )
+        );
+        #[cfg(test)]
+        reference::compare_native_dictionary_if_enabled(
+            target_image,
+            &dictionary,
+            encoded_data,
+            alpha_data,
+            stride,
+        );
     } else {
-        todo!("decode differential")
+        decode_differential(target_image, &data, differential_stride)
     }
 }
 
@@ -461,27 +505,20 @@ pub struct PictureHeaderInfo {
     pub effective_height: u16,
     pub block_count: u32,
     pub picture_id: u32,
+    pub flags: u32,
+    /// Per-file placement scale in units of 1/4096; cache aliases may differ.
+    pub scale: u32,
 }
 
 pub fn read_picture_header(source: &[u8]) -> Result<PictureHeaderInfo> {
+    read_picture_header_prefix(source, source.len() as u64)
+}
+
+/// Read the fixed header without fetching block data, including cache hits.
+/// Native open does not validate the signature, version or declared file size.
+pub fn read_picture_header_prefix(source: &[u8], _file_size: u64) -> Result<PictureHeaderInfo> {
     let mut source = io::Cursor::new(source);
     let header: PicHeader = BinRead::read(&mut source)?;
-
-    if header.version != 3 {
-        bail!("Unsupported picture format version {}", header.version);
-    }
-
-    if header.file_size != source.get_ref().len() as u32 {
-        bail!("File size mismatch");
-    }
-
-    if !matches!(header.field_20, 0 | 1 | 2 | 3) {
-        bail!("Unknown field_20 value {}", header.field_20);
-    }
-
-    if header.scale != 4096 {
-        bail!("Unsupported scale value {}/4096", header.scale);
-    }
 
     Ok(PictureHeaderInfo {
         origin_x: header.origin_x,
@@ -490,6 +527,8 @@ pub fn read_picture_header(source: &[u8]) -> Result<PictureHeaderInfo> {
         effective_height: header.effective_height,
         block_count: header.block_count,
         picture_id: header.picture_id,
+        flags: header.field_20,
+        scale: header.scale,
     })
 }
 
@@ -500,34 +539,32 @@ pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> 
     let mut source = io::Cursor::new(source);
     let header: PicHeader = BinRead::read(&mut source)?;
 
-    if header.version != 3 {
-        bail!("Unsupported picture format version {}", header.version);
-    }
-
-    if header.file_size != source.get_ref().len() as u32 {
-        bail!("File size mismatch");
-    }
-
-    if !matches!(header.field_20, 0 | 1 | 2 | 3) {
-        bail!("Unknown field_20 value {}", header.field_20);
-    }
-
-    if header.scale != 4096 {
-        bail!("Unsupported scale value {}/4096", header.scale);
-    }
-
     let mut blocks = BTreeMap::new();
+    let mut placements = Vec::new();
     for _ in 0..header.block_count {
         let block_desc: PicBlockDesc = BinRead::read(&mut source)?;
-        let block_data =
-            &source.get_ref()[block_desc.offset as usize..][..block_desc.size as usize];
-        let (positions, _) = blocks
-            .entry(block_desc.offset)
-            .or_insert_with(|| (Vec::new(), block_data));
+        // Native PIC construction decodes the first descriptor for each offset.
+        // Later descriptors add placements without inspecting their size.
+        let (positions, _) = match blocks.entry(block_desc.offset) {
+            Entry::Occupied(entry) => entry.into_mut(),
+            Entry::Vacant(entry) => {
+                // Native FileSlice rejects a range before creating a subsource.
+                // Return a loader error so cache waiters receive the failure.
+                let block_data =
+                    source.get_ref().get(block_desc.offset as usize..)
+                        .and_then(|tail| tail.get(..block_desc.size as usize))
+                        .with_context(|| format!(
+                            "Picture block range error: offset={}, size={}, picture length={}",
+                            block_desc.offset, block_desc.size, source.get_ref().len()
+                        ))?;
+                entry.insert((Vec::new(), block_data))
+            }
+        };
         positions.push((block_desc.x as u32, block_desc.y as u32));
+        placements.push((block_desc.offset, (block_desc.x as u32, block_desc.y as u32)));
     }
 
-    let builder = B::new(
+    let mut builder = B::new(
         builder_args,
         header.effective_width as u32,
         header.effective_height as u32,
@@ -535,6 +572,7 @@ pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> 
         header.origin_y as i32,
         header.picture_id,
     );
+    builder.set_placements(placements);
 
     // TODO: in bustups we collect blocks into a vector, while here we call builder methods directly from rayon tasks
     // We should decide which is better, because the inconsistency is killing me

@@ -34,7 +34,7 @@ pub enum ExpressionTerm {
     /// `R=pop(), L=pop(), push(L + R)`
     #[brw(magic(0x01u8))]
     Add,
-    /// `R=pop(), L=pop(), push(L - R)` TODO: is the order reversed?
+    /// `R=pop(), L=pop(), push(L - R)`
     #[brw(magic(0x02u8))]
     Subtract,
     /// `R=pop(), L=pop(), push(L * R)`
@@ -103,10 +103,10 @@ pub enum ExpressionTerm {
     /// `C=pop(), T=pop(), F=pop(), push(if bool(C) { T } else { F })`
     #[brw(magic(0x18u8))]
     Select,
-    /// `R=pop(), L=pop(), push(real(L) * real(R))`
+    /// `R=pop(), L=pop(), push(wrapping(L * R) / 1000)`
     #[brw(magic(0x19u8))]
     MultiplyReal,
-    /// `R=pop(), L=pop(), push(real(L) / real(R))`
+    /// `R=pop(), L=pop(), push(wrapping(L * 1000) / R)`; a zero divisor returns0.
     #[brw(magic(0x1au8))]
     DivideReal,
     /// `A=pop(), push(sin(angle(A)))`
@@ -201,13 +201,13 @@ impl Expression {
     pub fn validate(&self) -> Result<(), ExpressionValidationError> {
         // TODO: we can also probably do some type-checking for the expression?
         // though, it's probably better to do it in the `shin-asm`
-        let mut stack = 0;
+        let mut stack = 0usize;
         for (pos, term) in self.0.iter().enumerate() {
-            stack -= term.argument_count() as isize;
-            stack += 1;
-            if stack < 0 {
+            let arguments = term.argument_count();
+            if stack < arguments {
                 return Err(ExpressionValidationError::StackUnderflow { pos });
             }
+            stack = stack - arguments + 1;
         }
 
         if stack != 1 {
@@ -325,6 +325,26 @@ mod tests {
                 Err(e) => panic!("unexpected error: {:?}", e),
             },
             e => panic!("unexpected error: {:?}", e),
+        }
+    }
+
+    #[test]
+    fn reject_underflow_before_result_is_pushed() {
+        for terms in [
+            vec![ExpressionTerm::Negate],
+            vec![
+                ExpressionTerm::Push(NumberSpec::constant(1)),
+                ExpressionTerm::Add,
+            ],
+            vec![
+                ExpressionTerm::Push(NumberSpec::constant(1)),
+                ExpressionTerm::Select,
+            ],
+        ] {
+            assert!(matches!(
+                Expression::new(terms),
+                Err(ExpressionValidationError::StackUnderflow { .. })
+            ));
         }
     }
 }

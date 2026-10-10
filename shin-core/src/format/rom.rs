@@ -278,7 +278,13 @@ impl<S: StatelessReader> RomReader<S> {
             .ok_or_else(|| anyhow!("Path must start with /"))?;
 
         let mut entry = &self.index;
-        let mut split_path = path.split('/').peekable();
+        if path.ends_with('/') {
+            bail!("Invalid path, no filename: {:?}", path);
+        }
+        let mut parents = Vec::new();
+        // Native27f20 skips repeated slashes, folds ASCII component names,
+        // and resolves the archive's first two directory records (./..).
+        let mut split_path = path.split('/').filter(|part| !part.is_empty()).peekable();
         let mut filename = None;
 
         while let Some(part) = split_path.next() {
@@ -286,8 +292,19 @@ impl<S: StatelessReader> RomReader<S> {
                 filename = Some(part);
                 break;
             }
-            entry = match entry.entries.get(part) {
-                Some(IndexEntry::Directory(dir)) => dir,
+            match part {
+                "." => continue,
+                ".." => {
+                    entry = parents.pop().unwrap_or(&self.index);
+                    continue;
+                }
+                _ => {}
+            }
+            entry = match entry.entries.get(part.to_ascii_lowercase().as_str()) {
+                Some(IndexEntry::Directory(dir)) => {
+                    parents.push(entry);
+                    dir
+                }
                 Some(IndexEntry::File(_)) => bail!(
                     "Invalid path, found a file when expected a directory: {:?}",
                     path
@@ -298,7 +315,7 @@ impl<S: StatelessReader> RomReader<S> {
 
         let filename = filename.ok_or_else(|| anyhow!("Invalid path, no filename: {:?}", path))?;
 
-        Ok(*match entry.entries.get(filename) {
+        Ok(*match entry.entries.get(filename.to_ascii_lowercase().as_str()) {
             Some(IndexEntry::File(file)) => file,
             Some(IndexEntry::Directory(_)) => bail!(
                 "Invalid path, found a directory when expected a file: {:?}",
@@ -422,5 +439,66 @@ impl<S: StatelessReader, Rom: Borrow<RomReader<S>>> io::Seek for RomFileReader<S
         let new_pos = std::cmp::max(0, new_pos);
         self.position = new_pos;
         Ok(new_pos)
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    use super::*;
+    #[test]
+    fn archive_parent_paths_require_real_directories() {
+        use shin_primitives::stateless_reader::StatelessCursor;
+        let file = IndexEntry::File(IndexFile { data_offset: 123, data_size: 456 });
+        let rom = RomReader {
+            reader: StatelessCursor::new(Vec::<u8>::new()),
+            index: IndexDirectory { entries: BTreeMap::from([
+                ("bgm".into(), IndexEntry::Directory(IndexDirectory { entries: BTreeMap::new() })),
+                ("se".into(), IndexEntry::Directory(IndexDirectory { entries: BTreeMap::from([("sound.nxa".into(), file)]) })),
+            ]) },
+        };
+        for path in ["/se/sound.nxa", "/bgm/../se/sound.nxa", "//SE//SOUND.NXA", "/../../se/./sound.nxa"] {
+            let found = rom.find_file(path).unwrap();
+            assert_eq!((found.data_offset, found.data_size), (123, 456), "{path}");
+        }
+        for path in ["/missing/../se/sound.nxa", "/se/sound.nxa/../sound.nxa", "/se/sound.nxa/", "se/sound.nxa", "/", "/se/..", "/se/."] {
+            assert!(rom.find_file(path).is_err(), "{path}");
+        }
+    }
+
+    #[test]
+    #[ignore = "requires supplied ROMs and guarded native executable"]
+    fn reference_updated_native_rom_paths() {
+        use shin_primitives::stateless_reader::StatelessFile;
+        use std::{io::Write, process::{Command, Stdio}};
+        let base = std::path::PathBuf::from(std::env::var("SHIN_REFERENCE_ROM").unwrap());
+        let executable = base.parent().unwrap().join("uncompressed_executable_update");
+        for path in [base.clone(), base.parent().unwrap().join("patch.rom")] {
+            let rom = RomReader::new(StatelessFile::new(std::fs::File::open(&path).unwrap()).unwrap()).unwrap();
+            let files: Vec<_> = rom.traverse().filter_map(|(name, entry)| match entry { IndexEntry::File(_) => Some(name), _ => None }).collect();
+            let stride = (files.len() / 4096).max(1);
+            let mut queries = vec!["/bgm/../se/umilse_002.nxa".to_owned(), "/missing/../se/umilse_002.nxa".into(), "/".into(), "/se/..".into()];
+            for name in files.iter().step_by(stride).take(4096) {
+                queries.extend([name.clone(), name.to_ascii_uppercase().replace('/', "//"), format!("/../.{name}"), format!("{name}/")]);
+                if let Some((parent, tail)) = name.rsplit_once('/') {
+                    queries.push(format!("{parent}/./{tail}"));
+                }
+            }
+            let mut child = Command::new("/tmp/shin-native-rom-path").arg(&executable).arg(&path)
+                .stdin(Stdio::piped()).stdout(Stdio::piped()).spawn().unwrap();
+            let mut stdin = child.stdin.take().unwrap();
+            let input = queries.join("\n") + "\n";
+            let writer = std::thread::spawn(move || stdin.write_all(input.as_bytes()).unwrap());
+            let output = child.wait_with_output().unwrap(); writer.join().unwrap();
+            assert!(output.status.success());
+            let lines = String::from_utf8(output.stdout).unwrap();
+            assert_eq!(lines.lines().count(), queries.len());
+            for (query, line) in queries.iter().zip(lines.lines()) {
+                let native: Vec<u64> = line.split_whitespace().map(|s| s.parse().unwrap()).collect();
+                let ours = rom.find_file(query).ok();
+                let result = ours.map(|f| vec![1, f.data_offset, f.data_size as u64]).unwrap_or_else(|| vec![0, 0, 0]);
+                assert_eq!(result, native, "{}: {query}", path.display());
+            }
+            println!("{}: {} native path comparisons", path.display(), queries.len());
+        }
     }
 }

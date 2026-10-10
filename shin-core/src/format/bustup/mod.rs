@@ -15,6 +15,8 @@
 
 mod builder;
 pub mod default_builder;
+#[cfg(test)]
+mod reference;
 
 use anyhow::{Result, bail};
 use binrw::{BinRead, BinWrite};
@@ -278,6 +280,14 @@ fn with_offset_and_size<
 ///
 /// NOTE: this will spawn rayon tasks and block waiting for them. If you don't want blocking wrap it with [`shin_tasks::compute::spawn`].
 pub fn read_bustup<B: BustupBuilder>(source: &[u8], builder_args: B::Args) -> Result<B::Output> {
+    let result = read_bustup_impl::<B>(source, &builder_args);
+    if let Err(error) = &result {
+        B::on_error(&builder_args, error);
+    }
+    result
+}
+
+fn read_bustup_impl<B: BustupBuilder>(source: &[u8], builder_args: &B::Args) -> Result<B::Output> {
     let mut source = std::io::Cursor::new(source);
     let source = &mut source;
 
@@ -363,7 +373,7 @@ pub fn read_bustup<B: BustupBuilder>(source: &[u8], builder_args: B::Args) -> Re
     };
 
     // let the builder decide which blocks to decode. if they are not interested in a certain block, they should drop the promise
-    let skeleton = B::new(&builder_args, skeleton);
+    let skeleton = B::new(builder_args, skeleton);
 
     let required_blocks = (0..)
         .zip(&block_descriptors)
@@ -375,9 +385,20 @@ pub fn read_bustup<B: BustupBuilder>(source: &[u8], builder_args: B::Args) -> Re
     let decoded_blocks = required_blocks
         .into_par_iter()
         .map(|(index, desc)| {
-            let data = &source.get_ref()[desc.offset as usize..(desc.offset + desc.size) as usize];
+            let end = desc
+                .offset
+                .checked_add(desc.size)
+                .ok_or_else(|| anyhow::anyhow!("Bustup block {} range overflows", desc.block_id))?;
+            let data = source
+                .get_ref()
+                .get(desc.offset as usize..end as usize)
+                .ok_or_else(|| {
+                    anyhow::anyhow!("Bustup block {} range is outside the file", desc.block_id)
+                })?;
             read_picture_block(data)
-                .and_then(|block| B::new_block(&builder_args, desc.offset, block))
+                .and_then(|block| {
+                    B::new_block_with_id(builder_args, desc.offset, desc.block_id, block)
+                })
                 .map(|block| (index, block))
         })
         .collect_vec_list();
@@ -399,7 +420,7 @@ pub fn read_bustup<B: BustupBuilder>(source: &[u8], builder_args: B::Args) -> Re
         decoded_blocks: &mut blocks_array,
     };
 
-    let output = B::build(&builder_args, skeleton, token)?;
+    let output = B::build(builder_args, skeleton, token)?;
 
     Ok(output)
 }

@@ -1,7 +1,7 @@
 use std::fmt;
 
-use serde::{Deserialize, Deserializer, Serialize, Serializer, de::SeqAccess};
-use shin_primitives::bit_utils::{BitBuffer, BitPosition, bit_read, bit_write};
+use serde::{de::SeqAccess, Deserialize, Deserializer, Serialize, Serializer};
+use shin_primitives::bit_utils::{bit_read, bit_write, BitBuffer, BitPosition};
 
 type WordType = u32;
 const WORD_BITS: usize = WordType::BITS as usize;

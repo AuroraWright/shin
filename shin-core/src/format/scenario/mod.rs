@@ -106,6 +106,15 @@ impl InstructionReader {
 
     #[inline]
     pub fn read(&mut self) -> Result<Instruction> {
+        let position = self.cur.position();
+        if let Some(opcode) = self.cur.get_ref().get(position as usize).copied() {
+            match Instruction::read_opcode(&mut self.cur, opcode) {
+                Ok(instruction) => return Ok(instruction),
+                // Retain the original malformed/truncated-input diagnostics
+                // and cursor behavior; errors are never cached or accepted.
+                Err(_) => self.cur.set_position(position),
+            }
+        }
         let instruction = Instruction::read(&mut self.cur)?;
         Ok(instruction)
     }
@@ -120,3 +129,7 @@ impl InstructionReader {
         self.cur.set_position(offset.0 as u64);
     }
 }
+
+#[cfg(test)]
+#[path = "decoder_dispatch_tests.rs"]
+mod decoder_dispatch_tests;
