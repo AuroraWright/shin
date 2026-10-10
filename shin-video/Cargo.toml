@@ -34,6 +34,7 @@ tracing = { workspace = true }
 which = "7.0.2"
 
 async-process = "2.2.3"
+async-channel = "2.3.1"
 futures-lite = "2.3.0"
 num-integer = "0.1.45"
 
@@ -44,6 +45,7 @@ parking_lot = { workspace = true }
 once_cell = "1.20.3"
 
 [features]
+reference-tests = ["shin-tasks/reference-tests"]
 gstreamer = [
     "dep:gst",
     "dep:gst-app",
@@ -54,7 +56,7 @@ gstreamer = [
 [dev-dependencies]
 shin-window = { path = "../shin-window" }
 shin-input = { path = "../shin-input" }
-shin-tasks = { path = "../shin-tasks" }
+shin-tasks = { path = "../shin-tasks", features = ["reference-tests"] }
 
 enum-map = { workspace = true }
 

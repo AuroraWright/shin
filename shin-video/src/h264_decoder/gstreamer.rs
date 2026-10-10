@@ -1,13 +1,13 @@
 use std::io::{Read, Seek};
 
-use anyhow::{Context, Result, bail};
+use anyhow::{bail, Context, Result};
 use dpi::PhysicalSize;
 use gst::prelude::*;
 use once_cell::sync::Lazy;
 use tracing::{debug, error, trace, warn};
 
 use crate::{
-    h264_decoder::{FrameTiming, nv12::Nv12Frame},
+    h264_decoder::{nv12::Nv12Frame, FrameTiming},
     mp4::Mp4TrackReader,
     mp4_bitstream_converter::Mp4BitstreamConverter,
 };
@@ -129,7 +129,7 @@ impl super::H264DecoderTrait for GStreamerH264Decoder {
         // define data callback for AppSrc
         {
             let mut bitstream_converter: Mp4BitstreamConverter =
-                track.get_mp4_track_info(Mp4BitstreamConverter::for_mp4_track);
+                track.get_mp4_track_info(Mp4BitstreamConverter::for_mp4_track)?;
             let mut vec_buffer = Vec::new();
 
             app_src.set_callbacks(
@@ -145,7 +145,13 @@ impl super::H264DecoderTrait for GStreamerH264Decoder {
                             );
                             let duration = mp4_time_to_gst_time(sample.duration as u64);
 
-                            bitstream_converter.convert_packet(&sample.bytes, &mut vec_buffer);
+                            if let Err(error) =
+                                bitstream_converter.convert_packet(&sample.bytes, &mut vec_buffer)
+                            {
+                                error!(%error, "Error converting MP4 video sample");
+                                let _ = app_src.end_of_stream();
+                                return;
+                            }
                             let mut buffer = gst::Buffer::with_size(vec_buffer.len())
                                 .expect("Failed to create buffer");
                             {
@@ -244,7 +250,8 @@ impl super::H264DecoderTrait for GStreamerH264Decoder {
         self.frame_number += 1;
         trace!(
             "Got a new frame! (frame #{}, start_time={})",
-            self.frame_number, start_time
+            self.frame_number,
+            start_time
         );
 
         let y_len = (self.frame_size.width * self.frame_size.height) as usize;

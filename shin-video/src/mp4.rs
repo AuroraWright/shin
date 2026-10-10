@@ -3,9 +3,12 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{Context, Result, anyhow};
+use anyhow::{anyhow, Context, Result};
 use mp4::{Mp4Sample, Mp4Track};
 use parking_lot::Mutex;
+
+#[cfg(test)]
+mod tests;
 
 pub type Mp4ReadStream = std::fs::File;
 pub type Mp4Reader<S> = Arc<Mutex<mp4::Mp4Reader<S>>>;
@@ -42,6 +45,10 @@ impl<S: Read + Seek> Mp4TrackReader<S> {
         let mp4 = self.mp4.lock();
         let track = mp4.tracks().get(&self.track_id).unwrap();
         f(track)
+    }
+
+    pub fn rewind(&mut self) {
+        self.samples_position = 1;
     }
 
     pub fn next_sample(&mut self) -> Result<Option<Mp4Sample>> {
@@ -97,6 +104,18 @@ pub struct Mp4<S: Read + Seek> {
 }
 
 impl<S: Read + Seek> Mp4<S> {
+    /// Native movie preparation retains the maximum track durationUs. This
+    /// includes an audio track that outlasts the final video frame.
+    pub fn duration_us(&self) -> u64 {
+        let video = self
+            .video_track
+            .get_mp4_track_info(|track| track.duration().as_micros() as u64);
+        let audio = self.audio_track.as_ref().map_or(0, |track| {
+            track.get_mp4_track_info(|track| track.duration().as_micros() as u64)
+        });
+        video.max(audio)
+    }
+
     pub fn new(mut reader: S) -> Result<Self> {
         let size = stream_len(&mut reader).context("Getting the length of a stream")?;
         let mp4 =

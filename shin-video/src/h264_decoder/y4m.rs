@@ -20,6 +20,8 @@ pub enum Error {
     EndOfFile,
     /// Unknown colorspace (possibly just unimplemented).
     UnknownColorspace,
+    /// Decoded planes cannot be uploaded as the supported NV12 layout.
+    UnsupportedFrameLayout,
     /// Error while parsing the file/frame header.
     // TODO(Kagami): Better granularity of parse errors.
     Parse(ParseError),
@@ -34,6 +36,7 @@ impl std::error::Error for Error {
         match *self {
             Error::EndOfFile => None,
             Error::UnknownColorspace => None,
+            Error::UnsupportedFrameLayout => None,
             Error::Parse(ref err) => Some(err),
             Error::Io(ref err) => Some(err),
             Error::OutOfMemory => None,
@@ -45,7 +48,8 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::EndOfFile => write!(f, "End of file"),
-            Error::UnknownColorspace => write!(f, "Bad input parameters provided"),
+            Error::UnknownColorspace => write!(f, "Unknown y4m colorspace"),
+            Error::UnsupportedFrameLayout => write!(f, "Unsupported decoded frame layout for NV12"),
             Error::Parse(ref err) => err.fmt(f),
             Error::Io(ref err) => err.fmt(f),
             Error::OutOfMemory => write!(f, "Out of memory (limits exceeded)"),
@@ -106,10 +110,9 @@ macro_rules! parse_error {
 
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
-        match err.kind() {
-            io::ErrorKind::UnexpectedEof => Error::EndOfFile,
-            _ => Error::Io(err),
-        }
+        // EOF is normal only between complete frames. A failed exact read
+        // means that a frame payload was truncated.
+        Error::Io(err)
     }
 }
 
@@ -293,9 +296,13 @@ impl<R: AsyncRead + Unpin> Decoder<R> {
         let mut raw_params = Vec::new();
         let mut buf_reader = BufReader::new(reader);
         let end_params_pos = buf_reader.read_until(TERMINATOR, &mut raw_params).await?;
-        if end_params_pos < FILE_MAGICK.len() || !raw_params.starts_with(FILE_MAGICK) {
+        if end_params_pos < FILE_MAGICK.len()
+            || !raw_params.starts_with(FILE_MAGICK)
+            || raw_params.last() != Some(&TERMINATOR)
+        {
             parse_error!(ParseError::InvalidY4M)
         }
+        raw_params.pop(); // Strip the verified newline before parsing tokens.
         let mut width = 0;
         let mut height = 0;
         // Framerate is actually required per spec, but let's be a bit more
@@ -342,7 +349,11 @@ impl<R: AsyncRead + Unpin> Decoder<R> {
             parse_error!(ParseError::General)
         }
         let plane_sizes = get_plane_sizes(width, height, colorspace);
-        let frame_size = plane_sizes.into_iter().map(|s| s.get_bytes_len()).sum();
+        let frame_size = plane_sizes.into_iter().try_fold(0usize, |total, plane| {
+            total
+                .checked_add(plane.checked_bytes_len()?)
+                .ok_or(Error::OutOfMemory)
+        })?;
         if frame_size > limits.bytes {
             return Err(Error::OutOfMemory);
         }
@@ -356,7 +367,7 @@ impl<R: AsyncRead + Unpin> Decoder<R> {
         })
     }
 
-    /// Iterate over frames. End of input is indicated by `Error::EOF`.
+    /// Iterate over frames. Clean end of input is indicated by `Error::EndOfFile`.
     pub async fn read_frame(&mut self) -> Result<PlanarFrame, Error> {
         self.params_buf.clear();
         self.reader
@@ -367,7 +378,10 @@ impl<R: AsyncRead + Unpin> Decoder<R> {
             return Err(Error::EndOfFile);
         }
 
-        self.params_buf.resize(self.params_buf.len() - 1, 0); // remove the terminator
+        if self.params_buf.last() != Some(&TERMINATOR) {
+            parse_error!(ParseError::InvalidY4M)
+        }
+        self.params_buf.pop(); // Strip the verified frame-header newline.
         if self.params_buf.len() < FRAME_MAGICK.len() || !self.params_buf.starts_with(FRAME_MAGICK)
         {
             parse_error!(ParseError::InvalidY4M)
@@ -438,6 +452,13 @@ impl PlaneSize {
         }
     }
 
+    fn checked_bytes_len(&self) -> Result<usize, Error> {
+        (self.width as usize)
+            .checked_mul(self.height as usize)
+            .and_then(|samples| samples.checked_mul(self.get_bytes_per_sample()))
+            .ok_or(Error::OutOfMemory)
+    }
+
     pub fn get_bytes_len(&self) -> usize {
         self.width as usize * self.height as usize * self.get_bytes_per_sample()
     }
@@ -468,20 +489,31 @@ impl PlanarFrame {
         &self.info
     }
 
-    pub fn into_nv12(self) -> Nv12Frame {
-        let size = self.size();
-        assert_eq!(size.colorspace, Colorspace::C420mpeg2);
-        assert_eq!(size.plane_sizes[0].bits_per_sample, BitsPerSample::B8);
+    pub fn validate_nv12(&self) -> Result<(), Error> {
+        let y = self.info.plane_sizes[0];
+        let uv = PlaneSize::new(y.width / 2, y.height / 2, BitsPerSample::B8);
+        if self.info.colorspace != Colorspace::C420mpeg2
+            || y.bits_per_sample != BitsPerSample::B8
+            || y.width == 0
+            || y.height == 0
+            || y.width % 2 != 0
+            || y.height % 2 != 0
+            || self.info.plane_sizes[1] != uv
+            || self.info.plane_sizes[2] != uv
+        {
+            return Err(Error::UnsupportedFrameLayout);
+        }
+        for (plane, size) in self.planes.iter().zip(self.info.plane_sizes) {
+            if plane.len() != size.checked_bytes_len()? {
+                return Err(Error::UnsupportedFrameLayout);
+            }
+        }
+        Ok(())
+    }
 
-        let y_size = size.plane_sizes[0];
-        // check that it's in I420, the only format we support
-        assert_eq!(size.plane_sizes[1].width, y_size.width / 2);
-        assert_eq!(size.plane_sizes[1].height, y_size.height / 2);
-        assert_eq!(size.plane_sizes[1].bits_per_sample, BitsPerSample::B8);
-        assert_eq!(size.plane_sizes[2].width, y_size.width / 2);
-        assert_eq!(size.plane_sizes[2].height, y_size.height / 2);
-        assert_eq!(size.plane_sizes[2].bits_per_sample, BitsPerSample::B8);
-
+    pub fn into_nv12(self) -> Result<Nv12Frame, Error> {
+        self.validate_nv12()?;
+        let y_size = self.info.plane_sizes[0];
         let [y_plane, u_plane, v_plane] = self.planes;
 
         // interleave u and v samples
@@ -491,10 +523,103 @@ impl PlanarFrame {
             .flat_map(|(u, v)| [*u, *v])
             .collect::<Vec<u8>>();
 
-        Nv12Frame {
+        Ok(Nv12Frame {
             y_plane,
             uv_plane,
             size: PhysicalSize::new(y_size.width, y_size.height),
-        }
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures_lite::{future::block_on, io::Cursor};
+
+    const HEADER: &[u8] = b"YUV4MPEG2 W2 H2 F25:1 C420mpeg2\n";
+
+    #[test]
+    fn complete_frame_converts_exact_planes_and_clean_eof() {
+        block_on(async {
+            let bytes = [HEADER, b"FRAME\n", &[1, 2, 3, 4, 5, 6]].concat();
+            let mut decoder = Decoder::new(Cursor::new(bytes)).await.unwrap();
+            let frame = decoder.read_frame().await.unwrap().into_nv12().unwrap();
+            assert_eq!(frame.size, PhysicalSize::new(2, 2));
+            assert_eq!(frame.y_plane, [1, 2, 3, 4]);
+            assert_eq!(frame.uv_plane, [5, 6]);
+            assert!(matches!(decoder.read_frame().await, Err(Error::EndOfFile)));
+        });
+    }
+
+    #[test]
+    fn every_partial_frame_payload_reports_io_error_instead_of_eof() {
+        block_on(async {
+            for length in 0..6 {
+                let bytes = [HEADER, b"FRAME\n", &b"123456"[..length]].concat();
+                let mut decoder = Decoder::new(Cursor::new(bytes)).await.unwrap();
+                match decoder.read_frame().await {
+                    Err(Error::Io(error)) => assert_eq!(error.kind(), io::ErrorKind::UnexpectedEof),
+                    other => panic!("Truncated payload length {length}: {other:?}"),
+                }
+            }
+        });
+    }
+
+    #[test]
+    fn unterminated_stream_and_frame_headers_are_errors() {
+        block_on(async {
+            assert!(matches!(
+                Decoder::new(Cursor::new(&HEADER[..HEADER.len() - 1])).await,
+                Err(Error::Parse(_))
+            ));
+            for suffix in [&b"FRAME"[..], &b"FRAME "[..], &b"FRAME Xtest"[..]] {
+                let mut decoder = Decoder::new(Cursor::new([HEADER, suffix].concat()))
+                    .await
+                    .unwrap();
+                assert!(matches!(decoder.read_frame().await, Err(Error::Parse(_))));
+            }
+        });
+    }
+
+    #[test]
+    fn oversized_dimensions_return_error_without_arithmetic_overflow() {
+        block_on(async {
+            let bytes = b"YUV4MPEG2 W4294967295 H4294967295 C420p12\n";
+            assert!(matches!(
+                Decoder::new(Cursor::new(bytes)).await,
+                Err(Error::OutOfMemory)
+            ));
+            assert!(matches!(
+                Decoder::new_with_limits(Cursor::new(HEADER), Limits { bytes: 5 }).await,
+                Err(Error::OutOfMemory)
+            ));
+        });
+    }
+
+    #[test]
+    fn unsupported_layouts_and_inconsistent_planes_are_fallible() {
+        block_on(async {
+            for header in [
+                &b"YUV4MPEG2 W2 H2 C444\n"[..],
+                &b"YUV4MPEG2 W2 H2 C420p10\n"[..],
+                &b"YUV4MPEG2 W3 H2 C420mpeg2\n"[..],
+            ] {
+                let bytes = [header, b"FRAME\n", &[0; 32]].concat();
+                let mut decoder = Decoder::new(Cursor::new(bytes)).await.unwrap();
+                assert!(matches!(
+                    decoder.read_frame().await.unwrap().into_nv12(),
+                    Err(Error::UnsupportedFrameLayout)
+                ));
+            }
+            let mut decoder = Decoder::new(Cursor::new([HEADER, b"FRAME\n", &[0; 6]].concat()))
+                .await
+                .unwrap();
+            let mut frame = decoder.read_frame().await.unwrap();
+            frame.planes[2].clear();
+            assert!(matches!(
+                frame.into_nv12(),
+                Err(Error::UnsupportedFrameLayout)
+            ));
+        });
     }
 }

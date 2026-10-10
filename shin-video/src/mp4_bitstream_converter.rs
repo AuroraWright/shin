@@ -1,3 +1,4 @@
+use anyhow::{ensure, Context, Result};
 use mp4::Mp4Track;
 
 /// This struct converts NAL units from the MP4 to the Annex B format, expected by openh264.
@@ -12,6 +13,68 @@ pub struct Mp4BitstreamConverter {
     new_idr: bool,
     sps_seen: bool,
     pps_seen: bool,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn converter(length_size: u8) -> Mp4BitstreamConverter {
+        Mp4BitstreamConverter {
+            length_size,
+            sequence_parameter_sets: vec![vec![0x67, 0x01]],
+            picture_parameter_sets: vec![vec![0x68, 0x02]],
+            new_idr: true,
+            sps_seen: false,
+            pps_seen: false,
+        }
+    }
+
+    #[test]
+    fn damaged_nal_lengths_and_idr_headers_return_errors() {
+        for width in 1..=4 {
+            let mut converter = converter(width);
+            let mut output = Vec::new();
+            let prefix = vec![0; usize::from(width) - 1];
+            if !prefix.is_empty() {
+                assert!(converter
+                    .convert_packet(&prefix, &mut output)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("Truncated AVC NAL length"));
+            }
+            let mut packet = vec![0; usize::from(width)];
+            *packet.last_mut().unwrap() = 2;
+            packet.push(0x65);
+            assert!(converter
+                .convert_packet(&packet, &mut output)
+                .unwrap_err()
+                .to_string()
+                .contains("payload exceeds"));
+            packet[usize::from(width) - 1] = 1;
+            assert!(converter
+                .convert_packet(&packet, &mut output)
+                .unwrap_err()
+                .to_string()
+                .contains("IDR slice header"));
+        }
+    }
+
+    #[test]
+    fn valid_idr_packet_keeps_annex_b_parameter_sets_and_payload() {
+        let mut converter = converter(4);
+        let mut output = Vec::new();
+        converter
+            .convert_packet(
+                &[0, 0, 0, 2, 0x65, 0x80, 0, 0, 0, 2, 0x61, 0x80],
+                &mut output,
+            )
+            .unwrap();
+        assert_eq!(
+            output,
+            [0, 0, 1, 0x67, 0x01, 0, 0, 1, 0x68, 0x02, 0, 0, 1, 0x65, 0x80, 0, 0, 1, 0x61, 0x80]
+        );
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,7 +157,7 @@ impl From<u8> for NalType {
 impl Mp4BitstreamConverter {
     /// Create a new converter for the given track.
     /// The track must contain AVC1 configuration.
-    pub fn for_mp4_track(track: &Mp4Track) -> Self {
+    pub fn for_mp4_track(track: &Mp4Track) -> Result<Self> {
         let config_box = &track
             .trak
             .mdia
@@ -103,10 +166,14 @@ impl Mp4BitstreamConverter {
             .stsd
             .avc1
             .as_ref()
-            .expect("The track does not contain AVC1 configuration")
+            .context("The track does not contain AVC1 configuration")?
             .avcc;
 
-        Self {
+        ensure!(
+            config_box.length_size_minus_one < 4,
+            "Invalid AVC NAL length size"
+        );
+        Ok(Self {
             length_size: config_box.length_size_minus_one + 1,
             sequence_parameter_sets: config_box
                 .sequence_parameter_sets
@@ -124,17 +191,21 @@ impl Mp4BitstreamConverter {
             new_idr: true,
             sps_seen: false,
             pps_seen: false,
-        }
+        })
     }
 
     /// Convert a single packet from the MP4 format to the Annex B format.
     ///
     /// It clears the `out` vector and appends the converted packet to it.
-    pub fn convert_packet(&mut self, packet: &[u8], out: &mut Vec<u8>) {
+    pub fn convert_packet(&mut self, packet: &[u8], out: &mut Vec<u8>) -> Result<()> {
         let mut stream = packet;
         out.clear();
         while !stream.is_empty() {
             // read the length of the NAL unit
+            ensure!(
+                stream.len() >= usize::from(self.length_size),
+                "Truncated AVC NAL length"
+            );
             let mut nal_size = 0;
             for _ in 0..self.length_size {
                 nal_size = (nal_size << 8) | stream[0] as u32;
@@ -145,6 +216,10 @@ impl Mp4BitstreamConverter {
                 continue;
             }
 
+            ensure!(
+                nal_size as usize <= stream.len(),
+                "AVC NAL payload exceeds MP4 sample size"
+            );
             let nal = &stream[..nal_size as usize];
             stream = &stream[nal_size as usize..];
 
@@ -158,6 +233,7 @@ impl Mp4BitstreamConverter {
                     self.pps_seen = true;
                 }
                 NalType::IdrSlice => {
+                    ensure!(nal.len() >= 2, "Truncated AVC IDR slice header");
                     // If this is a new IDR picture following an IDR picture, reset the idr flag.
                     // Just check first_mb_in_slice to be 1
                     if !self.new_idr && nal[1] & 0x80 != 0 {
@@ -195,5 +271,6 @@ impl Mp4BitstreamConverter {
                 self.pps_seen = false;
             }
         }
+        Ok(())
     }
 }

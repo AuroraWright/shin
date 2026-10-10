@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::{Context, Result};
 use shin_audio::AudioManager;
+use shin_core::vm::command::types::Volume;
 use shin_video::{VideoPlayerHandle, mp4::Mp4};
 
 use crate::asset::system::{Asset, AssetDataAccessor, AssetDataCursor, AssetLoadContext};
@@ -31,6 +32,14 @@ impl Asset for Movie {
 }
 
 impl Movie {
+    pub fn prepare_with_volume(
+        &self,
+        device: &wgpu::Device,
+        audio_manager: &AudioManager,
+        volume: Volume,
+    ) -> Result<VideoPlayerHandle> {
+        VideoPlayerHandle::new_paused_with_volume(device, audio_manager, self.mp4.clone(), volume)
+    }
     pub fn label(&self) -> &str {
         &self.label
     }
@@ -41,5 +50,44 @@ impl Movie {
         audio_manager: &AudioManager,
     ) -> Result<VideoPlayerHandle> {
         VideoPlayerHandle::new(device, audio_manager, self.mp4.clone())
+    }
+
+    pub fn prepare_looping_with_volume(
+        &self,
+        device: &wgpu::Device,
+        audio_manager: &AudioManager,
+        volume: Volume,
+    ) -> Result<VideoPlayerHandle> {
+        VideoPlayerHandle::new_looping_with_volume(
+            device,
+            audio_manager,
+            self.mp4.clone(),
+            volume,
+            true,
+        )
+    }
+
+    pub fn play_looping_with_volume(
+        &self,
+        device: &wgpu::Device,
+        audio_manager: &AudioManager,
+        volume: Volume,
+    ) -> Result<VideoPlayerHandle> {
+        VideoPlayerHandle::new_looping_with_volume(
+            device,
+            audio_manager,
+            self.mp4.clone(),
+            volume,
+            false,
+        )
+    }
+
+    pub fn play_with_volume(
+        &self,
+        device: &wgpu::Device,
+        audio_manager: &AudioManager,
+        volume: Volume,
+    ) -> Result<VideoPlayerHandle> {
+        VideoPlayerHandle::new_with_volume(device, audio_manager, self.mp4.clone(), volume)
     }
 }
