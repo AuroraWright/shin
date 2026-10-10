@@ -8,7 +8,9 @@ use crate::format::scenario::{
     instruction_elements::{
         CodeAddress, FromNumber, NumberSpec, Register, RegisterRepr, UntypedNumberSpec,
     },
-    instructions::{BinaryOperationType, Expression, ExpressionTerm, JumpCond, JumpCondType},
+    instructions::{
+        BinaryOperationType, Expression, ExpressionTerm, JumpCond, JumpCondType, UnaryOperationType,
+    },
 };
 
 /// Contains the full VM state
@@ -21,11 +23,11 @@ pub struct VmCtx {
     ///
     /// Stores the return address for each call instruction
     ///
-    /// Also [push](super::Instruction::push) uses this stack for some reason
+    /// Native GOSUB/CALL return addresses and PUSH/POP values share this stack.
     call_stack: Vec<CodeAddress>,
     /// Data stack
     ///
-    /// Stores the arguments for each call instruction
+    /// Stores the arguments for each call instruction (up to 255 encoded values).
     ///
     /// Can be addressed via [Register] with value > 0x1000
     ///
@@ -51,7 +53,7 @@ fn unbool(v: bool) -> i32 {
 
 #[inline]
 fn real(v: i32) -> f32 {
-    v as f32 / 1000.0
+    v as f32 * 0.001
 }
 
 #[inline]
@@ -61,12 +63,27 @@ fn unreal(v: f32) -> i32 {
 
 #[inline]
 fn angle(v: i32) -> f32 {
-    real(v) * std::f32::consts::PI * 2.0
+    real(v % 1000) * std::f32::consts::TAU
 }
 
 #[inline]
 fn unangle(v: f32) -> i32 {
-    unreal(v / std::f32::consts::PI / 2.0)
+    (v * 1000.0 / std::f32::consts::TAU) as i32
+}
+
+// AArch64 SDIV returns zero on division by zero and wraps MIN / -1.
+#[inline]
+fn integer_divide(left: i32, right: i32) -> i32 {
+    if right == 0 {
+        0
+    } else {
+        left.wrapping_div(right)
+    }
+}
+
+#[inline]
+fn integer_modulo(left: i32, right: i32) -> i32 {
+    left.wrapping_sub(integer_divide(left, right).wrapping_mul(right))
 }
 
 impl VmCtx {
@@ -130,6 +147,29 @@ impl VmCtx {
         T::from_number(value)
     }
 
+    /// Evaluate a unary operation using the original engine's 32-bit semantics.
+    ///
+    /// Executed comparisons against both supplied NSOs: handler0xeba70/0xec1a0,
+    /// jump table 0x173e5f. Opcodes 7/8 call asinf/acosf through the PLT;
+    /// opcodes 10/11 call popcount/ctz at 0x119440/0x119480.
+    pub fn evaluate_unary_operation(&self, ty: UnaryOperationType, source: i32) -> i32 {
+        match ty {
+            UnaryOperationType::Zero => 0,
+            // The historical name is misleading: the Switch handler uses MVN W0, W0.
+            UnaryOperationType::Not16 => !source,
+            UnaryOperationType::Negate => source.wrapping_neg(),
+            UnaryOperationType::Abs => source.wrapping_abs(),
+            UnaryOperationType::Sin => unreal(angle(source).sin()),
+            UnaryOperationType::Cos => unreal(angle(source).cos()),
+            UnaryOperationType::Tan => unreal(angle(source).tan()),
+            UnaryOperationType::ASin => unangle(real(source).asin()),
+            UnaryOperationType::ACos => unangle(real(source).acos()),
+            UnaryOperationType::ATan => unangle(real(source).atan()),
+            UnaryOperationType::CountOnes => source.count_ones() as i32,
+            UnaryOperationType::TrailingZeros => source.trailing_zeros() as i32,
+        }
+    }
+
     /// Evaluate jump condition in this context
     pub fn compute_jump_condition(&self, cond: JumpCond, left: i32, right: i32) -> bool {
         let result = match cond.condition {
@@ -140,7 +180,7 @@ impl VmCtx {
             JumpCondType::LessOrEqual => left <= right,
             JumpCondType::Less => left < right,
             JumpCondType::BitwiseAndNotZero => (left & right) != 0,
-            JumpCondType::BitSet => (left & (1 << (right % 32))) != 0,
+            JumpCondType::BitSet => (left & 1i32.wrapping_shl(right as u32)) != 0,
         };
 
         if cond.is_negated {
@@ -166,7 +206,21 @@ impl VmCtx {
         self.arguments_stack.pop().unwrap();
     }
 
-    /// Evaluate a RPN expression in this context
+    /// Active stack state in the native oracle's serialized order.
+    #[cfg(test)]
+    pub(super) fn reference_stack_snapshot(&self) -> Vec<i64> {
+        let mut words = vec![self.call_stack.len() as i64];
+        words.extend(self.call_stack.iter().map(|v| i64::from(v.0)));
+        words.push(256 - self.arguments_stack.iter().map(|f| f.len() as i64 + 1).sum::<i64>());
+        for frame in self.arguments_stack.iter().rev() {
+            words.push(frame.len() as i64);
+            words.extend(frame.iter().map(|&v| i64::from(v)));
+        }
+        words
+    }
+
+    /// Evaluate an RPN expression with native wrapping integer/fixed-point semantics.
+    /// Executed handler0xec050/0xec780 comparisons cover every term and depth32.
     pub fn evaluate_expression(&self, expr: &Expression) -> i32 {
         let mut stack = SmallVec::<i32, 16>::new();
         for term in expr.iter() {
@@ -175,38 +229,37 @@ impl VmCtx {
                 ExpressionTerm::Add => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    stack.push(left + right);
+                    stack.push(left.wrapping_add(right));
                 }
                 ExpressionTerm::Subtract => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    stack.push(left - right);
+                    stack.push(left.wrapping_sub(right));
                 }
                 ExpressionTerm::Multiply => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    stack.push(left * right);
+                    stack.push(left.wrapping_mul(right));
                 }
                 ExpressionTerm::Divide => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    stack.push(if right != 0 { left / right } else { 0 });
+                    stack.push(integer_divide(left, right));
                 }
                 ExpressionTerm::Modulo => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    let div = if right != 0 { left / right } else { 0 };
-                    stack.push(left - div * right);
+                    stack.push(integer_modulo(left, right));
                 }
                 ExpressionTerm::ShiftLeft => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    stack.push(left << right);
+                    stack.push(left.wrapping_shl(right as u32));
                 }
                 ExpressionTerm::ShiftRight => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    stack.push(left >> right);
+                    stack.push(left.wrapping_shr(right as u32));
                 }
                 ExpressionTerm::BitwiseAnd => {
                     let right = stack.pop().unwrap();
@@ -225,7 +278,7 @@ impl VmCtx {
                 }
                 ExpressionTerm::Negate => {
                     let val = stack.pop().unwrap();
-                    stack.push(-val);
+                    stack.push(val.wrapping_neg());
                 }
                 ExpressionTerm::BitwiseNot => {
                     let val = stack.pop().unwrap();
@@ -233,7 +286,7 @@ impl VmCtx {
                 }
                 ExpressionTerm::Abs => {
                     let val = stack.pop().unwrap();
-                    stack.push(val.abs());
+                    stack.push(val.wrapping_abs());
                 }
                 ExpressionTerm::CmpEqual => {
                     let right = stack.pop().unwrap();
@@ -292,15 +345,12 @@ impl VmCtx {
                 ExpressionTerm::MultiplyReal => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    // TODO: figure out how negative values are handled
-                    assert!(left >= 0 && right >= 0); // not sure if this will behave correctly otherwise
-                    stack.push(left * right / 1000);
+                    stack.push(left.wrapping_mul(right) / 1000);
                 }
                 ExpressionTerm::DivideReal => {
                     let right = stack.pop().unwrap();
                     let left = stack.pop().unwrap();
-                    assert!(left >= 0 && right >= 0); // not sure if this will behave correctly otherwise
-                    stack.push(left * 1000 / right);
+                    stack.push(integer_divide(left.wrapping_mul(1000), right));
                 }
                 ExpressionTerm::Sin => {
                     let val = stack.pop().unwrap();
@@ -333,71 +383,199 @@ impl VmCtx {
         stack.pop().unwrap()
     }
 
+    /// The Switch handler at 0xebd50 uses 32-bit integer operations, including
+    /// fixed point multiply/divide, rather than converting through floating point.
+    /// Executed original0xebd50/updated0xec480 comparisons cover every operator.
     pub fn evaluate_binary_operation(&self, ty: BinaryOperationType, left: i32, right: i32) -> i32 {
         match ty {
             BinaryOperationType::MovRight => right,
             BinaryOperationType::Zero => 0,
-            BinaryOperationType::Add => left + right,
-            BinaryOperationType::Subtract => left - right,
-            BinaryOperationType::Multiply => left * right,
-            BinaryOperationType::Divide => {
-                if right != 0 {
-                    left / right
-                } else {
-                    0
-                }
-            }
-            BinaryOperationType::Modulo => {
-                let div = if right != 0 { left / right } else { 0 };
-                left - div * right
-            }
+            BinaryOperationType::Add => left.wrapping_add(right),
+            BinaryOperationType::Subtract => left.wrapping_sub(right),
+            BinaryOperationType::Multiply => left.wrapping_mul(right),
+            BinaryOperationType::Divide => integer_divide(left, right),
+            BinaryOperationType::Modulo => integer_modulo(left, right),
             BinaryOperationType::BitwiseAnd => left & right,
             BinaryOperationType::BitwiseOr => left | right,
             BinaryOperationType::BitwiseXor => left ^ right,
-            BinaryOperationType::LeftShift => left << (right % 32),
-            BinaryOperationType::RightShift => left >> (right % 32),
-            BinaryOperationType::MultiplyReal => unreal(real(left) * real(right)),
-            BinaryOperationType::DivideReal => unreal(real(left) / real(right)),
+            BinaryOperationType::LeftShift => left.wrapping_shl(right as u32),
+            BinaryOperationType::RightShift => left.wrapping_shr(right as u32),
+            BinaryOperationType::MultiplyReal => left.wrapping_mul(right) / 1000,
+            BinaryOperationType::DivideReal => integer_divide(left.wrapping_mul(1000), right),
             BinaryOperationType::ATan2 => unangle(f32::atan2(real(left), real(right))),
-            BinaryOperationType::SetBit => left | (1 << (right % 32)),
-            BinaryOperationType::ClearBit => left & !(1 << (right % 32)),
+            BinaryOperationType::SetBit => {
+                if (0..32).contains(&right) {
+                    left | (1 << right)
+                } else {
+                    left
+                }
+            }
+            BinaryOperationType::ClearBit => {
+                if (0..32).contains(&right) {
+                    left & !(1 << right)
+                } else {
+                    left
+                }
+            }
             BinaryOperationType::ACursedOperation => {
-                // Defined as `ctz((0xffffffff << R) & L)`
-                let r = right % 32;
-                let l = left & (-1 << r);
-                let l = if l == 0 { 32 } else { l };
-                let l = l.trailing_zeros();
-                l as i32
+                let bits = left & (-1i32).wrapping_shl(right as u32);
+                if bits == 0 {
+                    -1
+                } else {
+                    bits.trailing_zeros() as i32
+                }
             }
         }
     }
 
     /// Update the PRNG state.
-    /// This is called after each instruction is executed.
+    /// Native eed58/ef488 advances this immediately before each instruction.
     pub fn update_prng(&mut self) {
         self.prng_state = self.prng_state.wrapping_mul(0x343fd).wrapping_add(0x269ec3);
     }
 
-    /// Generate a random number in the range [a, b]
+    /// Generate a random number between the two endpoints, inclusive, in either order.
     ///
     /// This is called by the `rand` instruction
     ///
     /// The PRNG state is **NOT** updated after this call
     ///
-    /// (it is updated by AdvVm via [Self::update_prng] after each the instruction is executed)
+    /// The caller advances it through [Self::update_prng] before the instruction.
     pub fn run_prng(&self, a: i32, b: i32) -> i32 {
-        let state = self.prng_state;
-
         if a == b {
             a
         } else {
-            let useful_state = (state >> 8 & 0xffff) as i32;
-            let interval_size = (b - a).abs() + 1;
-            let lower_bound = a.min(b);
+            // Native ecd04..ecd40/ed434..ed470: signed endpoints are
+            // extended before range arithmetic; all24 upper seed bits remain.
+            let lower = i64::from(a.min(b));
+            let width = i64::from(a.max(b)) - lower + 1;
+            let sample = i64::from(self.prng_state >> 8);
+            (lower + ((width * sample) >> 24)) as i32
+        }
+    }
+}
 
-            let amplitude = (useful_state * interval_size) >> 0x10;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-            lower_bound + amplitude
+    fn expression_binary(ctx: &VmCtx, term: ExpressionTerm, left: i32, right: i32) -> i32 {
+        ctx.evaluate_expression(
+            &Expression::new([
+                ExpressionTerm::Push(NumberSpec::constant(left)),
+                ExpressionTerm::Push(NumberSpec::constant(right)),
+                term,
+            ])
+            .unwrap(),
+        )
+    }
+
+    #[test]
+    fn random_ranges_use_native_24bit_samples_and_wide_intervals() {
+        // Results emitted by original ecc90 and updated ed3c0, without a VM step.
+        for (seed, min, max, expected) in [
+            (0x12345678, 0, 1000, 71),
+            (0x80000000, i32::MIN, i32::MAX, 0),
+            (u32::MAX, i32::MIN, i32::MAX, 2147483392),
+            (0, i32::MIN, i32::MAX, i32::MIN),
+            (u32::MAX, 42, 42, 42),
+        ] {
+            let ctx = VmCtx::new(0, seed);
+            assert_eq!(ctx.run_prng(min, max), expected);
+            assert_eq!(ctx.run_prng(max, min), expected);
+            assert_eq!(ctx.get_prng_state(), seed, "RND does not advance the seed");
+        }
+    }
+
+    #[test]
+    fn unary_integer_boundaries() {
+        let ctx = VmCtx::new(0, 0);
+        for (ty, input, expected) in [
+            (UnaryOperationType::Zero, i32::MAX, 0),
+            (UnaryOperationType::Not16, 0, -1),
+            (UnaryOperationType::Not16, 0x12345678, !0x12345678),
+            (UnaryOperationType::Negate, i32::MIN, i32::MIN),
+            (UnaryOperationType::Abs, -123, 123),
+            (UnaryOperationType::Abs, i32::MIN, i32::MIN),
+            (UnaryOperationType::CountOnes, -1, 32),
+            (UnaryOperationType::CountOnes, i32::MIN, 1),
+            (UnaryOperationType::TrailingZeros, 0, 32),
+            (UnaryOperationType::TrailingZeros, i32::MIN, 31),
+            (UnaryOperationType::Sin, 250, 1000),
+            (UnaryOperationType::Sin, -250, -1000),
+            (UnaryOperationType::Sin, 1250, 1000),
+            (UnaryOperationType::Cos, 0, 1000),
+            (UnaryOperationType::Tan, 0, 0),
+            // Single precision multiply/divide precedes truncation in FCVTZS.
+            (UnaryOperationType::ASin, 1000, 249),
+            (UnaryOperationType::ACos, 1000, 0),
+            (UnaryOperationType::ATan, 0, 0),
+        ] {
+            assert_eq!(ctx.evaluate_unary_operation(ty, input), expected);
+        }
+    }
+
+    #[test]
+    fn binary_and_expression_integer_semantics_agree() {
+        use BinaryOperationType as B;
+        use ExpressionTerm as E;
+        let ctx = VmCtx::new(0, 0);
+        for (binary, term, left, right, expected) in [
+            (B::Add, E::Add, i32::MAX, 1, i32::MIN),
+            (B::Subtract, E::Subtract, i32::MIN, 1, i32::MAX),
+            (B::Multiply, E::Multiply, i32::MAX, 2, -2),
+            (B::Divide, E::Divide, i32::MIN, -1, i32::MIN),
+            (B::Divide, E::Divide, 7, 0, 0),
+            (B::Modulo, E::Modulo, -7, 3, -1),
+            (B::Modulo, E::Modulo, 7, 0, 7),
+            (B::Modulo, E::Modulo, i32::MIN, -1, 0),
+            (B::LeftShift, E::ShiftLeft, 1, -1, i32::MIN),
+            (B::LeftShift, E::ShiftLeft, 1, 32, 1),
+            (B::RightShift, E::ShiftRight, i32::MIN, 63, -1),
+            (B::MultiplyReal, E::MultiplyReal, -1500, 333, -499),
+            (B::MultiplyReal, E::MultiplyReal, i32::MAX, 2, 0),
+            (B::DivideReal, E::DivideReal, -1500, 3000, -500),
+            (B::DivideReal, E::DivideReal, 1000, 0, 0),
+        ] {
+            assert_eq!(
+                ctx.evaluate_binary_operation(binary, left, right),
+                expected,
+                "{binary:?}"
+            );
+            assert_eq!(
+                expression_binary(&ctx, term, left, right),
+                expected,
+                "{term:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn bit_operations_follow_switch_boundaries() {
+        let ctx = VmCtx::new(0, 0);
+        for index in [-1, 32, 63] {
+            assert_eq!(
+                ctx.evaluate_binary_operation(BinaryOperationType::SetBit, 42, index),
+                42
+            );
+            assert_eq!(
+                ctx.evaluate_binary_operation(BinaryOperationType::ClearBit, 42, index),
+                42
+            );
+        }
+        assert_eq!(
+            ctx.evaluate_binary_operation(BinaryOperationType::SetBit, 0, 31),
+            i32::MIN
+        );
+        assert_eq!(
+            ctx.evaluate_binary_operation(BinaryOperationType::ClearBit, -1, 31),
+            i32::MAX
+        );
+        for (value, start, expected) in [(0, 0, -1), (8, 4, -1), (8, 0, 3), (i32::MIN, -1, 31)] {
+            assert_eq!(
+                ctx.evaluate_binary_operation(BinaryOperationType::ACursedOperation, value, start),
+                expected
+            );
         }
     }
 }

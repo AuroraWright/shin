@@ -7,6 +7,66 @@ use crate::{
 
 pub struct NoMixin;
 
+/// Native MessageBrowser::LogMessage (ac2b0/ac300/ac480). The speaker
+/// remains at full body size, in brackets; it is not a message-window nameplate.
+pub struct BacklogTextLayouterMixin {
+    name_chars: usize,
+    in_name: bool,
+    quotation: MessageLayerLayouterMixin,
+}
+
+impl BacklogTextLayouterMixin {
+    pub fn new() -> Self {
+        let mut quotation = MessageLayerLayouterMixin::new(MessageboxType::Transparent);
+        quotation.line_index = 1;
+        Self {
+            name_chars: 0,
+            in_name: true,
+            quotation,
+        }
+    }
+}
+
+impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for BacklogTextLayouterMixin {
+    fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char) {
+        if self.in_name {
+            if self.name_chars == 0 {
+                layouter.on_char('【');
+            }
+            self.name_chars += 1;
+        }
+        layouter.on_char(codepoint);
+    }
+
+    fn on_newline(&mut self, layouter: &mut MessageTextLayouterImpl<Font>) {
+        if self.in_name {
+            if self.name_chars != 0 {
+                layouter.on_char('】');
+                // Native calls the base finalizer directly, bypassing quote
+                // handling. An empty name consumes no vertical space.
+                layouter.finalize_up_to(layouter.commands.len(), true);
+            }
+            self.in_name = false;
+        } else {
+            self.quotation.on_newline(layouter);
+        }
+    }
+
+    fn on_voice(&mut self, _layouter: &mut MessageTextLayouterImpl<Font>, _voice_path: String) {
+        // Browser collects replay paths separately; no voice timing commands.
+    }
+
+    fn finalize_up_to(
+        &mut self,
+        layouter: &mut MessageTextLayouterImpl<Font>,
+        finalize_index: usize,
+        is_hard_break: bool,
+    ) {
+        self.quotation
+            .finalize_up_to(layouter, finalize_index, is_hard_break);
+    }
+}
+
 impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for NoMixin {
     fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char) {
         layouter.on_char(codepoint);

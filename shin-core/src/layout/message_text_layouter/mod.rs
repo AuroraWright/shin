@@ -5,14 +5,14 @@ pub mod mixins;
 use commands::{Char, Command, Section, Voice, VoiceSync, VoiceWait, Wait};
 use float_ord::FloatOrd;
 use font::FontMetrics;
-use glam::{vec2, Vec2};
+use glam::{Vec2, vec2};
 use itertools::Itertools;
 use shin_primitives::{char_set::CharSet, color::UnormColor};
 
 use crate::{
     layout::{
-        message_text_layouter::commands::CharFontType, text_layouter::TextLayouter,
-        MessageTextParser,
+        MessageTextParser, message_text_layouter::commands::CharFontType,
+        text_layouter::TextLayouter,
     },
     vm::command::types::{MessageTextLayout, MessageboxType},
 };
@@ -74,7 +74,13 @@ pub struct MessageTextLayouterDefaults {
 }
 
 fn parse_color(color: i32) -> UnormColor {
-    UnormColor::from_decimal_rgb(color)
+    // Native layout stores zero for nonpositive defaults and @c0. Drawing
+    // supplies fade alpha separately; preserve this command's original word.
+    if color <= 0 {
+        UnormColor(0)
+    } else {
+        UnormColor::from_decimal_rgb(color)
+    }
 }
 
 fn parse_draw_speed(draw_speed: i32) -> f32 {
@@ -234,10 +240,6 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
             is_auto_click: self.auto_click,
         };
 
-        self.block_max_time = 0.0;
-        self.current_time += 0.001;
-        self.block_start_time = self.current_time;
-
         self.commands.push(Command::Wait(cmd));
 
         mixin.on_newline(self);
@@ -246,16 +248,13 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
     }
 
     pub fn on_char(&mut self, codepoint: char) {
-        const SHOULD_NOT_START_A_LINE: CharSet<56> = CharSet::new(")>]―’”‥…─♪、。々〉》」』】〕〟ぁぃぅぇぉっゃゅょゎんゝゞァィゥェォッャュョヮヵヶ・ーヽヾ！）：；？｝～");
+        const SHOULD_NOT_START_A_LINE: CharSet<56> = CharSet::new(
+            ")>]―’”‥…─♪、。々〉》」』】〕〟ぁぃぅぇぉっゃゅょゎんゝゞァィゥェォッャュョヮヵヶ・ーヽヾ！）：；？｝～",
+        );
         const SHOULD_NOT_END_A_LINE: CharSet<14> = CharSet::new("(<[‘“〈《「『【〔〝（｛");
 
         let mut cant_be_at_line_start = SHOULD_NOT_START_A_LINE.contains(codepoint);
         let mut cant_be_at_line_end = SHOULD_NOT_END_A_LINE.contains(codepoint);
-
-        if !self.params.follow_kinsoku_shori_rules {
-            cant_be_at_line_start = false;
-            cant_be_at_line_end = false;
-        }
 
         let (font, font_type) = if self.is_bold {
             (&self.font_bold, CharFontType::Bold)
@@ -276,6 +275,13 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
         if self.rubi_open {
             // if we have moved on from the start of the rubi base text - do not allow a line break
             cant_be_at_line_start = self.rubi_start_x != self.position.x;
+        }
+
+        // Native b4bd8 clears both prohibitions after ruby handling. When
+        // kinsoku is disabled, ruby bases may therefore wrap between glyphs.
+        if !self.params.follow_kinsoku_shori_rules {
+            cant_be_at_line_start = false;
+            cant_be_at_line_end = false;
         }
 
         let mut cmd = Char {
@@ -432,7 +438,9 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
         };
 
         self.block_max_time = 0.0;
-        self.current_time += 0.001;
+        // Native b539c..b53b0 resumes after the longest parallel branch,
+        // rather than the current (possibly shorter) branch.
+        self.current_time = cmd.time + 0.001;
         self.block_start_time = self.current_time;
 
         self.commands.push(Command::Wait(cmd));
@@ -1091,6 +1099,23 @@ impl<Font> MessageTextLayouter<Font> {
 
 pub type MessageLayerLayouter<Font> =
     MessageTextLayouterWithMixin<Font, mixins::MessageLayerLayouterMixin>;
+
+pub type BacklogTextLayouter<Font> =
+    MessageTextLayouterWithMixin<Font, mixins::BacklogTextLayouterMixin>;
+
+impl<Font> BacklogTextLayouter<Font> {
+    pub fn new(
+        font_normal: Font,
+        font_bold: Font,
+        layout_params: LayoutParams,
+        defaults: MessageTextLayouterDefaults,
+    ) -> Self {
+        Self {
+            layouter: MessageTextLayouterImpl::new(font_normal, font_bold, layout_params, defaults),
+            mixin: mixins::BacklogTextLayouterMixin::new(),
+        }
+    }
+}
 
 impl<Font> MessageLayerLayouter<Font> {
     pub fn new(

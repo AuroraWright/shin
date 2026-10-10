@@ -11,7 +11,7 @@ use derive_more::{Add, AddAssign, Sub, SubAssign};
 use float_ord::FloatOrd;
 use tracing::warn;
 pub use tween::{Easing, Tween};
-pub use tweener::Tweener;
+pub use tweener::{TweenOptions, Tweener};
 
 use crate::format::scenario::instruction_elements::FromNumber;
 

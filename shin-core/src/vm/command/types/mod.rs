@@ -91,16 +91,57 @@ impl Default for MessageboxStyle {
 
 impl FromNumber for MessageboxStyle {
     fn from_number(number: i32) -> Self {
-        assert!(number >= 0);
+        // Native MSGSET52e0 masks the two low nibbles independently. All
+        // upper bits (including sign) are ignored, and invalid nibbles use0.
         let msgbox_type = number & 0xf;
         let text_layout = (number >> 4) & 0xf;
         Self {
-            messagebox_type: num_traits::FromPrimitive::from_i32(msgbox_type).unwrap_or_else(
-                || panic!("MsgInit::from: unknown messagebox type: {}", msgbox_type),
-            ),
+            messagebox_type: num_traits::FromPrimitive::from_i32(msgbox_type)
+                .unwrap_or(MessageboxType::Neutral),
             text_layout: num_traits::FromPrimitive::from_i32(text_layout)
-                .unwrap_or_else(|| panic!("MsgInit::from: unknown text layout: {}", text_layout)),
+                .unwrap_or(MessageTextLayout::Justify),
         }
+    }
+}
+
+#[cfg(test)]
+mod message_style_tests {
+    use super::*;
+
+    #[test]
+    fn message_style_accepts_signed_words_and_independent_invalid_nibbles() {
+        for (word, ty, layout) in [
+            (-1, MessageboxType::Neutral, MessageTextLayout::Justify),
+            (i32::MIN, MessageboxType::Neutral, MessageTextLayout::Justify),
+            (0x26, MessageboxType::Neutral, MessageTextLayout::Center),
+            (0x40, MessageboxType::Neutral, MessageTextLayout::Justify),
+            (0x34, MessageboxType::Novel, MessageTextLayout::Right),
+            (0x55, MessageboxType::NoText, MessageTextLayout::Justify),
+            (0x80000035u32 as i32, MessageboxType::NoText, MessageTextLayout::Right),
+        ] {
+            assert_eq!(MessageboxStyle::from_number(word), MessageboxStyle { messagebox_type: ty, text_layout: layout });
+        }
+    }
+
+    #[test]
+    #[ignore = "requires native-msgset-reference.py output in SHIN_REFERENCE_MSGSET_CASES"]
+    fn reference_message_styles_match_executed_original_and_updated_msgset() {
+        use std::io::{BufRead, BufReader};
+        let path = std::env::var("SHIN_REFERENCE_MSGSET_CASES").unwrap();
+        let reader = BufReader::new(std::fs::File::open(path).unwrap());
+        let mut count = 0;
+        for line in reader.lines() {
+            let line = line.unwrap();
+            assert!(line.starts_with('[') && line.ends_with(']'));
+            let row: Vec<i64> = line[1..line.len()-1].split(',')
+                .map(|value| value.parse().unwrap()).collect();
+            assert_eq!(row.len(), 31);
+            let style = MessageboxStyle::from_number(row[0] as i32);
+            assert_eq!(style.messagebox_type as i64, row[22], "style word{}", row[0]);
+            assert_eq!(style.text_layout as i64, row[23], "style word{}", row[0]);
+            count += 1;
+        }
+        assert_eq!(count, 20568);
     }
 }
 
@@ -183,6 +224,7 @@ impl FromNumber for MaskParam {
             return Self(1.0);
         }
 
-        Self((number as f32 / 1000.0).clamp(0.001, 1.0)) // TODO: warn if out of range
+        // Native21e88..21ea8 clamps the integer, then multiplies by0.001.
+        Self(number.clamp(1, 1000) as f32 * 0.001)
     }
 }

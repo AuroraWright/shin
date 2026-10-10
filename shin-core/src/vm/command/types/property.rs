@@ -61,20 +61,21 @@ pub enum LayerProperty {
     WobbleAlphaAmplitude = 42,
     WobbleAlphaBias = 43,
 
-    WobbleScaleXMode = 44,
-    WobbleScaleXPeriod = 45,
-    WobbleScaleXAmplitude = 46,
-    WobbleScaleXBias = 47,
+    // Native74e20 uses44..47 for rotation,48..51 for X scale and52..55 for Y scale.
+    WobbleRotationMode = 44,
+    WobbleRotationPeriod = 45,
+    WobbleRotationAmplitude = 46,
+    WobbleRotationBias = 47,
 
-    WobbleScaleYMode = 48,
-    WobbleScaleYPeriod = 49,
-    WobbleScaleYAmplitude = 50,
-    WobbleScaleYBias = 51,
+    WobbleScaleXMode = 48,
+    WobbleScaleXPeriod = 49,
+    WobbleScaleXAmplitude = 50,
+    WobbleScaleXBias = 51,
 
-    WobbleRotationMode = 52,
-    WobbleRotationPeriod = 53,
-    WobbleRotationAmplitude = 54,
-    WobbleRotationBias = 55,
+    WobbleScaleYMode = 52,
+    WobbleScaleYPeriod = 53,
+    WobbleScaleYAmplitude = 54,
+    WobbleScaleYBias = 55,
 
     // "Ghosting" effect
     GhostingAlpha = 56,
@@ -86,8 +87,8 @@ pub enum LayerProperty {
     // Clipping, makes the layer render only within a certain rectangle
     ClipMode = 61,
     ClipFromX = 62,
-    ClipToX = 63,
-    ClipFromY = 64,
+    ClipFromY = 63,
+    ClipToX = 64,
     ClipToY = 65,
 
     // "Blur" effect?
@@ -99,7 +100,7 @@ pub enum LayerProperty {
     DissolveIntensity = 68,
     DissolveMode = 69,
 
-    // zoomblur?
+    // Zoom blur strength (signed); center offsets in virtual canvas pixels.
     Prop70 = 70,
     Prop71 = 71,
     Prop72 = 72,

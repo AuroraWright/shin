@@ -18,7 +18,7 @@ use crate::{
         text::{StringArray, U16FixupString, U16String},
     },
     time::Ticks,
-    vm::command::types::{PlaneId, WipeFlags, WiperType},
+    vm::command::types::{PlaneId, WipeFlags},
 };
 
 #[allow(non_camel_case_types, clippy::upper_case_acronyms)]
@@ -63,7 +63,9 @@ pub enum Command {
     WAIT {
         /// If true - allow skipping the wait by pressing "advance" button
         allow_interrupt: U8Bool,
-        wait_amount: NumberSpec<Ticks>,
+        // Keep the signed word: native WAIT takes a wrapping integer absolute
+        // value when it installs the clock, rather than clamping to zero.
+        wait_amount: NumberSpec,
     },
     // 0x84 is unused
     /// Set messagebox style & text layout
@@ -120,7 +122,7 @@ pub enum Command {
     },
     #[cmd(opcode = 0x8eu8)]
     WIPE {
-        ty: NumberSpec<WiperType>,
+        ty: NumberSpec,
         flags: NumberSpec<WipeFlags>,
         duration: NumberSpec<Ticks>,
         params: BitmaskNumberArray,
@@ -194,13 +196,18 @@ pub enum Command {
         se_slot: NumberSpec, // may have a special value of -1
         unwanted_statuses: NumberSpec<AudioWaitStatus>,
     },
-    /// ¿Play an SE without a slot?
+    /// Play a transient SE in an automatically allocated negative slot.
     #[cmd(opcode = 0x9bu8)]
     SEONCE {
+        /// SE data ID.
         arg1: NumberSpec,
+        /// Audio wait mask; zero starts playback without waiting.
         arg2: NumberSpec,
+        /// Volume in thousandths.
         arg3: NumberSpec,
+        /// Signed pan in thousandths.
         arg4: NumberSpec,
+        /// Reserved speed argument; the reference executable uses fixed 1.0.
         arg5: NumberSpec,
     },
     #[cmd(opcode = 0x9cu8)]
@@ -247,6 +254,8 @@ pub enum Command {
     RESUMESET {},
     #[cmd(opcode = 0xa5u8)]
     RESUME {},
+    /// ID 0 toggles system controls (argument != 0) and clears skip/auto mode.
+    /// Other IDs are ignored by the reference executable.
     #[cmd(opcode = 0xa6u8)]
     SYSCALL {
         call_id: NumberSpec,
@@ -313,13 +322,13 @@ pub enum Command {
     // 0xc8 unused
     #[cmd(opcode = 0xc9u8)]
     TRANSSET {
-        arg1: NumberSpec,
-        arg2: NumberSpec,
-        arg3: NumberSpec,
+        ty: NumberSpec,
+        flags: NumberSpec<WipeFlags>,
+        duration: NumberSpec,
         params: BitmaskNumberArray,
     },
     #[cmd(opcode = 0xcau8)]
-    TRANSWAIT { arg: NumberSpec },
+    TRANSWAIT { layer_id: NumberSpec<VLayerId> },
     #[cmd(opcode = 0xcbu8)]
     PAGEBACK {},
     #[cmd(opcode = 0xccu8)]
@@ -330,6 +339,8 @@ pub enum Command {
     MASKLOAD {
         mask_id: NumberSpec<MaskIdOpt>,
         mask_flags: NumberSpec<MaskFlags>,
+        /// Keep layer animations running during asynchronous mask loading.
+        /// False suspends them; completion always restores animation permission.
         smth_smth_transition: NumberSpec<bool>,
     },
     #[cmd(opcode = 0xcfu8)]
@@ -341,11 +352,12 @@ pub enum Command {
     /// Unlock a TIP in the TIPS menu
     #[cmd(opcode = 0xe1u8)]
     TIPSGET { tip_ids: U8SmallNumberList },
-    /// Show a quiz??
+    /// Wait for the interactive layer on the current plane and return its response.
     #[cmd(opcode = 0xe2u8)]
     QUIZ {
         #[cmd(dest)]
         dest: Register,
+        /// Layer ID, not a quiz/question ID. Layer type 9 selects the interaction mode.
         arg: NumberSpec,
     },
     /// Show "Characters" menu
@@ -379,10 +391,11 @@ impl RuntimeCommand {
     #[inline]
     pub fn execute_dummy(self) -> Option<CommandResult> {
         Some(match self {
-            RuntimeCommand::EXIT(_) => {
-                // TODO: actually the logic behind this is a bit more complex
-                // works for now though
-                return None;
+            RuntimeCommand::EXIT(cmd) => {
+                if cmd.arg1 == 0 {
+                    return None;
+                }
+                cmd.token.finish()
             }
             RuntimeCommand::SGET(cmd) => cmd.token.finish(0),
             RuntimeCommand::SSET(cmd) => cmd.token.finish(),
@@ -443,5 +456,29 @@ impl RuntimeCommand {
             RuntimeCommand::NOTIFYSET(cmd) => cmd.token.finish(),
             RuntimeCommand::DEBUGOUT(cmd) => cmd.token.finish(),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::vm::{IntoRuntimeForm, VmCtx};
+
+    #[test]
+    fn dummy_exit_obeys_shutdown_flag() {
+        let ctx = VmCtx::new(0, 0);
+        for flag in [0, 1, 255] {
+            let command = CompiletimeCommand::EXIT(compiletime::EXIT {
+                arg1: flag,
+                arg2: NumberSpec::constant(42),
+            })
+            .into_runtime_form(&ctx);
+            let result = command.execute_dummy();
+            if flag == 0 {
+                assert!(result.is_none());
+            } else {
+                assert!(matches!(result, Some(CommandResult::None)));
+            }
+        }
     }
 }

@@ -30,9 +30,9 @@ use tracing::{instrument, trace};
 
 use crate::{
     format::scenario::{
-        InstructionReader, Scenario,
         instruction_elements::CodeAddress,
-        instructions::{BinaryOperation, Instruction, UnaryOperation, UnaryOperationType},
+        instructions::{BinaryOperation, Instruction, UnaryOperation},
+        InstructionReader, Scenario,
     },
     vm::{
         breakpoint::{BreakpointHandle, CodeBreakpointSet},
@@ -71,6 +71,7 @@ use crate::{
 /// }
 /// ```
 pub struct Scripter {
+    initial_values: (i32, u32),
     /// Vm execution context
     ctx: VmCtx,
     instruction_reader: InstructionReader,
@@ -88,11 +89,17 @@ impl Scripter {
     /// * `random_seed` - The initial value of the PRNG
     pub fn new(scenario: &Scenario, init_val: i32, random_seed: u32) -> Self {
         Self {
+            initial_values: (init_val, random_seed),
             ctx: VmCtx::new(init_val, random_seed),
             instruction_reader: scenario.instruction_reader(scenario.entrypoint_address()),
             position: scenario.entrypoint_address(),
             breakpoints: CodeBreakpointSet::new(),
         }
+    }
+
+    /// Entry selector and seed needed to reconstruct a native saved route.
+    pub fn initial_values(&self) -> (i32, u32) {
+        self.initial_values
     }
 
     /// Execute one instruction
@@ -114,11 +121,7 @@ impl Scripter {
                 source,
             }) => {
                 let source = self.ctx.get_number(source);
-                let result = match ty {
-                    UnaryOperationType::Zero => 0,
-                    UnaryOperationType::Negate => -source,
-                    _ => todo!(),
-                };
+                let result = self.ctx.evaluate_unary_operation(ty, source);
 
                 trace!(?pc, ?ty, ?destination, ?source, ?result, "uo");
 
@@ -215,13 +218,12 @@ impl Scripter {
                 self.instruction_reader.set_position(target);
             }
             Instruction::push { values } => {
-                // unfortunately the game uses the call stack for both code addresses and sometimes data...
-                // we just cast the data provided to CodeOffset and hope for the best
-                // what could go wrong?
+                // Native PUSH stores the same 32-bit words as return addresses.
+                // Preserve signed values through their unchanged bit representation.
                 let values = values
                     .0
                     .into_iter()
-                    .map(|v| CodeAddress(self.ctx.get_number(v).try_into().unwrap()))
+                    .map(|v| CodeAddress(self.ctx.get_number(v) as u32))
                     .collect::<SmallVec<CodeAddress, 6>>();
                 trace!(?pc, ?values, "push");
 
@@ -231,7 +233,7 @@ impl Scripter {
             }
             Instruction::pop { dest } => {
                 let values = (0..dest.0.len())
-                    .map(|_| self.ctx.pop_code_stack().0.try_into().unwrap())
+                    .map(|_| self.ctx.pop_code_stack().0 as i32)
                     .collect::<SmallVec<i32, 6>>();
                 trace!(?pc, ?values, "pop");
 
@@ -257,7 +259,7 @@ impl Scripter {
 
     /// Get the current position of the VM
     ///
-    /// This is the address of the next instruction to be executed
+    /// When `run` yields, this is the address of the yielded command.
     #[inline]
     pub fn position(&self) -> CodeAddress {
         self.position
@@ -296,5 +298,45 @@ impl Scripter {
     /// Install a breakpoint at the given code address
     pub fn add_breakpoint(&mut self, address: CodeAddress) -> BreakpointHandle {
         self.breakpoints.add_breakpoint(address)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::format::scenario::types::{U8SmallList, U8SmallNumberList};
+
+    include!("random_reference_tests.rs");
+    include!("arithmetic_reference_tests.rs");
+    include!("control_reference_tests.rs");
+
+    #[test]
+    fn call_stack_preserves_signed_register_values() {
+        let mut scripter = Scripter {
+            initial_values: (0, 0),
+            ctx: VmCtx::new(0, 0),
+            instruction_reader: InstructionReader::new(bytes::Bytes::new(), CodeAddress(0)),
+            position: CodeAddress(0),
+            breakpoints: CodeBreakpointSet::new(),
+        };
+        let first: crate::format::scenario::instruction_elements::Register = "$v1".parse().unwrap();
+        let second = "$v2".parse().unwrap();
+        scripter.run_instruction(
+            Instruction::push {
+                values: U8SmallNumberList::from_iter([
+                    crate::format::scenario::instruction_elements::NumberSpec::constant(-1),
+                    crate::format::scenario::instruction_elements::NumberSpec::constant(i32::MIN),
+                ]),
+            },
+            CodeAddress(0),
+        );
+        scripter.run_instruction(
+            Instruction::pop {
+                dest: U8SmallList::from_iter([first, second]),
+            },
+            CodeAddress(0),
+        );
+        assert_eq!(scripter.ctx.read_register(first), i32::MIN);
+        assert_eq!(scripter.ctx.read_register(second), -1);
     }
 }

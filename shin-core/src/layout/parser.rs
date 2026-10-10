@@ -4,7 +4,7 @@ use crate::layout::text_layouter::TextLayouter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ParsedCommand {
-    /// Just your regular character (or a @U command)
+    /// Just your regular character (or a @u command)
     Char(char),
     /// @+
     EnableLipsync,
@@ -188,7 +188,7 @@ impl Iterator for MessageTextParser<'_> {
             '{' => ParsedCommand::BoldTextStart,
             '}' => ParsedCommand::BoldTextEnd,
             // NB: the original engine does not do any validation here. We have to if we want to continue using the char type
-            'U' => ParsedCommand::Char(
+            'u' => ParsedCommand::Char(
                 char::from_u32(self.read_int_argument() as u32).expect("Invalid char code"),
             ),
             c => {
@@ -221,6 +221,34 @@ mod tests {
                 ParsedCommand::Char('l'),
                 ParsedCommand::Char('o')
             ]
+        );
+    }
+
+    #[test]
+    fn authored_bgm_title_decodes_lowercase_unicode_escape() {
+        let text = parse("百合の泪 -En liljas t@u229.rar-")
+            .into_iter()
+            .map(|command| match command {
+                ParsedCommand::Char(c) => c,
+                _ => panic!("Unexpected command"),
+            })
+            .collect::<String>();
+        assert_eq!(text, "百合の泪 -En liljas tårar-");
+        assert_eq!(
+            parse("@u229.@u$E5.@u65."),
+            [
+                ParsedCommand::Char('å'),
+                ParsedCommand::Char('å'),
+                ParsedCommand::Char('A')
+            ]
+        );
+    }
+
+    #[test]
+    fn uppercase_unicode_tag_uses_native_unknown_command_behavior() {
+        assert_eq!(
+            parse("@U229."),
+            ['U', '2', '2', '9', '.'].map(ParsedCommand::Char)
         );
     }
 

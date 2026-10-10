@@ -35,13 +35,17 @@ bitflags! {
         const FLIP_X = 0x0001;
         const FLIP_Y = 0x0002;
         const INVERT = 0x0004;
+        /// Mask wipes use native texel size rather than stretching over the screen.
+        const WIPE_NATIVE_SIZE = 0x0008;
+        /// MASKLOAD scales the mask geometry to the virtual canvas.
         const SCALE = 0x0010;
     }
 }
 
 impl FromNumber for MaskFlags {
     fn from_number(number: i32) -> Self {
-        MaskFlags::from_bits(number).expect("Invalid MaskFlags")
+        // Native11b39c retains the complete mask flag word.
+        MaskFlags::from_bits_retain(number)
     }
 }
 
@@ -51,9 +55,10 @@ bitflags! {
     /// Used in [BGMWAIT](super::super::runtime::BGMWAIT), [SEWAIT](super::super::runtime::SEWAIT) and [VOICEWAIT](super::super::runtime::VOICEWAIT) commands
     #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct AudioWaitStatus: i32 {
-        // Not sure about this name tbh...
-        // I _think_ it's set while the sound is still fading in
-        const FADING = 1;
+        /// Set while a sound is loading (verified against voice status helper 0x11a0c0).
+        const LOADING = 1;
+        /// Historical alias for LOADING. This bit does not describe volume fades.
+        const FADING = Self::LOADING.bits();
         const PLAYING = 2;
         const VOLUME_TWEENING = 4;
         const PANNING_TWEENING = 8;
@@ -68,19 +73,16 @@ impl FromNumber for AudioWaitStatus {
 }
 
 bitflags! {
-    /// Flags modifying LAYERLOAD behavior. Unused in umi
+    /// Flags modifying LAYERLOAD behavior. Umineko uses values 0, 2 and 3.
     #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct LayerLoadFlags: i32 {
         /// Prevents setting some flag in ADV
         const DONT_BLOCK_ANIMATIONS = 1;
-        /// Keep previous layer parameters
+        /// Keep previous layer properties when replacing an occupied layer
         const KEEP_PREVIOUS_PROPERTIES = 2;
         /// Individually wipe the layer when adding it to the LayerGroup and wait for wipe completion. Ignored if PAGEBACK is active
         const AUTO_WIPE = 4;
         /// Makes the layer share the `Properties` instance with the previous layer while doing `LayerGroup`-level transition
-        // We are definitely not implementing that
-        // 1. Umineko doesn't use it, along with the whole `LayerGroup`-level transition system
-        // 2. We don't have reference counting on everything, so this will be disruptive
         const SHARE_PROPS_DURING_WIPE = 8;
     }
 }
