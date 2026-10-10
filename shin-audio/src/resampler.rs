@@ -33,6 +33,9 @@ impl Resampler {
         };
     }
 
+    #[cfg(test)]
+    pub(super) fn latest_frame(&self) -> Frame { self.frames[3].frame }
+
     pub fn get(&self, fractional_position: f32) -> Frame {
         interpolate_frame(
             self.frames[0].frame,

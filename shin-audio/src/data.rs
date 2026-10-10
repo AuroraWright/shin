@@ -12,16 +12,49 @@ use crate::{
     handle::AudioHandle,
     sound::{AudioSound, COMMAND_BUFFER_CAPACITY},
 };
+use shin_core::time::Tweener;
 
 pub struct AudioData<S: AudioFrameSource> {
     pub source: S,
     pub settings: AudioSettings,
 }
 
+/// Parameter transitions prepared while an asset is loading. Their clocks start
+/// with playback, rather than with the request or an audio command afterward.
+pub struct AudioTweens {
+    pub volume: Tweener,
+    pub panning: Tweener,
+    pub playback_rate: Tweener,
+}
+
+pub struct AudioDataWithTweens<S: AudioFrameSource> {
+    data: AudioData<S>,
+    tweens: AudioTweens,
+}
+
+impl<S: AudioFrameSource> AudioData<S> {
+    pub fn with_tweens(self, tweens: AudioTweens) -> AudioDataWithTweens<S> {
+        AudioDataWithTweens { data: self, tweens }
+    }
+}
+
+impl<S: AudioFrameSource + Send + 'static> SoundData for AudioDataWithTweens<S> {
+    type Error = anyhow::Error;
+    type Handle = AudioHandle;
+
+    fn into_sound(self) -> Result<(Box<dyn Sound>, Self::Handle), Self::Error> {
+        let (mut sound, handle) = self.data.split();
+        sound.install_tweens(self.tweens);
+        Ok((Box::new(sound), handle))
+    }
+}
+
 impl AudioData<AudioDecoder<Arc<AudioFile>>> {
     pub fn from_audio_file(audio: Arc<AudioFile>, settings: AudioSettings) -> Self {
         Self {
-            source: AudioDecoder::new(audio).expect("Failed to create audio decoder"),
+            // Native NXA playback uses nn::codec::DecodeOpusInterleaved's
+            // signed16 output, shared with the voice lip-sync detector.
+            source: AudioDecoder::new_pcm16(audio).expect("Failed to create audio decoder"),
             settings,
         }
     }
