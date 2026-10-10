@@ -17,6 +17,7 @@ impl StartableCommand for command::runtime::SESTOPALL {
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
         adv_state
+            .audio
             .se_player
             .stop_all(Tween::linear(self.fade_out_time));
         self.token.finish().into()

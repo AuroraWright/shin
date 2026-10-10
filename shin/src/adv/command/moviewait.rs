@@ -103,7 +103,7 @@ impl UpdatableCommand for MOVIEWAIT {
         &mut self,
         _context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        vm_state: &VmState,
+        _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
@@ -111,7 +111,7 @@ impl UpdatableCommand for MOVIEWAIT {
 
         for layer in &self.layers {
             let UserLayer::Movie(movie_layer) = adv_state
-                .plane_layer_group(vm_state.layers.current_plane)
+                .plane_layer_group(self.plane)
                 .get_layer(layer.layerbank)
                 .expect("BUG: layerbank not found")
             else {

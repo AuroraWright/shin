@@ -28,20 +28,26 @@ impl StartableCommand for command::runtime::BGMPLAY {
             linked_bgm_id: _,
         } = scenario.info_tables().bgm_info(self.bgm_data_id);
 
-        let audio = context
-            .asset_server
-            // TODO: sync - bad!!
-            .load_sync(bgm_info.path())
-            .expect("Failed to load BGM track");
-
-        adv_state.bgm_player.play(
-            audio,
-            display_name.as_str(),
+        let changed = adv_state.audio.bgm_player.request(
+            context.asset_server.clone(),
+            bgm_info.path().to_owned(),
+            self.bgm_data_id,
             !self.no_repeat,
             self.volume,
             Tween::linear(self.fade_in_time),
         );
 
+        if changed {
+            adv_state
+                .bgm_title
+                .show(context.asset_server, display_name.as_str());
+            adv_state
+                .pending_gallery_unlocks
+                .extend(crate::adv::gallery::played_bgm(
+                    scenario.info_tables(),
+                    self.bgm_data_id.into_i32(),
+                ));
+        }
         self.token.finish().into()
     }
 }

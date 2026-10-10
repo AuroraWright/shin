@@ -41,11 +41,11 @@ impl UpdatableCommand for SEWAIT {
         &mut self,
         _context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        _vm_state: &VmState,
+        _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
-        let status = adv_state.se_player.get_wait_status(self.slot);
+        let status = adv_state.audio.se_player.get_wait_status(self.slot);
         let finished = (status & self.unwanted_statuses).is_empty();
 
         trace!(status = ?status, finished = %finished, "polling SEWAIT");

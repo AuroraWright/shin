@@ -3,9 +3,7 @@ use super::prelude::*;
 impl StartableCommand for command::runtime::SSET {
     type StateInfo = ();
     fn apply_state(&self, state: &mut VmState) {
-        state
-            .persist
-            .set(self.slot_number.try_into().unwrap(), self.value);
+        state.set_persistent(self.slot_number, self.value);
     }
 
     fn start(

@@ -17,6 +17,7 @@ impl StartableCommand for command::runtime::SESTOP {
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
         adv_state
+            .audio
             .se_player
             .stop(self.se_slot, Tween::linear(self.fade_out_time));
 

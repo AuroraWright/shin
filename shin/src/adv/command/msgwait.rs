@@ -9,8 +9,12 @@ pub struct MSGWAIT {
 
 impl StartableCommand for command::runtime::MSGWAIT {
     type StateInfo = ();
-    fn apply_state(&self, _state: &mut VmState) {
-        // nothing to do
+    fn apply_state(&self, state: &mut VmState) {
+        // Native constructor91c clears the asynchronous close gate for any
+        // negative signal, even before the wait completes.
+        if self.signal_num < 0 {
+            state.messagebox_state.close_inhibited = false;
+        }
     }
 
     fn start(
@@ -36,7 +40,7 @@ impl UpdatableCommand for MSGWAIT {
         &mut self,
         _context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        _vm_state: &VmState,
+        _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {

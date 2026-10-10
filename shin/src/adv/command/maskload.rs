@@ -36,14 +36,23 @@ impl StartableCommand for command::runtime::MASKLOAD {
     ) -> CommandStartResult {
         adv_state.create_back_layer_group_if_needed(&mut context.pre_render.render_clone_ctx());
 
-        let Some(mask_id) = self.mask_id.repr() else {
+        let mask_info = self
+            .mask_id
+            .repr()
+            .and_then(|id| scenario.info_tables().mask_info_opt(id));
+        let Some(mask_info) = mask_info else {
             adv_state
                 .plane_layer_group_mut(vm_state.layers.current_plane)
                 .clear_mask_texture();
+            adv_state.allow_running_animations = true;
             return self.token.finish().into();
         };
 
-        let mask_info = scenario.info_tables().mask_info(mask_id);
+        // Native d004/d0a4 tests the third argument before suspending layer
+        // animation. Completion d23c unconditionally restores animation.
+        if !self.smth_smth_transition {
+            adv_state.allow_running_animations = false;
+        }
         let load_task = shin_tasks::async_io::spawn({
             let asset_server = context.asset_server.clone();
             let path = mask_info.path();
@@ -73,7 +82,7 @@ impl UpdatableCommand for MASKLOAD {
         &mut self,
         _context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        _vm_state: &VmState,
+        _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
@@ -82,7 +91,11 @@ impl UpdatableCommand for MASKLOAD {
         adv_state
             .plane_layer_group_mut(self.plane)
             .set_mask_texture(mask_texture, self.flags);
+        adv_state.allow_running_animations = true;
 
         Some(self.token.take().unwrap().finish())
     }
 }
+
+#[cfg(test)]
+pub(super) mod tests;

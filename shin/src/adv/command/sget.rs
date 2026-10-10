@@ -3,21 +3,22 @@ use shin_core::format::scenario::Scenario;
 use super::prelude::*;
 
 impl StartableCommand for command::runtime::SGET {
-    type StateInfo = ();
+    type StateInfo = i32;
 
-    fn apply_state(&self, _state: &mut VmState) {
-        // nothing to do
+    fn apply_state(&self, state: &mut VmState) -> i32 {
+        let value = state.get_persistent(self.slot_number);
+        state.route.record_persistent(value);
+        value
     }
 
     fn start(
         self,
         _context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        vm_state: &VmState,
-        _state_info: (),
+        _vm_state: &VmState,
+        value: i32,
         _adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        let value = vm_state.persist.get(self.slot_number.try_into().unwrap());
         self.token.finish(value).into()
     }
 }

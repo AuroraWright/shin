@@ -12,7 +12,7 @@ impl StartableCommand for command::runtime::SEPLAY {
             se_id: self.se_data_id,
             volume: self.volume,
             pan: self.pan,
-            play_speed: self.play_speed as f32 / 1000.0,
+            play_speed: self.play_speed as f32 * 0.001,
         });
     }
 
@@ -24,24 +24,17 @@ impl StartableCommand for command::runtime::SEPLAY {
         _state_info: (),
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        if self.play_speed != 1000 {
-            warn!("TODO: SEPLAY: ignoring play_speed={}", self.play_speed);
-        }
-
         let se_info = scenario.info_tables().se_info(self.se_data_id);
 
-        let audio = context
-            .asset_server
-            // TODO: sync - bad!!
-            .load_sync(se_info.path())
-            .expect("Failed to load BGM track");
-
-        adv_state.se_player.play(
+        adv_state.audio.se_player.request(
+            context.asset_server.clone(),
+            se_info.path().to_owned(),
             self.se_slot,
-            audio,
+            self.se_data_id,
             !self.no_repeat,
             self.volume,
             self.pan,
+            self.play_speed as f32 * 0.001,
             Tween::linear(self.fade_in_time),
         );
 

@@ -4,6 +4,8 @@ use tracing::debug;
 
 use super::prelude::*;
 use crate::adv::vm_state::layers::LayerOperationTargetList;
+#[cfg(test)]
+pub(super) mod tests;
 
 pub struct LayerLoadStateInfo {
     plane: PlaneId,

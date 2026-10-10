@@ -2,8 +2,8 @@ use super::prelude::*;
 
 impl StartableCommand for command::runtime::NOTIFYSET {
     type StateInfo = ();
-    fn apply_state(&self, _state: &mut VmState) {
-        warn!("TODO: NOTIFYSET state: {:?}", self);
+    fn apply_state(&self, state: &mut VmState) {
+        state.information.notification_style = self.arg;
     }
 
     fn start(
@@ -14,7 +14,6 @@ impl StartableCommand for command::runtime::NOTIFYSET {
         _state_info: (),
         _adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        warn!("TODO: NOTIFYSET: {:?}", self);
         self.token.finish().into()
     }
 }

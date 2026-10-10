@@ -2,8 +2,11 @@ use super::prelude::*;
 
 impl StartableCommand for command::runtime::EVEND {
     type StateInfo = ();
-    fn apply_state(&self, _state: &mut VmState) {
-        warn!("TODO: EVEND state: {:?}", self);
+    fn apply_state(&self, state: &mut VmState) {
+        state.commit_persistent();
+        state.record_event_boundary();
+        // Constructor 0x2a00 clears the event word to -1.
+        state.current_event = None;
     }
 
     fn start(
@@ -14,7 +17,6 @@ impl StartableCommand for command::runtime::EVEND {
         _state_info: (),
         _adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        warn!("TODO: EVEND: {:?}", self);
         self.token.finish().into()
     }
 }

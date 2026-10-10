@@ -18,9 +18,11 @@ impl StartableCommand for command::runtime::SEPAN {
         _state_info: (),
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        adv_state
-            .se_player
-            .set_panning(self.se_slot, self.pan, Tween::linear(self.fade_in_time));
+        adv_state.audio.se_player.set_panning(
+            self.se_slot,
+            self.pan,
+            Tween::linear(self.fade_in_time),
+        );
 
         self.token.finish().into()
     }

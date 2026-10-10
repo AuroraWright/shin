@@ -3,7 +3,8 @@ use super::prelude::*;
 impl StartableCommand for command::runtime::MSGSIGNAL {
     type StateInfo = ();
     fn apply_state(&self, _state: &mut VmState) {
-        // nothing to do
+        _state.messagebox_state.received_syncs =
+            _state.messagebox_state.received_syncs.wrapping_add(1);
     }
 
     fn start(

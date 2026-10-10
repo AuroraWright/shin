@@ -18,9 +18,11 @@ impl StartableCommand for command::runtime::SEVOL {
         _state_info: (),
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        adv_state
-            .se_player
-            .set_volume(self.se_slot, self.volume, Tween::linear(self.fade_in_time));
+        adv_state.audio.se_player.set_volume(
+            self.se_slot,
+            self.volume,
+            Tween::linear(self.fade_in_time),
+        );
 
         self.token.finish().into()
     }

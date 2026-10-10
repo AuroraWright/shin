@@ -19,6 +19,7 @@ impl StartableCommand for command::runtime::BGMVOL {
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
         adv_state
+            .audio
             .bgm_player
             .set_volume(self.volume, Tween::linear(self.fade_in_time));
         self.token.finish().into()

@@ -16,7 +16,10 @@ impl StartableCommand for command::runtime::BGMSTOP {
         _state_info: (),
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
-        adv_state.bgm_player.stop(Tween::linear(self.fade_out_time));
+        adv_state
+            .audio
+            .bgm_player
+            .stop(Tween::linear(self.fade_out_time));
         self.token.finish().into()
     }
 }

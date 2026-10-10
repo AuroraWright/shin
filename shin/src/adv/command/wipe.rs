@@ -7,7 +7,7 @@ use crate::wiper::AnyWiper;
 #[derive(Debug)]
 enum WipeState {
     WaitingForWipeLoader {
-        load_task: Option<AsyncTask<AnyWiper>>,
+        load_task: Option<AsyncTask<Option<AnyWiper>>>,
     },
     WaitingForWipe,
     Finished,
@@ -17,6 +17,7 @@ enum WipeState {
 pub struct WIPE {
     token: Option<command::token::WIPE>,
     flags: WipeFlags,
+    load_wait_attempted: bool,
     state: WipeState,
 }
 
@@ -44,11 +45,11 @@ impl StartableCommand for command::runtime::WIPE {
             return self.token.finish().into();
         }
 
-        let load_task = if self.duration > Ticks::ZERO {
+        let load_task = if self.duration > Ticks::ZERO && (0..=9).contains(&self.ty) {
             let asset_server = context.asset_server.clone();
             let scenario = scenario.clone();
             Some(shin_tasks::async_io::spawn(async move {
-                AnyWiper::load(
+                AnyWiper::load_raw(
                     &asset_server,
                     &scenario,
                     self.ty,
@@ -65,12 +66,11 @@ impl StartableCommand for command::runtime::WIPE {
             adv_state.allow_running_animations = false;
         }
 
-        // TODO: optimistically block for 5ms as the game does
-
         Yield(
             WIPE {
                 token: Some(self.token),
                 flags: self.flags,
+                load_wait_attempted: false,
                 state: WipeState::WaitingForWipeLoader { load_task },
             }
             .into(),
@@ -78,12 +78,30 @@ impl StartableCommand for command::runtime::WIPE {
     }
 }
 
+#[cfg(test)]
+impl WIPE {
+    pub(super) fn reference_hold_loading(&mut self) -> futures::channel::oneshot::Sender<()> {
+        let WipeState::WaitingForWipeLoader { load_task } = &mut self.state else {
+            panic!("Wipe loader phase");
+        };
+        let task = load_task.take().expect("Asset-backed pending wipe loader");
+        let (sender, receiver) = futures::channel::oneshot::channel();
+        *load_task = Some(shin_tasks::async_io::spawn(async move {
+            receiver
+                .await
+                .expect("Publication gate released or task canceled");
+            task.await
+        }));
+        sender
+    }
+}
+
 impl UpdatableCommand for WIPE {
     fn update(
         &mut self,
-        _context: &mut UpdateContext,
+        context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        _vm_state: &VmState,
+        _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
@@ -98,8 +116,13 @@ impl UpdatableCommand for WIPE {
                 |state| match state {
                     WipeState::WaitingForWipeLoader { load_task } => match load_task {
                         Some(mut load_task) => {
-                            if let Some(wiper) = load_task.poll_naive() {
-                                adv_state.screen_layer_mut().apply_transition(Some(wiper));
+                            let ready = if std::mem::replace(&mut self.load_wait_attempted, true) {
+                                load_task.poll_naive()
+                            } else {
+                                load_task.poll_with_timeout(context.loader_wait_budget())
+                            };
+                            if let Some(wiper) = ready {
+                                adv_state.screen_layer_mut().apply_transition(wiper);
                                 adv_state.allow_running_animations = true;
 
                                 WipeState::WaitingForWipe
@@ -115,10 +138,6 @@ impl UpdatableCommand for WIPE {
                             adv_state.allow_running_animations = true;
 
                             WipeState::WaitingForWipe
-                        }
-                        load_task @ Some(_) => {
-                            break_the_loop = true;
-                            WipeState::WaitingForWipeLoader { load_task }
                         }
                     },
                     WipeState::WaitingForWipe => {

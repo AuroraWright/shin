@@ -74,36 +74,39 @@ impl UpdatableCommand for LAYERWAIT {
         &mut self,
         _context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
-        vm_state: &VmState,
+        _vm_state: &mut VmState,
         adv_state: &mut AdvState,
-        #[expect(unused)] is_fast_forwarding: bool,
+        is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
-        let does_need_wait = |props: &LayerProperties| {
-            // TODO: implement fast-forwarding of tweeners
-            self.properties
-                .iter()
-                .any(|&prop| !props.property_tweener(prop).is_idle())
+        let does_need_wait = |props: &mut LayerProperties| {
+            self.properties.iter().any(|&prop| {
+                let mut tweener = props.property_tweener_mut(prop);
+                if is_fast_forwarding {
+                    tweener.fast_forward_unless_prohibited();
+                }
+                tweener.is_waiting()
+            })
         };
 
         let needs_wait = match self.layer_id.repr() {
             VLayerIdRepr::RootLayerGroup => {
-                does_need_wait(adv_state.root_layer_group().properties())
+                does_need_wait(adv_state.root_layer_group_mut().properties_mut())
             }
-            VLayerIdRepr::ScreenLayer => does_need_wait(adv_state.screen_layer().properties()),
-            VLayerIdRepr::PageLayer => does_need_wait(adv_state.page_layer().properties()),
-            VLayerIdRepr::PlaneLayerGroup => does_need_wait(
-                adv_state
-                    .plane_layer_group(vm_state.layers.current_plane)
-                    .properties(),
-            ),
+            VLayerIdRepr::ScreenLayer => {
+                does_need_wait(adv_state.screen_layer_mut().properties_mut())
+            }
+            VLayerIdRepr::PageLayer => does_need_wait(adv_state.page_layer_mut().properties_mut()),
+            VLayerIdRepr::PlaneLayerGroup => {
+                does_need_wait(adv_state.plane_layer_group_mut(self.plane).properties_mut())
+            }
             VLayerIdRepr::Selected | VLayerIdRepr::Layer(_) => {
                 self.affected_layers.iter().any(|target| {
                     does_need_wait(
                         adv_state
-                            .plane_layer_group(self.plane)
-                            .get_layer(target.layerbank)
+                            .plane_layer_group_mut(self.plane)
+                            .get_layer_mut(target.layerbank)
                             .expect("BUG: layerbank not found")
-                            .properties(),
+                            .properties_mut(),
                     )
                 })
             }
@@ -123,5 +126,45 @@ impl Debug for LAYERWAIT {
             .field(&self.layer_id)
             .field(&self.properties)
             .finish()
+    }
+}
+
+#[cfg(test)]
+impl LAYERWAIT {
+    pub(crate) fn reference_wait_status(&self, adv: &AdvState) -> String {
+        let snapshot = |label: String, props: &LayerProperties| {
+            let properties: Vec<_> = self
+                .properties
+                .iter()
+                .map(|&property| (property, props.reference_tweener_snapshot(property)))
+                .collect();
+            format!("{label}: {properties:?}")
+        };
+        match self.layer_id.repr() {
+            VLayerIdRepr::RootLayerGroup => {
+                snapshot("root".into(), adv.root_layer_group().properties())
+            }
+            VLayerIdRepr::ScreenLayer => snapshot("screen".into(), adv.screen_layer().properties()),
+            VLayerIdRepr::PageLayer => snapshot("page".into(), adv.page_layer().properties()),
+            VLayerIdRepr::PlaneLayerGroup => snapshot(
+                format!("plane{:?}", self.plane),
+                adv.plane_layer_group(self.plane).properties(),
+            ),
+            VLayerIdRepr::Selected | VLayerIdRepr::Layer(_) => self
+                .affected_layers
+                .iter()
+                .map(|target| {
+                    let label = format!("plane{:?}/bank{:?}", self.plane, target.layerbank);
+                    match adv
+                        .plane_layer_group(self.plane)
+                        .get_layer(target.layerbank)
+                    {
+                        Some(layer) => snapshot(label, layer.properties()),
+                        None => format!("{label}: missing"),
+                    }
+                })
+                .collect::<Vec<_>>()
+                .join("; "),
+        }
     }
 }
