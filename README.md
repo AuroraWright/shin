@@ -13,6 +13,105 @@ If you know more - let me know! (`dcnick3` on Discord)
 The initial implementation is focused on running switch version of Umineko no Naku Koro ni Saku \~Nekobako to Musou no
 Koukyoukyoku\~ (title id `01006A300BA2C000`), with the intention to support other games in the future.
 
+The current main engine changes are integrated, including Rust 1.99, stable
+dependencies and the latest save/load, asset recovery, input and rendering
+fixes. The workspace compile check and focused library, Metal, audio and
+save/load regressions pass for both games. See the
+[main-port validation](reverse-engineering/main-port-20261014/validation.json).
+The first six earned chapter results below were recorded before this port;
+Himatsubushi and Meakashi now also pass complete earned routes after the port.
+The first post-port full earned route, Himatsubushi, now passes through its
+normal category/prologue/picker, three choices, fuller ending, one progress
+save and ready Title. Its earlier premature test observation is preserved;
+two neutral VM-readiness gates corrected the fixture. See the
+[Himatsubushi evidence](reverse-engineering/higurashi/himatsubushi-integration-validation.json).
+Eight standard full routes are accepted. There are 26 complete ordinary
+playthroughs left: 17 standard and 9 Origin. See the
+[chapter inventory](reverse-engineering/higurashi/chapter-playthrough-count-2026-10-14-after-meakashi.json).
+Higurashi touch feedback now uses the shared effect with its own atlas and
+common16 setting. Ordinary desktop mouse gestures use the existing Umineko
+release/displacement adaptation. Native comparisons, exact ripple frames,
+Runtime settings/cancellation checks and an actual AppKit window pass. See the
+[touch validation](reverse-engineering/main-port-20261014/touch-validation.json).
+The refreshed manual package includes normal/completed Higurashi launchers and
+the Umineko launchers/saves copied from the main workspace. Existing Higurashi
+saves and default system audio are preserved. See the
+[manual refresh](reverse-engineering/main-port-20261014/touch-manual-refresh/validation.json).
+Both games now close the message-browser chapter list with a rightward swipe,
+reusing the story-menu mouse policy and preserving the parent browser/source
+position. Original-code checks, 21 focused tests and both actual AppKit windows
+pass. The signed manual release is refreshed; both games’ saves are preserved.
+See the [swipe fix](reverse-engineering/main-port-20261014/chapter-swipe-validation.json)
+and [current manual release](reverse-engineering/main-port-20261014/chapter-swipe-manual-refresh/validation.json).
+Right-to-left swipes now close pause menus and open browser chapters in both
+games, using the shared touch-control gesture policy. Native cancel/confirm
+paths, vertical scrolling and chapter-list rightward closure are preserved.
+Thirty-two focused tests and both real AppKit window journeys pass. The signed
+manual release is refreshed with existing saves retained. See the
+[left-swipe evidence](reverse-engineering/main-port-20261014/menu-browser-left-swipe-validation.json)
+and [latest manual package](reverse-engineering/main-port-20261014/menu-browser-left-swipe-manual-refresh/validation.json).
+Meakashi now passes the actual earned Category1/SNRSEL1 row2/scenario202 good
+route, protected credits, TIPS112..114, one EXIT save and ready Title. See the
+[Meakashi evidence](reverse-engineering/higurashi/meakashi-validation.json).
+The next ordinary earned route is Hirukowashi203, kind1 row3. Tsumihoroboshi301
+remains behind the second-collection unlock; no completion flags are seeded.
+
+The updated Switch version of Higurashi now launches with `--game higurashi`.
+Its title, ADV runtime, save/load, backlog, settings, Chart, TIPS, Kakera, Quiz
+and galleries use separate older-engine owners while sharing engine services
+with Umineko. Native instruction/packet comparisons and focused 720p/1080p
+rendering, audio and window journeys cover the implemented paths; sustained
+chapter and branch playthrough testing remains ongoing. See the
+[Higurashi work notes](reverse-engineering/higurashi/README.md) for the exact
+validation scopes and remaining work.
+Desktop filesystem save errors offer Retry; manual Save/Delete also offer Return
+with rollback. A close request waits for that decision before saving progress.
+
+Fresh Higurashi Runtime playback completes Onikakushi through its authored
+ending, completion notices, progress save and title return. An earned first-book
+save also completes Watanagashi through normal Chart and character choices.
+The cumulative earned save completes Tatarigoroshi through actual Day3, partner
+and Satoko route choices, then Tsukiotoshi, Taraimawashi and Someutsushi through
+earned Chart entries and authored endings. Someutsushi also completes the
+all-six epilogue and saves its next-collection unlock. All six retain unrelated
+manual saves and preserve protected media waits. The full Bonus story also reaches its natural
+ending and credits. Later books, alternate
+branches, broader window/focus and physical-controller checks remain.
+The desktop final-frame stencil fix is verified at720p,1080p and4K; a one-off
+manual build and separate prepared completed-save launcher were supplied on
+2026-10-14 at the user's request. See the
+[first-book evidence](reverse-engineering/higurashi/first-book-validation.json),
+[Tatarigoroshi evidence](reverse-engineering/higurashi/tatarigoroshi-validation.json),
+[Tsukiotoshi evidence](reverse-engineering/higurashi/tsukiotoshi-validation.json),
+[Taraimawashi evidence](reverse-engineering/higurashi/taraimawashi-validation.json),
+[Someutsushi evidence](reverse-engineering/higurashi/someutsushi-validation.json)
+and [presentation evidence](reverse-engineering/higurashi/desktop-presentation-and-completed-save-validation.json).
+
+Higurashi Tile Gamma now supports finite and nonfinite clipping, material and
+rectangle inputs using the original CPU behavior. All 17,792 captured owner
+states match pass/getter decisions; 8,464 Tile and 2,752 mask vertex/matrix pairs
+match exactly. Seventeen focused checks and 9,784 actual-owner/literal-shader
+frame comparisons at 720p/1080p pass, including 8,064 new nonfinite comparisons.
+Original SDK/compiler/allocation evidence is retained. These local Metal checks
+do not establish native Switch framebuffer identity. See the
+[nonfinite integration evidence](reverse-engineering/higurashi/tile-gamma-active-clip-20261014/allocation-closure/whole-tile-nonfinite-integration/integration-validation.json).
+The Umineko SDK audit follows the requested snapshot; chapter testing remains deferred.
+The reported Origin Matsuribayashi skip pauses are fixed: eligible skip clears
+authored WAIT timers while preserving manual-confirm and protected-event rules.
+A normal-menu regression covers the quoted line and both pauses. The manual
+build is refreshed after verified user-reported fixes. See the
+[autoskip evidence](reverse-engineering/higurashi/origin-autoskip-validation.json).
+
+Umineko remains the default. Put the Higurashi files in `higurashi`, or use
+`--game higurashi --assets-dir /path/to/higurashi`. Higurashi reads and saves
+progress at the desktop data directory's `shin/higurashi/progress.dat`;
+`--save-file /path/to/progress.dat` selects another file. Load saved games
+through the title or in-game menu. Direct `--load-save`, `--unsafe-entry-point`
+and `--fast-forward-to` launches currently apply to Umineko.
+
+`--game higurashi --inspect-assets` inspects the supplied archives and scenario
+without opening a window or reading/writing progress.
+
 As of writing, most of the basic game functionality works:
 
 - Character sprites
@@ -52,13 +151,18 @@ documented [here](https://dcnick3.github.io/shin/shin/asset/locate/fn.locate_ass
 
 Then you try running the game.
 
-Controls are:
+Keyboard controls are uniform in every screen; all other keyboard shortcuts are disabled:
 
-- Mouse click, space, enter - advance text
-- Ctrl - fast-forward text while held, with the skip indicator
-- S - toggle skip mode
-- A - toggle auto mode
-- Escape, Backspace - cancel skip and auto modes
+- Arrows = controller D-pad / first analog navigation
+- M = controller Y
+- B = controller X
+- Enter = controller A (confirm / advance)
+- Escape = controller B (cancel)
+- H/J = controller L/R
+- K/L = controller second analog up/down (hold to scroll)
+- Mouse click also advances text
+- J toggles skip; H toggles auto during story playback
+- Escape cancels skip and auto modes
 - Controller L/R during story playback - toggle auto/skip independently (Switch manual pages 4 and 6)
 - Event scenes allow mode selection while blocking skip/auto execution
 - Waiting murderer menus clear skip/auto modes and block their selection
@@ -78,10 +182,18 @@ Controls are:
   and scrolls just enough to keep the row visible.
 - While skip or auto is active, controller B/X/Y cancels the modes first
 - Up/down arrows and enter, or mouse - choose an option
-- F - toggle fullscreen
 - H/J: previous/next in Character, Character sprite gallery, Help, Save/Load and Picture/Music galleries; Start tabs and Backlog navigation
 - K/L: scroll Character descriptions, Tips, and Murderer text/hints
 - Character screen: H/J switch pages; K/L scroll the description
+
+The mouse wheel and trackpad scroll wherever the second analog stick scrolls:
+Character descriptions, Tips, Backlog and its jump list, Save/Load, Picture and
+Music galleries, and Murderer purple text and hints. Trackpad movement retains
+fractional motion and system momentum, with consistent speed on Retina displays.
+
+During dialogue, hold the left mouse button, drag, then release. Dragging
+left opens the Auto/Skip/Log/chapter toolbar; right closes it or opens the pause
+menu when it is closed; down hides the text. These gestures trigger on release after a clear directional drag; no flick speed is required.
 
 With 「タッチ操作時の画面効果」 enabled in Config, left mouse presses and
 held drags show the native trailing stars. Turning it off stops new stars;
@@ -96,21 +208,21 @@ retain their existing tap-to-skip controls.
 Press keyboard B or controller X during the story to open the message browser.
 Up/Down select a row,
 Left/Right move four rows, H/J or controller L/R jump between choices,
-quizzes and checkpoints, and the mouse wheel scrolls. Enter or V replays the
+quizzes and checkpoints, and the mouse wheel scrolls. Enter replays the
 selected message's voice; its voice icon activates on mouse release. Moving off
 a pressed row or close button cancels that click. Drag vertically to scroll;
 a quick release continues scrolling with momentum. An active mouse gesture takes
 priority over keyboard input. Escape or releasing the close button closes the
 browser after its flash and slide. The story stays paused while it is open.
 
-Y, releasing a message's text body, or a quick leftward fling opens a scene-jump
+M, releasing a message's text body, or a quick leftward fling opens a scene-jump
 confirmation. The default answer is No. Select Yes to restore the selected
 message; the browser stays paused until its closing animation and asset loading
 finish. Messages later in a previously read route can also be selected.
 
-G opens the chapter/scene-jump menu. Arrows select a marker, H/J select
-the first/last marker, G returns to the cursor captured when the menu opened,
-and Y opens confirmation for the selected message. Escape returns to the
+B opens the chapter/scene-jump menu. Arrows select a marker, H/J select
+the first/last marker, B returns to the cursor captured when the menu opened,
+and M opens confirmation for the selected message. Escape returns to the
 browser with that selection. Controllers use X for this menu, Y for confirmation,
 A for voice replay, B to cancel, and L/R for first/last markers. Click a marker
 to select it; dragging scrolls with momentum. Pressing a moving row stops the
@@ -120,8 +232,8 @@ jump uses the browser row selected when the dialog finishes.
 
 When the script opens the Characters screen, arrows move between portraits,
 H/J change pages, Enter cycles characters sharing a portrait cell,
-Tab cycles character states, and V changes the outfit. The state and outfit
-buttons also accept mouse clicks. K/L, Home/End or the mouse wheel scroll the
+M cycles character states, and B changes the outfit. The state and outfit
+buttons also accept mouse clicks. K/L or the mouse wheel scroll the
 character description; dragging the description supports momentum after release.
 Mouse buttons activate on release, and dragging cancels the click. Escape or the close button closes the screen after its
 flash and closing animation; the script waits until it has closed. Script-only
@@ -151,25 +263,24 @@ current playback positions and applies the restored volume, pan and speed.
 One-shot effects continue, while positive effect slots absent from the save stop
 with the native four-tick fade. New music titles and gallery unlocks appear when
 a request is accepted.
-Right-click or press H while a message or choice menu is visible to hide it and
+Right-click or press Escape while a message or choice menu is visible to hide it and
 the route/music overlays; on a controller, press B. Controller A/B/X/Y restore
-the hidden UI. Click, press Enter, Escape, or H to restore them; restoring
+the hidden UI. Click, press Enter, Escape, M or B to restore them; restoring
 the UI consumes that input without advancing the message.
 Press M or controller Y to open the system menu. Manual, Characters, Information,
-and Config return to the menu after closing. In Config, use controller L/R or keyboard K/L
-to change tabs, and Y to reset settings. Changed settings are saved when Config closes.
-Save and Load use the manual-slot screen, with Delete or controller Y to delete
+and Config return to the menu after closing. In Config, use controller L/R or keyboard H/J
+to change tabs, and M to reset settings. Changed settings are saved when Config closes.
+Save and Load use the manual-slot screen, with M or controller Y to delete
 a slot. Slots remain in memory unless a save file is configured. Title return
 asks for confirmation and saves globals on Yes before opening Title.
 No or Cancel returns to the system menu.
 Chapter autosaves display the native bottom-left route label, and new music
 tracks display their animated title. Both overlays honor the saved display settings.
-Press Up (D-pad or left stick), Arrow Up, or Backspace during normal story playback
+Press Up (D-pad or left stick), or Arrow Up during normal story playback
 to return to the previous message. Holding Up repeats the request; menus retain
 their Up navigation.
 After text is closed, it returns to the last message instead. Quick return requires
 at least two normal messages and uses a four-tick fade with a frozen scene image.
-Backspace keeps its cancel behavior in menus and dismisses a hidden message first.
 
 To load an existing Umineko engine-format save, start with
 `shin --load-save save.dat`. This selects the autosave slot. Use
@@ -193,9 +304,17 @@ notifications.
 While scene resources load or installation waits for audio capacity, the current
 scene's layers, audio players, labels and notifications continue updating.
 Script execution and input remain blocked while reconstruction is pending.
-Ordinary save and backlog loads then fade the frozen previous scene out over
-30 ticks. Script execution and input remain blocked through that fade;
+Ordinary save and backlog loads reveal the restored scene from left to right
+over 30 ticks using the original `/default.msk`. Script execution and input remain blocked through that transition;
 `RESUME` installs immediately, and quick return uses four ticks.
+Load from the main menu retains the outgoing menu while story resources are
+prepared, then wipes that captured menu away to reveal the saved scene.
+Pause-menu Load likewise retains its dimmed outgoing screen, keeping the wipe
+visible when reloading the same save. The saved wipe clock starts after
+publication and first-frame preparation, so slow setup cannot consume the wipe.
+Save-menu thumbnails retain visible visual resources and share reconstruction
+for identical saved histories. Per-row asset preparation runs concurrently,
+with ordered installation and a final readiness poll before rendering.
 Interrupted page wipes retain independently timed source transitions. Each page
 and wipe advances once per frame; completed inner wipes collapse to their target
 page, and the outer wipe releases its source textures when it finishes. Skipping
@@ -234,8 +353,8 @@ Tips covers episodes 1–7; Characters also includes episode 8 when unlocked.
 
 Title's CG entry opens the original gallery and returns with CG selected.
 Arrow keys select entries; Enter opens unlocked variants. In the viewer, Enter
-advances through unlocked variants, Escape closes, V fits the picture to the
-screen, and Tab toggles variant markers. Arrow keys and the left stick pan;
+advances through unlocked variants, Escape closes, B fits the picture to the
+screen, and M toggles variant markers. Arrow keys and the left stick pan;
 pointer dragging also pans. Loading and capture fades gate viewer input.
 
 Title's Movie entry opens the original ten-movie gallery. Arrow keys select a
@@ -246,7 +365,7 @@ block gallery input during playback; returning to Title selects Movie again.
 
 Title's BGM entry opens the original music gallery and returns with BGM selected.
 It retains the title frame while artwork loads, then fades into the gallery.
-Enter/controller A plays the selected unlocked track; Y/controller Y stops it.
+Enter/controller A plays the selected unlocked track; M/controller Y stops it.
 Tapping a track toggles playback. Directional input, analog scrolling and pointer
 dragging cover the two-column list; Escape/controller B or the close button
 returns to Title. Global audio, volume settings and save progress survive the
@@ -366,9 +485,8 @@ crash have not recurred since switching to app bundling; these issues are
 resolved. Launch-activation retries, explicit AppKit fullscreen policy and their
 opt-in feature have been removed. Earlier controlled checks are retained in
 `reverse-engineering/macos-bundle-default-policy-validation.json` as history.
-The F fullscreen shortcut responds to fresh key-down events and ignores held
-repeats, so a missed release during a native transition cannot block the next
-press. See `reverse-engineering/fullscreen-f-keydown-validation.json`.
+The former F fullscreen shortcut is disabled under the uniform keyboard mapping.
+Its earlier checks remain in `reverse-engineering/fullscreen-f-keydown-validation.json` as history.
 
 If you encounter any problems, please open an [issue on GitHub](https://github.com/DCNick3/shin/issues).
 
