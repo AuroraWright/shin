@@ -215,6 +215,52 @@ fn patch(
     }
 }
 
+/// Storage error notices must remain usable when their own atlas is damaged.
+/// Normal dialogs still require the native artwork; only the error adapter
+/// selects these plain panels, retaining the same geometry, text and input.
+fn notice_patch(
+    pass: &mut RenderPass,
+    textures: Option<&DialogTextures>,
+    kind: usize,
+    rect: Vec4,
+    color: FloatColor4,
+    transform: Mat4,
+) {
+    if let Some(textures) = textures {
+        patch(pass, textures, kind, rect, color, transform);
+        return;
+    }
+    let fill = |pass: &mut RenderPass, r: Vec4, tint: FloatColor4| {
+        QuadVertices::new()
+            .with_box(r.x, r.y, r.x + r.z, r.y + r.w)
+            .with_color(tint.into_unorm())
+            .fill(
+                pass,
+                RenderRequestBuilder::new().color_blend_type(ColorBlendType::Layer1),
+                transform,
+            );
+    };
+    let border = |pass: &mut RenderPass, tint: FloatColor4| {
+        for r in [
+            vec4(rect.x, rect.y, rect.z, 4.0),
+            vec4(rect.x, rect.y + rect.w - 4.0, rect.z, 4.0),
+            vec4(rect.x, rect.y + 4.0, 4.0, rect.w - 8.0),
+            vec4(rect.x + rect.z - 4.0, rect.y + 4.0, 4.0, rect.w - 8.0),
+        ] {
+            fill(pass, r, tint);
+        }
+    };
+    match kind {
+        0 => {
+            fill(pass, rect, FloatColor4::from_rgba(0.06, 0.08, 0.12, 0.98));
+            border(pass, FloatColor4::from_rgba(0.38, 0.42, 0.50, 1.0));
+        }
+        1 => fill(pass, rect, FloatColor4::from_rgba(0.18, 0.22, 0.30, 1.0)),
+        2 => border(pass, FloatColor4::from_rgba(0.25, 0.65, 1.0, 1.0)),
+        _ => fill(pass, rect, color),
+    }
+}
+
 pub(crate) struct DialogText {
     glyphs: Vec<CharacterTextGlyph>,
     handles: Vec<GpuFontGlyphHandle>,
@@ -399,7 +445,7 @@ impl DialogText {
 
 pub(super) struct DialogView {
     pub geometry: DialogGeometry,
-    textures: Arc<DialogTextures>,
+    textures: Option<Arc<DialogTextures>>,
     prompt: DialogText,
     answers: [DialogText; 2],
     texture: wgpu::Texture,
@@ -415,6 +461,32 @@ impl DialogView {
             "Generic dialog supports up to two answers"
         );
         let textures = server.load_sync::<DialogTextures>("/systex.txa")?;
+        Self::load_text_with_textures(server, prompt, labels, Some(textures))
+    }
+    pub(crate) fn load_storage_notice(
+        server: &AssetServer,
+        prompt: &str,
+        labels: &[&str],
+    ) -> anyhow::Result<Self> {
+        let textures = match server.load_sync::<DialogTextures>("/systex.txa") {
+            Ok(textures) => Some(textures),
+            Err(error) => {
+                tracing::warn!(%error, "Storage notice artwork failed; using plain frame");
+                None
+            }
+        };
+        Self::load_text_with_textures(server, prompt, labels, textures)
+    }
+    fn load_text_with_textures(
+        server: &AssetServer,
+        prompt: &str,
+        labels: &[&str],
+        textures: Option<Arc<DialogTextures>>,
+    ) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            labels.len() <= 2,
+            "Generic dialog supports up to two answers"
+        );
         let font = server.load_sync::<GpuFontLazy>("/system.fnt")?;
         let prompt = DialogText::load(server, &font, prompt, 54.0);
         let answers = std::array::from_fn(|index| {
@@ -482,9 +554,9 @@ impl DialogView {
         let g = &self.geometry;
         let projection =
             shin_orthographic_projection_matrix(0.0, g.outer.x, g.outer.y, 0.0, -1.0, 1.0);
-        patch(
+        notice_patch(
             &mut pass,
-            &self.textures,
+            self.textures.as_deref(),
             0,
             vec4(0.0, 0.0, g.outer.x, g.outer.y),
             FloatColor4::WHITE,
@@ -500,9 +572,9 @@ impl DialogView {
         for index in 0..g.button_count {
             let r = g.buttons[index];
             let focus = confirmation.focus[index].value();
-            patch(
+            notice_patch(
                 &mut pass,
-                &self.textures,
+                self.textures.as_deref(),
                 1,
                 r,
                 FloatColor4::from_rgba(0.7 * focus, 0.7 * focus, 0.7 * focus, 0.5 + 0.2 * focus),
@@ -521,13 +593,20 @@ impl DialogView {
                 ),
             );
             if confirmation.selected() == Some(index) {
-                patch(&mut pass, &self.textures, 2, r, FloatColor4::WHITE, content);
+                notice_patch(
+                    &mut pass,
+                    self.textures.as_deref(),
+                    2,
+                    r,
+                    FloatColor4::WHITE,
+                    content,
+                );
             }
             let flash = confirmation.flashes[index].value();
             if flash > 0.0 {
-                patch(
+                notice_patch(
                     &mut pass,
-                    &self.textures,
+                    self.textures.as_deref(),
                     3,
                     r,
                     FloatColor4::from_rgba(1.0, 1.0, 1.0, flash),
@@ -562,6 +641,10 @@ impl DialogView {
                 },
                 g.transform(confirmation.scale.value()),
             );
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_uses_plain_frame(&self) -> bool {
+        self.textures.is_none()
     }
 }
 
@@ -900,11 +983,13 @@ mod tests {
                 .unwrap();
         let (device, queue) = shin_tasks::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
+            }))
         .unwrap();
         let mut io = LayeredAssetIo::new();
         io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
@@ -912,6 +997,8 @@ mod tests {
         let server = AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),

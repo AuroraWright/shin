@@ -11,6 +11,9 @@ use shin_render::{
 };
 use std::{collections::VecDeque, sync::Arc};
 
+#[cfg(all(test, target_os = "macos"))]
+mod failure_reference;
+
 #[derive(Debug, TextureArchive)]
 pub struct NotificationTextures {
     #[txa(name = "notify")]
@@ -165,14 +168,11 @@ impl NotificationQueue {
         started
     }
 
-    pub fn load_textures(&mut self, server: &AssetServer) {
+    pub fn load_textures(&mut self, server: &AssetServer) -> anyhow::Result<()> {
         if self.textures.is_none() {
-            self.textures = Some(
-                server
-                    .load_sync("/adv.txa")
-                    .expect("Failed to load ADV notification textures"),
-            );
+            self.textures = Some(server.load_sync("/adv.txa")?);
         }
+        Ok(())
     }
 
     pub fn render(&self, pass: &mut RenderPass) {

@@ -163,12 +163,6 @@ impl TipsModel {
             self.sounds.push("move");
         } else if state[AppAction::Cancel].is_clicked {
             self.request_close("cancel");
-        } else if state[AppAction::KeyboardScrollUp].is_clicked_or_repeated {
-            self.scroll = (self.scroll - 180.0).clamp(0.0, self.max_scroll());
-            self.velocity = 0.0;
-        } else if state[AppAction::KeyboardScrollDown].is_clicked_or_repeated {
-            self.scroll = (self.scroll + 180.0).clamp(0.0, self.max_scroll());
-            self.velocity = 0.0;
         } else if self.axis != 0.0 {
             self.scroll = (self.scroll + self.axis * 32.0).clamp(0.0, self.max_scroll());
             self.velocity = 0.0;
@@ -367,6 +361,24 @@ mod tests {
         }
         model.update(10.0);
         model
+    }
+    #[test]
+    fn trackpad_wheel_scrolls_tips_without_changing_selection() {
+        let mut model = active();
+        for (amount, expected) in [
+            (-3.25, 104.0),
+            (-0.125, 108.0),
+            (3.25, 4.0),
+            (0.0, 4.0),
+            (100.0, 0.0),
+        ] {
+            let (input, scroll) = crate::app::wheel_scroll_test_input(amount);
+            model.set_axis(scroll);
+            model.input(&input);
+            assert_eq!(model.scroll(), expected);
+            assert_eq!(model.selected(), 0);
+            assert!(model.take_sounds().is_empty());
+        }
     }
     fn controls(actions: &[AppAction]) -> EnumMap<AppAction, ActionState> {
         let mut state = EnumMap::default();

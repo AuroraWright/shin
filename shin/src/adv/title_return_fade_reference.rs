@@ -44,7 +44,7 @@ pub(super) fn assert_title_return_fade<'a>(
         let mut upload = ctx.device.create_command_encoder(&Default::default());
         ctx.dynamic_buffer.finish(&mut upload);
         ctx.queue.submit([upload.finish(), encoder.finish()]);
-        ctx.device.poll(wgpu::Maintain::Wait);
+        ctx.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     fn draw(
         host: &SceneHost,

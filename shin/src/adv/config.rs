@@ -127,6 +127,11 @@ impl ConfigModel {
     pub fn phase(&self) -> ConfigPhase {
         self.phase
     }
+    pub(crate) fn save_failed(&mut self) {
+        if self.phase == ConfigPhase::WaitingSave {
+            self.phase = ConfigPhase::Active;
+        }
+    }
     pub fn progress(&self) -> f32 {
         self.progress
     }
@@ -162,6 +167,13 @@ impl ConfigModel {
     }
     pub fn take_responses(&mut self) -> Vec<i32> {
         std::mem::take(&mut self.responses)
+    }
+    pub(crate) fn take_response(&mut self) -> Option<i32> {
+        if self.responses.is_empty() {
+            None
+        } else {
+            Some(self.responses.remove(0))
+        }
     }
     pub fn controller_input(&mut self, input: ConfigInput) {
         if !self.accepts_controller_input() {

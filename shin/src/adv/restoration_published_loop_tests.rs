@@ -163,10 +163,11 @@ mod published_loop {
                     live.load_game_data(&globals, &game(1), server.clone())
                         .unwrap();
                     finish(&mut live, context, server, &mut frame, 1);
-                    let Some(UserLayer::Movie(movie)) = live
+                    let movie_owner = live
                         .adv_state
                         .plane_layer_group(PlaneId::new(0))
-                        .get_layer(LayerbankId::new(0))
+                        .get_layer(LayerbankId::new(0));
+                    let Some(UserLayer::Movie(movie)) = movie_owner.as_deref()
                     else {
                         panic!("Published Movie missing");
                     };
@@ -326,10 +327,11 @@ mod published_loop {
                 live.load_game_data(&globals, &game(1), server.clone())
                     .unwrap();
                 finish(&mut live, context, server, &mut frame, 1);
-                let Some(UserLayer::Movie(movie)) = live
+                let movie_owner = live
                     .adv_state
                     .plane_layer_group(PlaneId::new(0))
-                    .get_layer(LayerbankId::new(0))
+                    .get_layer(LayerbankId::new(0));
+                let Some(UserLayer::Movie(movie)) = movie_owner.as_deref()
                 else {
                     panic!("Published Movie missing")
                 };

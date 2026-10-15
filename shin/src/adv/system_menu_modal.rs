@@ -10,7 +10,7 @@ use super::{
     character_screen::CharacterScreen,
     character_view::CharacterTextures,
     config_screen::ConfigScreen,
-    input_area::{PointerEvent, PointerFrame},
+    input_area::{MouseRelease, PointerEvent, PointerFrame},
     manual_screen::ManualScreen,
     save_menu_screen::SaveMenuScreen,
     system_menu::{SystemMenuPhase, SystemMenuSnapshot},
@@ -19,6 +19,10 @@ use super::{
     title_return::TitleReturnDialog,
 };
 use crate::{app::AppAction, asset::system::AssetServer};
+
+#[cfg(all(test, target_os = "macos"))]
+#[path = "system_menu_modal/failure_reference.rs"]
+mod failure_reference;
 
 enum Child {
     Manual(ManualScreen),
@@ -41,9 +45,19 @@ pub(super) struct SystemMenuModal {
         Vec<PointerEvent>,
         EnumMap<AppAction, ActionState>,
         f32,
+        Option<MouseRelease>,
     )>,
 }
 impl SystemMenuModal {
+    /// Failed child construction/loading returns ownership to the same parent.
+    /// ADV keeps its modal scopes until the parent itself closes.
+    pub(super) fn cancel_failed_child(&mut self) {
+        self.child = None;
+        self.pending_request = None;
+        self.pending_title_setup = None;
+        self.screen.child_response(1);
+        self.suspend_pointer(self.pointer_held);
+    }
     pub(crate) fn suspend_pointer(&mut self, held: bool) {
         self.pending_input = None;
         self.pointer_held = held;
@@ -101,11 +115,23 @@ impl SystemMenuModal {
     pub fn pending_request(&self) -> Option<&SystemMenuRequest> {
         self.pending_request.as_ref()
     }
+    pub(super) fn desktop_diagnostic_ready(&self) -> bool {
+        self.child.is_none() && self.pending_request.is_none() && self.screen.model.accepts_input()
+    }
     pub fn input(
         &mut self,
         frame: &PointerFrame<'_>,
         state: &EnumMap<AppAction, ActionState>,
         axis: f32,
+    ) {
+        self.input_with_mouse_release(frame, state, axis, None);
+    }
+    pub fn input_with_mouse_release(
+        &mut self,
+        frame: &PointerFrame<'_>,
+        state: &EnumMap<AppAction, ActionState>,
+        axis: f32,
+        mouse_release: Option<MouseRelease>,
     ) {
         self.pending_input = Some((
             frame.number,
@@ -113,6 +139,7 @@ impl SystemMenuModal {
             frame.events.to_vec(),
             state.clone(),
             axis,
+            mouse_release,
         ));
     }
     pub fn pointer_state(&mut self, canvas: glam::Vec2, held: bool, elapsed_seconds: f64) {
@@ -143,14 +170,22 @@ impl SystemMenuModal {
         audio: &Arc<shin_audio::AudioManager>,
         canvas: (u32, u32),
     ) -> anyhow::Result<bool> {
-        if let Some((number, time_seconds, events, state, axis)) = self.pending_input.take() {
+        if let Some((number, time_seconds, events, state, axis, mouse_release)) =
+            self.pending_input.take()
+        {
             let frame = PointerFrame {
                 number,
                 time_seconds,
                 events: &events,
             };
-            self.screen
-                .update_frame(delta, server, play_ticks, &frame, &state);
+            self.screen.update_frame_with_mouse_release(
+                delta,
+                server,
+                play_ticks,
+                &frame,
+                &state,
+                mouse_release,
+            );
             match &mut self.child {
                 Some(Child::Manual(child)) => child.input_frame(&frame, &state),
                 Some(Child::Tips(child)) => child.input_frame(&frame, &state, axis),
@@ -228,7 +263,7 @@ impl SystemMenuModal {
                         scenario,
                         grid,
                         initial_page,
-                    )));
+                    )?));
                 }
                 SystemMenuRequest::Information { episode, tips } => {
                     let mut child =
@@ -339,6 +374,11 @@ impl SystemMenuModal {
     pub fn config_save_finished(&mut self) {
         if let Some(Child::Config(child)) = &mut self.child {
             child.save_finished();
+        }
+    }
+    pub fn config_save_failed(&mut self) {
+        if let Some(Child::Config(child)) = &mut self.child {
+            child.save_failed();
         }
     }
     pub fn prepare(&mut self, context: &mut crate::render::PreRenderContext) {

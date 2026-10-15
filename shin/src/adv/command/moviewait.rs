@@ -110,7 +110,7 @@ impl UpdatableCommand for MOVIEWAIT {
         let mut should_wait = false;
 
         for layer in &self.layers {
-            let UserLayer::Movie(movie_layer) = adv_state
+            let UserLayer::Movie(movie_layer) = &*adv_state
                 .plane_layer_group(self.plane)
                 .get_layer(layer.layerbank)
                 .expect("BUG: layerbank not found")

@@ -308,7 +308,7 @@ mod active_restore {
                 .get_layerbank_id(plane, LayerId::new(1))
                 .unwrap();
             let movie_owner = if name.starts_with("movie") {
-                let UserLayer::Movie(movie) = live
+                let UserLayer::Movie(movie) = &*live
                     .adv_state
                     .plane_layer_group(plane)
                     .get_layer(bank)
@@ -442,6 +442,7 @@ mod active_restore {
                 retirement: None,
                 kind: pending.kind,
                 source: pending.source.take(),
+                present_source: pending.present_source,
             });
             for _ in 0..3 {
                 step(&mut live, context, server, &mut frame, 5., true);
@@ -675,6 +676,7 @@ mod active_restore {
                         retirement: None,
                         kind: super::super::super::SceneLoadKind::Saved,
                         source: None,
+                        present_source: false,
                     });
                     arrival.recv_timeout(Duration::from_secs(5)).unwrap();
                     assert!(!retired.load(std::sync::atomic::Ordering::Acquire));

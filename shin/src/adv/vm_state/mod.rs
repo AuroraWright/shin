@@ -10,6 +10,7 @@ use shin_core::{
 
 use crate::adv::vm_state::audio::AudioState;
 
+#[derive(Clone)]
 pub struct SaveInfo {
     pub info: [String; 4],
 }
@@ -25,7 +26,7 @@ impl SaveInfo {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MessageState {
     pub message_id: MessageId,
     pub was_read: bool,
@@ -51,6 +52,7 @@ impl MessageState {
     }
 }
 
+#[derive(Clone)]
 pub struct VmState {
     pub settings: Settings,
     pub save_revision: u64,
@@ -59,6 +61,11 @@ pub struct VmState {
     previous_message_position: Option<u32>,
     current_message_position: Option<u32>,
     normal_message_count: u32,
+    previous_chapter_position: u32,
+    current_chapter_position: u32,
+    chapter_message_count: u32,
+    /// Native2dc8: the last message, chapter or no-text interactive boundary.
+    pub(super) chapter_skip_position: u32,
     pub resume_position: Option<u32>,
     pub auto_save_slot: Option<GameData>,
     /// Native GameData at VM2530 retains entry zero when entry one is active.
@@ -95,6 +102,31 @@ impl VmState {
             self.advance_save_position();
             self.current_message_position = Some(self.save_position);
             self.normal_message_count = self.normal_message_count.wrapping_add(1);
+            self.chapter_message_count = self.chapter_message_count.wrapping_add(1);
+            self.chapter_skip_position = self.save_position;
+        }
+    }
+
+    pub fn record_chapter_boundary(&mut self) {
+        self.advance_save_position();
+        self.previous_chapter_position = self.current_chapter_position;
+        self.current_chapter_position = self.save_position;
+        self.chapter_skip_position = self.save_position;
+        self.chapter_message_count = 0;
+    }
+
+    pub fn record_interactive_boundary(&mut self) {
+        self.advance_save_position();
+        self.chapter_skip_position = self.save_position;
+    }
+
+    /// Native182c0: after at most one message, return to the previous chapter;
+    /// otherwise restart this chapter. Event text does not increase the count.
+    pub fn previous_chapter_position(&self) -> u32 {
+        if self.chapter_message_count > 1 {
+            self.current_chapter_position
+        } else {
+            self.previous_chapter_position
         }
     }
 
@@ -234,6 +266,10 @@ impl VmState {
             previous_message_position: None,
             current_message_position: None,
             normal_message_count: 0,
+            previous_chapter_position: 0,
+            current_chapter_position: 0,
+            chapter_message_count: 0,
+            chapter_skip_position: 0,
             resume_position: None,
             auto_save_slot: None,
             primary_entry: None,

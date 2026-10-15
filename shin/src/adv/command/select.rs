@@ -14,7 +14,7 @@ impl StartableCommand for command::runtime::SELECT {
         // Constructor 0xd90 snapshots only when no message text is active.
         if state.messagebox_state.text.is_none() {
             state.commit_persistent();
-            state.advance_save_position();
+            state.record_interactive_boundary();
         }
     }
 

@@ -502,4 +502,169 @@ mod tests {
         assert_eq!(collected.current_row, None);
         assert!(BrowserHistory::collect(&scenario, &source(1), &globals, 1).is_err());
     }
+
+    #[test]
+    #[ignore = "requires genuine Episode8 saved fixture and prepared native backlog helper; CPU only"]
+    fn reference_authored_native_backlog_history_context_copy_back() {
+        use super::super::backlog::BacklogItem;
+        use shin_core::format::text::{decode_string_fixup, read_sjis_string};
+        use std::{
+            io::Write,
+            path::PathBuf,
+            process::{Command, Stdio},
+        };
+        fn bytes(value: &str) -> Vec<u8> {
+            if value == "-" {
+                return Vec::new();
+            }
+            assert_eq!(value.len() % 2, 0);
+            value
+                .as_bytes()
+                .chunks_exact(2)
+                .map(|p| u8::from_str_radix(std::str::from_utf8(p).unwrap(), 16).unwrap())
+                .collect()
+        }
+        fn text(value: &str) -> String {
+            let mut raw = bytes(value);
+            raw.push(0);
+            decode_string_fixup(&read_sjis_string(&mut &raw[..], Some(raw.len())).unwrap())
+        }
+        let fixture = PathBuf::from(std::env::var_os("SHIN_REFERENCE_BACKLOG_FIXTURE").unwrap());
+        let output = PathBuf::from(std::env::var_os("SHIN_REFERENCE_BACKLOG_OUTPUT").unwrap());
+        std::fs::create_dir_all(&output).unwrap();
+        let packet =
+            SaveData::decode(&std::fs::read(fixture.join("last0-boundary6896.dat")).unwrap())
+                .unwrap();
+        let source = &packet.manual_save_slots[99].as_ref().unwrap().entry;
+        assert_eq!(
+            (source.scenario_id, source.random_seed, source.save_position),
+            (7, 12345, 6896)
+        );
+        let scenario =
+            Scenario::new(std::fs::read(fixture.join("main.snr")).unwrap().into()).unwrap();
+        let mut globals = SaveData::default();
+        globals.settings.v11_disallowskipunread = false;
+        let globals_before = globals.encode();
+        let source_before = format!("{source:?}");
+        let history = BrowserHistory::collect(&scenario, source, &globals, 500_000).unwrap();
+        let source_route = serde_json::to_value(&source.route_data).unwrap();
+        let route: String = source_route
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| format!("{:02x}", v.as_u64().unwrap()))
+            .collect();
+        let input: String = (0..2)
+            .map(|active| {
+                format!(
+                    "{} {:x} {} {} {active}\n",
+                    source.scenario_id, source.random_seed, source.save_position, route
+                )
+            })
+            .collect();
+        std::fs::write(output.join("input.txt"), &input).unwrap();
+        let mut child =
+            Command::new(std::env::var_os("SHIN_REFERENCE_BACKLOG_NATIVE_HELPER").unwrap())
+                .arg(std::env::var_os("SHIN_REFERENCE_BACKLOG_EXECUTABLE").unwrap())
+                .arg(fixture.join("main.snr"))
+                .stdin(Stdio::piped())
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .spawn()
+                .unwrap();
+        child
+            .stdin
+            .take()
+            .unwrap()
+            .write_all(input.as_bytes())
+            .unwrap();
+        let native = child.wait_with_output().unwrap();
+        std::fs::write(output.join("native.trace"), &native.stdout).unwrap();
+        std::fs::write(output.join("native.stderr"), &native.stderr).unwrap();
+        assert!(
+            native.status.success(),
+            "{}",
+            String::from_utf8_lossy(&native.stderr)
+        );
+        let native = std::str::from_utf8(&native.stdout).unwrap();
+        let mut case = 0;
+        let mut rows = 0;
+        let mut kinds = [0usize; 4];
+        for line in native.lines() {
+            let p: Vec<_> = line.split_whitespace().collect();
+            match p[0] {
+                "H" => {
+                    assert_eq!(p[1].parse::<usize>().unwrap(), case);
+                    assert_eq!(p[2].parse::<usize>().unwrap(), case);
+                    assert_eq!(
+                        p[3].parse::<usize>().unwrap(),
+                        history.history.entries.len()
+                    );
+                    assert_eq!(p[4].parse::<usize>().unwrap(), history.current_row.unwrap());
+                    rows = 0;
+                }
+                "R" => {
+                    assert_eq!(p[1].parse::<usize>().unwrap(), rows);
+                    let entry = &history.history.entries[rows];
+                    assert_eq!(
+                        p[3].parse::<u32>().unwrap(),
+                        entry.save_position,
+                        "row{rows} boundary"
+                    );
+                    let kind = p[2].parse::<usize>().unwrap();
+                    kinds[kind] += 1;
+                    match (&entry.item, kind) {
+                        (BacklogItem::Message { text: expected, .. }, 0) => {
+                            assert_eq!(&text(p[5]), expected, "row{rows} message")
+                        }
+                        (BacklogItem::Checkpoint { title, text: body }, 2) => {
+                            assert_eq!(&text(p[4]), title, "row{rows} checkpoint title");
+                            assert_eq!(&text(p[5]), body, "row{rows} checkpoint text");
+                        }
+                        (BacklogItem::Quiz { mode, response, .. }, 3) => {
+                            assert_eq!(
+                                p[4].parse::<i32>().unwrap(),
+                                mode.unwrap(),
+                                "row{rows} quiz mode"
+                            );
+                            assert_eq!(
+                                p[5].parse::<i32>().unwrap(),
+                                *response,
+                                "row{rows} quiz response"
+                            );
+                        }
+                        other => panic!("Native/port row{rows} kinds differ:{other:?}"),
+                    }
+                    rows += 1;
+                }
+                "T" => {
+                    let expected = serde_json::to_value(&history.jump_source.route_data).unwrap();
+                    let expected: Vec<u8> = expected
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .map(|v| v.as_u64().unwrap() as u8)
+                        .collect();
+                    assert_eq!(p[1].parse::<usize>().unwrap(), expected.len());
+                    assert_eq!(bytes(p[2]), expected, "extended replay route");
+                }
+                "Z" => {
+                    assert_eq!(rows, history.history.entries.len());
+                    assert_eq!(p[2], "0");
+                    case += 1;
+                }
+                other => panic!("Unrecognized native row:{other}"),
+            }
+        }
+        assert_eq!(case, 2);
+        assert_eq!(globals.encode(), globals_before);
+        assert_eq!(format!("{source:?}"), source_before);
+        let summary = serde_json::json!({"native_cases": case,"rows_per_case": rows,"row_kind_observations": kinds,"current_row":history.current_row,"native_source_boundary":source.save_position,"port_jump_source_boundary":history.jump_source.save_position});
+        std::fs::write(
+            output.join("summary.json"),
+            serde_json::to_vec_pretty(&summary).unwrap(),
+        )
+        .unwrap();
+        println!("Authored native backlog replay: {summary}");
+    }
 }

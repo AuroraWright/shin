@@ -13,7 +13,19 @@ pub struct MASKLOAD {
     token: Option<command::token::MASKLOAD>,
     plane: PlaneId,
     flags: MaskFlags,
-    load_task: AsyncTask<Arc<MaskTexture>>,
+    load_task: Option<AsyncTask<anyhow::Result<Arc<MaskTexture>>>>,
+    path: String,
+    block_animations: bool,
+    error: Option<anyhow::Error>,
+}
+
+fn spawn_loader(
+    server: Arc<crate::asset::system::AssetServer>,
+    path: String,
+) -> AsyncTask<anyhow::Result<Arc<MaskTexture>>> {
+    shin_tasks::async_io::spawn(async move {
+        super::catch_preparation_panic(async { server.load(&path).await }).await?
+    })
 }
 
 impl StartableCommand for command::runtime::MASKLOAD {
@@ -53,24 +65,18 @@ impl StartableCommand for command::runtime::MASKLOAD {
         if !self.smth_smth_transition {
             adv_state.allow_running_animations = false;
         }
-        let load_task = shin_tasks::async_io::spawn({
-            let asset_server = context.asset_server.clone();
-            let path = mask_info.path();
-
-            async move {
-                asset_server
-                    .load(&path)
-                    .await
-                    .expect("Failed to load mask texture")
-            }
-        });
+        let path = mask_info.path();
+        let load_task = spawn_loader(context.asset_server.clone(), path.clone());
 
         Yield(
             MASKLOAD {
                 token: Some(self.token),
                 plane: vm_state.layers.current_plane,
                 flags: self.mask_flags,
-                load_task,
+                load_task: Some(load_task),
+                path,
+                block_animations: !self.smth_smth_transition,
+                error: None,
             }
             .into(),
         )
@@ -78,15 +84,39 @@ impl StartableCommand for command::runtime::MASKLOAD {
 }
 
 impl UpdatableCommand for MASKLOAD {
+    fn take_error(&mut self) -> Option<anyhow::Error> {
+        self.error.take()
+    }
     fn update(
         &mut self,
-        _context: &mut UpdateContext,
+        context: &mut UpdateContext,
         _scenario: &Arc<Scenario>,
         _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
-        let mask_texture = self.load_task.poll_naive()?;
+        if self.error.is_some() {
+            return None;
+        }
+        if self.load_task.is_none() {
+            if self.block_animations {
+                adv_state.allow_running_animations = false;
+            }
+            self.load_task = Some(spawn_loader(
+                context.asset_server.clone(),
+                self.path.clone(),
+            ));
+        }
+        let result = self.load_task.as_mut().unwrap().poll_naive()?;
+        self.load_task = None;
+        let mask_texture = match result {
+            Ok(mask) => mask,
+            Err(error) => {
+                self.error = Some(error);
+                adv_state.allow_running_animations = true;
+                return None;
+            }
+        };
 
         adv_state
             .plane_layer_group_mut(self.plane)

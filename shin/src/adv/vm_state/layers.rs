@@ -1,4 +1,3 @@
-use bevy_utils::hashbrown::hash_map::Entry;
 use enum_map::{Enum, EnumMap};
 use shin_core::{
     format::scenario::{
@@ -13,6 +12,7 @@ use shin_core::{
     },
 };
 use smallvec::{SmallVec, smallvec};
+use std::collections::hash_map::Entry;
 use tracing::{trace, warn};
 
 use crate::layer::LayerPropertiesState;

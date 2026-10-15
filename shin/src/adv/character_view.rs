@@ -418,6 +418,73 @@ impl TextureArchive for CharacterTextures {
     type Builder = CharacterTextureBuilder;
 }
 impl CharacterTextures {
+    pub(crate) fn require_names(&self, path: &str, names: &[&str]) -> anyhow::Result<()> {
+        for name in names {
+            anyhow::ensure!(self.contains(name), "Missing texture {name} in {path}");
+        }
+        Ok(())
+    }
+    pub(crate) fn require_first_texture(&self, path: &str) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.first_texture_name
+                .as_deref()
+                .is_some_and(|name| self.contains(name)),
+            "Missing texture at index0 in {path}"
+        );
+        Ok(())
+    }
+    pub(crate) fn validate_character_screen(
+        &self,
+        model: &super::characters::CharacterModel,
+    ) -> anyhow::Result<()> {
+        self.require_names(
+            "/chars.txa",
+            &[
+                "bg",
+                "obi",
+                "window",
+                "separator",
+                "hana",
+                "caption",
+                "close",
+                "help_chars",
+                "key",
+            ],
+        )?;
+        if !model.connectors.is_empty() {
+            self.require_names("/chars.txa", &["line"])?;
+        }
+        if model.page_mask.count_ones() > 1 {
+            self.require_names("/chars.txa", &["lr"])?;
+        }
+        if model.editable {
+            self.require_names("/chars.txa", &["button"])?;
+        }
+        if !model.cells.is_empty() {
+            self.require_names("/chars.txa", &["non"])?;
+        }
+        if model.cells.iter().any(|cell| cell.definitions.len() > 1) {
+            self.require_names("/chars.txa", &["numbase", "num"])?;
+        }
+        for cell in &model.cells {
+            for definition in &cell.definitions {
+                if definition.default_state == 0 || definition.states.is_empty() {
+                    self.require_names("/chars.txa", &["null"])?;
+                    continue;
+                }
+                self.require_names("/chars.txa", &["cur", "bar"])?;
+                for state in &definition.states {
+                    if state.variants.is_empty() {
+                        self.require_names("/chars.txa", &["null"])?;
+                    }
+                    for variant in &state.variants {
+                        self.require_names("/chars.txa", &[&variant.portrait])?;
+                    }
+                }
+            }
+        }
+        Ok(())
+    }
     pub(crate) fn first_texture(&self) -> &GpuTexture {
         self.get(
             self.first_texture_name

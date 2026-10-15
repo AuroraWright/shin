@@ -100,7 +100,7 @@ mod saved_masks {
         let mut upload = context.device.create_command_encoder(&Default::default());
         context.dynamic_buffer.finish(&mut upload);
         context.queue.submit([upload.finish(), encoder.finish()]);
-        context.device.poll(wgpu::Maintain::Wait);
+        context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
 
     fn gpu_texels(device: &wgpu::Device, queue: &wgpu::Queue, mask: &MaskTexture) -> Vec<u8> {
@@ -173,12 +173,13 @@ mod saved_masks {
         readback.slice(..).map_async(wgpu::MapMode::Read, move |r| {
             done.send(r).unwrap();
         });
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
         received
             .recv_timeout(Duration::from_secs(5))
             .unwrap()
             .unwrap();
-        let mapped = readback.slice(..).get_mapped_range();
+        let mapped = readback.slice(..).get_mapped_range()
+            .expect("Readback mapping must be ready");
         let bytes = mapped
             .chunks_exact(4)
             .map(|v| u32::from_le_bytes(v.try_into().unwrap()) as u8)

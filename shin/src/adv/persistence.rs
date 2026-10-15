@@ -476,7 +476,7 @@ fn join_worker(worker: std::thread::JoinHandle<Result<()>>) -> Result<()> {
         .unwrap_or_else(|_| Err(anyhow::anyhow!("Save worker panicked")))
 }
 
-fn write_atomic(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
+pub(crate) fn write_atomic(path: &std::path::Path, bytes: &[u8]) -> Result<()> {
     let parent = path
         .parent()
         .filter(|p| !p.as_os_str().is_empty())
@@ -1146,6 +1146,79 @@ mod tests {
         assert!(store.data.auto_save_slot.is_none());
         assert_eq!(fs::read(store.path.join("keep")).unwrap(), b"existing");
         assert_eq!(fs::read_dir(&directory).unwrap().count(), 2);
+        fs::remove_dir_all(directory).unwrap();
+    }
+
+    #[test]
+    fn checksum_valid_malformed_save_bodies_recover_without_losing_bytes() {
+        fn bytes(value: &serde_json::Value) -> Vec<u8> {
+            let hex = value.as_str().unwrap();
+            assert_eq!(hex.len() % 2, 0);
+            (0..hex.len())
+                .step_by(2)
+                .map(|start| u8::from_str_radix(&hex[start..start + 2], 16).unwrap())
+                .collect()
+        }
+        let fixtures: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../reverse-engineering/malformed-save-body-fixtures.json"
+        ))
+        .unwrap();
+        let valid = bytes(&fixtures["valid_packet_hex"]);
+        for fixture in fixtures["cases"].as_array().unwrap() {
+            let directory = directory();
+            let path = directory.join("progress.dat");
+            let packet = bytes(&fixture["packet_hex"]);
+            let raw = bytes(&fixture["raw_hex"]);
+            assert_eq!(SaveData::deobfuscate(&packet).unwrap(), raw);
+            fs::write(&path, &packet).unwrap();
+
+            // Real file opening must classify the malformed body without a
+            // worker panic, publishing defaults or modifying rejected bytes.
+            let error = SaveStore::open(path.clone(), None)
+                .err()
+                .expect("malformed body must be rejected")
+                .downcast::<SaveDecodeError>()
+                .unwrap();
+            assert!(error.recovery.kind == SaveRecoveryKind::Corrupt);
+            assert_eq!(fs::read(&path).unwrap(), packet);
+            assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
+
+            // This call corresponds to the already-tested final notice
+            // acknowledgement; preservation must precede default publication.
+            let store = SaveStore::recover(error.recovery).unwrap();
+            assert_eq!(store.data.encode(), SaveData::default().encode());
+            assert_eq!(fs::read(&path).unwrap(), packet);
+            let backup = fs::read_dir(&directory)
+                .unwrap()
+                .map(|entry| entry.unwrap().path())
+                .find(|candidate| candidate != &path)
+                .unwrap();
+            assert_eq!(fs::read(backup).unwrap(), packet);
+            drop(store);
+            fs::remove_dir_all(directory).unwrap();
+        }
+
+        // A repaired file arriving while the notice is open supersedes its
+        // captured rejected bytes; recovery must reopen the valid native save.
+        let directory = directory();
+        let path = directory.join("progress.dat");
+        let invalid = bytes(&fixtures["cases"][3]["packet_hex"]);
+        fs::write(&path, invalid).unwrap();
+        let error = SaveStore::open(path.clone(), None)
+            .err()
+            .unwrap()
+            .downcast::<SaveDecodeError>()
+            .unwrap();
+        fs::write(&path, &valid).unwrap();
+        let store = SaveStore::recover(error.recovery).unwrap();
+        assert_eq!(
+            store.data.encode(),
+            SaveData::decode(&valid).unwrap().encode()
+        );
+        assert!(store.data.auto_save_slot.is_some());
+        assert_eq!(fs::read(&path).unwrap(), valid);
+        assert_eq!(fs::read_dir(&directory).unwrap().count(), 1);
+        drop(store);
         fs::remove_dir_all(directory).unwrap();
     }
 }

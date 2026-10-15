@@ -41,6 +41,10 @@ impl ManualScreen {
             .count();
         let model = ManualModel::new(count)
             .ok_or_else(|| anyhow::anyhow!("Manual archive has no numbered pages"))?;
+        textures.require_names(
+            "/manual.txa",
+            &["bg", "obi", "caption", "close", "help_manual", "key"],
+        )?;
         self.textures = Some(textures);
         self.model = Some(model);
         Ok(())

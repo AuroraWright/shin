@@ -28,6 +28,86 @@ pub struct ReconstructedScene {
 }
 
 impl ReconstructedScene {
+    /// Native f4f0 searches without publishing reads, unlocks or autosaves, then
+    /// prepares f220 at2dc8. A current unread message or open choice can make
+    /// that target no later than the source, in which case there is no jump.
+    pub(super) fn next_chapter_game_data(
+        scenario: &Scenario,
+        game: &GameData,
+        globals: &SaveData,
+        command_limit: usize,
+    ) -> Result<Option<Self>> {
+        let mut probe = Self::from_game_data(scenario, game, globals, command_limit)?;
+        probe.state.persistent_commits_enabled = false;
+        let finish = |state: &VmState| -> Result<Option<Self>> {
+            if state.chapter_skip_position <= game.entry.save_position {
+                return Ok(None);
+            }
+            let mut target = state.snapshot_game_data();
+            target.entry.save_position = state.chapter_skip_position;
+            Self::from_game_data(scenario, &target, globals, command_limit).map(Some)
+        };
+        let result = match probe.stop {
+            ReconstructionStop::Response(result) => result,
+            ReconstructionStop::Command(command) => {
+                if Self::chapter_search_blocks(&command, &probe.state) {
+                    return finish(&probe.state);
+                }
+                command
+                    .execute_dummy()
+                    .context("Chapter search starts at EXIT")?
+            }
+        };
+        Self::search_next_chapter(&mut probe.scripter, &mut probe.state, result, command_limit)?;
+        finish(&probe.state)
+    }
+
+    pub(super) fn chapter_search_blocks(command: &RuntimeCommand, state: &VmState) -> bool {
+        matches!(command, RuntimeCommand::SELECT(_) | RuntimeCommand::QUIZ(_))
+            || (matches!(command, RuntimeCommand::MSGSET(_))
+                && state.current_event.is_none()
+                && state.settings.v11_disallowskipunread
+                && !state.messagebox_state.was_read)
+    }
+
+    /// Advance only the copied CPU state. The caller decides whether to prepare
+    /// a target; no GPU, audio, persistence or live breakpoint owner is used.
+    pub(super) fn search_next_chapter(
+        scripter: &mut Scripter,
+        state: &mut VmState,
+        mut result: CommandResult,
+        command_limit: usize,
+    ) -> Result<()> {
+        state.persistent_commits_enabled = false;
+        for _ in 0..command_limit {
+            let command = scripter.run(result).context("Searching next chapter")?;
+            match command {
+                RuntimeCommand::SGET(command) => {
+                    let value = command.apply_state(state);
+                    result = command.token.finish(value);
+                }
+                RuntimeCommand::RESUME(_) => {
+                    // The replacement owns another replay; never cross it in
+                    // this probe or invent an interactive response.
+                    return Ok(());
+                }
+                RuntimeCommand::EXIT(command) if command.arg1 == 0 => return Ok(()),
+                command => {
+                    command::apply_command_state_ref(&command, state)?;
+                    if matches!(command, RuntimeCommand::AUTOSAVE(_))
+                        || Self::chapter_search_blocks(&command, state)
+                    {
+                        return Ok(());
+                    }
+                    result = command
+                        .execute_dummy()
+                        .context("Chapter search reaches EXIT")?;
+                }
+            }
+        }
+        bail!("Next chapter not reached within reconstruction command limit")
+    }
+
     /// Replay the selected route while retaining the inactive native entry.
     pub fn from_game_data(
         scenario: &Scenario,
@@ -38,6 +118,33 @@ impl ReconstructedScene {
         let mut scene = Self::from_save(scenario, &game.entry, globals, command_limit)?;
         scene.state.primary_entry = game.primary_entry.clone();
         Ok(scene)
+    }
+
+    /// Native saved-scene worker 1b3b4 restarts an event checkpoint at2dc8
+    /// before hydrating its layers. Event MSGSET captures are valid Continue
+    /// data, but their EVBEGIN boundary must not become the live load target.
+    pub(super) fn from_game_data_for_load(
+        scenario: &Scenario,
+        game: &GameData,
+        globals: &SaveData,
+        command_limit: usize,
+    ) -> Result<Self> {
+        let scene = Self::from_game_data(scenario, game, globals, command_limit)?;
+        if scene.state.current_event.is_some()
+            && scene.state.chapter_skip_position < game.entry.save_position
+        {
+            let mut target = game.clone();
+            target.entry.save_position = scene.state.chapter_skip_position;
+            return Self::from_game_data(scenario, &target, globals, command_limit);
+        }
+        Ok(scene)
+    }
+
+    pub(super) fn publishes_continue_checkpoint(&self) -> bool {
+        !matches!(
+            &self.stop,
+            ReconstructionStop::Command(RuntimeCommand::EVBEGIN(_) | RuntimeCommand::EVEND(_))
+        )
     }
 
     pub(super) fn skip_event_game_data(
@@ -220,8 +327,29 @@ impl ReconstructedScene {
 mod native_replay_tests;
 
 #[cfg(test)]
+#[path = "reconstruction_chapter_tests.rs"]
+mod chapter_tests;
+
+#[cfg(test)]
 #[path = "reconstruction_filtered_select_tests.rs"]
 mod filtered_select_tests;
+
+#[cfg(test)]
+#[path = "restoration_movie_route_tests.rs"]
+mod movie_route_tests;
+
+#[cfg(test)]
+pub(super) fn assert_reference_load_feedback<'a>(
+    context: &mut crate::render::PreRenderContext<'a, '_, '_, '_>,
+    server: &'a std::sync::Arc<crate::asset::system::AssetServer>,
+) {
+    let assets = shin_tasks::block_on(crate::adv::assets::AdvAssets::load(server)).unwrap();
+    let mut frame = shin_core::primitives::update::FrameId::default();
+    frame.advance();
+    for kind in [super::SceneLoadKind::Saved, super::SceneLoadKind::History] {
+        tests::verify_live_scene_load_fade(context, server, &assets, frame, kind);
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -238,6 +366,77 @@ mod tests {
         },
         vm::command::{CompiletimeCommand as C, compiletime as c},
     };
+
+    #[test]
+    fn event_load_restart_preserves_normal_and_explicit_event_chapters() {
+        use shin_core::format::scenario::{
+            instruction_elements::{MessageId, U8Bool},
+            types::U16FixupString,
+        };
+        for explicit_chapter in [false, true] {
+            let mut bytes = scenario().raw()[..0xbc].to_vec();
+            let mut cursor = std::io::Cursor::new(&mut bytes);
+            cursor.set_position(0xbc);
+            let mut commands = vec![
+                C::MSGSET(c::MSGSET {
+                    msg_id: MessageId(1),
+                    auto_wait: U8Bool(true),
+                    text: U16FixupString::new("@rBefore ending"),
+                }),
+                C::EVBEGIN(c::EVBEGIN {
+                    arg: NumberSpec::constant(10),
+                }),
+                C::MSGSET(c::MSGSET {
+                    msg_id: MessageId(2),
+                    auto_wait: U8Bool(false),
+                    text: U16FixupString::new("@rEnding event"),
+                }),
+            ];
+            if explicit_chapter {
+                commands.push(C::AUTOSAVE(c::AUTOSAVE {}));
+            }
+            commands.push(C::EVEND(c::EVEND {}));
+            commands.push(C::EXIT(c::EXIT {
+                arg1: 0,
+                arg2: NumberSpec::constant(0),
+            }));
+            for c in commands {
+                Instruction::Command(c).write_le(&mut cursor).unwrap();
+            }
+            let size = bytes.len() as u32;
+            bytes[4..8].copy_from_slice(&size.to_le_bytes());
+            let scenario = Scenario::new(bytes.into()).unwrap();
+            for (boundary, expected, event) in [
+                (1, 1, None),
+                (2, 1, None),
+                (3, 3, explicit_chapter.then_some(10)),
+            ] {
+                let game = GameData::from_entry(GameDataEntry {
+                    scenario_id: 0,
+                    random_seed: 42,
+                    save_position: boundary,
+                    route_data: RouteRecorder::default().snapshot(),
+                });
+                let raw =
+                    ReconstructedScene::from_game_data(&scenario, &game, &SaveData::default(), 100)
+                        .unwrap();
+                assert_eq!(
+                    raw.publishes_continue_checkpoint(),
+                    boundary == 1 || (explicit_chapter && boundary == 3)
+                );
+                let loaded = ReconstructedScene::from_game_data_for_load(
+                    &scenario,
+                    &game,
+                    &SaveData::default(),
+                    100,
+                )
+                .unwrap();
+                assert_eq!(loaded.state.save_position, expected);
+                assert_eq!(loaded.state.current_event, event);
+                assert_eq!(game.entry.save_position, boundary);
+            }
+        }
+    }
 
     #[test]
     fn event_skip_replays_script_to_end_without_publishing_probe_side_effects() {
@@ -2381,7 +2580,7 @@ mod tests {
                 live.saved_scene_load_error()
             );
             assert_eq!(live.vm_state.save_position, completed_entry.save_position);
-            match live
+            match &*live
                 .adv_state
                 .plane_layer_group(plane)
                 .get_layer(bank)
@@ -2546,9 +2745,15 @@ mod tests {
             .map_async(wgpu::MapMode::Read, move |result| {
                 send.send(result).unwrap()
             });
-        context.device.poll(wgpu::Maintain::Wait);
+        context
+            .device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("GPU work must complete before readback or retirement");
         receive.recv().unwrap().unwrap();
-        let pixels = readback.slice(..).get_mapped_range();
+        let pixels = readback
+            .slice(..)
+            .get_mapped_range()
+            .expect("Readback mapping must be ready");
         let name = format!(
             "entry{entry}-save{}-pc{:08x}-frame{frame}",
             live.vm_state.save_position,
@@ -3312,7 +3517,7 @@ mod tests {
                             .adv_state
                             .plane_layer_group(live.vm_state.layers.current_plane)
                             .get_layer(shin_core::vm::command::types::LayerbankId::new(bank))?;
-                        let crate::layer::user::UserLayer::Movie(movie) = layer else {
+                        let crate::layer::user::UserLayer::Movie(movie) = &*layer else {
                             return None;
                         };
                         Some(format!("bank{bank}: {}", movie.reference_playback_status()))
@@ -3484,7 +3689,10 @@ mod tests {
                     context.device.create_command_encoder(&Default::default()),
                 );
                 context.queue.submit([upload.finish(), encoder.finish()]);
-                context.device.poll(wgpu::Maintain::Wait);
+                context
+                    .device
+                    .poll(wgpu::PollType::wait_indefinitely())
+                    .expect("GPU work must complete before readback or retirement");
             }));
             if let Err(error) = step {
                 // Preserve the exact live failure position, rather than only
@@ -3760,7 +3968,7 @@ mod tests {
         );
     }
 
-    fn verify_live_scene_load_fade<'a>(
+    pub(super) fn verify_live_scene_load_fade<'a>(
         context: &mut crate::render::PreRenderContext<'a, '_, '_, '_>,
         server: &'a std::sync::Arc<crate::asset::system::AssetServer>,
         assets: &crate::adv::assets::AdvAssets,
@@ -3834,6 +4042,17 @@ mod tests {
         assert!(live.saved_scene_load_error().is_none());
         assert!(live.is_loading_saved_scene());
         let installed_position = live.scripter.position();
+        let mask = (kind == super::super::SceneLoadKind::Saved).then(|| {
+            use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
+            use std::io::Read;
+            let mut rom = RomReader::new(StatelessFile::new(std::fs::File::open(
+                std::env::var_os("SHIN_REFERENCE_ROM").unwrap(),
+            ).unwrap()).unwrap()).unwrap();
+            let mut bytes = Vec::new();
+            rom.open_file(rom.find_file("/default.msk").unwrap()).unwrap()
+                .read_to_end(&mut bytes).unwrap();
+            shin_core::format::mask::read_mask(&bytes).unwrap().texels
+        });
         let duration = if kind == super::super::SceneLoadKind::History {
             4.0
         } else {
@@ -3860,12 +4079,38 @@ mod tests {
                 );
             }
             let pixels = snapshot_pixels(context, &live, true);
-            for pixel in pixels.chunks_exact(4) {
+            for (index, pixel) in pixels.chunks_exact(4).enumerate() {
+                let expected = if let Some(mask) = &mask {
+                    let x = (index % 1920) as f32 + 0.5;
+                    let y = (index / 1920) as f32 + 0.5;
+                    let sx = x / 1920.0 * mask.width() as f32 - 0.5;
+                    let sy = y / 1080.0 * mask.height() as f32 - 0.5;
+                    let at = |x: i32, y: i32| f32::from(mask.get_pixel(
+                        x.clamp(0, mask.width() as i32 - 1) as u32,
+                        y.clamp(0, mask.height() as i32 - 1) as u32,
+                    ).0[0]) / 255.0;
+                    let tx = sx - sx.floor();
+                    let ty = sy - sy.floor();
+                    let ix = sx.floor() as i32;
+                    let iy = sy.floor() as i32;
+                    let a = at(ix, iy) * (1.0 - tx) + at(ix + 1, iy) * tx;
+                    let b = at(ix, iy + 1) * (1.0 - tx) + at(ix + 1, iy + 1) * tx;
+                    let texel = a * (1.0 - ty) + b * ty;
+                    ((1.0 - phase as f32 * 0.25 * (1.0 + 1.0 / 0.3) + texel / 0.3)
+                        .clamp(0.0, 1.0) * 255.0).round() as u8
+                } else { expected };
                 assert!(
                     pixel[0].abs_diff(expected) <= 1,
                     "{kind:?} fade phase{phase}: {pixel:?}"
                 );
                 assert_eq!(&pixel[1..3], &[0, 0]);
+            }
+            if mask.is_some() && phase == 2 {
+                assert_eq!(pixels[(540 * 1920 + 100) * 4], 0, "Left side reveals first");
+                assert_eq!(pixels[(540 * 1920 + 1820) * 4], 255, "Right side still covered");
+                if let Some(output) = std::env::var_os("SHIN_LOAD_FEEDBACK_OUTPUT") {
+                    std::fs::write(std::path::Path::new(&output).join("saved-load-halfway.rgba"), &pixels).unwrap();
+                }
             }
             assert_eq!(live.vm_state.save_position, 99);
             assert_eq!(live.scripter.position(), installed_position);
@@ -3873,7 +4118,7 @@ mod tests {
         }
         assert_eq!(live.previous_rollback_position(), Some(7));
         eprintln!(
-            "Native {kind:?} load fade: frozen pre-load scene,2073600 pixels at each of five {duration}tick phases, premultiplied RGB/alpha, held-input/script gate and expiry pass"
+            "Native {kind:?} load fade: mask={}, frozen source,2073600 pixels at five {duration}tick phases, held-input/script gate and expiry pass", mask.is_some()
         );
     }
 
@@ -3963,6 +4208,7 @@ mod tests {
             retirement: None,
             kind: super::super::SceneLoadKind::Saved,
             source: None,
+            present_source: false,
         });
         let source_position = live.scripter.position();
         let source_route = live.vm_state.route.bit_position();
@@ -6076,6 +6322,7 @@ mod tests {
                     retirement: None,
                     kind: super::super::SceneLoadKind::Saved,
                     source: None,
+                    present_source: false,
                 });
             }
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
@@ -6300,8 +6547,26 @@ mod tests {
     include!("restoration_authored_tests.rs");
     include!("restoration_authored_movie_tests.rs");
     include!("restoration_blocked_read_tests.rs");
+    include!("restoration_io_error_tests.rs");
+    include!("live_layer_io_error_tests.rs");
+    include!("live_mask_io_error_tests.rs");
+    include!("chapter_navigation_integration_tests.rs");
     include!("restoration_published_loop_tests.rs");
     include!("save_context_tests.rs");
+
+    #[cfg(target_os = "macos")]
+    #[test]
+    #[ignore = "requires supplied ROMs, explicit syscall interposer, Metal and exact Loopback Audio"]
+    fn reference_asset_io_loader_failure_recovery() {
+        assert!(std::env::var_os("SHIN_REFERENCE_ASSET_IO_ERRORS_ONLY").is_some());
+        std::thread::Builder::new()
+            .name("reference-asset-io-loaders".into())
+            .stack_size(16 * 1024 * 1024)
+            .spawn(assert_reference_quiz_layer_saved_scene_restores_with_supplied_assets)
+            .unwrap()
+            .join()
+            .unwrap();
+    }
 
     #[test]
     #[ignore = "requires supplied ROM, Metal, exact Loopback Audio and SHIN_REFERENCE_POST_INSTALL_FAILURE_ONLY"]
@@ -6542,14 +6807,16 @@ mod tests {
         let adapter =
             shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .unwrap();
-        let (device, queue) = shin_tasks::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+        let (device, queue) =
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
-        .unwrap();
+            }))
+            .unwrap();
         let mut io = LayeredAssetIo::new();
         if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
             assert!(
@@ -6572,6 +6839,8 @@ mod tests {
         let server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -6721,11 +6990,12 @@ mod tests {
         let live_effect_textures: Option<Arc<crate::asset::effects::EffectTextures>> =
             std::env::var("SHIN_REFERENCE_LIVE_ENTRY")
                 .ok()
+                .or_else(|| std::env::var("SHIN_REFERENCE_LIVE_LAYER_IO_ONLY").ok())
                 .map(|_| shin_tasks::block_on(server.load("/effects.txa")).unwrap());
         let mut context = PreRenderContext {
             breakup_texture: live_effect_textures
                 .as_ref()
-                .map(|effects| &effects.breakup),
+                .map(|effects| effects.required("breakup")),
             device: &device,
             queue: &queue,
             resize_source: &resize,
@@ -6736,6 +7006,54 @@ mod tests {
             encoder: &mut encoder,
         };
         if std::env::var_os("SHIN_REFERENCE_AUTHORED_RESTORE_ONLY").is_some() {
+            #[cfg(target_os = "macos")]
+            if std::env::var_os("SHIN_REFERENCE_LIVE_LAYER_IO_ONLY").is_some() {
+                if std::env::var_os("SHIN_REFERENCE_LIVE_MASK_IO_ONLY").is_some() {
+                    live_mask_io_errors::verify(&mut context, &assets, &original_scenario, &view);
+                } else {
+                    live_layer_io_errors::verify(&mut context, &assets, &original_scenario, &view);
+                }
+                assert!(
+                    !disk_path.exists(),
+                    "Live layer IO checks must not write progress"
+                );
+                return;
+            }
+            if std::env::var_os("SHIN_REFERENCE_CHAPTER_NAVIGATION_ONLY").is_some() {
+                chapter_navigation_live::verify(
+                    &mut context,
+                    &server,
+                    &assets,
+                    &original_scenario,
+                    &view,
+                );
+                assert!(
+                    !disk_path.exists(),
+                    "Chapter checks must not write progress"
+                );
+                return;
+            }
+            #[cfg(target_os = "macos")]
+            if std::env::var_os("SHIN_REFERENCE_SAVED_IO_ERRORS_ONLY").is_some() {
+                saved_io_errors::verify(&mut context, &assets, &original_scenario, &view);
+                assert!(
+                    !disk_path.exists(),
+                    "Saved IO error checks must not write progress"
+                );
+                return;
+            }
+            #[cfg(target_os = "macos")]
+            if std::env::var_os("SHIN_REFERENCE_ASSET_IO_ERRORS_ONLY").is_some() {
+                crate::asset::system::verify_asset_load_failures(
+                    server.context(),
+                    &original_scenario,
+                );
+                assert!(
+                    !disk_path.exists(),
+                    "Asset IO checks must not write progress"
+                );
+                return;
+            }
             if std::env::var_os("SHIN_REFERENCE_RESTORE_ERROR_ONLY").is_some() {
                 mixed_restore::verify_scene_load_errors(
                     &mut context,
@@ -6824,6 +7142,7 @@ mod tests {
                     &assets,
                     &mut context,
                     &target,
+                    false,
                 );
                 return;
             }
@@ -7239,9 +7558,14 @@ mod tests {
             .map_async(wgpu::MapMode::Read, move |result| {
                 send.send(result).unwrap()
             });
-        device.poll(wgpu::Maintain::Wait);
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("GPU work must complete before readback or retirement");
         receive.recv().unwrap().unwrap();
-        let pixels = readback.slice(..).get_mapped_range();
+        let pixels = readback
+            .slice(..)
+            .get_mapped_range()
+            .expect("Readback mapping must be ready");
         let marker = &pixels[(540 * 1920 + 1260) * 4..][..4];
         assert!(
             marker[0] > 100 && marker[1] < 10 && marker[2] < 10,
@@ -8747,7 +9071,7 @@ mod tests {
         }
         let effect_textures: std::sync::Arc<crate::asset::effects::EffectTextures> =
             shin_tasks::block_on(server.load("/effects.txa")).unwrap();
-        context.breakup_texture = Some(&effect_textures.breakup);
+        context.breakup_texture = Some(effect_textures.required("breakup"));
         let mut ghost_picture = shin_tasks::block_on(crate::layer::user::UserLayer::load(
             &device,
             &server,
@@ -9347,7 +9671,19 @@ mod tests {
                     is_clicked: true,
                     ..Default::default()
                 };
-                live.handle_input(input, true);
+                if matches!(action, crate::app::AppAction::PointerClick) {
+                    let position = glam::vec2(800.0, 500.0);
+                    live.sample_modal_pointer(position, (1920, 1080), true, 0.016);
+                    live.handle_input(input, true);
+                    assert!(
+                        live.adv_state.hidden_ui_active,
+                        "Press does not restore hidden text"
+                    );
+                    live.sample_modal_pointer(position, (1920, 1080), false, 0.016);
+                    live.handle_input(Default::default(), true);
+                } else {
+                    live.handle_input(input, true);
+                }
                 assert!(!live.adv_state.hidden_ui_active);
                 assert_eq!(
                     live.adv_state.message_layer().reference_modal_clock().1,
@@ -10906,7 +11242,7 @@ mod tests {
                     pre_render: &mut context,
                 };
                 crate::update::Updatable::update(&mut adv.adv_state, &mut update);
-                let crate::layer::user::UserLayer::Bustup(live) = adv
+                let crate::layer::user::UserLayer::Bustup(live) = &*adv
                     .adv_state
                     .plane_layer_group(live_plane)
                     .get_layer(live_bank)
@@ -11036,7 +11372,7 @@ mod tests {
                     pre_render: &mut context,
                 };
                 crate::update::Updatable::update(&mut adv.adv_state, &mut update);
-                let crate::layer::user::UserLayer::Bustup(live) = adv
+                let crate::layer::user::UserLayer::Bustup(live) = &*adv
                     .adv_state
                     .plane_layer_group(live_plane)
                     .get_layer(live_bank)
@@ -11405,12 +11741,10 @@ mod tests {
                 }
                 let (id, page, portrait) =
                     candidate.expect("Supplied ROM must include a long character description");
-                adv.adv_state.character_screen = Some(CharacterScreen::new(
-                    &server,
-                    &original_scenario,
-                    id as i32,
-                    page as i32,
-                ));
+                adv.adv_state.character_screen = Some(
+                    CharacterScreen::new(&server, &original_scenario, id as i32, page as i32)
+                        .unwrap(),
+                );
                 let mut update = UpdateContext {
                     frame_started_at: std::time::Instant::now(),
                     frame_id: frame,

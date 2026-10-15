@@ -921,3 +921,93 @@ fn reference_native_authored_select_saved_replay() {
     }
     eprintln!("Evidence: {}", out.display());
 }
+
+#[test]
+#[ignore = "requires supplied ROMs/executables and prior recorded Episode8 route; CPU only, no GPU/audio/save writes"]
+fn reference_native_saved_movie_load_checkpoint_selection() {
+    use shin_core::format::save::{GameData, RouteData};
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    let files = root.join("umineko_switch_files");
+    let out = std::path::PathBuf::from(std::env::var_os("SHIN_MOVIE_LOAD_CHECKPOINT_OUTPUT").unwrap());
+    assert!(out.starts_with("/private/tmp"));
+    std::fs::create_dir_all(&out).unwrap();
+    let helper = out.join("native-event-load-restart");
+    assert!(Command::new("clang")
+        .args(["-O2", "-Wall", "-Wextra", "-Werror", "-Wno-unused-function"])
+        .arg(root.join("reverse-engineering/native-event-load-restart.c"))
+        .arg("-o").arg(&helper).status().unwrap().success());
+    let mut zero_route = RouteRecorder::default();
+    for _ in 0..16384 { zero_route.record_persistent(0); }
+    for (version, image, rom, recorded) in [
+        ("original", "uncompressed_executable", "data.rom", "hydration-original"),
+        ("1.03", "uncompressed_executable_update", "patch.rom", "hydration-updated"),
+    ] {
+        let bytes = scenario_bytes(&files.join(rom));
+        let snr = out.join(format!("{version}.snr"));
+        std::fs::write(&snr, &bytes).unwrap();
+        let scenario = Scenario::new(bytes.into()).unwrap();
+        let mut games: Vec<GameData> = [(2,2364),(3,7733),(5,3852),(25,93),(45,55)].into_iter()
+            .map(|(scenario_id, save_position)| GameData::from_entry(GameDataEntry {
+                scenario_id, random_seed: 0, save_position, route_data: zero_route.snapshot(),
+            })).collect();
+        let prior = std::fs::read_to_string(
+            Path::new("/private/tmp/shin-episode8-recorded-movies").join(recorded).join("input.txt")
+        ).unwrap();
+        for line in prior.lines() {
+            let f: Vec<_> = line.split_whitespace().collect();
+            let bytes: Vec<u8> = f[3].as_bytes().chunks_exact(2)
+                .map(|b| u8::from_str_radix(std::str::from_utf8(b).unwrap(),16).unwrap()).collect();
+            let route_data: RouteData = serde_json::from_value(serde_json::json!(bytes)).unwrap();
+            games.push(GameData::from_entry(GameDataEntry {
+                scenario_id: f[0].parse().unwrap(), random_seed: u32::from_str_radix(f[1],16).unwrap(),
+                save_position: f[2].parse().unwrap(), route_data,
+            }));
+        }
+        assert_eq!(games.len(),7);
+        let payload: String = games.iter().map(|g| {
+            let bytes: Vec<u8> = serde_json::from_value(serde_json::to_value(&g.entry.route_data).unwrap()).unwrap();
+            let hex: String = bytes.iter().map(|b|format!("{b:02x}")).collect();
+            format!("{} {:x} {} {hex}\n",g.entry.scenario_id,g.entry.random_seed,g.entry.save_position)
+        }).collect();
+        let input = out.join(format!("{version}.input"));std::fs::write(&input, payload).unwrap();
+        let native = Command::new(&helper).arg(files.join(image)).arg(&snr)
+            .stdin(Stdio::from(std::fs::File::open(input).unwrap())).output().unwrap();
+        std::fs::write(out.join(format!("{version}.native")), &native.stdout).unwrap();
+        std::fs::write(out.join(format!("{version}.stderr")), &native.stderr).unwrap();
+        assert!(native.status.success(), "{}",String::from_utf8_lossy(&native.stderr));
+        let native = String::from_utf8(native.stdout).unwrap();
+        let mut lines = native.lines().peekable();
+        let mut summary = Vec::new();
+        for game in games {
+            let label = format!("{version} entry{} saved{}",game.entry.scenario_id,game.entry.save_position);
+            let raw = ReconstructedScene::from_game_data(&scenario, &game, &SaveData::default(), 1_000_000).unwrap();
+            let loaded = ReconstructedScene::from_game_data_for_load(&scenario, &game, &SaveData::default(), 1_000_000).unwrap();
+            let header: Vec<_> = lines.next().unwrap().split_whitespace().collect();
+            assert_eq!(header[0],"E");assert_eq!(header[1].parse::<i32>().unwrap(),game.entry.scenario_id);
+            assert_eq!(header[2].parse::<u32>().unwrap(),game.entry.save_position);
+            assert_eq!(header[3].parse::<u32>().unwrap(),loaded.state.save_position,"{label}");
+            assert_eq!(header[4].parse::<i32>().unwrap(),loaded.state.current_event.unwrap_or(-1),"{label}");
+            assert_eq!(u32::from_str_radix(header[5],16).unwrap(),loaded.scripter.position().0,"{label}");
+            assert_eq!(header[6].parse::<u32>().unwrap(),loaded.state.chapter_skip_position,"{label}");
+            let mut expected = expected_rows(&loaded.state);let state_rows = expected.len();let mut audio=0;
+            while lines.peek().is_some_and(|row|!row.starts_with("E ")) {
+                let row=lines.next().unwrap();
+                if row.starts_with("A "){assert_audio(row,&loaded.state,&label);audio+=1;continue;}
+                let key=if row.starts_with("S "){"S".into()}else{row.split_whitespace().take(2).collect::<Vec<_>>().join(" ")};
+                assert_eq!(row, expected.remove(&key).unwrap(),"{label} {key}");
+            }
+            assert!(expected.is_empty());assert_eq!(audio,33);
+            let movies: Vec<_> = loaded.state.layers.layerbanks.iter()
+                .filter(|(_,l)|l.layer_type==Some(shin_core::vm::command::types::LayerType::Movie))
+                .map(|(bank,l)|(bank.raw(),l.params.0,l.layer_load_counter)).collect();
+            assert!(!movies.is_empty(),"{label}: known saved Movie must remain present");
+            assert_eq!(loaded.state.save_position,game.entry.save_position,"{label}: native control should retain ordinary Movie checkpoint");
+            summary.push(serde_json::json!({"entry":game.entry.scenario_id,"saved_boundary":game.entry.save_position,
+                "raw_event":raw.state.current_event,"prepared_boundary":loaded.state.save_position,
+                "chapter_skip_position":loaded.state.chapter_skip_position,"state_rows":state_rows,"audio_rows":audio,"movies":movies}));
+        }
+        assert!(lines.next().is_none());
+        std::fs::write(out.join(format!("{version}.summary.json")),serde_json::to_vec_pretty(&summary).unwrap()).unwrap();
+        println!("{version}: seven saved Movie checkpoint selections and complete CPU layer/property/mask/audio state match native worker prefix");
+    }
+}

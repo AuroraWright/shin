@@ -23,10 +23,9 @@ impl StartableCommand for command::runtime::SYSSE {
 
 #[cfg(test)]
 mod tests {
-    use kira::manager::{
-        AudioManager, AudioManagerSettings,
-        backend::mock::{MockBackend, MockBackendSettings},
-    };
+    use kira::{
+        AudioManager, AudioManagerSettings};
+    use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use shin_audio::{AudioData, AudioSettings};
     use shin_core::{
         format::{audio::AudioSource, rom::RomReader},
@@ -119,21 +118,21 @@ mod tests {
                 backend_settings: MockBackendSettings {
                     sample_rate: sound.sample_rate(),
                 },
+                internal_buffer_size: 1,
                 ..Default::default()
             })
             .unwrap()
         };
         let mut reference = new_manager();
         let mut actual = new_manager();
-        let track = actual
+        let mut track = actual
             .add_sub_track(kira::track::TrackBuilder::new())
             .unwrap();
-        let data = |volume, track| AudioData {
+        let data = |volume| AudioData {
             source: sound.decode(),
             settings: AudioSettings {
                 paused: false,
                 playback_rate: 1.0,
-                track,
                 fade_in: Tween::IMMEDIATE,
                 loop_start: None,
                 loop_count: 0,
@@ -142,16 +141,14 @@ mod tests {
             },
         };
         let _reference = reference
-            .play(data(Volume(1.0), kira::track::TrackId::Main))
+            .play(data(Volume(1.0)))
             .unwrap();
-        let cue = actual
+        let cue = track
             .play(data(
-                crate::audio::system_cue_volume(Volume(0.5), 70),
-                track.id(),
-            ))
+                crate::audio::system_cue_volume(Volume(0.5), 70)))
             .unwrap();
         let tail = crate::audio::SystemSoundTail {
-            _track: track,
+            _track:track.into(),
             sounds: vec![cue],
         };
         let mut energy = 0.0f64;
@@ -170,9 +167,7 @@ mod tests {
         // retain its captured gain while the retired bus remains owned.
         let _muted = actual
             .play(data(
-                crate::audio::system_cue_volume(Volume(1.0), 0),
-                kira::track::TrackId::Main,
-            ))
+                crate::audio::system_cue_volume(Volume(1.0), 0)))
             .unwrap();
         for _ in 0..1000 {
             reference.backend_mut().on_start_processing();
@@ -227,6 +222,7 @@ mod tests {
             backend_settings: MockBackendSettings {
                 sample_rate: sound.sample_rate(),
             },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -236,7 +232,6 @@ mod tests {
                 settings: AudioSettings {
                     paused: false,
                     playback_rate: 1.0,
-                    track: kira::track::TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,

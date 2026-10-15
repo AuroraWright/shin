@@ -104,7 +104,30 @@ impl ConfigScreen {
         if let Some(task) = &mut self.loading {
             if let Some(result) = task.poll_naive() {
                 self.loading = None;
-                self.atlases = Some(result?);
+                let (config, system) = result?;
+                config.require_names(
+                    "/config.txa",
+                    &[
+                        "bg",
+                        "obi",
+                        "window",
+                        "caption",
+                        "close",
+                        "default",
+                        "tab_on",
+                        "tab_off",
+                        "left",
+                        "right",
+                        "button_on",
+                        "button_off",
+                        "slider",
+                        "focus",
+                        "line",
+                        "help_config",
+                        "key",
+                    ],
+                )?;
+                self.atlases = Some((config, system));
             }
             // Native asset-completion frame still has opening progress0.
             return Ok(None);
@@ -143,11 +166,17 @@ impl ConfigScreen {
                 }
             }
         }
-        Ok(self.model.take_responses().into_iter().next())
+        // A save completion can start closing before this update consumes a
+        // large delta. Keep the final callback if both responses are queued.
+        Ok(self.model.take_response())
     }
     /// The ADV persistence adapter calls this after its SaveGame task completes.
     pub fn save_finished(&mut self) {
         self.model.save_finished();
+    }
+    pub(crate) fn save_failed(&mut self) {
+        self.model.save_failed();
+        self.suspend_pointer(self.pointer_held);
     }
     pub fn take_save_request(&mut self) -> bool {
         std::mem::take(&mut self.save_requested)
@@ -249,11 +278,13 @@ mod tests {
                 .unwrap();
         let (device, queue) = shin_tasks::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
+            }))
         .unwrap();
         let mut io = LayeredAssetIo::new();
         io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
@@ -261,6 +292,8 @@ mod tests {
         let server = std::sync::Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -442,8 +475,8 @@ mod tests {
         assert!(reloaded.settings.serialized_eq(screen.settings()));
         std::fs::remove_file(path).unwrap();
         screen.save_finished();
-        assert_eq!(screen.update(Ticks::ZERO).unwrap(), Some(0));
-        assert_eq!(screen.update(Ticks::from_f32(10.0)).unwrap(), Some(1));
+        assert_eq!(screen.update(Ticks::from_f32(10.0)).unwrap(), Some(0));
+        assert_eq!(screen.update(Ticks::ZERO).unwrap(), Some(1));
         assert_eq!(screen.update(Ticks::from_f32(100.0)).unwrap(), None);
         let mut unchanged = ConfigScreen::new(server, settings);
         unchanged.wait_reference_assets().unwrap();

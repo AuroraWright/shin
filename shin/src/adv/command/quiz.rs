@@ -15,7 +15,7 @@ impl StartableCommand for command::runtime::QUIZ {
         // Like SELECT, QUIZ snapshots only without an active message (0xdcc0).
         if state.messagebox_state.text.is_none() {
             state.commit_persistent();
-            state.advance_save_position();
+            state.record_interactive_boundary();
         }
         let plane = state.layers.current_plane;
         let layer = LayerId::try_new(u16::try_from(self.arg).ok()?)?;

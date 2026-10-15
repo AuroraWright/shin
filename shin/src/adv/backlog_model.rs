@@ -362,6 +362,22 @@ mod tests {
         let empty = BacklogModel::new([], 0);
         assert_eq!(empty.selected, None);
     }
+    #[test]
+    fn trackpad_wheel_scrolls_backlog_with_fractional_and_large_displacements() {
+        let mut model = BacklogModel::new([(1000.0, false), (100.0, false), (1000.0, false)], 0);
+        model.set_scroll(0.0);
+        for (amount, expected) in [
+            (-3.25, 104.0),
+            (-0.125, 108.0),
+            (3.25, 4.0),
+            (0.0, 4.0),
+            (100.0, 0.0),
+        ] {
+            let (_, scroll) = crate::app::wheel_scroll_test_input(amount);
+            model.axis(scroll);
+            assert_eq!(model.scroll(), expected);
+        }
+    }
 
     #[test]
     fn inertia_stops_when_clamped_motion_or_zero_delta_has_no_displacement() {

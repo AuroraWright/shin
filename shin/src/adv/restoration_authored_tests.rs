@@ -249,7 +249,7 @@ mod authored_restore {
                     layer.properties().layer_load_counter(),
                     saved.layer_load_counter
                 );
-                let path = match layer {
+                let path = match &*layer {
                     UserLayer::Picture(p) => {
                         let info = &scenario.info_tables().picture_info[saved.params.0 as usize];
                         assert!(p.reference_resource_owner().upgrade().unwrap().blocks.len() > 0);
@@ -300,7 +300,7 @@ mod authored_restore {
             let mut upload = context.device.create_command_encoder(&Default::default());
             context.dynamic_buffer.finish(&mut upload);
             context.queue.submit([upload.finish(), encoder.finish()]);
-            context.device.poll(wgpu::Maintain::Wait);
+            context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
             drop(live);
             for (picture, bustup) in owners {
                 if let Some(owner) = picture {

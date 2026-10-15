@@ -11,6 +11,518 @@ use shin_core::{
 };
 use std::sync::Arc;
 
+/// Reproduce the user's first-slot then third-slot1.03 Load with copied data.
+pub(super) fn assert_authored_sequential_load_wipe<'a>(
+    server: &'a Arc<AssetServer>,
+    assets: &AdvAssets,
+    context: &mut PreRenderContext<'a, '_, '_, '_>,
+    target: &wgpu::Texture,
+) {
+    struct Trace {
+        id: FrameId,
+        last: std::time::Instant,
+        point: glam::Vec2,
+        held: bool,
+        realtime: bool,
+        fades: Vec<f32>,
+        saved_half: bool,
+        setup_stall: bool,
+        publication_frame: bool,
+    }
+    fn step<'a>(
+        live: &mut crate::app::ReferenceApp,
+        context: &mut PreRenderContext<'a, '_, '_, '_>,
+        server: &'a Arc<AssetServer>,
+        frame: &mut Trace,
+        delta: f32,
+        action: Option<AppAction>,
+        target: &wgpu::Texture,
+    ) {
+        if frame.realtime {
+            std::thread::sleep(std::time::Duration::from_millis(8));
+        }
+        let now = std::time::Instant::now();
+        let elapsed = if frame.realtime {
+            now.duration_since(frame.last).as_secs_f64()
+        } else {
+            delta as f64 / 60.0
+        };
+        frame.last = now;
+        let was_loading = live.pending_restore.is_some();
+        let ticks = if frame.setup_stall && (was_loading || frame.publication_frame) {
+            // Actual .app baseline measured43ticks at publication and37ticks
+            // after the first cold draw. Neither belongs to the visible wipe.
+            Ticks::from_f32(if was_loading { 43.0 } else { 37.0 })
+        } else if frame.realtime {
+            Ticks::from_seconds(elapsed as f32)
+        } else {
+            Ticks::from_f32(delta)
+        };
+        let mut input = enum_map::EnumMap::default();
+        if let Some(action) = action {
+            input[action] = shin_input::ActionState {
+                is_clicked: true,
+                is_clicked_or_repeated: true,
+                ..Default::default()
+            };
+        }
+        input[AppAction::PointerClick].is_held = frame.held;
+        let extent = if frame.realtime {
+            (3840, 2160)
+        } else {
+            (1920, 1080)
+        };
+        frame.publication_frame = false;
+        frame.id.advance();
+        live.update_frame(
+            &mut UpdateContext {
+                frame_started_at: now,
+                frame_id: frame.id,
+                delta_ticks: ticks,
+                asset_server: server,
+                pre_render: context,
+            },
+            input, frame.point, extent, elapsed,
+        );
+        frame.publication_frame = was_loading && live.pending_restore.is_none();
+        if frame.realtime && was_loading && live.pending_restore.is_none() {
+            eprintln!(
+                "Publication: dt{}ticks, CPU{:.3}ms, fade_elapsed{:?}",
+                ticks.as_f32(),
+                now.elapsed().as_secs_f64() * 1000.0,
+                live.reference_load_transition_elapsed()
+            );
+        }
+        if frame.realtime && !was_loading && live.pending_restore.is_some() {
+            eprintln!(
+                "Queued restore: dt{}ticks, CPU{:.3}ms",
+                ticks.as_f32(),
+                now.elapsed().as_secs_f64() * 1000.0
+            );
+        }
+        if frame.realtime {
+            if live.has_ripples() && live.reference_load_transition_elapsed().is_some() {
+                eprintln!("App ripple composition during wipe");
+            }
+            if let Some(elapsed) = live.reference_load_transition_elapsed() {
+                frame.fades.push(elapsed);
+            }
+            use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
+            let view = target.create_view(&Default::default());
+            {
+                let mut pass = context.begin_pass(
+                    TextureTarget {
+                        kind: TextureTargetKind::Screen,
+                        view: &view,
+                    },
+                    Some(context.depth_stencil),
+                    "Real-time4K mouse Load frame",
+                );
+                live.render(&mut pass);
+            }
+        }
+        let encoder = std::mem::replace(
+            context.encoder,
+            context.device.create_command_encoder(&Default::default()),
+        );
+        let mut upload = context.device.create_command_encoder(&Default::default());
+        context.dynamic_buffer.finish(&mut upload);
+        context.queue.submit([upload.finish(), encoder.finish()]);
+        context
+            .device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .unwrap();
+        if frame.realtime && !was_loading && live.pending_restore.is_some() {
+            let image = pixels(live, context, target);
+            let path = std::path::PathBuf::from(
+                std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").unwrap(),
+            );
+            std::fs::write(path.with_file_name("mouse-outgoing.rgba"), image).unwrap();
+        }
+        if frame.realtime
+            && !frame.saved_half
+            && live
+                .reference_load_transition_elapsed()
+                .is_some_and(|t| (10.0..20.0).contains(&t))
+        {
+            let image = pixels(live, context, target);
+            let path = std::path::PathBuf::from(
+                std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").unwrap(),
+            );
+            std::fs::write(path.with_file_name("mouse-half.rgba"), image).unwrap();
+            frame.saved_half = true;
+        }
+    }
+    fn click<'a>(
+        live: &mut crate::app::ReferenceApp,
+        context: &mut PreRenderContext<'a, '_, '_, '_>,
+        server: &'a Arc<AssetServer>,
+        frame: &mut Trace,
+        target: &wgpu::Texture,
+        point: glam::Vec2,
+    ) {
+        frame.point = point;
+        frame.held = true;
+        step(live, context, server, frame, 0.0, None, target);
+        frame.held = false;
+        step(live, context, server, frame, 0.0, None, target);
+    }
+    fn pixels(live: &crate::app::ReferenceApp, context: &mut PreRenderContext, target: &wgpu::Texture) -> Vec<u8> {
+        use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
+        let view = target.create_view(&Default::default());
+        {
+            let mut pass = context.begin_pass(
+                TextureTarget {
+                    kind: TextureTargetKind::Screen,
+                    view: &view,
+                },
+                Some(context.depth_stencil),
+                "Authored sequential Load composed pixels",
+            );
+            live.render(&mut pass);
+        }
+        crate::layer::user::readback_test_texture(context, target)
+    }
+    let path =
+        std::path::PathBuf::from(std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").unwrap());
+    assert!(
+        path.starts_with("/private/tmp"),
+        "Use a copy of working progress"
+    );
+    let mut data = SaveData::decode(&std::fs::read(&path).unwrap()).unwrap();
+    let third = data.manual_save_slots[2].as_ref().unwrap().clone();
+    let repeat_target = std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_REPEAT_TARGET").is_some();
+    let first = if repeat_target {
+        third.clone()
+    } else {
+        data.manual_save_slots[0].as_ref().unwrap().clone()
+    };
+    for (slot, game) in [(1, &first), (3, &third)] {
+        let scene = super::reconstruction::ReconstructedScene::from_game_data_for_load(
+            &assets.scenario,
+            game,
+            &data,
+            1_000_000,
+        )
+        .unwrap();
+        match scene.stop {
+            super::reconstruction::ReconstructionStop::Command(command) => eprintln!(
+                "Authored slot{slot}: scenario{}, boundary{}, command{command:?}",
+                game.entry.scenario_id, game.entry.save_position
+            ),
+            super::reconstruction::ReconstructionStop::Response(response) => eprintln!(
+                "Authored slot{slot}: scenario{}, boundary{}, response{response:?}",
+                game.entry.scenario_id, game.entry.save_position
+            ),
+        }
+    }
+    let realtime = std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_REALTIME").is_some();
+    data.save_menu_position = if realtime { 0 } else { 2 };
+    let audio = Arc::new(shin_audio::AudioManager::new_for_tests());
+    let mut live = Adv::new(
+        audio,
+        server.clone(),
+        assets.clone(),
+        Scripter::new(&assets.scenario, 0, 42),
+    );
+    live.install_global_data(super::GlobalData::open(None, Some(data.clone())).unwrap());
+    live.load_game_data(&data, &first, server.clone()).unwrap();
+    let mut live = crate::app::ReferenceApp::new(live, assets.clone(), server.clone());
+    let mut frame = Trace {
+        id: FrameId::default(),
+        last: std::time::Instant::now(),
+        point: glam::vec2(1900.0, 1050.0),
+        held: false,
+        realtime,
+        fades: Vec::new(),
+        saved_half: false,
+        setup_stall: std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SETUP_STALL").is_some(),
+        publication_frame: false,
+    };
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(40);
+    while live.pending_restore.is_some() {
+        step(&mut live, context, server, &mut frame, 0.0, None, target);
+        assert!(
+            std::time::Instant::now() < deadline,
+            "First saved slot never loaded"
+        );
+        std::thread::yield_now();
+    }
+    assert!(live.saved_scene_load_error().is_none());
+    step(&mut live, context, server, &mut frame, 30.0, None, target);
+    if realtime {
+        while live.is_loading_saved_scene() {
+            step(&mut live, context, server, &mut frame, 0.0, None, target);
+            assert!(std::time::Instant::now() < deadline, "Initial Load stalled");
+        }
+        let before_menu = pixels(&live, context, target);
+        std::fs::write(path.with_file_name("mouse-before-menu.rgba"), &before_menu).unwrap();
+        frame.fades.clear();
+        frame.saved_half = false;
+        let labels = super::save_menu_scene::SavedSlotScene::reconstruct(
+            &assets.scenario,
+            &third.entry,
+            &data,
+            1_000_000,
+        )
+        .unwrap()
+        .labels;
+        eprintln!("Mouse target label: {labels:?}");
+        assert!(
+            matches!(labels,super::save_menu_text::SaveSlotLabels::Ready{ref title,ref subtitle}
+            if title.contains("縁寿の選択") || subtitle.contains("縁寿の選択")),
+            "Slot3 is not the user's named target"
+        );
+        step(
+            &mut live,
+            context,
+            server,
+            &mut frame,
+            0.0,
+            Some(AppAction::SystemMenu),
+            target,
+        );
+        while live.system_menu.as_ref().unwrap().screen.model.phase()
+            != super::system_menu::SystemMenuPhase::Active
+        {
+            step(&mut live, context, server, &mut frame, 0.0, None, target);
+            assert!(
+                std::time::Instant::now() < deadline,
+                "Pause menu never opened"
+            );
+        }
+        click(
+            &mut live,
+            context,
+            server,
+            &mut frame,
+            target,
+            glam::vec2(222.0, 260.0),
+        );
+        while live
+            .system_menu
+            .as_mut()
+            .unwrap()
+            .reference_save_menu()
+            .is_none_or(|screen| screen.model().phase() != SaveMenuPhase::Active)
+        {
+            step(&mut live, context, server, &mut frame, 0.0, None, target);
+            assert!(
+                std::time::Instant::now() < deadline,
+                "Mouse Load button did not open Load"
+            );
+        }
+        let scroll = live
+            .system_menu
+            .as_mut()
+            .unwrap()
+            .reference_save_menu()
+            .unwrap()
+            .model()
+            .scroll();
+        click(
+            &mut live,
+            context,
+            server,
+            &mut frame,
+            target,
+            glam::vec2(600.0, 188.0 + 2.0 * 186.0 - scroll + 86.0),
+        );
+        while !live
+            .system_menu
+            .as_mut()
+            .unwrap()
+            .reference_save_menu()
+            .unwrap()
+            .reference_dialog_is_open()
+        {
+            step(&mut live, context, server, &mut frame, 0.0, None, target);
+            assert!(
+                std::time::Instant::now() < deadline,
+                "Slot3 mouse dialog did not open"
+            );
+        }
+        assert_eq!(
+            live.system_menu
+                .as_mut()
+                .unwrap()
+                .reference_save_menu()
+                .unwrap()
+                .model()
+                .selected(),
+            2
+        );
+        let yes = live
+            .system_menu
+            .as_mut()
+            .unwrap()
+            .reference_save_menu()
+            .unwrap()
+            .reference_dialog_button_center(0);
+        click(&mut live, context, server, &mut frame, target, yes);
+        while live.system_menu.is_some() || live.is_loading_saved_scene() {
+            step(&mut live, context, server, &mut frame, 0.0, None, target);
+            assert!(std::time::Instant::now() < deadline, "Mouse Load stalled");
+        }
+        eprintln!("Actually presented4K mouse wipe phases: {:?}", frame.fades);
+        assert!(
+            frame
+                .fades
+                .iter()
+                .filter(|&&t| (0.0..30.0).contains(&t))
+                .count()
+                >= 5,
+            "Real-time mouse Load did not present a visible wipe"
+        );
+        assert!(
+            frame.fades.iter().any(|&t| (10.0..20.0).contains(&t)),
+            "Real-time mouse Load skipped the wipe midpoint"
+        );
+        let after_load = pixels(&live, context, target);
+        std::fs::write(path.with_file_name("mouse-after-load.rgba"), &after_load).unwrap();
+        let halfway = std::fs::read(path.with_file_name("mouse-half.rgba")).unwrap();
+        let outgoing = std::fs::read(path.with_file_name("mouse-outgoing.rgba")).unwrap();
+        for y in 0..1200 {
+            for (x, expected) in [(200, &after_load), (3640, &outgoing)] {
+                let at = (y * 3840 + x) * 4;
+                for c in 0..3 {
+                    assert!(
+                        halfway[at + c].abs_diff(expected[at + c]) <= 1,
+                        "Composed mouse wipe direction/source mismatch at({x},{y}),channel{c}"
+                    );
+                }
+            }
+        }
+        eprintln!("Composed mouse wipe:2400 background direction/source samples pass");
+        if repeat_target {
+            let changed = before_menu
+                .chunks_exact(4)
+                .zip(halfway.chunks_exact(4))
+                .take(3840 * 1200)
+                .filter(|(a, b)| (0..3).any(|c| a[c].abs_diff(b[c]) > 3))
+                .count();
+            eprintln!(
+                "Same 縁寿の選択 background wipe: {changed} changed pixels above the message window"
+            );
+            assert!(
+                changed > 20_000,
+                "Reloading 縁寿の選択 presented a transition clock but no visible background wipe"
+            );
+        }
+        assert_eq!(live.vm_state.save_position, third.entry.save_position);
+        assert!(live.saved_scene_load_error().is_none());
+        return;
+    }
+    let first_pixels = pixels(&live, context, target);
+    std::fs::write(path.with_file_name("sequential-first.rgba"), &first_pixels).unwrap();
+    for (delta, action) in [
+        (0.0, Some(AppAction::SystemMenu)),
+        (22.0, None),
+        (0.0, None),
+        (0.0, Some(AppAction::AnyDown)),
+        (0.0, Some(AppAction::Enter)),
+        (7.0, None),
+        (0.0, None),
+    ] {
+        step(
+            &mut live, context, server, &mut frame, delta, action, target,
+        );
+    }
+    while live
+        .system_menu
+        .as_mut()
+        .unwrap()
+        .reference_save_menu()
+        .unwrap()
+        .model()
+        .phase()
+        == SaveMenuPhase::Loading
+    {
+        step(&mut live, context, server, &mut frame, 0.0, None, target);
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Load menu never ready"
+        );
+        std::thread::yield_now();
+    }
+    step(&mut live, context, server, &mut frame, 10.0, None, target);
+    assert_eq!(
+        live.system_menu
+            .as_mut()
+            .unwrap()
+            .reference_save_menu()
+            .unwrap()
+            .model()
+            .selected(),
+        2
+    );
+    for (delta, action) in [
+        (0.0, Some(AppAction::Enter)),
+        (7.0, None),
+        (0.0, None),
+        (12.0, None),
+        (0.0, None),
+        (0.0, Some(AppAction::Left)),
+        (0.0, Some(AppAction::Enter)),
+        (7.0, None),
+        (0.0, None),
+        (12.0, None),
+        (5.0, None),
+        (10.0, None),
+    ] {
+        step(
+            &mut live, context, server, &mut frame, delta, action, target,
+        );
+    }
+    assert!(live.system_menu.is_none() && live.pending_restore.is_some());
+    while live.pending_restore.is_some() {
+        step(&mut live, context, server, &mut frame, 0.0, None, target);
+        assert!(
+            std::time::Instant::now() < deadline,
+            "Third saved slot never loaded"
+        );
+        std::thread::yield_now();
+    }
+    assert!(live.saved_scene_load_error().is_none());
+    assert_eq!(live.reference_load_transition_masked(), Some(true));
+    let zero = pixels(&live, context, target);
+    step(&mut live, context, server, &mut frame, 15.0, None, target);
+    let half = pixels(&live, context, target);
+    step(&mut live, context, server, &mut frame, 15.0, None, target);
+    let full = pixels(&live, context, target);
+    for (name, image) in [("zero", &zero), ("half", &half), ("full", &full)] {
+        std::fs::write(
+            path.with_file_name(format!("sequential-{name}.rgba")),
+            image,
+        )
+        .unwrap();
+    }
+    let changed = |a: &[u8], b: &[u8]| {
+        a.chunks_exact(4)
+            .zip(b.chunks_exact(4))
+            .filter(|(a, b)| (0..3).any(|c| a[c].abs_diff(b[c]) > 2))
+            .count()
+    };
+    eprintln!(
+        "Authored composed wipe: changed zero/full{}, half/full{}, zero/half{};choice={}, backroot={}",
+        changed(&zero, &full),
+        changed(&half, &full),
+        changed(&zero, &half),
+        live.adv_state.choice_menu.is_some(),
+        live.adv_state.back_layer_group.is_some()
+    );
+    assert!(
+        changed(&zero, &full) > 5_000,
+        "Actual saved-load wipe has no visible outgoing frame"
+    );
+    assert!(
+        changed(&half, &full) > 5_000 && changed(&zero, &half) > 5_000,
+        "Actual saved-load wipe has no visible intermediate phase"
+    );
+    assert!(!live.is_loading_saved_scene());
+    assert_eq!(live.vm_state.save_position, third.entry.save_position);
+}
+
 /// Desktop storage adapter exercised through the actual ADV update/input owner.
 /// Native successful save timing and Nintendo OS error UI remain separate.
 #[cfg(unix)]
@@ -19,6 +531,7 @@ pub(super) fn assert_automatic_save_failure<'a>(
     assets: &AdvAssets,
     context: &mut PreRenderContext<'a, '_, '_, '_>,
     target: &wgpu::Texture,
+    bad_notice: bool,
 ) {
     use std::{fs, os::unix::fs::PermissionsExt, path::PathBuf};
     struct Cleanup(PathBuf);
@@ -71,7 +584,7 @@ pub(super) fn assert_automatic_save_failure<'a>(
         let mut upload = context.device.create_command_encoder(&Default::default());
         context.dynamic_buffer.finish(&mut upload);
         context.queue.submit([upload.finish(), encoder.finish()]);
-        context.device.poll(wgpu::Maintain::Wait);
+        context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     let audio = Arc::new(shin_audio::AudioManager::new_for_tests());
     for (mouse, nested, resume) in [
@@ -162,6 +675,14 @@ pub(super) fn assert_automatic_save_failure<'a>(
             live.progress_error.is_some(),
             "Automatic failure must be visible"
         );
+        if bad_notice {
+            assert!(
+                live.progress_error
+                    .as_ref()
+                    .unwrap()
+                    .reference_uses_plain_frame()
+            );
+        }
         assert!(
             live.pending_save.is_none(),
             "An automatic error is not an explicit save worker"
@@ -212,6 +733,12 @@ pub(super) fn assert_automatic_save_failure<'a>(
             .filter(|&at| pixels[at..at + 3].iter().all(|&v| v > 245))
             .count();
         assert!(glyphs > 100, "Save error prompt must render: {glyphs}");
+        if bad_notice {
+            super::storage_notice_failure_reference::assert_notice_pixels(
+                &pixels,
+                &format!("automatic-progress-{mouse}-{resume}"),
+            );
+        }
         // A release inherited from the initiating mouse press cannot accept.
         step(
             &mut live,
@@ -365,7 +892,7 @@ pub(super) fn assert_live_save_menu<'a>(
         let mut upload = context.device.create_command_encoder(&Default::default());
         context.dynamic_buffer.finish(&mut upload);
         context.queue.submit([upload.finish(), encoder.finish()]);
-        context.device.poll(wgpu::Maintain::Wait);
+        context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     fn child(live: &mut Adv) -> &mut super::save_menu_screen::SaveMenuScreen {
         live.system_menu
@@ -456,6 +983,9 @@ pub(super) fn assert_live_save_menu<'a>(
     }
     let audio = Arc::new(shin_audio::AudioManager::new_for_tests());
     for (disk, launch) in [(true, false), (false, false), (true, true), (false, true)] {
+        if std::env::var_os("SHIN_REFERENCE_ADV_LOAD_MENU_ONLY").is_some() && launch {
+            continue;
+        }
         let mut live = Adv::new(
             audio.clone(),
             server.clone(),
@@ -705,8 +1235,10 @@ pub(super) fn assert_live_save_menu<'a>(
             (0, 0)
         );
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        let mut saw_masked_transition = false;
         while live.is_loading_saved_scene() {
             step(&mut live, context, server, &mut frame, 1.0, None);
+            saw_masked_transition |= live.reference_load_transition_masked() == Some(true);
             assert!(
                 std::time::Instant::now() < deadline,
                 "Actual manual Load restoration timed out: {:?}",
@@ -715,6 +1247,7 @@ pub(super) fn assert_live_save_menu<'a>(
             std::thread::yield_now();
         }
         assert!(live.restore_error.is_none());
+        assert!(saw_masked_transition, "Pause-menu Load must install the prepared default mask");
         assert_eq!(live.vm_state.save_position, 1);
         assert_eq!(live.vm_state.snapshot_entry().random_seed, 42);
         assert!(live.play_ticks() >= before_load);
@@ -722,6 +1255,13 @@ pub(super) fn assert_live_save_menu<'a>(
             live.save_menu_data().manual_save_slots[0].is_some(),
             "scene replacement must retain global manual slots"
         );
+        if std::env::var_os("SHIN_REFERENCE_ADV_LOAD_MENU_ONLY").is_some() {
+            drop(live);
+            if disk { std::fs::remove_dir_all(&folder).unwrap(); }
+            assert!(!backup.exists());
+            eprintln!("Actual pause-menu Save/Delete/Load: disk={disk}, masked30tick handoff, input/audio scopes, retained slots and resource invalidation pass");
+            continue;
+        }
         // Actual ADV Config close uses the same pending owner as Title Config.
         step(
             &mut live,

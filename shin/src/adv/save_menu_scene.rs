@@ -19,6 +19,7 @@ use super::{
 pub(super) struct SavedSlotScene {
     pub scene: ReconstructedScene,
     pub labels: SaveSlotLabels,
+    entry: GameDataEntry,
 }
 impl SavedSlotScene {
     pub fn reconstruct(
@@ -47,6 +48,7 @@ impl SavedSlotScene {
         Ok(Self {
             scene,
             labels: SaveSlotLabels::Ready { title, subtitle },
+            entry: entry.clone(),
         })
     }
 }
@@ -66,6 +68,10 @@ pub(super) struct SaveMenuSceneCache {
     scenes: [Option<Arc<SavedSlotScene>>; SLOT_COUNT],
     generations: [u64; SLOT_COUNT],
     replay: Option<ReplayJob>,
+    #[cfg(test)]
+    pub(super) reference_disable_reuse: bool,
+    #[cfg(test)]
+    pub(super) reference_replay_starts: usize,
 }
 impl SaveMenuSceneCache {
     pub fn new(scenario: Arc<Scenario>, globals: SaveData) -> Self {
@@ -75,6 +81,10 @@ impl SaveMenuSceneCache {
             scenes: std::array::from_fn(|_| None),
             generations: [0; SLOT_COUNT],
             replay: None,
+            #[cfg(test)]
+            reference_disable_reuse: false,
+            #[cfg(test)]
+            reference_replay_starts: 0,
         }
     }
     pub fn scene(&self, slot: usize) -> Option<&Arc<SavedSlotScene>> {
@@ -96,8 +106,23 @@ impl SaveMenuSceneCache {
             SaveSlotLabels::Loading
         }
     }
-    /// Returns rows whose reconstructed scene became ready this frame. GPU
-    /// preview work is a separate serial stage; text can become ready first.
+    fn reusable_scene(&self, entry: &GameDataEntry) -> Option<Arc<SavedSlotScene>> {
+        #[cfg(test)]
+        if self.reference_disable_reuse {
+            return None;
+        }
+        // These are immutable preview descriptions, not live script owners.
+        // Timestamp/slot number do not affect replay. Match the full seed,
+        // scenario, boundary and recorded branch history under this cache's
+        // fixed global-data snapshot; never share merely by save position.
+        self.scenes
+            .iter()
+            .flatten()
+            .find(|scene| scene.entry == *entry)
+            .cloned()
+    }
+    /// Returns the completed replay job's row; exact immutable aliases become
+    /// available directly during the scan. GPU capture is a separate stage.
     pub fn update(&mut self, model: &SaveMenuModel) -> Result<Vec<usize>> {
         let mut visible = [false; SLOT_COUNT];
         for slot in model.visible_slots() {
@@ -108,9 +133,17 @@ impl SaveMenuSceneCache {
                 self.scenes[slot] = None;
             } else if self.replay.is_none() && self.scenes[slot].is_none() {
                 if let Some(data) = &model.slots()[slot] {
+                    if let Some(scene) = self.reusable_scene(&data.entry) {
+                        self.scenes[slot] = Some(scene);
+                        continue;
+                    }
                     let entry = data.entry.clone();
                     let scenario = self.scenario.clone();
                     let globals = self.globals.clone();
+                    #[cfg(test)]
+                    {
+                        self.reference_replay_starts += 1;
+                    }
                     self.replay = Some(ReplayJob {
                         slot,
                         generation: self.generations[slot],
@@ -251,6 +284,55 @@ mod tests {
             }
         );
     }
+    #[test]
+    fn identical_history_shares_immutable_scene_but_distinct_seed_does_not() {
+        crate::init_test_task_pools();
+        let mut data = SaveData::default();
+        for slot in [0, 1] {
+            data.manual_save_slots[slot] = Some(GameData::from_entry(entry(42)));
+        }
+        data.manual_save_slots[2] = Some(GameData::from_entry(entry(43)));
+        let model = SaveMenuModel::new(&data, None);
+        let mut cache = SaveMenuSceneCache::new(scenario(), data);
+        while cache.scene(2).is_none() {
+            complete(&mut cache, &model);
+        }
+        assert!(Arc::ptr_eq(
+            cache.scene(0).unwrap(),
+            cache.scene(1).unwrap()
+        ));
+        assert!(!Arc::ptr_eq(
+            cache.scene(0).unwrap(),
+            cache.scene(2).unwrap()
+        ));
+        assert_eq!(cache.reference_replay_starts, 2);
+        for variant in 0..4 {
+            let mut other = entry(42);
+            match variant {
+                0 => other.scenario_id = 1,
+                1 => other.random_seed = 44,
+                2 => other.save_position = 1,
+                _ => other.route_data = serde_json::from_value(serde_json::json!([255])).unwrap(),
+            }
+            assert!(
+                cache.reusable_scene(&other).is_none(),
+                "History key component {variant}"
+            );
+        }
+        let retained = Arc::downgrade(cache.scene(1).unwrap());
+        cache.invalidate(0);
+        assert!(cache.scene(0).is_none());
+        assert!(
+            retained.upgrade().is_some(),
+            "Other slot still owns its scene"
+        );
+        drop(cache);
+        assert!(
+            retained.upgrade().is_none(),
+            "No global replay cache retains scenes"
+        );
+    }
+
     #[test]
     fn overwrite_or_delete_during_replay_cannot_publish_former_scene() {
         crate::init_test_task_pools();

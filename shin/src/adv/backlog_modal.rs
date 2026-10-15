@@ -240,25 +240,9 @@ impl BacklogModal {
             return;
         }
         if state[AppAction::SceneJumpMenu].is_clicked {
-            match super::backlog_jump::SceneJump::new(
-                screen.history(),
-                self.current_row,
-                screen.model.selected.unwrap_or(0),
-            ) {
-                Ok(model) => {
-                    self.scene_jump = Some(SceneJumpTask {
-                        model,
-                        view: None,
-                        progress: 0.0,
-                        closing: false,
-                        pointer: Default::default(),
-                    })
-                }
-                Err(error) => {
-                    tracing::warn!(%error, "Cannot open scene jump menu");
-                    self.sounds.push("error");
-                }
-            }
+            // Native a6d3c stops parent inertia for keyboard opening.
+            screen.model.release(0.0);
+            self.open_chapters();
             return;
         }
         if state[AppAction::ReplayVoice].is_clicked || state[AppAction::Enter].is_clicked {
@@ -278,6 +262,20 @@ impl BacklogModal {
         };
         screen.axis(wheel);
     }
+    pub(super) fn desktop_diagnostic_phase(&self) -> Option<&'static str> {
+        if self.rollback.is_some() || self.installing {
+            return None;
+        }
+        let screen = self.screen.as_ref()?;
+        if !screen.shell.is_open() {
+            return None;
+        }
+        if let Some(menu) = &self.scene_jump {
+            (menu.is_open() && menu.model.accepts_keyboard()).then_some("chapters_ready")
+        } else {
+            screen.model.accepts_keyboard().then_some("ready")
+        }
+    }
     pub fn pointer(&mut self, position: glam::Vec2, clicked: bool) {
         if clicked {
             self.pointer_state(position, true, 1.0 / 60.0);
@@ -285,6 +283,15 @@ impl BacklogModal {
         }
     }
     pub fn pointer_state(&mut self, position: glam::Vec2, held: bool, elapsed_seconds: f64) {
+        self.pointer_state_with_mouse_release(position, held, elapsed_seconds, None)
+    }
+    pub fn pointer_state_with_mouse_release(
+        &mut self,
+        position: glam::Vec2,
+        held: bool,
+        elapsed_seconds: f64,
+        mouse_release: Option<super::input_area::MouseRelease>,
+    ) {
         use super::backlog_pointer::{Event, Target};
         if let Some(task) = &mut self.rollback {
             if let Some(menu) = &mut self.scene_jump {
@@ -320,9 +327,14 @@ impl BacklogModal {
             self.pointer.update(held, false, None);
             self.gesture.update(position, held, false, elapsed_seconds);
             let eligible = menu.is_open();
-            let events =
-                menu.pointer
-                    .update(&mut menu.model, position, held, eligible, elapsed_seconds);
+            let events = menu.pointer.update_with_mouse_release(
+                &mut menu.model,
+                position,
+                held,
+                eligible,
+                elapsed_seconds,
+                mouse_release,
+            );
             for event in events {
                 use super::backlog_jump_pointer::Event as MenuEvent;
                 match event {
@@ -351,6 +363,7 @@ impl BacklogModal {
                         if menu.model.release(v) {
                             menu.closing = true;
                             self.sounds.push("cancel");
+                            tracing::debug!(phase = "chapters_swipe_close", "UMINEKO_BROWSER");
                         }
                     }
                 }
@@ -368,13 +381,23 @@ impl BacklogModal {
                 screen.model.row_at(position).map(Target::Row)
             }
         });
-        let motion = self
-            .gesture
-            .update(position, held, eligible, elapsed_seconds);
-        let mut event = self.pointer.update(held, eligible, hit);
-        if motion.cancel_click {
-            event = self.pointer.cancel_capture().or(event);
-        }
+        let motion = self.gesture.update_browser_with_mouse_release(
+            position,
+            held,
+            eligible,
+            elapsed_seconds,
+            mouse_release,
+        );
+        let cancelled = motion
+            .cancel_click
+            .then(|| self.pointer.cancel_capture())
+            .flatten();
+        let event = self.pointer.update(held, eligible, hit);
+        let event = if motion.cancel_click {
+            cancelled
+        } else {
+            event
+        };
         // Disabled callbacks discard capture without retargeting the close task.
         if !eligible {
             return;
@@ -388,11 +411,12 @@ impl BacklogModal {
             }
         }
         let mut request_rollback = false;
+        let mut request_chapters = false;
         if let Some(velocity) = motion.fling {
             if super::backlog_gesture::scroll_fling(velocity) {
                 screen.model.release(velocity.y);
             } else {
-                request_rollback = true;
+                request_chapters = true;
             }
         }
         match event {
@@ -419,8 +443,41 @@ impl BacklogModal {
             Some(Event::Cancel(Target::Row(index))) => screen.cancel_voice(index),
             None => {}
         }
-        if request_rollback {
+        if request_chapters {
+            if self.open_chapters() {
+                tracing::debug!(phase = "chapters_swipe_open", "UMINEKO_BROWSER");
+            }
+        } else if request_rollback {
             self.request_rollback();
+        }
+    }
+    fn open_chapters(&mut self) -> bool {
+        let Some(screen) = &self.screen else {
+            return false;
+        };
+        // Original a7e94/a7ea4 and a6d24/a6d34 play the same confirm cue
+        // before constructing the child for swipes and keyboard input.
+        self.sounds.push("decide");
+        match super::backlog_jump::SceneJump::new(
+            screen.history(),
+            self.current_row,
+            screen.model.selected.unwrap_or(0),
+        ) {
+            Ok(model) => {
+                self.scene_jump = Some(SceneJumpTask {
+                    model,
+                    view: None,
+                    progress: 0.0,
+                    closing: false,
+                    pointer: Default::default(),
+                });
+                true
+            }
+            Err(error) => {
+                tracing::warn!(%error, "Cannot open scene jump menu");
+                self.sounds.push("error");
+                false
+            }
         }
     }
     fn request_rollback(&mut self) {
@@ -594,6 +651,11 @@ impl BacklogModal {
                     }
                     if menu.closing && menu.progress == 0.0 {
                         self.scene_jump = None;
+                        tracing::debug!(
+                            phase = "chapters_retired",
+                            browser_open = screen.shell.is_open(),
+                            "UMINEKO_BROWSER"
+                        );
                     }
                 }
             }

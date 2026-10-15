@@ -1,15 +1,15 @@
 use std::cell::RefCell;
 
-use bevy_utils::HashMap;
 use egui::{
     ClippedPrimitive, CollapsingHeader, Color32, Context, CornerRadius, FontFamily, FontId,
-    InnerResponse, Pos2, Rect, Stroke, TextureId, Ui, ViewportId, ViewportIdMap, ahash::HashMapExt,
+    InnerResponse, Pos2, Rect, Stroke, TextureId, Ui, ViewportId, ViewportIdMap,
     style::WidgetVisuals,
 };
 use egui_wgpu::{Renderer, ScreenDescriptor};
 use enum_map::{Enum, enum_map};
 use glam::vec2;
 use shin_input::{Action, ActionState, RawInputState, inputs::MouseButton};
+use std::collections::HashMap;
 use winit::keyboard::KeyCode;
 
 use crate::time::Time;
@@ -47,14 +47,22 @@ pub struct OverlayManager {
 
 impl OverlayManager {
     pub fn new(device: &wgpu::Device, texture_format: wgpu::TextureFormat) -> Self {
-        let renderer = Renderer::new(device, texture_format, None, 1, false);
+        let renderer = Renderer::new(device, texture_format,
+            egui_wgpu::RendererOptions {
+                msaa_samples: 1,
+                dithering: false,
+                ..Default::default()
+            },
+        );
         let context = Context::default();
 
         let alpha = 128;
 
         let from_gray = |l: u8| Color32::from_rgba_unmultiplied(l, l, l, alpha);
 
-        context.set_style(egui::Style {
+        context.set_style_of(
+            egui::Theme::Dark,
+            egui::Style {
             override_font_id: Some(FontId {
                 size: 14.0,
                 // TODO: use Fira Code
@@ -108,7 +116,8 @@ impl OverlayManager {
                 ..egui::Visuals::light()
             },
             ..Default::default()
-        });
+        },
+        );
 
         Self {
             show_overlays_window: false,
@@ -126,7 +135,7 @@ impl OverlayManager {
         let ctx = &self.context;
 
         let pixels_per_point = ctx.pixels_per_point();
-        let size = ctx.input(|i| i.screen_rect.size());
+        let size = ctx.input(|i| i.content_rect().size());
         let size = vec2(size.x, size.y); // convert from egui Vec2 to glam Vec2
         assert_ne!(
             size,
@@ -206,13 +215,14 @@ impl OverlayManager {
             monitor_size: None,
             inner_rect: None,
             outer_rect: None,
+            occluded: None,
             minimized: None,
             maximized: None,
             fullscreen: None,
             focused: None,
         };
 
-        let mut viewports = ViewportIdMap::new();
+        let mut viewports = ViewportIdMap::default();
         viewports.insert(ViewportId::ROOT, viewport);
 
         let raw_input = egui::RawInput {
@@ -225,7 +235,7 @@ impl OverlayManager {
             max_texture_side: None,
             time: Some(time.elapsed_seconds_f64()),
             predicted_dt: 0.0,
-            modifiers: Default::default(),
+            safe_area_insets: Default::default(),
             events,
             hovered_files: vec![],
             dropped_files: vec![],
@@ -286,10 +296,10 @@ impl OverlayManager {
         raw_input_state: &mut RawInputState,
     ) {
         let ctx = &self.context;
-        let full_output = self.context.end_pass();
+        let mut full_output = self.context.end_pass();
 
         // consume mouse events if egui wants them
-        if ctx.wants_pointer_input() {
+        if ctx.egui_wants_pointer_input() {
             raw_input_state
                 .mouse
                 .buttons
@@ -303,8 +313,10 @@ impl OverlayManager {
         self.primitives = ctx.tessellate(full_output.shapes, 2.0);
 
         // update the textures as requested
-        for (id, tex) in full_output.textures_delta.set {
-            self.renderer.update_texture(device, queue, id, &tex);
+        for (id, tex) in full_output.textures_delta.set.drain() {
+            for delta in tex {
+            self.renderer.update_texture(device, queue, id, &delta);
+            }
         }
 
         // let mut encoder =

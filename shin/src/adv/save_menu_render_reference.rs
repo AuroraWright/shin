@@ -9,8 +9,46 @@ use crate::render::PreRenderContext;
 use shin_core::{format::save::SaveData, primitives::color::UnormColor, time::Ticks};
 use std::sync::Arc;
 #[test]
+#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+fn reference_dialogue_window_gpu_indexed_strip() {
+    assert!(std::env::var_os("SHIN_REFERENCE_DIALOGUE_WINDOW_ONLY").is_some());
+    reference_save_menu_gpu_window_and_artwork();
+}
+
+#[test]
+#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+fn reference_render_debug_groups_submit_balanced() {
+    assert!(std::env::var_os("SHIN_REFERENCE_DEBUG_GROUPS_ONLY").is_some());
+    reference_save_menu_gpu_window_and_artwork();
+}
+
+#[test]
+#[ignore = "requires supplied ROM, copied progress, Metal and exact Loopback Audio"]
+fn reference_saved_load_mask_and_thumbnail_reuse() {
+    assert!(std::env::var_os("SHIN_REFERENCE_LOAD_FEEDBACK_ONLY").is_some());
+    std::thread::Builder::new().stack_size(16 * 1024 * 1024)
+        .spawn(reference_save_menu_gpu_window_and_artwork).unwrap().join().unwrap();
+}
+
+#[test]
+#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves"]
+fn reference_pause_menu_load_mask_and_preview_invalidation() {
+    assert!(std::env::var_os("SHIN_REFERENCE_ADV_LOAD_MENU_ONLY").is_some());
+    std::thread::Builder::new().stack_size(16 * 1024 * 1024)
+        .spawn(reference_save_menu_gpu_window_and_artwork).unwrap().join().unwrap();
+}
+
+#[test]
+#[ignore = "requires supplied1.03 ROM, copied progress, Metal and exact Loopback Audio"]
+fn reference_authored_sequential_load_wipe() {
+    assert!(std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").is_some());
+    std::thread::Builder::new().stack_size(16 * 1024 * 1024)
+        .spawn(reference_save_menu_gpu_window_and_artwork).unwrap().join().unwrap();
+}
+
+#[test]
 #[ignore = "requires supplied ROM and GPU (SHIN_REFERENCE_ROM)"]
-fn reference_save_menu_gpu_window_and_artwork() {
+pub(super) fn reference_save_menu_gpu_window_and_artwork() {
     use crate::asset::system::{AssetLoadContext, AssetServer, LayeredAssetIo, cache::AssetCache};
     use shin_render::{
         dynamic_buffer::DynamicBuffer,
@@ -28,11 +66,13 @@ fn reference_save_menu_gpu_window_and_artwork() {
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     if let Some(patch) = std::env::var_os("SHIN_REFERENCE_PATCH_ROM") {
@@ -43,6 +83,8 @@ fn reference_save_menu_gpu_window_and_artwork() {
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -50,14 +92,19 @@ fn reference_save_menu_gpu_window_and_artwork() {
             font_cache: Default::default(),
         },
     ));
+    let (width, height) = if std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_REALTIME").is_some() {
+        (3840, 2160)
+    } else {
+        (1920, 1080)
+    };
     let resize = SurfaceResizeSource::new(ViewportParams::both(winit::dpi::PhysicalSize::new(
-        1920, 1080,
+        width, height,
     )));
     let depth = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("Save menu reference depth"),
         size: wgpu::Extent3d {
-            width: 1920,
-            height: 1080,
+            width,
+            height,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
@@ -72,8 +119,8 @@ fn reference_save_menu_gpu_window_and_artwork() {
     let target = device.create_texture(&wgpu::TextureDescriptor {
         label: Some("Save menu reference target"),
         size: wgpu::Extent3d {
-            width: 1920,
-            height: 1080,
+            width,
+            height,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
@@ -99,6 +146,41 @@ fn reference_save_menu_gpu_window_and_artwork() {
         dynamic_buffer: &mut dynamic,
         encoder: &mut encoder,
     };
+
+    if std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").is_some() {
+        let assets = shin_tasks::block_on(super::AdvAssets::load(&server)).unwrap();
+        super::live_save_reference::assert_authored_sequential_load_wipe(&server, &assets, &mut context, &target);
+        return;
+    }
+    if std::env::var_os("SHIN_REFERENCE_ADV_LOAD_MENU_ONLY").is_some() {
+        let assets = shin_tasks::block_on(super::AdvAssets::load(&server)).unwrap();
+        super::live_save_reference::assert_live_save_menu(&server, &assets, &mut context, &target);
+        return;
+    }
+    if std::env::var_os("SHIN_REFERENCE_LOAD_FEEDBACK_ONLY").is_some() {
+        super::reconstruction::assert_reference_load_feedback(&mut context, &server);
+        super::save_menu_screen::assert_reference_thumbnail_reuse(&mut context, &target, &server);
+        return;
+    }
+
+    if std::env::var_os("SHIN_REFERENCE_DIALOGUE_WINDOW_ONLY").is_some()
+        || std::env::var_os("SHIN_REFERENCE_DEBUG_GROUPS_ONLY").is_some()
+    {
+        let assets = shin_tasks::block_on(super::AdvAssets::load(&server)).unwrap();
+        let audio = Arc::new(shin_audio::AudioManager::new_for_tests());
+        let mut message = crate::layer::message_layer::MessageLayer::new(
+            assets.fonts.clone(),
+            assets.messagebox_textures.clone(),
+            crate::audio::VoicePlayer::new(audio, server.clone()),
+        );
+        if std::env::var_os("SHIN_REFERENCE_DEBUG_GROUPS_ONLY").is_some() {
+            message.assert_reference_message_submission(&mut context, &assets.scenario);
+            crate::layer::LayerGroup::assert_reference_mask_debug_exits(&mut context, &server);
+        } else {
+            message.assert_reference_window_opacity(&mut context);
+        }
+        return;
+    }
 
     if std::env::var_os("SHIN_REFERENCE_MURDERER_CAPTURE_ONLY").is_some() {
         let _audio = shin_audio::AudioManager::new_for_tests();
@@ -153,8 +235,28 @@ fn reference_save_menu_gpu_window_and_artwork() {
         super::bgm_title::BgmTitle::assert_reference_render(&mut context, &server, &scenario);
         return;
     }
+    if std::env::var_os("SHIN_REFERENCE_EP4_ACTUAL_SKIP_ONLY").is_some() {
+        super::ep4_teaparty_ending_reference::verify_actual_skip(&mut context, &server, &target);
+        return;
+    }
+    if std::env::var_os("SHIN_REFERENCE_EP4_ENDING_CONTINUE_ONLY").is_some() {
+        super::ep4_teaparty_ending_reference::verify_live(&mut context, &server, &target);
+        return;
+    }
     if std::env::var_os("SHIN_REFERENCE_ENDING_ONLY").is_some() {
         super::ending_reference::assert_ending_returns_to_title(&mut context, &server, &target);
+        return;
+    }
+    if std::env::var_os("SHIN_REFERENCE_CONTINUE_MESSAGE_ONLY").is_some() {
+        super::continue_message_reference::verify(&mut context, &server);
+        return;
+    }
+    if std::env::var_os("SHIN_REFERENCE_CHAPTER_CONTINUE_ONLY").is_some() {
+        super::chapter_continue_reference::verify(&mut context, &server);
+        return;
+    }
+    if std::env::var_os("SHIN_REFERENCE_SHARED_PICTURE_HANDOFF_ONLY").is_some() {
+        super::shared_picture_handoff_reference::verify(&mut context, &server);
         return;
     }
     if std::env::var_os("SHIN_REFERENCE_MSGSET_ONLY").is_some() {

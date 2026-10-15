@@ -5,6 +5,9 @@ use crate::adv::character_screen::CharacterScreen;
 pub struct SHOWCHARS {
     token: Option<command::token::SHOWCHARS>,
     previous_system_controls: bool,
+    grid: i32,
+    initial_page: i32,
+    error: Option<anyhow::Error>,
 }
 impl StartableCommand for command::runtime::SHOWCHARS {
     type StateInfo = bool;
@@ -22,30 +25,50 @@ impl StartableCommand for command::runtime::SHOWCHARS {
         adv_state: &mut AdvState,
     ) -> CommandStartResult {
         adv_state.playback_modes.reset();
-        adv_state.character_screen = Some(CharacterScreen::new(
-            context.asset_server,
-            scenario,
-            vm_state.information.character_grid,
-            vm_state.information.character_grid_argument,
-        ));
+        let grid = vm_state.information.character_grid;
+        let initial_page = vm_state.information.character_grid_argument;
+        let error = match CharacterScreen::new(context.asset_server, scenario, grid, initial_page) {
+            Ok(screen) => {
+                adv_state.character_screen = Some(screen);
+                None
+            }
+            Err(error) => Some(error),
+        };
         Yield(
             SHOWCHARS {
                 token: Some(self.token),
                 previous_system_controls,
+                grid,
+                initial_page,
+                error,
             }
             .into(),
         )
     }
 }
 impl UpdatableCommand for SHOWCHARS {
+    fn take_error(&mut self) -> Option<anyhow::Error> {
+        self.error.take()
+    }
     fn update(
         &mut self,
-        _context: &mut UpdateContext,
-        _scenario: &Arc<Scenario>,
+        context: &mut UpdateContext,
+        scenario: &Arc<Scenario>,
         vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
+        if self.error.is_some() {
+            return None;
+        }
+        if adv_state.character_screen.is_none() {
+            match CharacterScreen::new(context.asset_server, scenario, self.grid, self.initial_page)
+            {
+                Ok(screen) => adv_state.character_screen = Some(screen),
+                Err(error) => self.error = Some(error),
+            }
+            return None;
+        }
         if !adv_state.character_screen.as_ref()?.model.is_closed() {
             return None;
         }

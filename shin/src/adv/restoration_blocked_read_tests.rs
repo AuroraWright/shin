@@ -269,6 +269,8 @@ mod blocked_read {
             let server = Arc::new(AssetServer::new(
                 io.into(),
                 AssetLoadContext {
+                    game: crate::cli::Game::Umineko,
+                    higurashi_bustup_cache: Default::default(),
                     wgpu_device: context.device.clone(),
                     wgpu_queue: context.queue.clone(),
                     bustup_cache: AssetCache::new(),
@@ -436,10 +438,12 @@ mod blocked_read {
                 .unwrap();
             finish(&mut live, context, &server, 100);
             let group = live.adv_state.plane_layer_group(PlaneId::new(0));
-            let Some(UserLayer::Picture(picture)) = group.get_layer(LayerbankId::new(0)) else {
+            let picture_owner = group.get_layer(LayerbankId::new(0));
+            let Some(UserLayer::Picture(picture)) = picture_owner.as_deref() else {
                 panic!("Retry PIC missing")
             };
-            let Some(UserLayer::Bustup(portrait)) = group.get_layer(LayerbankId::new(3)) else {
+            let portrait_owner = group.get_layer(LayerbankId::new(3));
+            let Some(UserLayer::Bustup(portrait)) = portrait_owner.as_deref() else {
                 panic!("Retry BUP missing")
             };
             let retry_picture = picture.reference_resource_owner();

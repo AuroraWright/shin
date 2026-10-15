@@ -92,4 +92,24 @@ impl PreRenderContext<'_, '_, '_, '_> {
             encoder: self.encoder,
         }
     }
+
+    pub fn begin_pass_preserving_depth_stencil(
+        &mut self,
+        target: TextureTarget,
+        depth_stencil: DepthStencilTarget,
+        label: &str,
+    ) -> RenderPass {
+        RenderPass::new_with_depth_preservation(
+            self.pipeline_storage,
+            self.dynamic_buffer,
+            self.sampler_store,
+            self.device,
+            self.encoder,
+            target,
+            Some(depth_stencil),
+            None,
+            label,
+            true,
+        )
+    }
 }

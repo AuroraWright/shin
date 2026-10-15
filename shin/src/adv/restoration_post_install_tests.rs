@@ -47,7 +47,7 @@ pub(super) fn verify_post_install_failure<'a>(
         .plane_layer_group(PlaneId::new(0))
         .get_layer(LayerbankId::new(0))
         .unwrap();
-    let old_owner = Owner::of(old_layer);
+    let old_owner = Owner::of(&old_layer);
     let blockers = {
         let mut manager = audio.kira_manager().lock();
         let available = manager.sub_track_capacity() - manager.num_sub_tracks();
@@ -147,7 +147,7 @@ pub(super) fn verify_post_install_failure<'a>(
     assert_eq!(live.vm_state.route.bit_position(), old_route);
     assert_eq!(format!("{:?}", live.current_command), old_command);
     old_owner.assert_live(
-        live.adv_state
+        &live.adv_state
             .plane_layer_group(PlaneId::new(0))
             .get_layer(LayerbankId::new(0))
             .unwrap(),
@@ -158,7 +158,7 @@ pub(super) fn verify_post_install_failure<'a>(
         }
     }
     let deadline = Instant::now() + Duration::from_secs(5);
-    while audio.kira_manager().lock().num_sounds() != 0 {
+    while audio.kira_manager().lock().main_track().num_sounds() != 0 {
         assert!(
             Instant::now() < deadline,
             "Failed candidate voice did not retire"
@@ -196,8 +196,8 @@ pub(super) fn verify_post_install_failure<'a>(
     assert!(live.saved_scene_load_error().is_none());
     let group = live.adv_state.plane_layer_group(PlaneId::new(0));
     let movie = group.get_layer(LayerbankId::new(2)).unwrap();
-    let retry = Owner::of(movie);
-    assert!(matches!(movie, UserLayer::Movie(_)));
+    let retry = Owner::of(&movie);
+    assert!(matches!(&*movie, UserLayer::Movie(_)));
     drop(live);
     retry.assert_released();
     let summary = "Post-install command-start rejection: real mixed PIC/BUP/Movie candidate, capacity/ready handoff, actual decoder work held by controlled I/O scheduling, caller join, old VM/PC/route/current-command/PIC identity preservation, Movie/voice retirement and successful retry pass. Unsupported stop is injected; no authored rejection reachability claim.\n";

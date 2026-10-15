@@ -15,6 +15,10 @@ use super::{
 };
 use crate::asset::system::AssetServer;
 
+#[cfg(all(test, target_os = "macos"))]
+#[path = "character_screen/failure_reference.rs"]
+mod failure_reference;
+
 /// Native text viewport callbacks0x54cd0/0x54d50 and inertia0x50d1c..0x50dc4.
 #[derive(Debug, Default)]
 pub struct CharacterTextScroll {
@@ -365,10 +369,6 @@ impl CharacterScreenModel {
             self.request_character_cycle();
         } else if state[A::Cancel].is_clicked {
             self.request_close();
-        } else if state[A::KeyboardScrollUp].is_clicked_or_repeated {
-            self.text_scroll.axis(-180.0 / 16.0);
-        } else if state[A::KeyboardScrollDown].is_clicked_or_repeated {
-            self.text_scroll.axis(180.0 / 16.0);
         } else {
             let axis = if state[A::TextScrollUp].is_clicked_or_repeated {
                 -1.0
@@ -514,7 +514,7 @@ pub(crate) fn assert_reference_character_scroll<'a>(
     use crate::app::AppAction as A;
     use shin_input::{Action, ActionState, RawInputState};
     use winit::keyboard::KeyCode;
-    let mut screen = CharacterScreen::new(server, scenario, 1, 0);
+    let mut screen = CharacterScreen::new(server, scenario, 1, 0).unwrap();
     let (cell, definition, state) = screen
         .model
         .characters
@@ -571,7 +571,9 @@ pub(crate) fn assert_reference_character_scroll<'a>(
                 ActionState::default()
             }
         });
-        screen.model.handle_controller_input(&input, 0.0);
+        screen
+            .model
+            .handle_controller_input(&input, crate::app::text_scroll_axis(&raw));
     }
     key(&mut screen, KeyCode::KeyL, false);
     assert_eq!(
@@ -669,10 +671,10 @@ pub(crate) fn assert_reference_character_scroll<'a>(
     key(&mut screen, KeyCode::KeyL, false);
     assert_eq!(
         screen.model.text_scroll.position,
-        180.0_f32.min(height - 730.0)
+        16.0_f32.min(height - 730.0)
     );
     key(&mut screen, KeyCode::KeyL, true);
-    for _ in 0..10 {
+    for _ in 0..1000 {
         key(&mut screen, KeyCode::KeyL, true);
     }
     assert_eq!(screen.model.text_scroll.position, height - 730.0);
@@ -699,7 +701,7 @@ pub(crate) fn assert_reference_character_scroll<'a>(
         .filter(|&at| top[at..at + 4] != bottom[at..at + 4])
         .count();
     assert!(moved > 30, "Scrollbar thumb must move with text: {moved}");
-    for _ in 0..10 {
+    for _ in 0..1000 {
         key(&mut screen, KeyCode::KeyK, true);
     }
     assert_eq!(screen.model.text_scroll.position, 0.0);
@@ -766,7 +768,8 @@ pub(crate) fn assert_reference_character_scroll<'a>(
             model.adjacent_page(1).map(|next| (grid, model.page, next))
         })
         .expect("Supplied scenario must contain a multi-page character grid");
-    let mut pages = CharacterScreen::new(server, scenario, grid as i32, initial_page as i32);
+    let mut pages =
+        CharacterScreen::new(server, scenario, grid as i32, initial_page as i32).unwrap();
     pages.update(Ticks::from_f32(10.0), server);
     pages.update(Ticks::ZERO, server);
     key(&mut pages, KeyCode::KeyJ, false);
@@ -793,13 +796,13 @@ impl CharacterScreen {
         scenario: &Scenario,
         grid: i32,
         initial_page: i32,
-    ) -> Self {
+    ) -> anyhow::Result<Self> {
         Self::with_atlas(
             server,
             scenario,
             grid,
             initial_page,
-            server.load_sync("/chars.txa").unwrap(),
+            server.load_sync("/chars.txa")?,
         )
     }
     pub(crate) fn with_atlas(
@@ -808,21 +811,24 @@ impl CharacterScreen {
         grid: i32,
         initial_page: i32,
         atlas: Arc<CharacterTextures>,
-    ) -> Self {
+    ) -> anyhow::Result<Self> {
         let tables = scenario.info_tables();
-        let id = usize::try_from(grid).expect("SHOWCHARS requires a selected character grid");
-        let characters = CharacterModel::new(
-            &tables.chars_grid_info[id],
-            &tables.chars_sprite_info,
-            id,
-            initial_page,
-        );
+        let id = usize::try_from(grid)?;
+        let grid = tables
+            .chars_grid_info
+            .get(id)
+            .ok_or_else(|| anyhow::anyhow!("Character grid {id} is unavailable"))?;
+        let characters = CharacterModel::new(grid, &tables.chars_sprite_info, id, initial_page);
+        atlas.validate_character_screen(&characters)?;
+        let system: Arc<CharacterTextures> = server.load_sync("/systex.txa")?;
+        system.require_names("/systex.txa", &["scroll"])?;
+        // Root ADV/title assets retain this font during later text changes.
+        // Keep construction fallible even when called without that root owner.
+        let _font: Arc<crate::asset::font::GpuFontLazy> = server.load_sync("/system.fnt")?;
         let mut screen = Self {
             model: CharacterScreenModel::new(characters),
             atlas,
-            system: server
-                .load_sync("/systex.txa")
-                .expect("Loading character scrollbar artwork"),
+            system,
             text: None,
             full_sprite: None,
             pending_full_sprite: None,
@@ -831,7 +837,7 @@ impl CharacterScreen {
             pointer: Default::default(),
         };
         screen.refresh(server);
-        screen
+        Ok(screen)
     }
     fn refresh(&mut self, server: &Arc<AssetServer>) {
         let state = self
@@ -857,7 +863,11 @@ impl CharacterScreen {
             // retains the displayed sprite until the latest request is ready.
             self.pending_full_sprite = path.map(|path| {
                 let server = server.clone();
-                shin_tasks::async_io::spawn(async move { server.load(&path).await })
+                shin_tasks::async_io::spawn(async move {
+                    let atlas: Arc<CharacterTextures> = server.load(&path).await?;
+                    atlas.require_first_texture(&path)?;
+                    Ok(atlas)
+                })
             });
             if self.pending_full_sprite.is_none() {
                 self.full_sprite = None;
@@ -872,7 +882,10 @@ impl CharacterScreen {
             .and_then(|task| task.poll_naive())
         {
             self.pending_full_sprite = None;
-            self.full_sprite = Some(result.expect("Loading character full sprite"));
+            match result {
+                Ok(sprite) => self.full_sprite = Some(sprite),
+                Err(error) => tracing::warn!(%error, "Loading character full sprite failed"),
+            }
         }
     }
     #[cfg(test)]
@@ -1579,6 +1592,18 @@ mod tests {
         s.update(Ticks::from_f32(10.0));
         assert_eq!(s.position, 0.0);
         assert_eq!(s.velocity, 0.0);
+    }
+    #[test]
+    fn trackpad_wheel_scrolls_character_description_without_switching_pages() {
+        let mut screen = model();
+        screen.update(Ticks::from_f32(10.0));
+        screen.text_scroll.set_maximum(500.0);
+        for (amount, expected) in [(-3.25, 52.0), (-0.125, 54.0), (3.25, 2.0), (0.0, 2.0)] {
+            let (input, scroll) = crate::app::wheel_scroll_test_input(amount);
+            screen.handle_controller_input(&input, scroll);
+            assert_eq!(screen.text_scroll.position, expected);
+            assert!(screen.take_sounds().is_empty());
+        }
     }
     #[test]
     #[ignore = "requires supplied executable next to SHIN_REFERENCE_ROM"]

@@ -151,7 +151,7 @@ pub(super) fn assert_ending_returns_to_title<'a>(
             let mut upload = ctx.device.create_command_encoder(&Default::default());
             ctx.dynamic_buffer.finish(&mut upload);
             ctx.queue.submit([upload.finish(), encoder.finish()]);
-            ctx.device.poll(wgpu::Maintain::Wait);
+            ctx.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
         };
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(40);
         while !host.reference_adv().is_some_and(|adv| {

@@ -5,7 +5,7 @@ impl StartableCommand for command::runtime::AUTOSAVE {
 
     fn apply_state(&self, state: &mut VmState) {
         state.commit_persistent();
-        state.advance_save_position();
+        state.record_chapter_boundary();
         state.snapshot_scene_title();
         state.capture_autosave();
     }

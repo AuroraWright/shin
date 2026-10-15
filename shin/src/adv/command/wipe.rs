@@ -7,8 +7,9 @@ use crate::wiper::AnyWiper;
 #[derive(Debug)]
 enum WipeState {
     WaitingForWipeLoader {
-        load_task: Option<AsyncTask<Option<AnyWiper>>>,
+        load_task: Option<AsyncTask<anyhow::Result<Option<AnyWiper>>>>,
     },
+    WaitingForRetry,
     WaitingForWipe,
     Finished,
 }
@@ -17,8 +18,29 @@ enum WipeState {
 pub struct WIPE {
     token: Option<command::token::WIPE>,
     flags: WipeFlags,
+    ty: i32,
+    duration: Ticks,
+    params: shin_core::format::scenario::instruction_elements::UntypedNumberArray,
+    error: Option<anyhow::Error>,
     load_wait_attempted: bool,
     state: WipeState,
+}
+
+fn spawn_loader(
+    server: Arc<crate::asset::system::AssetServer>,
+    scenario: Arc<Scenario>,
+    ty: i32,
+    duration: Ticks,
+    params: shin_core::format::scenario::instruction_elements::UntypedNumberArray,
+) -> Option<AsyncTask<anyhow::Result<Option<AnyWiper>>>> {
+    (duration > Ticks::ZERO && (0..=9).contains(&ty)).then(|| {
+        shin_tasks::async_io::spawn(async move {
+            super::catch_preparation_panic(AnyWiper::load_raw_checked(
+                &server, &scenario, ty, duration, params,
+            ))
+            .await?
+        })
+    })
 }
 
 impl StartableCommand for command::runtime::WIPE {
@@ -45,22 +67,13 @@ impl StartableCommand for command::runtime::WIPE {
             return self.token.finish().into();
         }
 
-        let load_task = if self.duration > Ticks::ZERO && (0..=9).contains(&self.ty) {
-            let asset_server = context.asset_server.clone();
-            let scenario = scenario.clone();
-            Some(shin_tasks::async_io::spawn(async move {
-                AnyWiper::load_raw(
-                    &asset_server,
-                    &scenario,
-                    self.ty,
-                    self.duration,
-                    self.params,
-                )
-                .await
-            }))
-        } else {
-            None
-        };
+        let load_task = spawn_loader(
+            context.asset_server.clone(),
+            scenario.clone(),
+            self.ty,
+            self.duration,
+            self.params,
+        );
 
         if !self.flags.contains(WipeFlags::DONT_BLOCK_ANIMATIONS) {
             adv_state.allow_running_animations = false;
@@ -70,6 +83,10 @@ impl StartableCommand for command::runtime::WIPE {
             WIPE {
                 token: Some(self.token),
                 flags: self.flags,
+                ty: self.ty,
+                duration: self.duration,
+                params: self.params,
+                error: None,
                 load_wait_attempted: false,
                 state: WipeState::WaitingForWipeLoader { load_task },
             }
@@ -97,14 +114,20 @@ impl WIPE {
 }
 
 impl UpdatableCommand for WIPE {
+    fn take_error(&mut self) -> Option<anyhow::Error> {
+        self.error.take()
+    }
     fn update(
         &mut self,
         context: &mut UpdateContext,
-        _scenario: &Arc<Scenario>,
+        scenario: &Arc<Scenario>,
         _vm_state: &mut VmState,
         adv_state: &mut AdvState,
         _is_fast_forwarding: bool,
     ) -> Option<CommandResult> {
+        if self.error.is_some() {
+            return None;
+        }
         // TODO: state machines like this can be useful in multiple commands
         // it would be nice to have a generic abstraction for this
         let mut break_the_loop = false;
@@ -114,6 +137,20 @@ impl UpdatableCommand for WIPE {
                 &mut self.state,
                 || WipeState::Finished,
                 |state| match state {
+                    WipeState::WaitingForRetry => {
+                        if !self.flags.contains(WipeFlags::DONT_BLOCK_ANIMATIONS) {
+                            adv_state.allow_running_animations = false;
+                        }
+                        WipeState::WaitingForWipeLoader {
+                            load_task: spawn_loader(
+                                context.asset_server.clone(),
+                                scenario.clone(),
+                                self.ty,
+                                self.duration,
+                                self.params,
+                            ),
+                        }
+                    }
                     WipeState::WaitingForWipeLoader { load_task } => match load_task {
                         Some(mut load_task) => {
                             let ready = if std::mem::replace(&mut self.load_wait_attempted, true) {
@@ -121,11 +158,21 @@ impl UpdatableCommand for WIPE {
                             } else {
                                 load_task.poll_with_timeout(context.loader_wait_budget())
                             };
-                            if let Some(wiper) = ready {
-                                adv_state.screen_layer_mut().apply_transition(wiper);
-                                adv_state.allow_running_animations = true;
-
-                                WipeState::WaitingForWipe
+                            if let Some(result) = ready {
+                                match result {
+                                    Ok(wiper) => {
+                                        adv_state.screen_layer_mut().apply_transition(wiper);
+                                        adv_state.allow_running_animations = true;
+                                        WipeState::WaitingForWipe
+                                    }
+                                    Err(error) => {
+                                        self.error = Some(error);
+                                        adv_state.allow_running_animations = true;
+                                        self.load_wait_attempted = false;
+                                        break_the_loop = true;
+                                        WipeState::WaitingForRetry
+                                    }
+                                }
                             } else {
                                 break_the_loop = true;
                                 WipeState::WaitingForWipeLoader {

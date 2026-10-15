@@ -72,7 +72,8 @@ pub(crate) fn reference_live_maskunload<'a>(
         };
         let captured_plane = unload.apply_state(&mut vm);
         vm.layers.current_plane = other;
-        let sounds = adv.audio_manager.kira_manager().lock().num_sounds();
+        let sounds = adv.audio_manager.kira_manager().lock().main_track()
+            .num_sounds();
         let mut update = UpdateContext {
             frame_started_at: std::time::Instant::now(),
             frame_id: FrameId::default(),
@@ -152,7 +153,8 @@ pub(crate) fn reference_live_maskunload<'a>(
         );
         assert_eq!(vm.layers.plane_layergroups[plane].mask_flags, flags);
         assert_eq!(adv.allow_running_animations, allowed);
-        assert_eq!(adv.audio_manager.kira_manager().lock().num_sounds(), sounds);
+        assert_eq!(adv.audio_manager.kira_manager().lock().main_track()
+                .num_sounds(), sounds);
     }
     adv.back_layer_group = None;
     adv.allow_running_animations = true;

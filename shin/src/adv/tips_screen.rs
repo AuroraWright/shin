@@ -44,14 +44,16 @@ mod tests {
         let adapter =
             shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
                 .unwrap();
-        let (device, queue) = shin_tasks::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+        let (device, queue) =
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
-        .unwrap();
+            }))
+            .unwrap();
         let mut io = LayeredAssetIo::new();
         if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
             io.try_with_rom(patch).unwrap();
@@ -61,6 +63,8 @@ mod tests {
         let server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device,
                 wgpu_queue: queue,
                 bustup_cache: AssetCache::new(),
@@ -91,6 +95,7 @@ mod tests {
             screen: &mut TipsScreen,
             pointer: &mut PointerSampler,
             action: Option<AppAction>,
+            scroll_key: Option<winit::keyboard::KeyCode>,
             held: bool,
             repeat: bool,
         ) {
@@ -101,33 +106,24 @@ mod tests {
                     is_clicked_or_repeated: true,
                     ..Default::default()
                 };
-                if let Some(key) = match action {
-                    AppAction::KeyboardScrollUp => Some(winit::keyboard::KeyCode::KeyK),
-                    AppAction::KeyboardScrollDown => Some(winit::keyboard::KeyCode::KeyL),
-                    _ => None,
-                } {
-                    use shin_input::Action;
-                    let mut raw = shin_input::RawInputState::new();
-                    raw.keyboard.insert(key);
-                    let lowered = AppAction::lower(&raw);
-                    state = EnumMap::from_fn(|action| ActionState {
-                        is_clicked: lowered[action] && !repeat,
-                        is_clicked_or_repeated: lowered[action],
-                        is_held: lowered[action],
-                        ..Default::default()
-                    });
-                    assert!(lowered[AppAction::PageUp] || lowered[AppAction::PageDown]);
-                }
             }
+            let axis = if let Some(key) = scroll_key {
+                let mut raw = shin_input::RawInputState::new();
+                raw.keyboard.insert(key);
+                crate::app::text_scroll_axis(&raw)
+            } else {
+                0.0
+            };
             pointer.sample(glam::Vec2::new(480.0, 300.0), held, 1.0 / 60.0);
-            screen.input_frame(&pointer.frame(), &state, 0.0);
+            screen.input_frame(&pointer.frame(), &state, axis);
             assert_eq!(screen.update(Ticks::ZERO).unwrap(), None);
         }
         // Opening is input-gated, including the desktop keys.
         input(
             &mut screen,
             &mut pointer,
-            Some(AppAction::KeyboardScrollDown),
+            None,
+            Some(winit::keyboard::KeyCode::KeyL),
             false,
             false,
         );
@@ -138,6 +134,7 @@ mod tests {
                 &mut screen,
                 &mut pointer,
                 Some(AppAction::AnyDown),
+                None,
                 false,
                 false,
             );
@@ -148,25 +145,27 @@ mod tests {
         input(
             &mut screen,
             &mut pointer,
-            Some(AppAction::KeyboardScrollDown),
+            None,
+            Some(winit::keyboard::KeyCode::KeyL),
             false,
             false,
         );
         assert_eq!(
             screen.model.scroll(),
-            180.0,
+            32.0,
             "L must scroll long authored tips"
         );
         input(
             &mut screen,
             &mut pointer,
-            Some(AppAction::KeyboardScrollDown),
+            None,
+            Some(winit::keyboard::KeyCode::KeyL),
             false,
             true,
         );
         assert_eq!(
             screen.model.scroll(),
-            maximum.min(360.0),
+            maximum.min(64.0),
             "Keyboard repeat must scroll"
         );
         assert_eq!(
@@ -179,7 +178,8 @@ mod tests {
             input(
                 &mut screen,
                 &mut pointer,
-                Some(AppAction::KeyboardScrollDown),
+                None,
+                Some(winit::keyboard::KeyCode::KeyL),
                 false,
                 true,
             );
@@ -193,17 +193,19 @@ mod tests {
         input(
             &mut screen,
             &mut pointer,
-            Some(AppAction::KeyboardScrollUp),
+            None,
+            Some(winit::keyboard::KeyCode::KeyK),
             true,
             false,
         );
         assert_eq!(screen.model.scroll(), maximum);
-        input(&mut screen, &mut pointer, None, false, false);
+        input(&mut screen, &mut pointer, None, None, false, false);
         for _ in 0..1000 {
             input(
                 &mut screen,
                 &mut pointer,
-                Some(AppAction::KeyboardScrollUp),
+                None,
+                Some(winit::keyboard::KeyCode::KeyK),
                 false,
                 true,
             );
@@ -212,7 +214,8 @@ mod tests {
         input(
             &mut screen,
             &mut pointer,
-            Some(AppAction::KeyboardScrollUp),
+            None,
+            Some(winit::keyboard::KeyCode::KeyK),
             false,
             true,
         );
@@ -236,12 +239,13 @@ mod tests {
             AppAction::AnyDown
         };
         for _ in 0..short.abs_diff(row) {
-            input(&mut screen, &mut pointer, Some(action), false, false);
+            input(&mut screen, &mut pointer, Some(action), None, false, false);
         }
         input(
             &mut screen,
             &mut pointer,
-            Some(AppAction::KeyboardScrollDown),
+            None,
+            Some(winit::keyboard::KeyCode::KeyL),
             false,
             false,
         );
@@ -332,7 +336,25 @@ impl TipsScreen {
         if let Some(task) = &mut self.loading {
             if let Some(result) = task.poll_naive() {
                 self.loading = None;
-                self.atlases = Some(result?);
+                let (tips, system) = result?;
+                tips.require_names(
+                    "/tips.txa",
+                    &[
+                        "bg",
+                        "obi",
+                        "window",
+                        "separator",
+                        "menu",
+                        "items",
+                        "bar",
+                        "caption",
+                        "close",
+                        "help_tips",
+                        "key",
+                    ],
+                )?;
+                system.require_names("/systex.txa", &["scroll"])?;
+                self.atlases = Some((tips, system));
             }
             return Ok(None);
         }

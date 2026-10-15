@@ -205,7 +205,8 @@ pub(crate) fn reference_live_layerswap<'a>(
             pixel(context, adv.plane_layer_group_mut(plane)),
             [0, 0, 255, 255]
         );
-        let sounds = adv.audio_manager.kira_manager().lock().num_sounds();
+        let sounds = adv.audio_manager.kira_manager().lock().main_track()
+            .num_sounds();
         // Invalid runtime commands still retain the first back scene.
         let result = super::super::apply_command_state_and_start(
             command(-1, 200),
@@ -248,11 +249,8 @@ pub(crate) fn reference_live_layerswap<'a>(
             CommandStartResult::Continue(CommandResult::None)
         ));
         for (index, bank) in banks.iter().enumerate() {
-            let props = adv
-                .plane_layer_group(plane)
-                .get_layer(*bank)
-                .unwrap()
-                .properties();
+            let layer = adv.plane_layer_group(plane).get_layer(*bank).unwrap();
+            let props = layer.properties();
             assert_eq!(props.get_layer_id(), ids[1 - index]);
             assert_eq!(props.identity(), owners[index]);
             assert_eq!(
@@ -335,7 +333,8 @@ pub(crate) fn reference_live_layerswap<'a>(
         );
         assert_eq!(adv.plane_layer_group(plane).get_used_layerbank_ids(), banks);
         assert_eq!(adv.allow_running_animations, allowed);
-        assert_eq!(adv.audio_manager.kira_manager().lock().num_sounds(), sounds);
+        assert_eq!(adv.audio_manager.kira_manager().lock().main_track()
+                .num_sounds(), sounds);
     }
     adv.back_layer_group = None;
     adv.allow_running_animations = true;

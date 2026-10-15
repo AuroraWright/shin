@@ -4,9 +4,10 @@ use anyhow::Result;
 use shin_audio::AudioManager;
 use shin_core::{
     format::{audio::AudioFile, scenario::Scenario},
-    time::{Ticks, Tween},
+    time::Tween,
     vm::command::types::{LayerId, LayerbankId, MaskFlags, PlaneId},
 };
+use shin_render::shaders::types::{RenderClone, RenderCloneCtx};
 
 use super::{AdvState, VmState};
 use crate::{
@@ -24,13 +25,18 @@ pub(super) struct LoadedScene {
     masks: Vec<(PlaneId, Arc<MaskTexture>, MaskFlags)>,
     bgm: Option<Arc<AudioFile>>,
     effects: Vec<(usize, Arc<AudioFile>)>,
-    reused: Vec<ReusedLayer>,
+    reused: Vec<RetainedLayer>,
 }
 
 pub(super) struct LoadedAudio {
     bgm: Option<Arc<AudioFile>>,
     effects: Vec<(usize, Arc<AudioFile>)>,
-    reused: Vec<ReusedLayer>,
+    reused: Vec<RetainedLayer>,
+}
+
+pub(super) struct RetainedLayer {
+    entry: ReusedLayer,
+    layer: UserLayer,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -42,45 +48,80 @@ pub(super) struct ReusedLayer {
 
 /// Native 1bae0 consumes the first matching load counter in the retained
 /// plane/child scan order. A source can supply only one target layer.
-fn select_reused_layers(
-    sources: &[(PlaneId, LayerbankId, u32)],
+fn select_reused_layers<T>(
+    sources: Vec<(PlaneId, LayerbankId, T)>,
     targets: impl IntoIterator<Item = (LayerbankId, u32)>,
-) -> Vec<ReusedLayer> {
-    let mut available = sources.iter().copied().map(Some).collect::<Vec<_>>();
+    counter: impl Fn(&T) -> u32,
+) -> Vec<(ReusedLayer, T)> {
+    let mut available = sources.into_iter().map(Some).collect::<Vec<_>>();
     targets
         .into_iter()
-        .filter_map(|(target, counter)| {
+        .filter_map(|(target, load_counter)| {
             let source = available
                 .iter_mut()
-                .find(|entry| entry.is_some_and(|(_, _, value)| value == counter))?
+                .find(|entry| {
+                    entry
+                        .as_ref()
+                        .is_some_and(|(_, _, value)| counter(value) == load_counter)
+                })?
                 .take()
                 .unwrap();
-            Some(ReusedLayer {
-                target,
-                source_plane: source.0,
-                source: source.1,
-            })
+            Some((
+                ReusedLayer {
+                    target,
+                    source_plane: source.0,
+                    source: source.1,
+                },
+                source.2,
+            ))
         })
         .collect()
 }
 
-pub(super) fn reuse_plan(adv: &AdvState, state: &VmState) -> Vec<ReusedLayer> {
+pub(super) fn reuse_plan(
+    adv: &AdvState,
+    state: &VmState,
+    server: &AssetServer,
+) -> Vec<RetainedLayer> {
     let mut sources = Vec::new();
+    let device = &server.context().wgpu_device;
+    let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+        label: Some("Scene restoration layer snapshots"),
+    });
+    let mut clone_context = RenderCloneCtx {
+        device,
+        encoder: &mut encoder,
+    };
     for (plane, _) in &state.layers.plane_layergroups {
         let group = adv.plane_layer_group(plane);
         for bank in group.get_used_layerbank_ids() {
             let layer = group.get_layer(bank).unwrap();
-            sources.push((plane, bank, layer.properties().layer_load_counter()));
+            // Native19f90 tests InteractiveLayer RTTI before copying. Quiz,
+            // Cake, Murderer and Last are reconstructed through the worker.
+            if layer.interactive().is_some() {
+                continue;
+            }
+            // Snapshot before scheduling the worker. Native virtual copies
+            // independently own their property state; retained backend/model
+            // resources do not imply a shared property owner.
+            sources.push((plane, bank, layer.render_clone(&mut clone_context)));
         }
     }
-    select_reused_layers(
-        &sources,
-        state
-            .layers
-            .layerbanks
-            .iter()
-            .filter_map(|(bank, layer)| layer.layer_type.map(|_| (bank, layer.layer_load_counter))),
-    )
+    // Native1bae0 initializes lazy snapshot properties only as they are
+    // visited. Unvisited originals stay lazy and are never mutated.
+    let selected =
+        select_reused_layers(
+            sources,
+            state.layers.layerbanks.iter().filter_map(|(bank, layer)| {
+                layer.layer_type.map(|_| (bank, layer.layer_load_counter))
+            }),
+            |layer| layer.properties().layer_load_counter(),
+        )
+        .into_iter()
+        .map(|(entry, layer)| RetainedLayer { entry, layer })
+        .collect::<Vec<_>>();
+    server.context().wgpu_queue.submit([encoder.finish()]);
+    selected
 }
 
 fn restore_completed_answer(layer: &UserLayer, saved: &super::vm_state::layers::LayerbankState) {
@@ -126,7 +167,7 @@ impl LoadedScene {
         audio: &Arc<AudioManager>,
         scenario: &Scenario,
         state: &VmState,
-        reused: Vec<ReusedLayer>,
+        reused: Vec<RetainedLayer>,
     ) -> Result<Self> {
         let mut loaded = Self {
             layers: Vec::new(),
@@ -137,10 +178,14 @@ impl LoadedScene {
         };
         for (bank, layer) in &state.layers.layerbanks {
             if let Some(ty) = layer.layer_type {
-                if loaded.reused.iter().any(|entry| entry.target == bank) {
+                if loaded
+                    .reused
+                    .iter()
+                    .any(|retained| retained.entry.target == bank)
+                {
                     continue;
                 }
-                let asset = UserLayer::load(
+                let asset = UserLayer::load_checked(
                     &server.context().wgpu_device,
                     server,
                     audio,
@@ -149,7 +194,7 @@ impl LoadedScene {
                     ty,
                     layer.params,
                 )
-                .await;
+                .await?;
                 loaded.layers.push((bank, asset));
             }
         }
@@ -216,13 +261,16 @@ impl LoadedScene {
 }
 
 impl LoadedAudio {
-    /// Native1a278..1a404 resets seven live property owners in place. Validate
-    /// the new command before touching them, so rejected candidates are atomic.
+    /// Native e5700 creates a fresh Page and four planes before 1a278..1a404
+    /// restores values. Only in-place quick return/RESUME retains Root/Screen;
+    /// saved-scene factory 19500 creates a new ADV through fb30 instead.
+    /// Validate the command before touching retained owners.
     pub(super) fn install_container_properties(
         &mut self,
-        source: &AdvState,
+        source: &mut AdvState,
         target: &mut AdvState,
         state: &VmState,
+        retain_root_screen: bool,
     ) {
         fn restore(
             source: &impl DrawableLayer,
@@ -233,43 +281,48 @@ impl LoadedAudio {
             properties.restore_values(state);
             target.set_properties(properties);
         }
-        restore(
-            source.root_layer_group(),
-            target.root_layer_group_mut(),
-            &state.layers.root_layer_group,
-        );
-        restore(
-            source.screen_layer(),
-            target.screen_layer_mut(),
-            &state.layers.screen_layer,
-        );
-        restore(
-            source.page_layer(),
-            target.page_layer_mut(),
-            &state.layers.page_layer,
-        );
-        for (plane, group) in &state.layers.plane_layergroups {
+        if retain_root_screen {
+            target
+                .root_layer_group_mut()
+                .preserve_drawable_state_from(source.root_layer_group_mut());
             restore(
-                source.plane_layer_group(plane),
-                target.plane_layer_group_mut(plane),
-                &group.properties,
+                source.root_layer_group(),
+                target.root_layer_group_mut(),
+                &state.layers.root_layer_group,
             );
+            restore(
+                source.screen_layer(),
+                target.screen_layer_mut(),
+                &state.layers.screen_layer,
+            );
+        } else {
+            target
+                .root_layer_group_mut()
+                .properties_mut()
+                .restore_values(&state.layers.root_layer_group);
+            target
+                .screen_layer_mut()
+                .properties_mut()
+                .restore_values(&state.layers.screen_layer);
+        }
+        target
+            .page_layer_mut()
+            .properties_mut()
+            .restore_values(&state.layers.page_layer);
+        for (plane, group) in &state.layers.plane_layergroups {
+            target
+                .plane_layer_group_mut(plane)
+                .properties_mut()
+                .restore_values(&group.properties);
         }
     }
 
-    /// Move the exact retained drawables only after command-start validation.
+    /// Publish native-style layer snapshots only after command validation.
     /// Pending/failing workers never remove resources from the live source.
-    pub(super) fn install_reused(
-        &mut self,
-        source: &mut AdvState,
-        target: &mut AdvState,
-        state: &VmState,
-    ) {
-        for entry in self.reused.drain(..) {
-            let mut layer = source
-                .plane_layer_group_mut(entry.source_plane)
-                .remove_layer(entry.source, Ticks::ZERO)
-                .expect("Retained scene layer remains owned until publication");
+    pub(super) fn install_reused(&mut self, target: &mut AdvState, state: &VmState) {
+        for retained in self.reused.drain(..) {
+            let entry = retained.entry;
+            let mut layer = retained.layer;
             let saved = &state.layers.layerbanks[entry.target];
             layer.properties_mut().restore_state(
                 &saved.properties,
@@ -395,9 +448,9 @@ mod reuse_tests {
                 .iter()
                 .enumerate()
                 .map(|(i, counter)| (LayerbankId::new(i as u8), *counter));
-            let plan = select_reused_layers(&sources, targets);
+            let plan = select_reused_layers(sources, targets, |counter| *counter);
             let mut actual = [-1i32; 48];
-            for entry in plan {
+            for (entry, _) in plan {
                 actual[entry.target.raw() as usize] = entry.source.raw() as i32;
                 assert_eq!(
                     entry.source_plane.raw() as usize,

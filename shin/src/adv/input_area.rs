@@ -2,6 +2,7 @@
 use enum_map::EnumMap;
 use glam::{IVec2, Vec2};
 use shin_input::ActionState;
+use std::collections::VecDeque;
 
 use super::{manual::ManualModel, manual::ManualPhase, system_menu::SystemMenuModel};
 use crate::app::AppAction;
@@ -26,6 +27,36 @@ pub struct PointerFrame<'a> {
     pub time_seconds: f64,
     pub events: &'a [PointerEvent],
 }
+/// Desktop mouse motion sampled over the final 80ms of a released drag.
+/// Native touch frames continue to use InputArea's original release calculation.
+#[derive(Clone, Copy)]
+pub(crate) struct MouseRelease {
+    position: Vec2,
+    velocity: Vec2,
+}
+/// Reuse the story-menu mouse policy across desktop gesture targets. Native
+/// touch callbacks keep their original velocity and direction checks.
+pub(crate) fn desktop_gesture_vector(displacement: Vec2, velocity: Vec2) -> Vec2 {
+    if displacement.length() >= 64.0 {
+        displacement
+    } else {
+        velocity
+    }
+}
+impl MouseRelease {
+    pub(crate) fn scaled(self, scale: Vec2) -> Self {
+        Self {
+            position: self.position * scale,
+            velocity: self.velocity * scale,
+        }
+    }
+    pub(crate) fn position(self) -> Vec2 {
+        self.position
+    }
+    pub(crate) fn velocity(self) -> Vec2 {
+        self.velocity
+    }
+}
 /// Convert desktop pointer samples into native contact events without synthesizing
 /// a new Down when a modal opens underneath an already held mouse button.
 #[derive(Default)]
@@ -37,6 +68,8 @@ pub struct PointerSampler {
     frame: u32,
     time_seconds: f64,
     events: Vec<PointerEvent>,
+    mouse_motion: VecDeque<(f64, Vec2)>,
+    mouse_release: Option<MouseRelease>,
 }
 impl PointerSampler {
     /// Retire a scene's capture after a desktop shutdown notice. Its next
@@ -45,6 +78,8 @@ impl PointerSampler {
         self.pending_cancel = true;
         self.ignore_until_release |= held || self.held;
         self.held = false;
+        self.mouse_motion.clear();
+        self.mouse_release = None;
     }
     pub fn sample(&mut self, position: Vec2, held: bool, elapsed_seconds: f64) {
         self.frame = self.frame.wrapping_add(1);
@@ -52,6 +87,7 @@ impl PointerSampler {
             self.time_seconds += elapsed_seconds;
         }
         self.events.clear();
+        self.mouse_release = None;
         let position = position.as_ivec2();
         if std::mem::take(&mut self.pending_cancel) {
             self.events.push(PointerEvent {
@@ -64,6 +100,32 @@ impl PointerSampler {
             self.ignore_until_release = held;
             self.previous = position;
             return;
+        }
+        if held && !self.held {
+            self.mouse_motion.clear();
+        }
+        if held || self.held {
+            self.mouse_motion
+                .push_back((self.time_seconds, position.as_vec2()));
+            while self.mouse_motion.len() > 64
+                || (self.mouse_motion.len() > 2
+                    && self.mouse_motion[0].0 < self.time_seconds - 0.08)
+            {
+                self.mouse_motion.pop_front();
+            }
+            if !held {
+                let (time, origin) = self.mouse_motion[0];
+                let seconds = self.time_seconds - time;
+                self.mouse_release = Some(MouseRelease {
+                    position: position.as_vec2(),
+                    velocity: if seconds > 0.0 {
+                        (position.as_vec2() - origin) * (0.016683333333333335 / seconds) as f32
+                    } else {
+                        Vec2::ZERO
+                    },
+                });
+                self.mouse_motion.clear();
+            }
         }
         let kind = match (self.held, held) {
             (false, true) => Some(PointerKind::Down),
@@ -88,7 +150,72 @@ impl PointerSampler {
             events: &self.events,
         }
     }
+    pub(crate) fn mouse_release(&self) -> Option<MouseRelease> {
+        self.mouse_release
+    }
 }
+
+/// Nonvisual full-canvas tap recognition. Uses the same InputArea contact
+/// classification as TouchEffect's ripple, independently of the effect setting.
+pub(super) struct TapInput {
+    area: InputArea,
+    target: TapTarget,
+    extent: (u16, u16),
+}
+#[derive(Default)]
+struct TapTarget(bool);
+impl InputAreaTarget for TapTarget {
+    fn probe(&mut self, _: Vec2) -> bool {
+        true
+    }
+    fn reset(&mut self) {}
+    fn press(&mut self, _: Vec2) {}
+    fn release(&mut self, _: Vec2) {
+        self.0 = true;
+    }
+    fn long_press(&mut self, _: Vec2) {}
+    fn drag(&mut self, _: Vec2, _: Vec2) {}
+    fn gesture(&mut self, _: Vec2) {}
+    fn cancel(&mut self) {
+        self.0 = false;
+    }
+}
+impl Default for TapInput {
+    fn default() -> Self {
+        Self {
+            area: InputArea::canvas(),
+            target: TapTarget::default(),
+            extent: (1920, 1080),
+        }
+    }
+}
+impl TapInput {
+    pub fn cancel(&mut self) {
+        self.area.disable(&mut self.target);
+        self.target.0 = false;
+    }
+    pub fn update(&mut self, sampler: &PointerSampler, extent: (u16, u16)) -> bool {
+        let position = sampler.previous;
+        if extent.0 == 0
+            || extent.1 == 0
+            || position.x < 0
+            || position.y < 0
+            || position.x >= extent.0 as i32
+            || position.y >= extent.1 as i32
+        {
+            self.cancel();
+            return false;
+        }
+        if extent != self.extent {
+            self.cancel();
+            self.area = InputArea::new(extent.0, extent.1);
+            self.extent = extent;
+        }
+        self.area.update(&mut self.target, &sampler.frame());
+        std::mem::take(&mut self.target.0)
+    }
+}
+
 pub trait InputAreaTarget {
     fn probe(&mut self, position: Vec2) -> bool;
     fn reset(&mut self);
@@ -97,6 +224,11 @@ pub trait InputAreaTarget {
     fn long_press(&mut self, position: Vec2);
     fn drag(&mut self, previous: Vec2, current: Vec2);
     fn gesture(&mut self, velocity: Vec2);
+    /// Desktop drag release can use total displacement; native touch remains
+    /// subject to the original per-frame flick velocity calculation.
+    fn mouse_gesture(&mut self, _displacement: Vec2, velocity: Vec2) {
+        self.gesture(velocity);
+    }
     fn cancel(&mut self);
 }
 pub trait ModalInputTarget: InputAreaTarget {
@@ -165,24 +297,46 @@ impl InputArea {
         frame: &PointerFrame<'_>,
         state: &EnumMap<AppAction, ActionState>,
     ) {
+        self.input_frame_with_mouse_release(target, frame, state, None);
+    }
+    pub(crate) fn input_frame_with_mouse_release(
+        &mut self,
+        target: &mut impl ModalInputTarget,
+        frame: &PointerFrame<'_>,
+        state: &EnumMap<AppAction, ActionState>,
+        mouse_release: Option<MouseRelease>,
+    ) {
         if !target.accepts_pointer_input() {
             self.disable(target);
-        } else if !self.update(target, frame) {
+        } else if !self.update_with_mouse_release(target, frame, mouse_release) {
             target.controller_input(state);
         }
     }
     /// Native6b900 caches both callbacks and consumed status once per frame.
     pub fn update(&mut self, target: &mut impl InputAreaTarget, frame: &PointerFrame<'_>) -> bool {
+        self.update_with_mouse_release(target, frame, None)
+    }
+    pub(crate) fn update_with_mouse_release(
+        &mut self,
+        target: &mut impl InputAreaTarget,
+        frame: &PointerFrame<'_>,
+        mouse_release: Option<MouseRelease>,
+    ) -> bool {
         if let Some((number, consumed)) = self.cached {
             if number == frame.number {
                 return consumed;
             }
         }
-        let consumed = self.dispatch(target, frame);
+        let consumed = self.dispatch(target, frame, mouse_release);
         self.cached = Some((frame.number, consumed));
         consumed
     }
-    fn dispatch(&mut self, target: &mut impl InputAreaTarget, frame: &PointerFrame<'_>) -> bool {
+    fn dispatch(
+        &mut self,
+        target: &mut impl InputAreaTarget,
+        frame: &PointerFrame<'_>,
+        mouse_release: Option<MouseRelease>,
+    ) -> bool {
         let now = frame.time_seconds;
         let mut structural_change = false;
         for event in frame.events {
@@ -219,10 +373,32 @@ impl InputArea {
                     self.contacts.remove(index);
                     structural_change = true;
                     if self.contacts.is_empty() {
+                        let desktop = mouse_release.filter(|_| event.kind == PointerKind::Up);
+                        if let Some(release) = desktop {
+                            if (release.position - self.origin).length()
+                                > self.physical_width * 8.0 / 960.0
+                            {
+                                self.tap = false;
+                                self.dragged = true;
+                                if release.position != self.previous {
+                                    target.drag(
+                                        self.previous * self.scale,
+                                        release.position * self.scale,
+                                    );
+                                    self.previous = release.position;
+                                }
+                            }
+                        }
                         if event.kind == PointerKind::Cancel {
                             target.cancel();
                         } else if self.tap {
                             target.release(self.previous * self.scale);
+                        } else if self.dragged && desktop.is_some() {
+                            let release = desktop.unwrap();
+                            target.mouse_gesture(
+                                (release.position - self.origin) * self.scale,
+                                release.velocity * self.scale,
+                            );
                         } else if self.dragged && now > self.last_time {
                             // Native f64 division/multiplication followed by f32 conversion.
                             let factor = 0.016683333333333335 / (now - self.last_time);
@@ -334,6 +510,17 @@ impl InputAreaTarget for SystemMenuModel {
     fn gesture(&mut self, velocity: Vec2) {
         self.pointer_gesture(velocity);
     }
+    fn mouse_gesture(&mut self, displacement: Vec2, velocity: Vec2) {
+        let candidate = desktop_gesture_vector(displacement, velocity);
+        let angle = candidate.y.atan2(candidate.x) / f32::from_bits(0x40490fd8) * 180.0;
+        self.pointer_gesture(
+            if candidate.length() >= 64.0 && (angle > 150.0 || angle < -150.0) {
+                candidate
+            } else {
+                velocity
+            },
+        );
+    }
     fn cancel(&mut self) {
         self.pointer_leave();
     }
@@ -349,6 +536,67 @@ impl ModalInputTarget for SystemMenuModel {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn tap_input_matches_ripple_contact_rules_and_cancels_inherited_holds() {
+        for width in [960u16, 1920, 3840] {
+            let extent = (width, width * 9 / 16);
+            let scale = width as f32 / 1920.0;
+            let start = Vec2::new(800.0, 500.0) * scale;
+            let mut sampler = PointerSampler::default();
+            let mut tap = TapInput::default();
+            let sample = |tap: &mut TapInput, sampler: &mut PointerSampler, p, held, seconds| {
+                sampler.sample(p, held, seconds);
+                tap.update(sampler, extent)
+            };
+            assert!(!sample(&mut tap, &mut sampler, start, true, 0.016));
+            assert!(
+                !sample(&mut tap, &mut sampler, start, true, 1.5),
+                "Holding never taps, including long hold"
+            );
+            assert!(sample(&mut tap, &mut sampler, start, false, 0.016));
+            assert!(
+                !tap.update(&sampler, extent),
+                "Same release frame cannot tap twice"
+            );
+            assert!(!sample(&mut tap, &mut sampler, start, true, 0.016));
+            assert!(!sample(
+                &mut tap,
+                &mut sampler,
+                start + Vec2::new(20.0, 0.0) * scale,
+                true,
+                0.016
+            ));
+            assert!(!sample(&mut tap, &mut sampler, start, true, 0.016));
+            assert!(
+                !sample(&mut tap, &mut sampler, start, false, 0.016),
+                "Returning a dragged pointer cannot tap"
+            );
+            assert!(!sample(&mut tap, &mut sampler, start, true, 0.016));
+            sampler.cancel_contact(true);
+            assert!(
+                !sample(&mut tap, &mut sampler, start, false, 0.016),
+                "Focus cancel never taps"
+            );
+            assert!(!sample(&mut tap, &mut sampler, start, true, 0.016));
+            tap.cancel();
+            assert!(
+                !sample(&mut tap, &mut sampler, start, false, 0.016),
+                "Inherited held release never taps"
+            );
+            assert!(!sample(
+                &mut tap,
+                &mut sampler,
+                Vec2::new(-32.0, 100.0),
+                true,
+                0.016
+            ));
+            assert!(
+                !sample(&mut tap, &mut sampler, start, false, 0.016),
+                "Out-of-canvas press never taps"
+            );
+        }
+    }
+
     #[test]
     fn desktop_notice_cancels_capture_without_releasing_or_restarting_held_contact() {
         use super::*;

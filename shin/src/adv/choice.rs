@@ -15,6 +15,7 @@ use crate::{
 #[path = "choice_model.rs"]
 mod model;
 pub use model::ChoiceModel;
+pub(crate) use model::shuffle as shuffle_choice_indices;
 use model::{GAP, Phase};
 struct Label {
     text: super::bgm_title::TitleText,
@@ -306,11 +307,13 @@ mod tests {
                 .unwrap();
         let (device, queue) = shin_tasks::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
+            }))
         .unwrap();
         let mut io = LayeredAssetIo::new();
         io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
@@ -318,6 +321,8 @@ mod tests {
         let server = AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -456,9 +461,10 @@ mod tests {
             .map_async(wgpu::MapMode::Read, move |result| {
                 send.send(result).unwrap()
             });
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
         receive.recv().unwrap().unwrap();
-        let pixels = readback.slice(..).get_mapped_range();
+        let pixels = readback.slice(..).get_mapped_range()
+            .expect("Readback mapping must be ready");
         for row in 0..2 {
             let y = (menu.model.top()
                 + menu.model.heights.iter().take(row).sum::<f32>()

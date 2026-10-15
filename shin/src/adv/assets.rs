@@ -6,7 +6,7 @@ use shin_core::format::{font::FontLazy, scenario::Scenario};
 use shin_derive::RenderClone;
 
 use crate::{
-    asset::{asset_paths, font::GpuFontLazy, system::AssetServer},
+    asset::{asset_paths, font::GpuFontLazy, mask::MaskTexture, system::AssetServer},
     layer::message_layer::MessageboxTextures,
 };
 
@@ -17,6 +17,8 @@ pub struct AdvAssets {
     pub fonts: AdvFonts,
     pub menu_textures: Arc<super::character_view::CharacterTextures>,
     pub messagebox_textures: Arc<MessageboxTextures>,
+    /// ADV resource worker 1ef10 publishes this to the saved-load capture owner.
+    pub scene_load_mask: Arc<MaskTexture>,
 }
 
 #[derive(Clone, RenderClone)]
@@ -33,6 +35,7 @@ impl AdvAssets {
             AdvFonts::load(asset_server),
             asset_server.load(asset_paths::MSGTEX),
             asset_server.load("/adv.txa"),
+            asset_server.load("/default.msk"),
         )?;
 
         Ok(Self {
@@ -40,6 +43,7 @@ impl AdvAssets {
             fonts: result.1,
             messagebox_textures: result.2,
             menu_textures: result.3,
+            scene_load_mask: result.4,
         })
     }
 }

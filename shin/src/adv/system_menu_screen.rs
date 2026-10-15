@@ -101,7 +101,20 @@ impl SystemMenuScreen {
         frame: &super::input_area::PointerFrame<'_>,
         state: &EnumMap<AppAction, ActionState>,
     ) {
-        self.input_area.input_frame(&mut self.model, frame, state);
+        self.input_frame_with_mouse_release(frame, state, None);
+    }
+    fn input_frame_with_mouse_release(
+        &mut self,
+        frame: &super::input_area::PointerFrame<'_>,
+        state: &EnumMap<AppAction, ActionState>,
+        mouse_release: Option<super::input_area::MouseRelease>,
+    ) {
+        self.input_area.input_frame_with_mouse_release(
+            &mut self.model,
+            frame,
+            state,
+            mouse_release,
+        );
     }
     pub fn input(&mut self, state: &EnumMap<AppAction, ActionState>) {
         self.model.input(state);
@@ -115,8 +128,19 @@ impl SystemMenuScreen {
         frame: &super::input_area::PointerFrame<'_>,
         state: &EnumMap<AppAction, ActionState>,
     ) {
+        self.update_frame_with_mouse_release(delta, server, play_ticks, frame, state, None);
+    }
+    pub(super) fn update_frame_with_mouse_release(
+        &mut self,
+        delta: Ticks,
+        server: &AssetServer,
+        play_ticks: f64,
+        frame: &super::input_area::PointerFrame<'_>,
+        state: &EnumMap<AppAction, ActionState>,
+        mouse_release: Option<super::input_area::MouseRelease>,
+    ) {
         self.model.prepare_frame();
-        self.input_frame(frame, state);
+        self.input_frame_with_mouse_release(frame, state, mouse_release);
         self.model.advance_clocks(delta.as_f32());
         self.detail.update_time(server, play_ticks);
     }

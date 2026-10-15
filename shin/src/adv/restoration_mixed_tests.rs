@@ -259,7 +259,7 @@ mod mixed_restore {
         let mut upload = context.device.create_command_encoder(&Default::default());
         context.dynamic_buffer.finish(&mut upload);
         context.queue.submit([upload.finish(), encoder.finish()]);
-        context.device.poll(wgpu::Maintain::Wait);
+        context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     fn finish<'a>(
         live: &mut Adv,
@@ -337,7 +337,7 @@ mod mixed_restore {
         assert_eq!(live.vm_state.save_position, 3);
         for (bank, owner) in &prepared {
             owner.assert_live(
-                live.adv_state
+                &live.adv_state
                     .plane_layer_group(PlaneId::new(0))
                     .get_layer(*bank)
                     .unwrap(),
@@ -357,7 +357,7 @@ mod mixed_restore {
         // releases gates; retirement runs through the normal caller on this thread.
         for after_preparation in [false, true] {
             for shutdown in [false, true] {
-                use crate::layer::user::{reference_preparation_gate, ReferencePreparationGate};
+                use crate::layer::user::{ReferencePreparationGate, reference_preparation_gate};
                 use std::sync::mpsc;
                 let (entered, entry) = mpsc::channel();
                 let (resume, gate) = mpsc::channel();
@@ -369,7 +369,8 @@ mod mixed_restore {
                     label: "/movie/op1.mp4".into(), entered, resume: gate,
                     prepared, finish: final_gate, cancelled,
                 });
-                let mut active = Adv::new(audio.clone(), server.clone(), assets.clone(), Scripter::new(&scenario, 0, 0));
+                let mut active = Adv::new(audio.clone(), server.clone(), assets.clone(), Scripter::new(&scenario, 0, 0),
+                );
                 active.load_game_data(&globals, &game(3), server.clone()).unwrap();
                 let movie = entry.recv_timeout(Duration::from_secs(15)).unwrap();
                 let player = if after_preparation {
@@ -418,11 +419,14 @@ mod mixed_restore {
             // Use a fresh real manager so that reclamation cannot reopen the
             // capacity gate while this fixture's Movie is being prepared.
             let capacity_audio = Arc::new(shin_audio::AudioManager::new_for_tests());
-            let mut held = Adv::new(capacity_audio.clone(), server.clone(), assets.clone(), Scripter::new(&scenario, 0, 0));
+            let mut held = Adv::new(capacity_audio.clone(), server.clone(), assets.clone(), Scripter::new(&scenario, 0, 0),
+            );
             let blockers = {
                 let mut manager = capacity_audio.kira_manager().lock();
                 let available = manager.sub_track_capacity() - manager.num_sub_tracks();
-                (0..available).map(|_| manager.add_sub_track(kira::track::TrackBuilder::new()).unwrap()).collect::<Vec<_>>()
+                (0..available).map(|_| {
+                        manager.add_sub_track(kira::track::TrackBuilder::new()).unwrap()
+                    }).collect::<Vec<_>>()
             };
             held.load_game_data(&globals, &game(3), server.clone()).unwrap();
             let deadline = Instant::now() + Duration::from_secs(15);
@@ -462,7 +466,8 @@ mod mixed_restore {
                     finish(&mut held, context, server, &mut frame);
                     assert_eq!(held.vm_state.save_position, 3);
                     for (bank, owner) in &prepared {
-                        owner.assert_live(held.adv_state.plane_layer_group(PlaneId::new(0)).get_layer(*bank).unwrap());
+                        owner.assert_live(&held.adv_state.plane_layer_group(PlaneId::new(0)).get_layer(*bank).unwrap(),
+                        );
                     }
                     // The token itself does not join resources whose ownership
                     // has transferred to the published scene.
@@ -533,7 +538,7 @@ mod mixed_restore {
                 (
                     bank,
                     Owner::of(
-                        live.adv_state
+                        &live.adv_state
                             .plane_layer_group(PlaneId::new(0))
                             .get_layer(bank)
                             .unwrap(),
@@ -574,7 +579,7 @@ mod mixed_restore {
         );
         for (bank, owner) in &current {
             owner.assert_live(
-                live.adv_state
+                &live.adv_state
                     .plane_layer_group(PlaneId::new(0))
                     .get_layer(*bank)
                     .unwrap(),
@@ -636,7 +641,7 @@ mod mixed_restore {
                     "Test the exact full-width rejected ID"
                 );
                 assert!(
-                    matches!(group.get_layer(bank), Some(UserLayer::Null(_))),
+                    group.get_layer(bank).is_some_and(|layer| matches!(&*layer, UserLayer::Null(_))),
                     "Native fallback requires an installed Null layer"
                 );
             }
@@ -647,9 +652,10 @@ mod mixed_restore {
             );
             assert_eq!(live.vm_state.save_position, 3);
             let preview = shin_tasks::block_on(crate::adv::save_menu_preview::SaveMenuPreviewScene::load(
-                server, &audio, &scenario, &live.vm_state)).unwrap();
+                server, &audio, &scenario, &live.vm_state,
+                )).unwrap();
             for bank in live.adv_state.plane_layer_group(PlaneId::new(0)).get_used_layerbank_ids() {
-                assert!(matches!(preview.reference_layer(PlaneId::new(0), bank), Some(UserLayer::Null(_))));
+                assert!(preview.reference_layer(PlaneId::new(0), bank).is_some_and(|layer| matches!(&*layer, UserLayer::Null(_))));
             }
             assert_eq!(server.reference_requested_paths().len(), requested,
                 "Rejected metadata thumbnail must not request assets");
@@ -657,18 +663,23 @@ mod mixed_restore {
                 "Invalid metadata id mode{invalid}: actual Picture/Bustup/Movie saved publication and thumbnail install three Null layers, no asset requests, no panic"
             );
         }
-        for linked in [i16::MIN, -1, i16::try_from(original.info_tables().picture_info.len()).unwrap(), i16::MAX] {
+        for linked in [i16::MIN, -1, i16::try_from(original.info_tables().picture_info.len()).unwrap(), i16::MAX,
+        ] {
             let scenario = source_with_movie_link(original, linked);
             let mut movie_assets = assets.clone();
             movie_assets.scenario = scenario.clone();
-            let mut live = Adv::new(audio.clone(), server.clone(), movie_assets, Scripter::new(&scenario, 0, 0));
+            let mut live = Adv::new(audio.clone(), server.clone(), movie_assets, Scripter::new(&scenario, 0, 0),
+            );
             let requested = server.reference_requested_paths().len();
             live.load_game_data(&globals, &game(3), server.clone()).unwrap();
             finish(&mut live, context, server, &mut frame);
             let group = live.adv_state.plane_layer_group(PlaneId::new(0));
             let bank = group.get_used_layerbank_ids().into_iter()
-                .find(|bank| matches!(group.get_layer(*bank), Some(UserLayer::Movie(_)))).unwrap();
-            let Some(UserLayer::Movie(movie)) = group.get_layer(bank) else { unreachable!() };
+                .find(|bank| {
+                    group.get_layer(*bank).is_some_and(|layer| matches!(&*layer, UserLayer::Movie(_)))
+                }).unwrap();
+            let layer = group.get_layer(bank).unwrap();
+            let UserLayer::Movie(movie) = &*layer else { unreachable!() };
             assert!(!movie.reference_has_still_picture());
             let owner = movie.reference_publication_owner();
             assert!(owner.owners() > 0);
@@ -680,8 +691,9 @@ mod mixed_restore {
             assert_eq!(live.vm_state.save_position, 3);
             let requested = server.reference_requested_paths().len();
             let preview = shin_tasks::block_on(crate::adv::save_menu_preview::SaveMenuPreviewScene::load(
-                server, &audio, &scenario, &live.vm_state)).unwrap();
-            assert!(matches!(preview.reference_layer(PlaneId::new(0), bank), Some(UserLayer::Null(_))));
+                server, &audio, &scenario, &live.vm_state,
+                )).unwrap();
+            assert!(preview.reference_layer(PlaneId::new(0), bank).is_some_and(|layer| matches!(&*layer, UserLayer::Null(_))));
             let paths = server.reference_requested_paths();
             assert!(!paths[requested..].iter().any(|p| p.starts_with("/movie/") || p == &original.info_tables().picture_info[0].path()));
             drop(preview);

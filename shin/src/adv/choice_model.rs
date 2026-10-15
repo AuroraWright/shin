@@ -306,7 +306,7 @@ impl ChoiceModel {
     }
 }
 
-fn shuffle(indices: &mut [usize], seed: u32) {
+pub(crate) fn shuffle(indices: &mut [usize], seed: u32) {
     // f00d8 draws exactly one global seed even for an empty/single-row menu.
     // f013c uses libc++ uniform_int_distribution<long> with MINSTD, then swaps
     // forward through the remaining suffix. Preserve original script indexes.

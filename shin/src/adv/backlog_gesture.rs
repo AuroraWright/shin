@@ -20,6 +20,12 @@ pub(super) struct Motion {
     pub fling: Option<Vec2>,
 }
 
+#[derive(Clone, Copy)]
+enum Direction {
+    Left,
+    Right,
+}
+
 impl Gesture {
     pub fn take_consumed(&mut self) -> bool {
         let consumed = std::mem::take(&mut self.consumed);
@@ -36,6 +42,55 @@ impl Gesture {
         eligible: bool,
         seconds: f64,
         sample_threshold: f32,
+    ) -> Motion {
+        self.update_with_mouse_release(position, held, eligible, seconds, sample_threshold, None)
+    }
+    pub fn update_with_mouse_release(
+        &mut self,
+        position: Vec2,
+        held: bool,
+        eligible: bool,
+        seconds: f64,
+        sample_threshold: f32,
+        mouse_release: Option<super::input_area::MouseRelease>,
+    ) -> Motion {
+        self.update_desktop(
+            position,
+            held,
+            eligible,
+            seconds,
+            sample_threshold,
+            mouse_release,
+            Direction::Right,
+        )
+    }
+    pub fn update_browser_with_mouse_release(
+        &mut self,
+        position: Vec2,
+        held: bool,
+        eligible: bool,
+        seconds: f64,
+        mouse_release: Option<super::input_area::MouseRelease>,
+    ) -> Motion {
+        self.update_desktop(
+            position,
+            held,
+            eligible,
+            seconds,
+            1.5,
+            mouse_release,
+            Direction::Left,
+        )
+    }
+    fn update_desktop(
+        &mut self,
+        position: Vec2,
+        held: bool,
+        eligible: bool,
+        seconds: f64,
+        sample_threshold: f32,
+        mouse_release: Option<super::input_area::MouseRelease>,
+        direction: Direction,
     ) -> Motion {
         let mut result = Motion::default();
         self.consumed = held || self.held;
@@ -65,8 +120,41 @@ impl Gesture {
             // threshold, and stationary samples clear release momentum.
             self.displacement = delta;
         } else if !held && self.held && self.active {
-            if self.dragging && self.scroll_allowed && seconds > 0.0 && seconds.is_finite() {
-                let velocity = self.displacement * (0.016683333333333335 / seconds) as f32;
+            if let Some(release) = mouse_release {
+                let displacement = release.position() - self.origin;
+                if displacement.length() > 16.0 {
+                    if !self.dragging {
+                        self.dragging = true;
+                        result.cancel_click = true;
+                    }
+                    if self.scroll_allowed && release.position() != self.previous {
+                        result.drag = Some(release.position() - self.previous);
+                    }
+                }
+            }
+            if self.dragging && self.scroll_allowed {
+                let velocity = if let Some(release) = mouse_release {
+                    let candidate = super::input_area::desktop_gesture_vector(
+                        release.position() - self.origin,
+                        release.velocity(),
+                    );
+                    let degrees = angle(candidate);
+                    // Only the pane's horizontal action uses displacement.
+                    // Ordinary vertical scrolling keeps measured velocity.
+                    let horizontal = match direction {
+                        Direction::Left => degrees > 150.0 || degrees < -150.0,
+                        Direction::Right => degrees > -30.0 && degrees < 30.0,
+                    };
+                    if horizontal {
+                        candidate
+                    } else {
+                        release.velocity()
+                    }
+                } else if seconds > 0.0 && seconds.is_finite() {
+                    self.displacement * (0.016683333333333335 / seconds) as f32
+                } else {
+                    Vec2::ZERO
+                };
                 if velocity.length() > 20.0 {
                     result.fling = Some(velocity);
                 }
@@ -88,7 +176,7 @@ pub(super) fn scroll_drag(delta: Vec2) -> bool {
 }
 
 /// a7dd0 accepts the forward half-plane for scrolling. A leftward fling
-/// outside this interval requests rollback.
+/// outside this interval opens the chapter list.
 pub(super) fn scroll_fling(velocity: Vec2) -> bool {
     (-150.0..=150.0).contains(&angle(velocity))
 }

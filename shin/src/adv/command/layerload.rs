@@ -7,7 +7,7 @@ use shin_render::shaders::types::{RenderClone, RenderCloneCtx};
 use shin_tasks::AsyncTask;
 use tracing::error;
 
-use super::prelude::*;
+use super::{catch_preparation_panic, prelude::*};
 use crate::{
     adv::vm_state::layers::LayerOperationTarget,
     layer::{
@@ -19,7 +19,7 @@ use crate::{
 pub struct LAYERLOAD {
     token: Option<command::token::LAYERLOAD>,
     state_info: LayerLoadStateInfo,
-    load_task: Option<AsyncTask<PreparedUserLayer>>,
+    load_task: Option<AsyncTask<anyhow::Result<PreparedUserLayer>>>,
     resource_free: Option<(
         LayerType,
         shin_core::format::scenario::instruction_elements::UntypedNumberArray,
@@ -28,8 +28,12 @@ pub struct LAYERLOAD {
     wipe_wait_attempted: bool,
     loaded_kind: LayerType,
     loaded_id: i32,
+    loaded_params: shin_core::format::scenario::instruction_elements::UntypedNumberArray,
+    block_load_animations: bool,
+    error: Option<anyhow::Error>,
     share_properties: bool,
-    wipe_task: Option<AsyncTask<Option<crate::wiper::AnyWiper>>>,
+    wipe_task: Option<AsyncTask<anyhow::Result<Option<crate::wiper::AnyWiper>>>>,
+    retry_transition: Option<crate::adv::vm_state::layers::LayerTransitionSettings>,
     pending_transition: Option<crate::adv::vm_state::layers::LayerTransitionSettings>,
     wipe_flags: WipeFlags,
     published: bool,
@@ -51,6 +55,21 @@ pub struct LayerLoadStateInfo {
     skip_layerloader_creation: bool,
     plane: PlaneId,
     affected_layers: heapless::Vec<LayerInfo, { LAYERBANKS_COUNT }>,
+}
+
+async fn prepare_layer(
+    device: &wgpu::Device,
+    server: &Arc<crate::asset::system::AssetServer>,
+    audio: &Arc<shin_audio::AudioManager>,
+    scenario: &Arc<Scenario>,
+    volume: crate::audio::MovieVolumeSettings,
+    kind: LayerType,
+    params: shin_core::format::scenario::instruction_elements::UntypedNumberArray,
+) -> anyhow::Result<PreparedUserLayer> {
+    catch_preparation_panic(UserLayer::prepare_checked(
+        device, server, audio, scenario, volume, kind, params,
+    ))
+    .await?
 }
 
 impl StartableCommand for command::runtime::LAYERLOAD {
@@ -164,7 +183,7 @@ impl StartableCommand for command::runtime::LAYERLOAD {
         let load_task =
             (!state_info.skip_layerloader_creation && resource_free.is_none()).then(|| {
                 shin_tasks::async_io::spawn(async move {
-                    UserLayer::prepare(
+                    prepare_layer(
                         &device,
                         &asset_server,
                         &audio_manager,
@@ -200,8 +219,12 @@ impl StartableCommand for command::runtime::LAYERLOAD {
                 wipe_wait_attempted: false,
                 loaded_kind: self.layer_type,
                 loaded_id: self.params.0,
+                loaded_params: self.params,
+                block_load_animations: !self.flags.contains(LayerLoadFlags::DONT_BLOCK_ANIMATIONS),
+                error: None,
                 share_properties: self.flags.contains(LayerLoadFlags::SHARE_PROPS_DURING_WIPE),
                 wipe_task: None,
+                retry_transition: None,
                 pending_transition,
                 wipe_flags: transition.flags,
                 published: false,
@@ -232,6 +255,9 @@ impl LAYERLOAD {
 }
 
 impl UpdatableCommand for LAYERLOAD {
+    fn take_error(&mut self) -> Option<anyhow::Error> {
+        self.error.take()
+    }
     fn update(
         &mut self,
         context: &mut UpdateContext,
@@ -243,16 +269,46 @@ impl UpdatableCommand for LAYERLOAD {
         if self.published {
             return self.finish_if_wipes_complete(adv_state);
         }
+        if self.error.is_some() {
+            return None;
+        }
+        if self.load_task.is_none()
+            && self.ready_layer.is_none()
+            && self.resource_free.is_none()
+            && !self.state_info.skip_layerloader_creation
+        {
+            let device = context.pre_render.device.clone();
+            let server = context.asset_server.clone();
+            let audio = adv_state.audio_manager.clone();
+            let scenario = scenario.clone();
+            let volume = (&vm_state.settings).into();
+            let kind = self.loaded_kind;
+            let params = self.loaded_params;
+            self.load_task = Some(shin_tasks::async_io::spawn(async move {
+                prepare_layer(&device, &server, &audio, &scenario, volume, kind, params).await
+            }));
+            if self.block_load_animations {
+                adv_state.allow_running_animations = false;
+            }
+        }
         if let Some(task) = self.load_task.as_mut() {
-            self.ready_layer = Some(if std::mem::replace(&mut self.load_wait_attempted, true) {
+            let result = if std::mem::replace(&mut self.load_wait_attempted, true) {
                 task.poll_naive()?
             } else {
                 task.poll_with_timeout(context.loader_wait_budget())?
-            });
+            };
             self.load_task = None;
             // Native8ddc releases layer-loader animation suspension before
             // applying the transition-loader's independent animation policy.
             adv_state.allow_running_animations = true;
+            match result {
+                Ok(layer) => self.ready_layer = Some(layer),
+                Err(error) => {
+                    self.error = Some(error);
+                    self.load_wait_attempted = false;
+                    return None;
+                }
+            }
         }
         if self.resource_free.is_some() && !self.load_wait_attempted {
             self.load_wait_attempted = true;
@@ -261,29 +317,43 @@ impl UpdatableCommand for LAYERLOAD {
         if let Some(transition) = self.pending_transition.take()
             && (0..=9).contains(&transition.ty)
         {
+            self.retry_transition = Some(transition);
             let asset_server = context.asset_server.clone();
             let scenario = scenario.clone();
             self.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                crate::wiper::AnyWiper::load_raw(
+                catch_preparation_panic(crate::wiper::AnyWiper::load_raw_checked(
                     &asset_server,
                     &scenario,
                     transition.ty,
                     transition.duration,
                     transition.params,
-                )
-                .await
+                ))
+                .await?
             }));
         }
         if let Some(task) = self.wipe_task.as_mut() {
             if !self.wipe_flags.contains(WipeFlags::DONT_BLOCK_ANIMATIONS) {
                 adv_state.allow_running_animations = false;
             }
-            self.ready_wiper = if std::mem::replace(&mut self.wipe_wait_attempted, true) {
+            let result = if std::mem::replace(&mut self.wipe_wait_attempted, true) {
                 task.poll_naive()?
             } else {
                 task.poll_with_timeout(context.loader_wait_budget())?
             };
             self.wipe_task = None;
+            match result {
+                Ok(wiper) => {
+                    self.ready_wiper = wiper;
+                    self.retry_transition = None;
+                }
+                Err(error) => {
+                    self.error = Some(error);
+                    self.pending_transition = self.retry_transition.take();
+                    self.wipe_wait_attempted = false;
+                    adv_state.allow_running_animations = true;
+                    return None;
+                }
+            }
         }
         let loaded_layer = self.ready_layer.take();
 
@@ -297,6 +367,7 @@ impl UpdatableCommand for LAYERLOAD {
             let previous = plane_layer_group.get_layer(info.operation_target.layerbank);
             let mut layer = if info.already_the_same {
                 previous
+                    .as_ref()
                     .expect("Cached layer needs its installed target")
                     .render_clone(&mut context.pre_render.render_clone_ctx())
             } else if let Some((kind, params)) = self.resource_free {
@@ -494,7 +565,7 @@ pub(super) mod tests {
                 // factory stays deferred even after the layer loader is ready.
                 let (sender, receiver) = std::sync::mpsc::channel();
                 command.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                    receiver.recv().unwrap()
+                    Ok(receiver.recv().unwrap())
                 }));
                 assert!(
                     command
@@ -597,7 +668,7 @@ pub(super) mod tests {
             assert!(command.load_task.is_some());
             let (sender, receiver) = futures::channel::oneshot::channel();
             command.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                receiver.await.unwrap()
+                Ok(receiver.await.unwrap())
             }));
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(15);
             while command.ready_layer.is_none() {
@@ -643,28 +714,30 @@ pub(super) mod tests {
             let group = adv.plane_layer_group(plane);
             let first = group.get_layer(banks[0]).unwrap();
             let second = group.get_layer(banks[1]).unwrap();
-            assert_eq!(snapshot(first), prototype);
-            assert_eq!(snapshot(second), prototype);
+            assert_eq!(snapshot(&first), prototype);
+            assert_eq!(snapshot(&second), prototype);
             assert_ne!(
                 first.properties().identity(),
                 second.properties().identity()
             );
+            drop(first);
+            drop(second);
             let group = adv.plane_layer_group_mut(plane);
-            let first = group.get_layer_mut(banks[0]).unwrap();
+            let mut first = group.get_layer_mut(banks[0]).unwrap();
             first
                 .properties_mut()
                 .property_tweener_mut(LayerProperty::TranslateX)
                 .fast_forward_to(123.0);
-            if let UserLayer::Bustup(layer) = first {
+            if let UserLayer::Bustup(layer) = &mut *first {
                 layer.reference_advance_blink();
-                assert_ne!(snapshot(first), prototype);
+                assert_ne!(snapshot(&first), prototype);
             }
             let second = group.get_layer(banks[1]).unwrap();
             assert_eq!(
                 second.properties().get_value(LayerProperty::TranslateX),
                 0.0
             );
-            assert_eq!(snapshot(second), prototype);
+            assert_eq!(snapshot(&second), prototype);
             assert!(adv.allow_running_animations);
         }
         for (kind, params) in [
@@ -733,7 +806,7 @@ pub(super) mod tests {
                 if !cached {
                     let (sender, receiver) = futures::channel::oneshot::channel();
                     command.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                        receiver.await.unwrap()
+                        Ok(receiver.await.unwrap())
                     }));
                     while command.ready_layer.is_none() {
                         assert!(
@@ -784,7 +857,7 @@ pub(super) mod tests {
                         .layerbank_allocator
                         .get_layerbank_id(plane, id)
                         .unwrap();
-                    state(adv.plane_layer_group(plane).get_layer(bank).unwrap())
+                    state(&adv.plane_layer_group(plane).get_layer(bank).unwrap())
                 });
                 assert_eq!(states[0].0, states[1].0, "Immutable atlas is shared");
                 assert_ne!(
@@ -879,7 +952,7 @@ pub(super) mod tests {
             };
             let (sender, receiver) = futures::channel::oneshot::channel();
             command.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                receiver.await.unwrap()
+                Ok(receiver.await.unwrap())
             }));
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
             while command.ready_layer.is_none() {
@@ -924,8 +997,8 @@ pub(super) mod tests {
             let group = adv.plane_layer_group(plane);
             let first = group.get_layer(banks[0]).unwrap();
             let second = group.get_layer(banks[1]).unwrap();
-            let initial = state(first);
-            let untouched = state(second);
+            let initial = state(&first);
+            let untouched = state(&second);
             assert_eq!(initial.0, untouched.0, "Immutable atlas is shared");
             assert_ne!(
                 initial.1, untouched.1,
@@ -935,7 +1008,7 @@ pub(super) mod tests {
                 first.properties().identity(),
                 second.properties().identity()
             );
-            let cake_fingers = match (first, second) {
+            let cake_fingers = match (&*first, &*second) {
                 (UserLayer::Cake(a), UserLayer::Cake(b)) => {
                     Some((a.reference_feedback().0, b.reference_feedback().0))
                 }
@@ -945,7 +1018,7 @@ pub(super) mod tests {
             if let Some((a, b)) = cake_fingers {
                 // Native Cake starts at1440,900, outside the half-open hit map.
                 // Down moves its finger eight pixels without selecting a slice.
-                let (UserLayer::Cake(first), UserLayer::Cake(second)) = (first, second) else {
+                let (UserLayer::Cake(first), UserLayer::Cake(second)) = (&*first, &*second) else {
                     panic!();
                 };
                 assert_eq!(first.reference_feedback().0, a + glam::Vec2::new(0.0, 8.0));
@@ -956,16 +1029,16 @@ pub(super) mod tests {
                 );
             } else {
                 assert_ne!(
-                    state(first).2,
+                    state(&first).2,
                     initial.2,
                     "First bank accepted navigation, mode{mode}"
                 );
             }
-            assert_eq!(state(second), untouched, "Second bank did not navigate");
+            assert_eq!(state(&second), untouched, "Second bank did not navigate");
             if mode == 2 {
                 let seed_calls = crate::engine_random::seed_call_count();
                 let mut alias = first.render_clone(&mut update.pre_render.render_clone_ctx());
-                let UserLayer::Murderer(original) = first else {
+                let UserLayer::Murderer(original) = &*first else {
                     panic!();
                 };
                 let UserLayer::Murderer(retained) = &alias else {
@@ -981,7 +1054,7 @@ pub(super) mod tests {
                     original.reference_retained_render_identity()
                 );
                 assert_eq!(alias.properties().identity(), first.properties().identity());
-                assert_eq!(state(&alias), state(first));
+                assert_eq!(state(&alias), state(&first));
                 assert_eq!(
                     crate::engine_random::seed_call_count(),
                     seed_calls,
@@ -1072,6 +1145,8 @@ pub(super) mod tests {
                 let frozen = layer.reference_frozen_pixels(update.pre_render);
                 assert!(frozen.chunks_exact(4).any(|pixel| pixel[..3] != [0, 0, 0]));
                 let retained_controller = state(&alias);
+                drop(first);
+                drop(second);
                 encoded.set_position(0);
                 let Instruction::Command(runtime) = Instruction::read_le(&mut encoded).unwrap()
                 else {
@@ -1100,7 +1175,7 @@ pub(super) mod tests {
                 assert_eq!(crate::engine_random::seed_call_count(), cached_draws + 14);
                 let installed = adv.plane_layer_group(plane).get_layer(banks[0]).unwrap();
                 assert_eq!(
-                    state(installed),
+                    state(&installed),
                     retained_controller,
                     "Cached Murderer retains controller state instead of resetting it"
                 );
@@ -1127,6 +1202,10 @@ pub(super) mod tests {
                     frozen,
                     "Cached property reset preserves the active frozen capture"
                 );
+
+                // Scoped layer reads must end before the graph updates these cells.
+                drop(installed);
+                drop(group_alias);
 
                 // Cached source/target are aliases of one native retained owner.
                 // A real outer replacement wipe must not double its internal clock.
@@ -1235,10 +1314,10 @@ pub(super) mod tests {
                 // Quiz/Cake/Last copy their controller values; Murderer native
                 // clone9b040 instead retains the whole layer owner.
                 let cloned = first.render_clone(&mut update.pre_render.render_clone_ctx());
-                assert_ne!(state(&cloned).1, state(first).1);
-                assert_eq!(state(&cloned).2, state(first).2);
-                let before = state(first);
-                let cake_finger = match first {
+                assert_ne!(state(&cloned).1, state(&first).1);
+                assert_eq!(state(&cloned).2, state(&first).2);
+                let before = state(&first);
+                let cake_finger = match &*first {
                     UserLayer::Cake(layer) => Some(layer.reference_feedback().0),
                     _ => None,
                 };
@@ -1250,7 +1329,7 @@ pub(super) mod tests {
                     cloned.interactive().unwrap().navigate(1);
                 }
                 if let Some(finger) = cake_finger {
-                    let (UserLayer::Cake(original), UserLayer::Cake(copy)) = (first, &cloned)
+                    let (UserLayer::Cake(original), UserLayer::Cake(copy)) = (&*first, &cloned)
                     else {
                         panic!();
                     };
@@ -1266,12 +1345,14 @@ pub(super) mod tests {
                 } else {
                     assert_ne!(state(&cloned).2, before.2);
                 }
-                assert_eq!(state(first), before, "Clone navigation is independent");
+                assert_eq!(state(&first), before, "Clone navigation is independent");
                 if mode < 2 {
                     first.interactive().unwrap().confirm();
                 }
-                let before_cache = [state(first), state(second)];
+                let before_cache = [state(&first), state(&second)];
                 let result_before_cache = first.interactive().unwrap().result();
+                drop(first);
+                drop(second);
                 encoded.set_position(0);
                 let Instruction::Command(runtime) = Instruction::read_le(&mut encoded).unwrap()
                 else {
@@ -1300,7 +1381,7 @@ pub(super) mod tests {
                 assert_eq!(crate::engine_random::seed_call_count(), cached_draws + 26);
                 for (bank, before) in banks.into_iter().zip(before_cache) {
                     let installed = adv.plane_layer_group(plane).get_layer(bank).unwrap();
-                    let after = state(installed);
+                    let after = state(&installed);
                     assert_eq!(after.0, before.0);
                     assert_ne!(
                         after.1, before.1,
@@ -1382,7 +1463,7 @@ pub(super) mod tests {
             };
             let (sender, receiver) = futures::channel::oneshot::channel();
             command.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                receiver.await.unwrap()
+                Ok(receiver.await.unwrap())
             }));
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
             while command.ready_layer.is_none() {
@@ -1476,7 +1557,8 @@ pub(super) mod tests {
         vm.layers.layer_selection.to = LayerId::new(1);
         let plane = vm.layers.current_plane;
         adv.create_back_layer_group_if_needed(&mut context.render_clone_ctx());
-        assert_eq!(adv.audio_manager.kira_manager().lock().num_sounds(), 0);
+        assert_eq!(adv.audio_manager.kira_manager().lock().main_track()
+                .num_sounds(), 0);
         for (name, has_audio, repeat) in [
             ("door", false, 0),
             ("op1", true, 0),
@@ -1526,7 +1608,7 @@ pub(super) mod tests {
             assert!(command.load_task.is_some());
             let (sender, receiver) = futures::channel::oneshot::channel();
             command.wipe_task = Some(shin_tasks::async_io::spawn(async move {
-                receiver.await.unwrap()
+                Ok(receiver.await.unwrap())
             }));
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(20);
             while command.ready_layer.is_none() {
@@ -1584,7 +1666,7 @@ pub(super) mod tests {
             });
             let group = adv.plane_layer_group(plane);
             for bank in banks {
-                let UserLayer::Movie(layer) = group.get_layer(bank).unwrap() else {
+                let UserLayer::Movie(layer) = &*group.get_layer(bank).unwrap() else {
                     panic!();
                 };
                 assert_eq!(
@@ -1673,7 +1755,8 @@ pub(super) mod tests {
             assert_eq!(crate::engine_random::seed_call_count(), seed_calls + 38);
             assert_eq!(owner.owners(), 3);
             for bank in banks {
-                let UserLayer::Movie(layer) = adv.plane_layer_group(plane).get_layer(bank).unwrap()
+                let UserLayer::Movie(layer) =
+                    &*adv.plane_layer_group(plane).get_layer(bank).unwrap()
                 else {
                     panic!();
                 };
@@ -1691,7 +1774,8 @@ pub(super) mod tests {
             }
             if has_audio {
                 let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-                while adv.audio_manager.kira_manager().lock().num_sounds() == 0 {
+                while adv.audio_manager.kira_manager().lock().main_track()
+                    .num_sounds() == 0 {
                     assert!(
                         std::time::Instant::now() < deadline,
                         "Movie voice was not installed"
@@ -1699,7 +1783,8 @@ pub(super) mod tests {
                     std::thread::sleep(std::time::Duration::from_millis(5));
                 }
                 assert_eq!(
-                    adv.audio_manager.kira_manager().lock().num_sounds(),
+                    adv.audio_manager.kira_manager().lock()
+                        .main_track().num_sounds(),
                     1,
                     "All selected/cached movie layers share one AAC voice"
                 );
@@ -1873,7 +1958,8 @@ pub(super) mod tests {
             }
             owner.assert_released();
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-            while adv.audio_manager.kira_manager().lock().num_sounds() != 0 {
+            while adv.audio_manager.kira_manager().lock()
+                .main_track().num_sounds() != 0 {
                 assert!(
                     std::time::Instant::now() < deadline,
                     "Last movie bank leaked audio capacity"

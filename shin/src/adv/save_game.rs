@@ -69,8 +69,9 @@ impl SaveGameModel {
     }
 }
 
-// Switch reports failed writes through its OS error service. This dialog is
-// the desktop platform adapter; it is not an authored native save dialog.
+// The native worker calls the imported nn::diag::detail::AbortImpl on failed
+// writes. This acknowledgement is the desktop recovery adapter, rather than
+// an authored native save dialog or proof of the external diagnostic handler.
 struct SaveFailure {
     error: Option<anyhow::Error>,
     dialog: Confirmation,
@@ -189,6 +190,16 @@ impl SaveGameTask {
         self.failure
             .as_mut()
             .map_or_else(Vec::new, |failure| failure.input.take_sounds())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_state(&self) -> String {
+        format!(
+            "phase={:?}, failure={:?}",
+            self.model.phase,
+            self.failure
+                .as_ref()
+                .and_then(|failure| failure.error.as_ref())
+        )
     }
     #[cfg(test)]
     pub(crate) fn reference_failure_is_open(&self) -> bool {

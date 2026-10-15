@@ -84,6 +84,9 @@ impl SaveMenuDialog {
         self.input
             .keyboard(&mut self.confirmation, self.view.geometry.vertical, state);
     }
+    pub(super) fn cancel(&mut self) {
+        self.confirmation.cancel();
+    }
     pub fn update(&mut self, delta: Ticks) -> Vec<SaveMenuDialogResponse> {
         self.input.update_motion(&mut self.view.geometry, delta);
         self.confirmation.update(delta);

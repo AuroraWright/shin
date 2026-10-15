@@ -38,10 +38,21 @@ impl Pointer {
         eligible: bool,
         seconds: f64,
     ) -> Vec<Event> {
+        self.update_with_mouse_release(model, p, held, eligible, seconds, None)
+    }
+    pub fn update_with_mouse_release(
+        &mut self,
+        model: &mut SceneJump,
+        p: Vec2,
+        held: bool,
+        eligible: bool,
+        seconds: f64,
+        mouse_release: Option<super::input_area::MouseRelease>,
+    ) -> Vec<Event> {
         let mut events = Vec::new();
-        let motion = self
-            .gesture
-            .update_with_threshold(p, held, eligible, seconds, 1.0);
+        let motion =
+            self.gesture
+                .update_with_mouse_release(p, held, eligible, seconds, 1.0, mouse_release);
         if !eligible {
             if matches!(self.zone, Some(Zone::Close | Zone::Blocked)) {
                 events.push(Event::CancelClose);
@@ -102,7 +113,17 @@ impl Pointer {
                 }
             }
         } else if self.held {
+            if motion.cancel_click {
+                self.dragging = true;
+                if matches!(self.zone, Some(Zone::Close | Zone::Blocked)) {
+                    events.push(Event::CancelClose);
+                    self.zone = Some(Zone::Blocked);
+                }
+            }
             if matches!(self.zone, Some(Zone::Scroll)) {
+                if let Some(delta) = motion.drag {
+                    events.push(Event::Drag(delta.y));
+                }
                 if let Some(v) = motion.fling {
                     events.push(Event::Fling(v));
                 }
@@ -303,3 +324,7 @@ mod tests {
         assert!((model.scroll() - 116.1).abs() < 0.001);
     }
 }
+
+#[cfg(test)]
+#[path = "backlog_chapter_swipe_tests.rs"]
+mod desktop_tests;

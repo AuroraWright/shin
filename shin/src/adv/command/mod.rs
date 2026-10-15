@@ -1,5 +1,7 @@
 #![allow(clippy::upper_case_acronyms)]
 
+use futures::FutureExt as _;
+
 mod prelude {
     pub use std::sync::Arc;
 
@@ -106,8 +108,29 @@ use crate::{
     update::UpdateContext,
 };
 
+async fn catch_preparation_panic<T>(
+    future: impl std::future::Future<Output = T>,
+) -> anyhow::Result<T> {
+    std::panic::AssertUnwindSafe(future)
+        .catch_unwind()
+        .await
+        .map_err(|panic| {
+            let message = panic
+                .downcast_ref::<String>()
+                .map(String::as_str)
+                .or_else(|| panic.downcast_ref::<&str>().copied())
+                .unwrap_or("unknown panic");
+            anyhow::anyhow!("Resource preparation worker failed: {message}")
+        })
+}
+
 #[enum_dispatch]
 pub trait UpdatableCommand {
+    /// Preparation errors leave the command pending. The scene host presents
+    /// its desktop notice before allowing the retained command to retry.
+    fn take_error(&mut self) -> Option<anyhow::Error> {
+        None
+    }
     /// Consume an advance action when a command explicitly permits interruption.
     fn advance(&mut self) -> bool {
         false

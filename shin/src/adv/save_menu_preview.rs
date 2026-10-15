@@ -55,17 +55,21 @@ pub(super) struct SaveMenuPreviewScene {
 }
 impl SaveMenuPreviewScene {
     #[cfg(test)]
+    pub(super) fn reference_release_resources(&mut self) {
+        self.root = LayerGroup::new(None);
+    }
+    #[cfg(test)]
     pub(super) fn reference_layer(
         &self,
         plane: shin_core::vm::command::types::PlaneId,
         bank: LayerbankId,
-    ) -> Option<&UserLayer> {
-        self.root
-            .get_layer(LayerbankId::new(2))
-            .unwrap()
+    ) -> Option<crate::layer::owner::LayerRead<'_, UserLayer>> {
+        let screen = self.root.get_layer(LayerbankId::new(2)).unwrap();
+        screen
             .page_layer()
             .get_plane(plane)
-            .get_layer(bank)
+            .layer_owner(bank)
+            .map(|owner| crate::layer::owner::LayerRead::Shared(owner.read_owned()))
     }
 
     pub async fn load(
@@ -73,6 +77,26 @@ impl SaveMenuPreviewScene {
         audio: &Arc<AudioManager>,
         scenario: &Scenario,
         state: &VmState,
+    ) -> Result<Self> {
+        Self::load_visuals(server, audio, scenario, state, true).await
+    }
+
+    #[cfg(test)]
+    pub(super) async fn reference_load_serial(
+        server: &AssetServer,
+        audio: &Arc<AudioManager>,
+        scenario: &Scenario,
+        state: &VmState,
+    ) -> Result<Self> {
+        Self::load_visuals(server, audio, scenario, state, false).await
+    }
+
+    async fn load_visuals(
+        server: &AssetServer,
+        audio: &Arc<AudioManager>,
+        scenario: &Scenario,
+        state: &VmState,
+        parallel: bool,
     ) -> Result<Self> {
         let mut screen = ScreenLayer::new(4);
         screen.set_properties(LayerProperties::from_state(
@@ -102,44 +126,62 @@ impl SaveMenuPreviewScene {
                 dest.set_mask_texture(server.load(mask.path()).await?, group.mask_flags);
             }
         }
+        let mut requests = Vec::new();
         for (bank, saved) in &state.layers.layerbanks {
             let Some(ty) = saved.layer_type else {
                 continue;
             };
-            let mut layer = if ty == LayerType::Movie {
-                // Native103670..1036a4 maps type6 Movie to type2 Picture.
-                // Native103694/1036a8 also changes a rejected Movie ID to Null.
-                // Read the full signed32-bit value before looking up its link.
-                let still = scenario
-                    .info_tables()
-                    .movie_info
-                    .get(saved.params.0 as usize)
-                    .and_then(|movie| {
-                        scenario
-                            .info_tables()
-                            .picture_info
-                            .get(movie.linked_picture_id.into_i32() as usize)
-                    });
-                if let Some(still) = still {
-                    let picture: Arc<Picture> = server.load(still.path()).await?;
-                    UserLayer::from(PictureLayer::new(picture, Some(still.name.to_string())))
+            requests.push(async move {
+                let layer = if ty == LayerType::Movie {
+                    // Native103670..1036a4 maps type6 Movie to type2 Picture.
+                    // Native103694/1036a8 also changes a rejected Movie ID to Null.
+                    // Read the full signed32-bit value before looking up its link.
+                    let still = scenario
+                        .info_tables()
+                        .movie_info
+                        .get(saved.params.0 as usize)
+                        .and_then(|movie| {
+                            scenario
+                                .info_tables()
+                                .picture_info
+                                .get(movie.linked_picture_id.into_i32() as usize)
+                        });
+                    if let Some(still) = still {
+                        let picture: Arc<Picture> = server.load(still.path()).await?;
+                        UserLayer::from(PictureLayer::new(picture, Some(still.name.to_string())))
+                    } else {
+                        // Preview changes Movie to Picture; a rejected metadata ID
+                        // therefore follows the Picture factory's Null fallback.
+                        UserLayer::from(NullLayer::new())
+                    }
                 } else {
-                    // Preview changes Movie to Picture; a rejected metadata ID
-                    // therefore follows the Picture factory's Null fallback.
-                    UserLayer::from(NullLayer::new())
-                }
-            } else {
-                UserLayer::load(
-                    &server.context().wgpu_device,
-                    server,
-                    audio,
-                    scenario,
-                    (&state.settings).into(),
-                    ty,
-                    saved.params,
-                )
-                .await
-            };
+                    UserLayer::load(
+                        &server.context().wgpu_device,
+                        server,
+                        audio,
+                        scenario,
+                        (&state.settings).into(),
+                        ty,
+                        saved.params,
+                    )
+                    .await
+                };
+                Ok::<_, anyhow::Error>((bank, saved, layer))
+            });
+        }
+        // Asset I/O/decode/upload is independent for each preview layer. Issue
+        // it together, then install in saved bank order once all requests are
+        // ready. The row's GPU capture/publication remains serial and atomic.
+        let layers = if parallel {
+            futures::future::try_join_all(requests).await?
+        } else {
+            let mut layers = Vec::new();
+            for request in requests {
+                layers.push(request.await?);
+            }
+            layers
+        };
+        for (bank, saved, mut layer) in layers {
             layer.set_properties(LayerProperties::from_state(
                 &saved.properties,
                 saved.layer_id,
@@ -475,7 +517,8 @@ pub(super) fn assert_reference_preview(
             .unwrap()
             .page_layer()
             .get_plane(PlaneId::new(0))
-            .get_layer(LayerbankId::new(0)),
+            .get_layer(LayerbankId::new(0))
+            .as_deref(),
         Some(UserLayer::Picture(_))
     ));
     let preview = movie_scene.capture(context, (1920, 1080));

@@ -13,7 +13,7 @@ pub struct LAYERWAIT {
     plane: PlaneId,
     layer_id: VLayerId,
     affected_layers: LayerOperationTargetList,
-    properties: SmallVec<LayerProperty, { SMALL_LIST_SIZE }>,
+    properties: SmallVec<[LayerProperty; { SMALL_LIST_SIZE }]>,
     token: Option<command::token::LAYERWAIT>,
 }
 

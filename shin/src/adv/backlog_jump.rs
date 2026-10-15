@@ -285,6 +285,23 @@ mod tests {
     use super::super::backlog::BacklogEntry;
     use super::*;
     use shin_core::vm::command::types::MessageboxType;
+    #[test]
+    fn trackpad_wheel_scrolls_backlog_jump_list() {
+        let mut model = SceneJump::new(&history(30, true), 0, 0).unwrap();
+        model.update_with_delta(Ticks::from_f32(10.0));
+        model.direct_scroll(0.0);
+        for (amount, expected) in [
+            (-3.25, 325.0),
+            (-0.125, 337.5),
+            (3.25, 12.5),
+            (0.0, 12.5),
+            (100.0, 0.0),
+        ] {
+            let (_, scroll) = crate::app::wheel_scroll_test_input(amount);
+            model.axis(scroll);
+            assert_eq!(model.scroll(), expected);
+        }
+    }
     fn history(n: usize, checkpoints: bool) -> Backlog {
         Backlog {
             entries: (0..n)

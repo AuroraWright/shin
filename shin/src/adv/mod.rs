@@ -15,6 +15,19 @@ mod backlog_rollback;
 mod backlog_screen;
 mod backlog_text;
 mod backlog_view;
+#[cfg(test)]
+mod chapter_continue_reference;
+#[cfg(test)]
+mod continue_message_reference;
+#[cfg(test)]
+mod current_progress_audit;
+#[cfg(test)]
+mod ep4_teaparty_ending_reference;
+#[cfg(test)]
+mod menu_browser_desktop_tests;
+#[cfg(test)]
+mod shared_picture_handoff_reference;
+
 mod backlog_voice;
 mod bgm_title;
 pub mod character_screen;
@@ -28,6 +41,7 @@ pub(crate) mod scrollbar;
 pub(crate) use command::apply_command_state_and_start;
 #[cfg(test)]
 pub(crate) use command::apply_command_state_and_start_with_skip;
+mod chapter_navigation;
 pub mod config;
 pub mod config_dialog;
 #[cfg(test)]
@@ -40,8 +54,10 @@ mod dialog_view;
 #[cfg(test)]
 mod ending_reference;
 mod event_skip;
+mod story_touch;
 pub(crate) use dialog_view::DialogText;
 mod gallery;
+pub mod higurashi;
 pub mod information;
 pub mod input_area;
 #[cfg(test)]
@@ -50,7 +66,7 @@ pub mod manual;
 pub mod manual_screen;
 pub mod manual_view;
 pub mod modal_backdrop;
-mod persistence;
+pub(crate) mod persistence;
 pub(crate) use persistence::{SaveRecovery, SaveRecoveryKind};
 pub mod play_clock;
 mod playback;
@@ -60,7 +76,11 @@ mod route_label;
 pub(crate) mod save_game;
 pub mod save_menu;
 mod save_menu_dialog;
+#[cfg(test)]
+mod save_preparation_failure_reference;
 mod skip_indicator;
+#[cfg(all(test, unix))]
+pub(crate) mod storage_notice_failure_reference;
 pub(crate) use save_menu_dialog::SaveMenuDialog;
 mod save_menu_preview;
 #[cfg(test)]
@@ -69,7 +89,7 @@ mod save_menu_scene;
 pub(crate) mod save_menu_screen;
 pub mod save_menu_text;
 pub mod save_menu_view;
-mod scene_load_fade;
+pub(crate) mod scene_load_fade;
 pub(crate) mod storage_retry_dialog;
 pub mod system_menu;
 mod system_menu_modal;
@@ -89,6 +109,7 @@ use std::{borrow::Cow, sync::Arc};
 pub use command::{CommandStartResult, ExecutingCommand, StartableCommand, UpdatableCommand};
 use egui::Window;
 use enum_map::{Enum, EnumMap, enum_map};
+use futures::FutureExt as _;
 use glam::Mat4;
 use itertools::Itertools;
 use shin_audio::AudioManager;
@@ -183,6 +204,7 @@ struct PendingSceneRestore {
     retirement: Option<shin_tasks::LoaderRetirement>,
     kind: SceneLoadKind,
     source: Option<shin_render::render_texture::RenderTexture>,
+    present_source: bool,
 }
 
 impl Drop for PendingSceneRestore {
@@ -240,6 +262,7 @@ pub struct Adv {
     pending_restore: Option<PendingSceneRestore>,
     restore_error: Option<String>,
     restore_error_dialog: Option<storage_retry_dialog::StorageRetryDialog>,
+    retry_live_command_after_error: bool,
     previous_rollback_position: Option<u32>,
     pending_rollback_position: Option<u32>,
     pending_result: shin_core::vm::command::CommandResult,
@@ -259,10 +282,15 @@ pub struct Adv {
     modal_pointer: input_area::PointerSampler,
     modal_pointer_extent: (u16, u16),
     modal_pointer_held: bool,
+    last_desktop_browser_phase: Option<&'static str>,
+    hidden_tap_input: input_area::TapInput,
     pending_previous_scene: bool,
+    pending_chapter: Option<chapter_navigation::Direction>,
+    chapter_dialog: Option<(chapter_navigation::Direction, SaveMenuDialog)>,
     pending_playback_sound: Option<&'static str>,
     held_skip: bool,
     event_skip: event_skip::EventSkip,
+    story_touch: story_touch::StoryTouch,
     pending_event_skip: bool,
 }
 
@@ -315,6 +343,7 @@ impl Adv {
             pending_restore: None,
             restore_error: None,
             restore_error_dialog: None,
+            retry_live_command_after_error: false,
             previous_rollback_position: None,
             pending_rollback_position: None,
             pending_result: shin_core::vm::command::CommandResult::None,
@@ -330,13 +359,18 @@ impl Adv {
             pending_backlog: false,
             pending_system_menu: false,
             system_menu: None,
+            last_desktop_browser_phase: None,
             modal_pointer: Default::default(),
             modal_pointer_extent: (1920, 1080),
             modal_pointer_held: false,
+            hidden_tap_input: Default::default(),
             pending_previous_scene: false,
+            pending_chapter: None,
+            chapter_dialog: None,
             pending_playback_sound: None,
             held_skip: false,
             event_skip: event_skip::EventSkip::new(),
+            story_touch: story_touch::StoryTouch::new(),
             pending_event_skip: false,
         }
     }
@@ -493,9 +527,9 @@ impl Adv {
         entry: &shin_core::format::save::GameDataEntry,
         server: Arc<crate::asset::system::AssetServer>,
     ) -> anyhow::Result<()> {
-        let scene = reconstruction::ReconstructedScene::from_save(
+        let scene = reconstruction::ReconstructedScene::from_game_data_for_load(
             &self.scenario,
-            entry,
+            &shin_core::format::save::GameData::from_entry(entry.clone()),
             globals,
             1_000_000,
         )?;
@@ -509,7 +543,7 @@ impl Adv {
         game: &shin_core::format::save::GameData,
         server: Arc<crate::asset::system::AssetServer>,
     ) -> anyhow::Result<()> {
-        let scene = reconstruction::ReconstructedScene::from_game_data(
+        let scene = reconstruction::ReconstructedScene::from_game_data_for_load(
             &self.scenario,
             game,
             globals,
@@ -547,32 +581,59 @@ impl Adv {
         let reused = if kind == SceneLoadKind::Saved {
             Vec::new()
         } else {
-            restoration::reuse_plan(&self.adv_state, &scene.state)
+            restoration::reuse_plan(&self.adv_state, &scene.state, &server)
         };
         self.restore_error = None;
+        self.retry_live_command_after_error = false;
         if self.restore_error_dialog.take().is_some() {
             self.adv_state.release_audio_pause();
         }
         self.pending_previous_scene = false;
+        self.pending_chapter = None;
+        self.chapter_dialog = None;
+        self.story_touch.close();
         self.pending_playback_sound = None;
         self.pending_rollback_position = previous_position;
         self.pending_restore = Some(PendingSceneRestore {
             task: Some(shin_tasks::async_io::spawn_loader(async move {
-                let loaded = restoration::LoadedScene::load_with_reuse(
-                    &server,
-                    &audio,
-                    &scenario,
-                    &scene.state,
-                    reused,
-                )
-                .await?;
+                let loaded =
+                    std::panic::AssertUnwindSafe(restoration::LoadedScene::load_with_reuse(
+                        &server,
+                        &audio,
+                        &scenario,
+                        &scene.state,
+                        reused,
+                    ))
+                    .catch_unwind()
+                    .await
+                    .map_err(|panic| {
+                        let message = panic
+                            .downcast_ref::<String>()
+                            .map(String::as_str)
+                            .or_else(|| panic.downcast_ref::<&str>().copied())
+                            .unwrap_or("unknown panic");
+                        anyhow::anyhow!("Scene resource worker failed: {message}")
+                    })??;
                 Ok((loaded, scene))
             })),
             ready: None,
             retirement: None,
             kind,
             source: None,
+            present_source: false,
         });
+    }
+
+    /// Keep the outgoing composed screen visible during saved-scene preparation,
+    /// then transfer this same capture to the normal saved-load wipe.
+    pub(crate) fn set_saved_load_source(
+        &mut self,
+        source: shin_render::render_texture::RenderTexture,
+    ) {
+        if let Some(pending) = &mut self.pending_restore {
+            pending.source = Some(source);
+            pending.present_source = true;
+        }
     }
 
     #[inline(never)]
@@ -607,6 +668,21 @@ impl Adv {
 
     pub fn previous_rollback_position(&self) -> Option<u32> {
         self.previous_rollback_position
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_load_transition_masked(&self) -> Option<bool> {
+        self.adv_state
+            .scene_load_fade
+            .as_ref()
+            .map(|fade| fade.is_masked())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_load_transition_elapsed(&self) -> Option<f32> {
+        self.adv_state
+            .scene_load_fade
+            .as_ref()
+            .map(|fade| fade.reference_elapsed())
     }
 
     /// Native mode1 quick return to the previous/current message checkpoint.
@@ -673,19 +749,21 @@ impl Adv {
         server: &crate::asset::system::AssetServer,
         purpose: SavePurpose,
         edit: persistence::ExplicitSave,
-    ) {
-        assert!(
+    ) -> anyhow::Result<()> {
+        anyhow::ensure!(
             self.pending_save.is_none(),
             "A SaveGame task is already active"
         );
-        let task = save_game::SaveGameTask::load(server).expect("Loading save updating dialog");
+        let task = save_game::SaveGameTask::load(server)?;
         if let Some(store) = &mut self.persistence {
-            store
-                .prepare_explicit(&self.vm_state, edit)
-                .expect("Preparing save snapshot");
+            store.prepare_explicit(&self.vm_state, edit)?;
         } else {
             let mut snapshot = self.save_menu_data();
             if let persistence::ExplicitSave::Slot { slot, game } = edit {
+                anyhow::ensure!(
+                    slot < snapshot.manual_save_slots.len(),
+                    "Invalid manual save slot {slot}"
+                );
                 if game.is_some() {
                     snapshot.save_menu_position = slot as u8;
                 }
@@ -694,6 +772,7 @@ impl Adv {
             self.volatile_save = snapshot;
         }
         self.pending_save = Some(PendingSaveTask { task, purpose });
+        Ok(())
     }
 
     fn update_save_task(&mut self, context: &mut UpdateContext) {
@@ -884,6 +963,13 @@ impl Adv {
             fresh.notifications = self.adv_state.notifications.clone();
             fresh.notifications.cancel_for_scene_load();
         }
+        let publish_continue = scene.publishes_continue_checkpoint();
+        let starts_message = matches!(
+            &scene.stop,
+            reconstruction::ReconstructionStop::Command(
+                shin_core::vm::command::RuntimeCommand::MSGSET(_)
+            )
+        );
         let start = match scene.stop {
             reconstruction::ReconstructionStop::Response(result) => {
                 Ok(CommandStartResult::Continue(result))
@@ -916,8 +1002,13 @@ impl Adv {
                 return true;
             }
         };
-        loaded_audio.install_container_properties(&self.adv_state, &mut fresh, &scene.state);
-        loaded_audio.install_reused(&mut self.adv_state, &mut fresh, &scene.state);
+        loaded_audio.install_container_properties(
+            &mut self.adv_state,
+            &mut fresh,
+            &scene.state,
+            kind != SceneLoadKind::Saved,
+        );
+        loaded_audio.install_reused(&mut fresh, &scene.state);
         // Native audio players are global to the running ADV. Transfer them
         // only after validation, then restore through their identity reuse paths.
         std::mem::swap(
@@ -929,7 +1020,17 @@ impl Adv {
             &mut self.adv_state.audio.se_player,
         );
         loaded_audio.install(&mut fresh, &scene.state, &self.scenario);
-        restoration::restore_message(&mut fresh, &scene.state, &self.scenario, context.pre_render);
+        // MSGSET installs a fresh sentence at the saved command boundary.
+        // Reinstalling the static snapshot here fast-forwards that sentence
+        // and suppresses its voice before its first ordinary update.
+        if !starts_message {
+            restoration::restore_message(
+                &mut fresh,
+                &scene.state,
+                &self.scenario,
+                context.pre_render,
+            );
+        }
         // Native mode3 bypasses title/route cancellation and the notification
         // deque/opacity reset at1aad0..1abf8 by branching directly to1ac20.
         if kind == SceneLoadKind::Resume {
@@ -959,16 +1060,24 @@ impl Adv {
             fresh.set_ui_hidden(fresh.ui_hide_count != 0);
         }
         self.adv_state.message_layer_mut().voice_player_mut().stop();
-        fresh.scene_load_fade = source.map(|source| {
-            scene_load_fade::SceneLoadFade::new(
+        let mut load_fade = source.map(|source| {
+            let fade = scene_load_fade::SceneLoadFade::new(
                 source,
                 shin_core::time::Ticks::from_f32(if kind == SceneLoadKind::History {
                     4.0
                 } else {
                     30.0
                 }),
-            )
+            );
+            if kind == SceneLoadKind::Saved {
+                fade.with_mask(self.assets.scene_load_mask.clone(), 0.3)
+            } else {
+                fade
+            }
         });
+        if kind != SceneLoadKind::Saved {
+            fresh.scene_load_fade = load_fade.take();
+        }
         self.previous_rollback_position = self.pending_rollback_position.take();
         let mut previous = std::mem::replace(&mut self.adv_state, fresh);
         self.adv_state
@@ -979,6 +1088,12 @@ impl Adv {
             store.restore_revision(&self.vm_state, &scene.state);
         }
         self.vm_state = scene.state;
+        // Publish restored user checkpoints for immediate Load/title returns.
+        // Native19ea0 installs event transitions without f720: an event skip
+        // reaching EVEND must retain the preceding message's Continue snapshot.
+        if publish_continue {
+            self.vm_state.capture_autosave();
+        }
         self.scripter = scene.scripter;
         self.current_command = None;
         self.pending_result = shin_core::vm::command::CommandResult::None;
@@ -991,6 +1106,17 @@ impl Adv {
             CommandStartResult::Exit => self.finished = true,
         }
         self.adv_state.update(context);
+        // A saved Load becomes visible only after publication. Its current
+        // delta still belongs to outgoing capture/resource preparation; the
+        // next delta also includes this frame's first pipeline compilation.
+        if let Some(fade) = load_fade {
+            self.adv_state.scene_load_fade = Some(fade.start_after_publication());
+        }
+        tracing::debug!(
+            delta = context.delta_ticks.as_f32(),
+            frame_ms = context.frame_started_at.elapsed().as_secs_f64() * 1000.0,
+            "Saved scene published"
+        );
         true
     }
 
@@ -1040,15 +1166,47 @@ impl Adv {
         held: bool,
         elapsed_seconds: f64,
     ) {
+        let extent_changed = self.modal_pointer_extent != extent;
         self.modal_pointer.sample(position, held, elapsed_seconds);
         self.modal_pointer_extent = extent;
         self.modal_pointer_held = held;
+        if tracing::enabled!(tracing::Level::DEBUG) {
+            let phase = if let Some(menu) = &self.system_menu {
+                menu.desktop_diagnostic_ready().then_some("system_menu")
+            } else if let Some(browser) = &self.adv_state.backlog {
+                browser.desktop_diagnostic_phase()
+            } else {
+                let e = self.story_touch_eligibility();
+                (e.input
+                    && e.system
+                    && !e.event
+                    && self.adv_state.message_layer().is_interested_in_input())
+                .then_some("dialogue")
+            };
+            if phase != self.last_desktop_browser_phase {
+                self.last_desktop_browser_phase = phase;
+                tracing::debug!(
+                    phase = phase.unwrap_or("transition"),
+                    pc = self.scripter.position().0,
+                    save_position = self.vm_state.save_position,
+                    "UMINEKO_BROWSER"
+                );
+            }
+        }
+
         if let Some(menu) = &mut self.system_menu {
             menu.set_pointer_extent(extent);
+        }
+        if let Some((_, dialog)) = &mut self.chapter_dialog {
+            if extent_changed {
+                dialog.set_pointer_extent(extent, held);
+            }
         }
     }
 
     pub(crate) fn cancel_event_contact(&mut self) {
+        self.hidden_tap_input.cancel();
+        self.story_touch.disable();
         self.event_skip.pointer(
             &self.modal_pointer.frame(),
             self.modal_pointer_extent,
@@ -1080,6 +1238,7 @@ impl Adv {
     }
     pub fn handle_pointer(&mut self, position: glam::Vec2, clicked: bool) {
         if self.pending_save.is_some()
+            || self.chapter_dialog.is_some()
             || self.progress_error.is_some()
             || self.restore_error_dialog.is_some()
         {
@@ -1112,6 +1271,10 @@ impl Adv {
         held: bool,
         elapsed_seconds: f64,
     ) {
+        if let Some((_, dialog)) = &mut self.chapter_dialog {
+            dialog.pointer_state(position, held, elapsed_seconds);
+            return;
+        }
         if let Some(dialog) = &mut self.progress_error {
             dialog.pointer_state(position, held, self.modal_pointer_extent, elapsed_seconds);
             return;
@@ -1146,8 +1309,28 @@ impl Adv {
             }
             return;
         }
+        if self.process_story_pointer().1 {
+            if let Some(menu) = &mut self.adv_state.choice_menu {
+                menu.ignore_pointer_state(held);
+            }
+            if let Some(layer) = self.active_interactive_layer() {
+                layer.ignore_pointer_state(held);
+            }
+            return;
+        }
         if let Some(backlog) = &mut self.adv_state.backlog {
-            backlog.pointer_state(position, held, elapsed_seconds);
+            let scale = glam::vec2(
+                1920.0 / self.modal_pointer_extent.0.max(1) as f32,
+                1080.0 / self.modal_pointer_extent.1.max(1) as f32,
+            );
+            backlog.pointer_state_with_mouse_release(
+                position,
+                held,
+                elapsed_seconds,
+                self.modal_pointer
+                    .mouse_release()
+                    .map(|release| release.scaled(scale)),
+            );
         } else if let Some(screen) = &mut self.adv_state.character_screen {
             screen.pointer_state(position, held, elapsed_seconds);
         } else if let Some(menu) = &mut self.adv_state.choice_menu {
@@ -1173,12 +1356,11 @@ impl Adv {
                 .play_system_sound(server, sound, Default::default());
         }
     }
-    fn active_interactive_layer(&self) -> Option<crate::layer::user::InteractiveLayerRef<'_>> {
+    fn active_interactive_layer(&self) -> Option<crate::layer::user::InteractiveLayerRef<'static>> {
         let (plane, bank) = self.current_command.as_ref()?.interactive_target()?;
-        self.adv_state
-            .plane_layer_group(plane)
-            .get_layer(bank)?
-            .interactive()
+        crate::layer::user::InteractiveLayerRef::from_owned(
+            self.adv_state.plane_layer_group(plane).layer_owner(bank)?,
+        )
     }
 
     pub fn is_finished(&self) -> bool {
@@ -1195,7 +1377,16 @@ impl Adv {
             self.skip_indicator_active(),
             self.vm_state.settings.v11_disallowskipunread,
         );
+        if let Some(pending) = &self.pending_restore {
+            if pending.present_source {
+                if let Some(source) = &pending.source {
+                    scene_load_fade::render_snapshot(source, pass);
+                }
+            }
+        }
         self.event_skip.render(pass, &self.assets.menu_textures);
+        self.story_touch
+            .render(self.assets.menu_textures.get("navi"), pass);
         if let Some(menu) = &self.adv_state.choice_menu {
             menu.render(pass);
         }
@@ -1207,6 +1398,9 @@ impl Adv {
         }
         if let Some(save) = &self.pending_save {
             save.task.render(pass);
+        }
+        if let Some((_, dialog)) = &self.chapter_dialog {
+            dialog.render(pass);
         }
         if let Some(dialog) = &self.progress_error {
             dialog.render(pass);
@@ -1238,6 +1432,7 @@ impl Adv {
 
     fn playback_indicator_controls_allowed(&self) -> bool {
         !self.adv_state.hidden_ui_active
+            && self.chapter_dialog.is_none()
             && self.vm_state.allows_system_controls()
             && self.adv_state.modal_backdrop.is_none()
             && self.adv_state.choice_menu.is_none()
@@ -1250,11 +1445,7 @@ impl Adv {
     }
 
     pub fn set_character_scroll_axis(&mut self, axis: f32) {
-        self.character_scroll_axis = if axis.is_finite() {
-            axis.clamp(-1.0, 1.0)
-        } else {
-            0.0
-        };
+        self.character_scroll_axis = if axis.is_finite() { axis } else { 0.0 };
     }
     pub(crate) fn set_interactive_axes(&mut self, axes: glam::Vec2) {
         self.interactive_axes = if axes.is_finite() {
@@ -1265,8 +1456,12 @@ impl Adv {
     }
 
     pub fn handle_input(&mut self, state: EnumMap<AppAction, ActionState>, is_focused: bool) {
+        if !self.adv_state.hidden_ui_active {
+            self.hidden_tap_input.cancel();
+        }
         // CTRL is a temporary port control; never latch the native skip mode.
         self.held_skip = is_focused
+            && self.chapter_dialog.is_none()
             && !self.is_loading_saved_scene()
             && self.pending_save.is_none()
             && self.progress_error.is_none()
@@ -1280,14 +1475,17 @@ impl Adv {
             || self.restore_error_dialog.is_some()
             || self.finished
         {
+            self.hidden_tap_input.cancel();
             self.event_skip.pointer(
                 &self.modal_pointer.frame(),
                 self.modal_pointer_extent,
                 false,
             );
+            self.story_touch.disable();
             return;
         }
         if self.system_menu.is_some()
+            || self.chapter_dialog.is_some()
             || self.adv_state.modal_backdrop.is_some()
             || self.adv_state.backlog.is_some()
             || self.adv_state.hidden_ui_active
@@ -1298,14 +1496,20 @@ impl Adv {
                 self.modal_pointer_extent,
                 false,
             );
+            self.story_touch.disable();
         }
 
         if let Some(menu) = &mut self.system_menu {
-            menu.input(
+            self.hidden_tap_input.cancel();
+            menu.input_with_mouse_release(
                 &self.modal_pointer.frame(),
                 &state,
                 self.character_scroll_axis,
+                self.modal_pointer.mouse_release(),
             );
+            return;
+        }
+        if self.chapter_dialog.is_some() {
             return;
         }
         // Native11f80..11fc4 blocks story controls until backdrop fade is idle0.
@@ -1326,17 +1530,22 @@ impl Adv {
             return;
         }
         if self.adv_state.hidden_ui_active {
-            if [
-                AppAction::Enter,
-                AppAction::Cancel,
-                AppAction::PointerClick,
-                AppAction::HideMessage,
-                AppAction::Backlog,
-                AppAction::CharacterState,
-            ]
-            .iter()
-            .any(|&action| state[action].is_clicked)
+            let tapped = self
+                .hidden_tap_input
+                .update(&self.modal_pointer, self.modal_pointer_extent);
+            if tapped
+                || [
+                    AppAction::Enter,
+                    AppAction::Cancel,
+                    AppAction::HideMessage,
+                    AppAction::Backlog,
+                    AppAction::CharacterState,
+                ]
+                .iter()
+                .any(|&action| state[action].is_clicked)
             {
+                tracing::debug!(tapped, "Hidden text restored");
+                self.hidden_tap_input.cancel();
                 self.adv_state.hidden_ui_active = false;
                 self.adv_state.release_ui_hide();
             }
@@ -1356,15 +1565,9 @@ impl Adv {
             && self.vm_state.current_event.is_some()
             && self.adv_state.choice_menu.is_none()
             && self.active_interactive_layer().is_none();
-        let pointer_consumed = self.event_skip.pointer(
-            &self.modal_pointer.frame(),
-            self.modal_pointer_extent,
-            event_controls,
-        );
-        if self.event_skip.take_request() {
-            self.pending_event_skip = true;
-        }
-        if pointer_consumed {
+        let pointer_consumed = self.process_story_pointer().0;
+        self.apply_story_touch_requests();
+        if pointer_consumed || self.story_touch.blocks_input() {
             return;
         }
 
@@ -1403,6 +1606,21 @@ impl Adv {
             self.adv_state.playback_modes.reset();
             self.pending_playback_sound = Some("cancel");
             return;
+        }
+
+        if self.vm_state.system_controls_allowed
+            && self.adv_state.ui_hide_count == 0
+            && self.adv_state.audio_pause_count == 0
+        {
+            // Native12028 handles chapter triggers before the event A/B path.
+            if state[AppAction::NextChapter].is_clicked {
+                self.pending_chapter = Some(chapter_navigation::Direction::Next);
+                return;
+            }
+            if state[AppAction::PreviousChapter].is_clicked {
+                self.pending_chapter = Some(chapter_navigation::Direction::Previous);
+                return;
+            }
         }
 
         if event_controls {
@@ -1446,6 +1664,7 @@ impl Adv {
         {
             self.adv_state.playback_modes.reset();
             self.adv_state.hidden_ui_active = true;
+            self.story_touch.close();
             self.adv_state.acquire_ui_hide();
             return;
         }
@@ -1522,6 +1741,8 @@ impl Adv {
         input_state: EnumMap<AppAction, ActionState>,
     ) {
         self.held_skip = false;
+        self.story_touch.configure(self.story_touch_eligibility());
+        self.story_touch.update(context.delta_ticks);
         self.event_skip.update(context.delta_ticks);
         let progress_error = self.progress_error.is_some();
         if let Some(dialog) = if progress_error {
@@ -1545,11 +1766,30 @@ impl Adv {
                     self.progress_error = None;
                 } else {
                     self.restore_error_dialog = None;
+                    if std::mem::take(&mut self.retry_live_command_after_error) {
+                        self.restore_error = None;
+                    }
                 }
                 self.adv_state.release_audio_pause();
             }
             // Do not deliver the acknowledgement input to a story/menu owner.
             return;
+        }
+        // If even the failure notice uses the damaged dialog assets, retain
+        // the finished scene without reloading/logging every frame. A fresh
+        // Enter press explicitly retries preparation after data is repaired.
+        if self.finished
+            && !self.exit_save_finished
+            && self.pending_save.is_none()
+            && self.restore_error.is_some()
+        {
+            if input_state[AppAction::Enter].is_clicked {
+                self.restore_error = None;
+                self.retry_live_command_after_error = false;
+            } else {
+                self.adv_state.update_presentation(context);
+                return;
+            }
         }
         if let Some(save) = &mut self.pending_save {
             save.task.keyboard(&input_state);
@@ -1568,7 +1808,8 @@ impl Adv {
         self.adv_state.apply_audio_settings(&self.vm_state.settings);
         // self.action_state.update(context.raw_input_state);
 
-        let fast_forward_button_held = input_state[AppAction::HoldSkip].is_held;
+        let fast_forward_button_held =
+            input_state[AppAction::HoldSkip].is_held && self.chapter_dialog.is_none();
         // self
         //     .action_state
         //     .is_pressed(AdvMessageAction::HoldFastForward);
@@ -1582,6 +1823,9 @@ impl Adv {
 
         // TODO: tasks from task pool can steal focus
         self.handle_input(input_state, true);
+        if self.update_chapter_navigation(context, &input_state) {
+            return;
+        }
         // Native f610 returns null if the event has ended since input was read.
         if std::mem::take(&mut self.pending_event_skip)
             && self.vm_state.current_event.is_some()
@@ -1618,6 +1862,7 @@ impl Adv {
                 .play_system_sound(context.asset_server, sound, Default::default());
         }
         if std::mem::take(&mut self.pending_system_menu) {
+            self.story_touch.close();
             // Native1c1b4 calls13a70 before copying VM metadata into the menu.
             let backdrop = self.adv_state.capture_modal_backdrop(context.pre_render);
             self.adv_state.acquire_ui_hide();
@@ -1644,18 +1889,23 @@ impl Adv {
             let canvas: shin_render::resize::CanvasSize =
                 context.pre_render.resize_source.handle().get();
             let mut menu = self.system_menu.take().unwrap();
-            let closed = menu
-                .update(
-                    context.delta_ticks,
-                    context.asset_server,
-                    &self.scenario,
-                    self.play_clock.ticks(),
-                    &self.vm_state.settings,
-                    &saves,
-                    &self.adv_state.audio_manager,
-                    (canvas.width, canvas.height),
-                )
-                .expect("Updating system menu child");
+            let closed = match menu.update(
+                context.delta_ticks,
+                context.asset_server,
+                &self.scenario,
+                self.play_clock.ticks(),
+                &self.vm_state.settings,
+                &saves,
+                &self.adv_state.audio_manager,
+                (canvas.width, canvas.height),
+            ) {
+                Ok(closed) => closed,
+                Err(error) => {
+                    warn!(%error, "Loading system menu child failed");
+                    menu.cancel_failed_child();
+                    false
+                }
+            };
             if let Some(settings) = menu.config_settings() {
                 self.vm_state.settings = settings.clone();
                 self.adv_state
@@ -1667,18 +1917,24 @@ impl Adv {
             // so repeated edits do not accumulate for the screen's lifetime.
             let _edits = menu.take_config_edits();
             if menu.take_config_save_request() {
-                self.begin_save_task(
+                if let Err(error) = self.begin_save_task(
                     context.asset_server,
                     SavePurpose::Config,
                     persistence::ExplicitSave::Globals,
-                );
+                ) {
+                    warn!(%error, "Preparing Config save failed");
+                    menu.config_save_failed();
+                }
             }
             if menu.take_title_save_request() {
-                self.begin_save_task(
+                if let Err(error) = self.begin_save_task(
                     context.asset_server,
                     SavePurpose::TitleReturn,
                     persistence::ExplicitSave::Globals,
-                );
+                ) {
+                    warn!(%error, "Preparing title-return save failed");
+                    menu.cancel_failed_child();
+                }
             }
             let mut load_entry = None;
             for request in menu.take_save_menu_requests() {
@@ -1687,7 +1943,7 @@ impl Adv {
                     SaveMenuRequest::Save { slot, mut game } => {
                         game.refresh_timestamp();
                         menu.save_menu_write_started(Some(game.clone()));
-                        self.begin_save_task(
+                        if let Err(error) = self.begin_save_task(
                             context.asset_server,
                             SavePurpose::Manual {
                                 game: Some(game.clone()),
@@ -1696,15 +1952,21 @@ impl Adv {
                                 slot,
                                 game: Some(game),
                             },
-                        );
+                        ) {
+                            warn!(%error, "Preparing manual save failed");
+                            menu.save_menu_write_finished(false, None);
+                        }
                     }
                     SaveMenuRequest::Delete { slot } => {
                         menu.save_menu_write_started(None);
-                        self.begin_save_task(
+                        if let Err(error) = self.begin_save_task(
                             context.asset_server,
                             SavePurpose::Manual { game: None },
                             persistence::ExplicitSave::Slot { slot, game: None },
-                        );
+                        ) {
+                            warn!(%error, "Preparing save deletion failed");
+                            menu.save_menu_write_finished(false, None);
+                        }
                     }
                     SaveMenuRequest::Load { slot, game } => {
                         if let Some(store) = &mut self.persistence {
@@ -1728,6 +1990,25 @@ impl Adv {
                 self.adv_state
                     .play_system_sound(context.asset_server, sound, Default::default());
             }
+            // Native manual Load queues a fresh ADV (dbf38/19524). Its
+            // constructor10060 copies the completed canvas, including the
+            // paused scene's dimmed backdrop, into capture owner62d80. Preserve
+            // that composition before releasing the old modal scopes; a raw
+            // story-to-story capture is invisible when the same save is loaded.
+            let load_source = load_entry.as_ref().map(|_| {
+                let mut source = context
+                    .pre_render
+                    .new_render_texture("Pause-menu Load outgoing frame".into());
+                let mut pass = context.pre_render.begin_pass(
+                    source.as_texture_target(),
+                    Some(context.pre_render.depth_stencil),
+                    "Pause-menu Load outgoing frame",
+                );
+                self.render(&mut pass);
+                menu.render(&mut pass);
+                drop(pass);
+                source
+            });
             if closed || load_entry.is_some() {
                 self.system_menu = None;
                 // Native1d2b8 releases audio/UI immediately, then starts fade0.
@@ -1747,6 +2028,8 @@ impl Adv {
                     self.load_game_data(&globals, &entry, context.asset_server.clone())
                 {
                     self.report_scene_load_error(error, context);
+                } else {
+                    self.set_saved_load_source(load_source.unwrap());
                 }
                 self.update_loading_scene(context);
                 return;
@@ -1776,6 +2059,7 @@ impl Adv {
             return;
         }
         if self.pending_backlog {
+            self.story_touch.close();
             self.pending_backlog = false;
             let entry = self.vm_state.snapshot_game_data();
             let globals = shin_core::format::save::SaveData {
@@ -1844,7 +2128,8 @@ impl Adv {
                 self.fast_forward_to_bp = None;
             }
 
-            let is_fast_forwarding = self.adv_state.modal_backdrop.is_none()
+            let is_fast_forwarding = self.chapter_dialog.is_none()
+                && self.adv_state.modal_backdrop.is_none()
                 && !self.adv_state.hidden_ui_active
                 && (self.adv_state.playback_modes.is_skipping(
                     self.vm_state.allows_system_controls(),
@@ -1864,13 +2149,19 @@ impl Adv {
 
             // TODO: maybe yield if spent too much time in this loop?
             let runtime_command = if let Some(command) = &mut self.current_command {
-                match command.update(
+                let updated = command.update(
                     context,
                     &self.scenario,
                     &mut self.vm_state,
                     &mut self.adv_state,
                     is_fast_forwarding,
-                ) {
+                );
+                if let Some(error) = command.take_error() {
+                    self.report_scene_load_error(error, context);
+                    self.retry_live_command_after_error = true;
+                    return;
+                }
+                match updated {
                     None => break,
                     Some(result) => {
                         self.current_command = None;
@@ -1936,16 +2227,23 @@ impl Adv {
         self.collect_completed_messages();
         self.play_interactive_sounds(context.asset_server);
         if self.finished && !self.exit_save_finished && self.pending_save.is_none() {
-            self.begin_save_task(
+            match self.begin_save_task(
                 context.asset_server,
                 SavePurpose::Exit,
                 persistence::ExplicitSave::Globals,
-            );
-            self.pending_save
-                .as_mut()
-                .unwrap()
-                .task
-                .prepare(context.pre_render);
+            ) {
+                Ok(()) => self
+                    .pending_save
+                    .as_mut()
+                    .unwrap()
+                    .task
+                    .prepare(context.pre_render),
+                Err(error) => {
+                    warn!(%error, "Preparing scenario-exit save failed; Enter retries");
+                    self.report_scene_load_error(error, context);
+                    self.retry_live_command_after_error = true;
+                }
+            }
         } else {
             self.flush_progress(context);
         }
@@ -2070,21 +2368,30 @@ pub struct AdvState {
 
 impl AdvState {
     // System cue, voice, two BGM tracks, 32 SE slots and one-shot SE.
-    const AUDIO_TRACK_COUNT: u16 = crate::audio::SE_SLOT_COUNT as u16 + 5;
+    const AUDIO_TRACK_COUNT: usize = crate::audio::SE_SLOT_COUNT + 5;
 
     fn update_presentation(&mut self, context: &mut UpdateContext) {
         self.skip_indicator.update(context.delta_ticks);
         self.bgm_title.update(context.delta_ticks);
         self.route_label.update(context.delta_ticks);
         self.audio.system_player.update();
-        self.update_notifications(context);
+        self.update_notifications(context.asset_server, context.delta_ticks);
     }
 
-    fn update_notifications(&mut self, context: &mut UpdateContext) {
-        if let Some(code) = self.notifications.update(context.delta_ticks) {
-            self.notifications.load_textures(context.asset_server);
+    fn update_notifications(
+        &mut self,
+        server: &crate::asset::system::AssetServer,
+        delta: shin_core::time::Ticks,
+    ) {
+        if let Some(code) = self.notifications.update(delta) {
+            // Artwork failure must not unwind an ADV input/update callback or
+            // undo an unlock. Keep normal toast/cue timing; a later toast can
+            // retry, while a retained healthy atlas needs no new file access.
+            if let Err(error) = self.notifications.load_textures(server) {
+                warn!(%error, "Loading notification artwork failed");
+            }
             self.play_system_sound(
-                context.asset_server,
+                server,
                 if code & 0x10 == 0 {
                     "notify1"
                 } else {
@@ -2401,7 +2708,7 @@ impl Updatable for AdvState {
             self.play_system_sound(context.asset_server, sound, Default::default());
         }
 
-        self.update_notifications(context);
+        self.update_notifications(context.asset_server, context.delta_ticks);
         let message_owner = self.root_layer_group.message_owner();
         let voice_callback = |character, pan| {
             let mut message = message_owner.lock();

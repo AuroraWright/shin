@@ -89,7 +89,8 @@ pub(crate) fn reference_live_maskload_policy<'a>(
         }
         // Replaying the retained missing ID must stay loadable in both scene
         // restoration and thumbnail construction instead of indexing the table.
-        let sounds = adv.audio_manager.kira_manager().lock().num_sounds();
+        let sounds = adv.audio_manager.kira_manager().lock().main_track()
+            .num_sounds();
         assert!(
             shin_tasks::block_on(crate::adv::restoration::LoadedScene::load(
                 server,
@@ -108,7 +109,8 @@ pub(crate) fn reference_live_maskload_policy<'a>(
             ))
             .is_ok()
         );
-        assert_eq!(adv.audio_manager.kira_manager().lock().num_sounds(), sounds);
+        assert_eq!(adv.audio_manager.kira_manager().lock()
+                .main_track().num_sounds(), sounds);
         adv.allow_running_animations = true;
         adv.plane_layer_group_mut(plane)
             .set_mask_texture(mask.clone(), old_flags);
@@ -135,10 +137,10 @@ pub(crate) fn reference_live_maskload_policy<'a>(
         // and ADV updater. No I/O thread is blocked by the test gate.
         let (release, gate) = futures::channel::oneshot::channel::<()>();
         let loaded = mask.clone();
-        pending.load_task = shin_tasks::async_io::spawn(async move {
+        pending.load_task = Some(shin_tasks::async_io::spawn(async move {
             gate.await.unwrap();
-            loaded
-        });
+            Ok(loaded)
+        }));
         let mut tween = adv
             .plane_layer_group_mut(plane)
             .properties_mut()

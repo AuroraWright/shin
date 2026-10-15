@@ -1,4 +1,10 @@
 mod first_boot;
+mod higurashi;
+pub(crate) use higurashi::window_app::{
+    HigurashiApp, PreparedLaunch, prepare_launch as prepare_higurashi_launch,
+};
+#[cfg(feature = "higurashi-window-probe")]
+pub(crate) use higurashi::window_probe::run as run_higurashi_window_probe;
 mod scene_host;
 mod shutdown;
 mod touch_effect;
@@ -23,7 +29,7 @@ use winit::keyboard::KeyCode;
 
 use crate::{
     adv::{Adv, assets::AdvAssets},
-    asset::system::{AssetLoadContext, AssetServer, cache::AssetCache, locate_assets},
+    asset::system::{AssetLoadContext, AssetServer, cache::AssetCache, locate_assets_for_game},
     cli::Cli,
     render::PreRenderContext,
     update::UpdateContext,
@@ -45,7 +51,7 @@ pub enum AppAction {
     DpadRight,
     PageUp,
     PageDown,
-    // Desktop scroll keys are separate from native shoulder-button actions.
+    // Retired desktop scroll actions; keyboard scrolling uses the right-stick axis.
     KeyboardScrollUp,
     KeyboardScrollDown,
     CharacterPageUp,
@@ -68,6 +74,8 @@ pub enum AppAction {
     DeleteSave,
     Backlog,
     PreviousScene,
+    NextChapter,
+    PreviousChapter,
     ReplayVoice,
     ConfirmSceneJump,
     SceneJumpMenu,
@@ -76,185 +84,110 @@ pub enum AppAction {
     ToggleAuto,
 }
 
+/// Project the complete keyboard contract into controller input once, so every
+/// scene receives the same buttons and axes regardless of the input device.
+pub(crate) fn keyboard_as_controller(raw: &RawInputState) -> RawInputState {
+    let mut mapped = raw.clone();
+    for (key, button) in [
+        (KeyCode::ArrowUp, GamepadButton::Up),
+        (KeyCode::ArrowDown, GamepadButton::Down),
+        (KeyCode::ArrowLeft, GamepadButton::Left),
+        (KeyCode::ArrowRight, GamepadButton::Right),
+        (KeyCode::KeyM, GamepadButton::Y),
+        (KeyCode::KeyB, GamepadButton::X),
+        (KeyCode::Enter, GamepadButton::A),
+        (KeyCode::Escape, GamepadButton::B),
+        (KeyCode::KeyH, GamepadButton::L),
+        (KeyCode::KeyJ, GamepadButton::R),
+    ] {
+        mapped.gamepads.unified.buttons[button] |= raw.keyboard.contains(&key);
+    }
+    let up = raw.keyboard.contains(&KeyCode::KeyK);
+    let down = raw.keyboard.contains(&KeyCode::KeyL);
+    if up || down {
+        mapped.gamepads.unified.axes[GamepadAxis::RightStickY] =
+            u8::from(up) as f32 - u8::from(down) as f32;
+        mapped.gamepads.unified.virtual_keys[VirtualGamepadButton::StickRUp] = up && !down;
+        mapped.gamepads.unified.virtual_keys[VirtualGamepadButton::StickRDown] = down && !up;
+    }
+    mapped.keyboard.clear();
+    mapped
+}
+
+/// Screen scroll is down-positive. Keyboard/stick input keeps its native gain;
+/// wheel displacement is accumulated once per frame, including fractional
+/// trackpad motion. It must not be clamped to a held stick's [-1, 1] range.
+pub(crate) fn text_scroll_axis(raw: &RawInputState) -> f32 {
+    let keyboard = f32::from(raw.keyboard.contains(&KeyCode::KeyL))
+        - f32::from(raw.keyboard.contains(&KeyCode::KeyK));
+    let axis = if keyboard != 0.0 {
+        keyboard
+    } else {
+        let stick = raw.gamepads.unified.axes[GamepadAxis::RightStickY];
+        if stick.is_finite() {
+            -stick.clamp(-1.0, 1.0)
+        } else {
+            0.0
+        }
+    };
+    let wheel = raw.mouse.scroll_amount;
+    if wheel.is_finite() {
+        axis - wheel
+    } else {
+        axis
+    }
+}
+
 impl Action for AppAction {
     fn lower(raw_input_state: &RawInputState) -> EnumMap<Self, bool> {
+        let mapped = keyboard_as_controller(raw_input_state);
+        let pad = &mapped.gamepads;
+        let held = |button| pad.is_held(button);
+        let direction = |button, stick| held(button) || pad.is_vheld(stick);
         EnumMap::from_fn(|action| match action {
-            AppAction::Act => {
-                raw_input_state.keyboard.contains(&KeyCode::Space)
-                    || raw_input_state.gamepads.is_held(GamepadButton::A)
-                    || raw_input_state.mouse.buttons[MouseButton::Left]
-            }
-            AppAction::Enter => {
-                raw_input_state.keyboard.contains(&KeyCode::Space)
-                    | raw_input_state.keyboard.contains(&KeyCode::Enter)
-                    | raw_input_state.gamepads.is_held(GamepadButton::A)
-            }
-            AppAction::Cancel => {
-                raw_input_state.keyboard.contains(&KeyCode::Backspace)
-                    || raw_input_state.keyboard.contains(&KeyCode::Escape)
-                    || raw_input_state.gamepads.is_held(GamepadButton::B)
-            }
-            AppAction::AnyDown => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowDown)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Down)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLDown)
-            }
-            AppAction::DpadUp => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowUp)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Up)
-            }
-            AppAction::DpadDown => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowDown)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Down)
-            }
-            AppAction::DpadLeft => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowLeft)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Left)
-            }
-            AppAction::DpadRight => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowRight)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Right)
-            }
-            AppAction::Left => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowLeft)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Left)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLLeft)
-            }
-            AppAction::Right => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowRight)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Right)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLRight)
-            }
-            AppAction::PageUp => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyK)
-                    || raw_input_state.gamepads.is_held(GamepadButton::L)
-            }
-            AppAction::PageDown => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyL)
-                    || raw_input_state.gamepads.is_held(GamepadButton::R)
-            }
-            AppAction::KeyboardScrollUp => raw_input_state.keyboard.contains(&KeyCode::KeyK),
-            AppAction::KeyboardScrollDown => raw_input_state.keyboard.contains(&KeyCode::KeyL),
-            AppAction::CharacterPageUp => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyH)
-                    || raw_input_state.gamepads.is_held(GamepadButton::L)
-            }
-            AppAction::CharacterPageDown => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyJ)
-                    || raw_input_state.gamepads.is_held(GamepadButton::R)
-            }
-            AppAction::ScenarioTabPrevious => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyH)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Left)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLLeft)
-            }
-            AppAction::ScenarioTabNext => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyJ)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Right)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLRight)
-            }
-            AppAction::CharacterState => {
-                raw_input_state.keyboard.contains(&KeyCode::Tab)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Y)
-            }
-            AppAction::CharacterVariant => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyV)
-                    || raw_input_state.gamepads.is_held(GamepadButton::X)
-            }
-            AppAction::ViewerPanUp => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowUp)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Up)
-            }
-            AppAction::ViewerPanDown => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowDown)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Down)
-            }
-            AppAction::ViewerPanLeft => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowLeft)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Left)
-            }
-            AppAction::ViewerPanRight => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowRight)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Right)
-            }
-            AppAction::TextScrollUp => {
-                raw_input_state.keyboard.contains(&KeyCode::Home)
-                    || raw_input_state.mouse.buttons[MouseButton::WheelUp]
-            }
-            AppAction::TextScrollDown => {
-                raw_input_state.keyboard.contains(&KeyCode::End)
-                    || raw_input_state.mouse.buttons[MouseButton::WheelDown]
-            }
-            AppAction::Up => {
-                raw_input_state.keyboard.contains(&KeyCode::ArrowUp)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Up)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLUp)
-            }
-            AppAction::Backlog => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyB)
-                    || raw_input_state.gamepads.is_held(GamepadButton::X)
-            }
-            AppAction::PreviousScene => {
-                raw_input_state.keyboard.contains(&KeyCode::Backspace)
-                    || raw_input_state.keyboard.contains(&KeyCode::ArrowUp)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Up)
-                    || raw_input_state
-                        .gamepads
-                        .is_vheld(VirtualGamepadButton::StickLUp)
-            }
-            AppAction::ReplayVoice => raw_input_state.keyboard.contains(&KeyCode::KeyV),
-            AppAction::SceneJumpMenu => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyG)
-                    || raw_input_state.gamepads.is_held(GamepadButton::X)
-            }
-            AppAction::ConfirmSceneJump => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyY)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Y)
-            }
+            AppAction::Act => held(GamepadButton::A) || mapped.mouse.buttons[MouseButton::Left],
+            AppAction::Enter | AppAction::ReplayVoice => held(GamepadButton::A),
+            AppAction::Cancel => held(GamepadButton::B),
             AppAction::HideMessage => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyH)
-                    || raw_input_state.mouse.buttons[MouseButton::Right]
-                    || raw_input_state.gamepads.is_held(GamepadButton::B)
+                held(GamepadButton::B) || mapped.mouse.buttons[MouseButton::Right]
             }
-            AppAction::SystemMenu => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyM)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Y)
+            AppAction::AnyDown => direction(GamepadButton::Down, VirtualGamepadButton::StickLDown),
+            AppAction::Up | AppAction::PreviousScene => {
+                direction(GamepadButton::Up, VirtualGamepadButton::StickLUp)
             }
-            AppAction::UnlockScenarios => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyU)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Plus)
+            AppAction::Left => direction(GamepadButton::Left, VirtualGamepadButton::StickLLeft),
+            AppAction::Right => direction(GamepadButton::Right, VirtualGamepadButton::StickLRight),
+            AppAction::DpadUp | AppAction::ViewerPanUp => held(GamepadButton::Up),
+            AppAction::DpadDown | AppAction::ViewerPanDown => held(GamepadButton::Down),
+            AppAction::DpadLeft | AppAction::ViewerPanLeft => held(GamepadButton::Left),
+            AppAction::DpadRight | AppAction::ViewerPanRight => held(GamepadButton::Right),
+            AppAction::PageUp
+            | AppAction::CharacterPageUp
+            | AppAction::ScenarioTabPrevious
+            | AppAction::ToggleAuto => held(GamepadButton::L),
+            AppAction::PageDown
+            | AppAction::CharacterPageDown
+            | AppAction::ScenarioTabNext
+            | AppAction::ToggleSkip => held(GamepadButton::R),
+            AppAction::CharacterState
+            | AppAction::SystemMenu
+            | AppAction::ConfirmSceneJump
+            | AppAction::DeleteSave
+            | AppAction::ConfigReset => held(GamepadButton::Y),
+            AppAction::CharacterVariant | AppAction::Backlog | AppAction::SceneJumpMenu => {
+                held(GamepadButton::X)
             }
-            AppAction::DeleteSave => {
-                raw_input_state.keyboard.contains(&KeyCode::Delete)
-                    || raw_input_state.keyboard.contains(&KeyCode::KeyY)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Y)
+            AppAction::UnlockScenarios => held(GamepadButton::Plus),
+            AppAction::NextChapter => held(GamepadButton::Plus),
+            AppAction::PreviousChapter => held(GamepadButton::Minus),
+            // Wheel displacement is delivered once through the scroll axis.
+            AppAction::TextScrollUp | AppAction::TextScrollDown => false,
+            AppAction::PointerClick => mapped.mouse.buttons[MouseButton::Left],
+            // Former desktop-only actions. K/L now use the actual right-stick
+            // axis, including continuous scrolling and native contact priority.
+            AppAction::KeyboardScrollUp | AppAction::KeyboardScrollDown | AppAction::HoldSkip => {
+                false
             }
-            AppAction::ConfigReset => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyY)
-                    || raw_input_state.gamepads.is_held(GamepadButton::Y)
-            }
-            AppAction::PointerClick => raw_input_state.mouse.buttons[MouseButton::Left],
-            AppAction::ToggleSkip => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyS)
-                    || raw_input_state.gamepads.is_held(GamepadButton::R)
-            }
-            AppAction::ToggleAuto => {
-                raw_input_state.keyboard.contains(&KeyCode::KeyA)
-                    || raw_input_state.gamepads.is_held(GamepadButton::L)
-            }
-            AppAction::HoldSkip => raw_input_state.keyboard.contains(&KeyCode::ControlLeft),
         })
     }
 }
@@ -263,7 +196,7 @@ pub struct App {
     shutdown: shutdown::Shutdown,
     platform_suspended: bool,
     frame_id: FrameId,
-    effect_textures: Option<Arc<crate::asset::effects::EffectTextures>>,
+    effect_textures: Option<crate::asset::effects::EffectsAtlasBorrow>,
     audio_manager: Arc<AudioManager>,
     asset_server: Arc<AssetServer>,
     scenes: SceneHost,
@@ -306,11 +239,140 @@ impl App {
     }
 }
 
+impl App {
+    fn prepare_touch_frame(
+        &mut self,
+        pre_render: &mut PreRenderContext,
+        delta: Ticks,
+        held: bool,
+        pointer: glam::Vec2,
+        extent: (u16, u16),
+    ) {
+        // Use the post-update settings so Config toggles and reset take effect
+        // in this frame. Pointer coordinates already exclude letterbox bars.
+        self.touch_effect.update_in_viewport(
+            delta,
+            self.scenes.touch_effects_enabled(),
+            held,
+            pointer,
+            extent,
+        );
+        if self.touch_effect.has_ripples() {
+            let background = self.touch_background.get_or_insert_with(|| {
+                pre_render.new_render_texture("Touch ripple scene capture".into())
+            });
+            let target = background.as_texture_target();
+            let depth = pre_render.depth_stencil;
+            let mut pass = pre_render.begin_pass(target, Some(depth), "Touch ripple scene capture");
+            self.scenes.render(&mut pass);
+        } else {
+            self.touch_background = None;
+        }
+    }
+
+    fn render_frame(&self, pass: &mut RenderPass) {
+        if let Some(background) = &self.touch_background {
+            pass.clear(
+                Some(shin_core::primitives::color::UnormColor::BLACK),
+                Some(0),
+                Some(1.0),
+            );
+            shin_render::quad_vertices::QuadVertices::new()
+                .with_box(0.0, 0.0, 1920.0, 1080.0)
+                .render_sprite(
+                    pass,
+                    shin_render::RenderRequestBuilder::new(),
+                    background.as_texture_source(),
+                    crate::render::top_left_projection_matrix(),
+                );
+            self.touch_effect
+                .render_ripples(pass, background.as_texture_source());
+        } else {
+            self.scenes.render(pass);
+        }
+        if let Some(textures) = &self.system_textures {
+            self.touch_effect.render(pass, textures);
+        }
+
+        self.shutdown.render(pass);
+    }
+}
+
+/// Real scene-host and touch-effect composition without a platform window.
+#[cfg(test)]
+pub(crate) struct ReferenceApp(App);
+#[cfg(test)]
+impl std::ops::Deref for ReferenceApp {
+    type Target = Adv;
+    fn deref(&self) -> &Adv {
+        self.0.scenes.reference_adv().unwrap()
+    }
+}
+#[cfg(test)]
+impl std::ops::DerefMut for ReferenceApp {
+    fn deref_mut(&mut self) -> &mut Adv {
+        self.0.scenes.reference_adv_mut().unwrap()
+    }
+}
+#[cfg(test)]
+impl ReferenceApp {
+    pub fn new(adv: Adv, assets: AdvAssets, server: Arc<AssetServer>) -> Self {
+        Self(App {
+            shutdown: Default::default(),
+            platform_suspended: false,
+            frame_id: Default::default(),
+            effect_textures: None,
+            audio_manager: adv.adv_state_audio().manager.clone(),
+            asset_server: server.clone(),
+            scenes: SceneHost::new(adv, assets, server),
+            pointer_position: Default::default(),
+            character_scroll_axis: 0.0,
+            touch_effect: Default::default(),
+            touch_background: None,
+            system_textures: None,
+        })
+    }
+    pub fn update_frame(
+        &mut self,
+        context: &mut UpdateContext,
+        input: EnumMap<AppAction, ActionState>,
+        pointer: glam::Vec2,
+        extent: (u16, u16),
+        elapsed: f64,
+    ) {
+        self.0
+            .scenes
+            .update(
+                context,
+                input,
+                pointer * glam::vec2(extent.0 as f32 / 1920.0, extent.1 as f32 / 1080.0),
+                pointer,
+                extent,
+                0.0,
+                elapsed,
+            )
+            .unwrap();
+        self.0.system_textures = self.0.scenes.system_textures().cloned();
+        self.0.prepare_touch_frame(
+            context.pre_render,
+            context.delta_ticks,
+            input[AppAction::PointerClick].is_held,
+            pointer,
+            extent,
+        );
+    }
+    pub fn render(&self, pass: &mut RenderPass) {
+        self.0.render_frame(pass);
+    }
+    pub fn has_ripples(&self) -> bool {
+        self.0.touch_background.is_some()
+    }
+}
+
 impl ShinApp for App {
     type Parameters = Cli;
     type EventType = ();
     type ActionType = AppAction;
-    const FULLSCREEN_SHORTCUT: Option<KeyCode> = Some(KeyCode::KeyF);
 
     fn run_in_background(&self) -> bool {
         self.shutdown.active() || self.scenes.run_in_background()
@@ -341,6 +403,10 @@ impl ShinApp for App {
     }
 
     fn init(context: AppContext<Self>, cli: Self::Parameters) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            cli.game == crate::cli::Game::Umineko,
+            "Umineko application requires an Umineko launch"
+        );
         #[cfg(not(test))]
         let audio_manager = Arc::new(if cli.loopback_audio {
             AudioManager::new_for_tests()
@@ -350,13 +416,15 @@ impl ShinApp for App {
         #[cfg(test)]
         let audio_manager = Arc::new(AudioManager::new_for_tests());
 
-        let asset_io = locate_assets(cli.assets_dir.as_deref()).context("Failed to locate assets. Consult the README for instructions on how to set up the game.")?;
+        let asset_io = locate_assets_for_game(cli.game, cli.assets_dir.as_deref()).context("Failed to locate assets. Consult the README for instructions on how to set up the game.")?;
 
         debug!("Asset IO: {:#?}", asset_io);
 
         let asset_server = Arc::new(AssetServer::new(
             asset_io.into(),
             AssetLoadContext {
+                game: cli.game,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: context.wgpu.device.clone(),
                 wgpu_queue: context.wgpu.queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -388,7 +456,9 @@ impl ShinApp for App {
 
         // Explicit saved/debug story launches prepare their requested ADV.
         let adv_assets = shin_tasks::block_on(AdvAssets::load(&asset_server))?;
-        let effect_textures = Some(shin_tasks::block_on(asset_server.load("/effects.txa"))?);
+        let effect_textures = Some(shin_tasks::block_on(
+            asset_server.initialize_effects_atlas(),
+        )?);
         let system_textures = Some(shin_tasks::block_on(asset_server.load("/systex.txa"))?);
 
         let mut scripter = Scripter::new(&adv_assets.scenario, 0, 42);
@@ -543,10 +613,12 @@ impl ShinApp for App {
         if self.effect_textures.is_none() {
             self.effect_textures = self.scenes.effect_textures().cloned();
         }
-        let effect_textures = self.effect_textures.clone();
+        let effect_textures = self.effect_textures.as_ref().map(|atlas| atlas.read());
         let asset_server = self.asset_server.clone();
         let mut pre_render_context = PreRenderContext {
-            breakup_texture: effect_textures.as_ref().map(|effects| &effects.breakup),
+            breakup_texture: effect_textures
+                .as_ref()
+                .map(|effects| effects.required("breakup")),
             device: &context.wgpu.device,
             queue: &context.wgpu.queue,
             resize_source: &context.winit.resize_source,
@@ -619,11 +691,9 @@ impl ShinApp for App {
         if self.system_textures.is_none() {
             self.system_textures = self.scenes.system_textures().cloned();
         }
-        // Use the post-update settings so Config toggles and reset take effect
-        // in this frame. Pointer coordinates already exclude letterbox bars.
-        self.touch_effect.update_in_viewport(
+        self.prepare_touch_frame(
+            update_context.pre_render,
             Ticks::from_duration(elapsed_time),
-            self.scenes.touch_effects_enabled(),
             input[AppAction::PointerClick].is_held,
             pointer,
             (
@@ -631,23 +701,6 @@ impl ShinApp for App {
                 viewport.canvas_size.height.clamp(1, u16::MAX as u32) as u16,
             ),
         );
-        if self.touch_effect.has_ripples() {
-            let background = self.touch_background.get_or_insert_with(|| {
-                update_context
-                    .pre_render
-                    .new_render_texture("Touch ripple scene capture".into())
-            });
-            let target = background.as_texture_target();
-            let depth = update_context.pre_render.depth_stencil;
-            let mut pass = update_context.pre_render.begin_pass(
-                target,
-                Some(depth),
-                "Touch ripple scene capture",
-            );
-            self.scenes.render(&mut pass);
-        } else {
-            self.touch_background = None;
-        }
 
         // let update_context = AdvUpdateContext {
         //     delta_time: Ticks::from_duration(elapsed_time),
@@ -687,45 +740,156 @@ impl ShinApp for App {
     }
 
     fn raw_input(&mut self, state: &RawInputState) {
-        self.scenes.raw_input(state);
+        let mapped = keyboard_as_controller(state);
+        self.scenes.raw_input(&mapped);
         self.pointer_position = state.mouse.position;
-        self.character_scroll_axis = -state.gamepads.unified.axes[GamepadAxis::RightStickY];
+        self.character_scroll_axis = text_scroll_axis(&mapped);
     }
 
     #[tracing::instrument(skip_all)]
     fn render(&mut self, _context: RenderContext, pass: &mut RenderPass) {
-        if let Some(background) = &self.touch_background {
-            pass.clear(
-                Some(shin_core::primitives::color::UnormColor::BLACK),
-                Some(0),
-                Some(1.0),
-            );
-            shin_render::quad_vertices::QuadVertices::new()
-                .with_box(0.0, 0.0, 1920.0, 1080.0)
-                .render_sprite(
-                    pass,
-                    shin_render::RenderRequestBuilder::new(),
-                    background.as_texture_source(),
-                    crate::render::top_left_projection_matrix(),
-                );
-            self.touch_effect
-                .render_ripples(pass, background.as_texture_source());
-        } else {
-            self.scenes.render(pass);
-        }
-        if let Some(textures) = &self.system_textures {
-            self.touch_effect.render(pass, textures);
-        }
-
-        self.shutdown.render(pass);
+        self.render_frame(pass);
 
         // render_layer(pass, &transform, &self.adv, FloatColor4::BLACK, 0);
     }
 }
 
 #[cfg(test)]
+pub(crate) fn wheel_scroll_test_input(amount: f32) -> (EnumMap<AppAction, ActionState>, f32) {
+    let mut raw = RawInputState::new();
+    raw.mouse.scroll_amount = amount;
+    raw.mouse.buttons[MouseButton::WheelUp] = amount > 0.0;
+    raw.mouse.buttons[MouseButton::WheelDown] = amount < 0.0;
+    let mut actions = shin_input::ActionsState::<AppAction>::new();
+    (
+        actions.update(AppAction::lower(&raw), Duration::from_millis(16)),
+        text_scroll_axis(&raw),
+    )
+}
+
+#[cfg(test)]
 mod controller_tests {
     use super::*;
+    #[test]
+    fn approved_keyboard_buttons_match_controller_in_every_action() {
+        for (key, button) in [
+            (KeyCode::ArrowUp, GamepadButton::Up),
+            (KeyCode::ArrowDown, GamepadButton::Down),
+            (KeyCode::ArrowLeft, GamepadButton::Left),
+            (KeyCode::ArrowRight, GamepadButton::Right),
+            (KeyCode::KeyM, GamepadButton::Y),
+            (KeyCode::KeyB, GamepadButton::X),
+            (KeyCode::Enter, GamepadButton::A),
+            (KeyCode::Escape, GamepadButton::B),
+            (KeyCode::KeyH, GamepadButton::L),
+            (KeyCode::KeyJ, GamepadButton::R),
+        ] {
+            let mut keyboard = RawInputState::new();
+            keyboard.keyboard.insert(key);
+            let mut controller = RawInputState::new();
+            controller.gamepads.unified.buttons[button] = true;
+            assert_eq!(
+                AppAction::lower(&keyboard),
+                AppAction::lower(&controller),
+                "{key:?}"
+            );
+            assert_eq!(
+                keyboard_as_controller(&keyboard).gamepads.unified.axes,
+                controller.gamepads.unified.axes
+            );
+        }
+    }
+
+    #[test]
+    fn scroll_keys_are_right_stick_axes_and_do_not_trigger_shoulders() {
+        for (key, value, direction) in [
+            (KeyCode::KeyK, 1.0, VirtualGamepadButton::StickRUp),
+            (KeyCode::KeyL, -1.0, VirtualGamepadButton::StickRDown),
+        ] {
+            let mut keyboard = RawInputState::new();
+            keyboard.keyboard.insert(key);
+            let mut controller = RawInputState::new();
+            controller.gamepads.unified.axes[GamepadAxis::RightStickY] = value;
+            controller.gamepads.unified.virtual_keys[direction] = true;
+            let mapped = keyboard_as_controller(&keyboard);
+            assert_eq!(
+                mapped.gamepads.unified.axes,
+                controller.gamepads.unified.axes
+            );
+            assert_eq!(
+                mapped.gamepads.unified.virtual_keys,
+                controller.gamepads.unified.virtual_keys
+            );
+            assert_eq!(AppAction::lower(&keyboard), AppAction::lower(&controller));
+            assert!(AppAction::lower(&keyboard).values().all(|held| !held));
+        }
+        let mut raw = RawInputState::new();
+        raw.keyboard.insert(KeyCode::KeyK);
+        raw.keyboard.insert(KeyCode::KeyL);
+        assert_eq!(
+            keyboard_as_controller(&raw).gamepads.unified.axes[GamepadAxis::RightStickY],
+            0.0
+        );
+    }
+
+    #[test]
+    fn removed_keyboard_shortcuts_produce_no_actions() {
+        for key in [
+            KeyCode::Space,
+            KeyCode::Backspace,
+            KeyCode::Tab,
+            KeyCode::KeyV,
+            KeyCode::Home,
+            KeyCode::End,
+            KeyCode::KeyG,
+            KeyCode::KeyY,
+            KeyCode::KeyU,
+            KeyCode::Delete,
+            KeyCode::KeyS,
+            KeyCode::KeyA,
+            KeyCode::ControlLeft,
+            KeyCode::KeyF,
+            KeyCode::F11,
+        ] {
+            let mut raw = RawInputState::new();
+            raw.keyboard.insert(key);
+            assert!(AppAction::lower(&raw).values().all(|held| !held), "{key:?}");
+            assert_eq!(
+                keyboard_as_controller(&raw).gamepads.unified.axes,
+                EnumMap::default()
+            );
+        }
+        assert_eq!(<App as ShinApp>::FULLSCREEN_SHORTCUT, None);
+    }
+
+    #[test]
+    fn start_tabs_use_shoulders_and_not_dpad_or_left_stick() {
+        for button in [GamepadButton::Left, GamepadButton::Right] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.buttons[button] = true;
+            let actions = AppAction::lower(&raw);
+            assert!(!actions[AppAction::ScenarioTabPrevious]);
+            assert!(!actions[AppAction::ScenarioTabNext]);
+        }
+        for button in [
+            VirtualGamepadButton::StickLLeft,
+            VirtualGamepadButton::StickLRight,
+        ] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.virtual_keys[button] = true;
+            assert!(!AppAction::lower(&raw)[AppAction::ScenarioTabPrevious]);
+            assert!(!AppAction::lower(&raw)[AppAction::ScenarioTabNext]);
+        }
+        for (button, action) in [
+            (GamepadButton::L, AppAction::ScenarioTabPrevious),
+            (GamepadButton::R, AppAction::ScenarioTabNext),
+        ] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.buttons[button] = true;
+            assert!(AppAction::lower(&raw)[action]);
+        }
+    }
+
     #[test]
     fn viewer_pan_preserves_dpad_and_keyboard_without_combined_stick_actions() {
         let mut raw = RawInputState::new();
@@ -810,8 +974,8 @@ mod controller_tests {
         raw.keyboard.clear();
         raw.keyboard.insert(KeyCode::Backspace);
         let actions = AppAction::lower(&raw);
-        assert!(actions[AppAction::PreviousScene]);
-        assert!(actions[AppAction::Cancel]);
+        assert!(!actions[AppAction::PreviousScene]);
+        assert!(!actions[AppAction::Cancel]);
     }
     #[test]
     fn story_buttons_retain_modal_actions() {

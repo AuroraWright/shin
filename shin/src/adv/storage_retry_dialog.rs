@@ -1,4 +1,5 @@
-//! Desktop adapter for storage errors reported by the Switch OS error service.
+//! Desktop recovery notices for storage and resource failures.
+//! Native storage workers call the external nn::diag::detail::AbortImpl handler.
 use super::{backlog_rollback::Confirmation, dialog_input::DialogInput, dialog_view::DialogView};
 use crate::{app::AppAction, asset::system::AssetServer, render::PreRenderContext};
 use enum_map::EnumMap;
@@ -25,7 +26,7 @@ impl StorageRetryDialog {
         let mut dialog = Self {
             confirmation: Confirmation::new(2, 0, true),
             input: DialogInput::default(),
-            view: DialogView::load_text(
+            view: DialogView::load_storage_notice(
                 server,
                 "セーブデータを保存できませんでした。@r保存先をご確認のうえ、再試行してください。",
                 &["再試行", "キャンセル"],
@@ -39,8 +40,8 @@ impl StorageRetryDialog {
     pub(crate) fn retry_requested(&mut self) -> bool {
         self.confirmation.take_outcome() == Some(super::backlog_rollback::Outcome::Yes)
     }
-    /// Desktop resource/reconstruction failure notice. Switch OS error-service
-    /// presentation is a separate platform contract.
+    /// Desktop resource/reconstruction failure notice. Native platform
+    /// diagnostics and scheduling are a separate contract.
     pub fn load_scene_error(
         server: &AssetServer,
         held: bool,
@@ -112,7 +113,7 @@ impl StorageRetryDialog {
         let mut dialog = Self {
             confirmation: Confirmation::new(1, 0, cancellable),
             input: DialogInput::default(),
-            view: DialogView::load_text(server, prompt, &[label])?,
+            view: DialogView::load_storage_notice(server, prompt, &[label])?,
             extent,
         };
         dialog.input.ignore_pointer(held);
@@ -169,6 +170,10 @@ impl StorageRetryDialog {
     }
     pub fn render(&self, pass: &mut RenderPass) {
         self.view.render(pass, &self.confirmation);
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_uses_plain_frame(&self) -> bool {
+        self.view.reference_uses_plain_frame()
     }
     #[cfg(test)]
     pub fn reference_button(&self) -> Vec2 {

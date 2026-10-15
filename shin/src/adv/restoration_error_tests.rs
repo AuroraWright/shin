@@ -56,7 +56,7 @@ pub(super) fn verify_scene_load_errors<'a>(
         let mut upload = ctx.device.create_command_encoder(&Default::default());
         ctx.dynamic_buffer.finish(&mut upload);
         ctx.queue.submit([upload.finish(), encoder.finish()]);
-        ctx.device.poll(wgpu::Maintain::Wait);
+        ctx.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     fn image(host: &SceneHost, ctx: &mut PreRenderContext, target: &wgpu::Texture) -> Vec<u8> {
         let view = target.create_view(&Default::default());

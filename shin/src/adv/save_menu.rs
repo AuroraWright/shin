@@ -1036,4 +1036,27 @@ mod tests {
         model.update(10.0);
         assert!(model.take_responses().is_empty());
     }
+    #[test]
+    fn trackpad_wheel_scrolls_save_and_load_without_activating_a_slot() {
+        for save in [false, true] {
+            let mut model = open(0, save, false);
+            for (amount, expected) in [
+                (-3.25, 104.0),
+                (-0.125, 108.0),
+                (3.25, 4.0),
+                (0.0, 4.0),
+                (100.0, 0.0),
+            ] {
+                let (input, axis) = crate::app::wheel_scroll_test_input(amount);
+                assert!(input.values().all(|state| !state.is_clicked));
+                model.input(SaveMenuInput {
+                    axis,
+                    ..Default::default()
+                });
+                assert_eq!(model.scroll(), expected);
+                assert!(model.take_requests().is_empty());
+                assert_eq!(model.phase(), SaveMenuPhase::Active);
+            }
+        }
+    }
 }
