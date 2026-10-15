@@ -10,6 +10,16 @@ If you know more - let me know! (`dcnick3` on Discord)
 
 ## Status
 
+The primary local workspace for both games is `/Users/aurora/shin-higurashi`.
+It owns the Git metadata, game inputs, test fonts and current manual package.
+The former `/Users/aurora/shin` path is a compatibility alias; its old workspace
+is retained in the ignored recovery area. See the
+[workspace consolidation](reverse-engineering/workspace-consolidation-20261015/README.md)
+and [reverse-engineering index](reverse-engineering/README.md).
+
+For current work, remaining scope, test commands, SDK inputs, manual builds and
+cleanup requirements, read the [port handoff](HANDOFF.md).
+
 The initial implementation is focused on running switch version of Umineko no Naku Koro ni Saku \~Nekobako to Musou no
 Koukyoukyoku\~ (title id `01006A300BA2C000`), with the intention to support other games in the future.
 
@@ -95,7 +105,12 @@ frame comparisons at 720p/1080p pass, including 8,064 new nonfinite comparisons.
 Original SDK/compiler/allocation evidence is retained. These local Metal checks
 do not establish native Switch framebuffer identity. See the
 [nonfinite integration evidence](reverse-engineering/higurashi/tile-gamma-active-clip-20261014/allocation-closure/whole-tile-nonfinite-integration/integration-validation.json).
-The Umineko SDK audit follows the requested snapshot; chapter testing remains deferred.
+The requested snapshot is saved. The authorized Higurashi SDK reuse now passes
+7,200 bounded original Umineko Tile CPU calls across both versions/O0/O3;
+its Gamma caller has different register provenance from Higurashi. See the
+[SDK audit](reverse-engineering/umineko-sdk-audit-20261015/audit.md).
+Allocation growth, complete SDK ABI/output and Umineko Gamma implementation
+remain open; chapter testing remains deferred.
 The reported Origin Matsuribayashi skip pauses are fixed: eligible skip clears
 authored WAIT timers while preserving manual-confirm and protected-event rules.
 A normal-menu regression covers the quoted line and both pauses. The manual

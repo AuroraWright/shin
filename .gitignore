@@ -19,6 +19,13 @@ heaptrack.*.zst
 *.cap
 /shin-core/test_assets/*.fnt
 
+# Supplied local modules and workspace recovery data
+/higurashi/uncompressed_sdk
+/higurashi/uncompressed_subsdk*
+/higurashi/main.npdm
+/higurashi/rtld
+/.workspace-recovery-*/
+
 # Reverse-engineering evidence and agent working files
 /reverse-engineering/
 AGENTS.md
