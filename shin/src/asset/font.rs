@@ -18,6 +18,7 @@ use crate::asset::system::{
 };
 
 mod cache;
+pub mod gerokasu2;
 pub use cache::FontGlyphCache;
 use cache::GlyphKey;
 

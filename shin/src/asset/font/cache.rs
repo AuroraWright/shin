@@ -3,6 +3,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use parking_lot::Mutex;
 
 use super::GpuFontGlyph;
+use super::gerokasu2::{GpuGerokasu2Glyph, cache::Gerokasu2GlyphCache};
 use crate::asset::system::cache::{AssetCache, CacheLoaderHandle, CacheLookupResult};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -83,9 +84,16 @@ impl<K: Ord + Copy, V> Residency<K, V> {
     pub(super) fn set_age(&mut self, age: u32) {
         self.age = age;
     }
-    #[cfg(test)]
     pub(super) fn fail(&mut self) {
         self.age += 1;
+    }
+    #[cfg(test)]
+    pub(super) fn age(&self) -> u32 {
+        self.age
+    }
+    #[cfg(test)]
+    pub(super) fn values(&self) -> impl Iterator<Item = (&K, &Arc<V>)> {
+        self.entries.iter().map(|(key, value)| (key, &value.value))
     }
     #[cfg(test)]
     pub(super) fn test_owner(&self, key: K) -> Arc<V> {
@@ -98,12 +106,16 @@ impl<K: Ord + Copy, V> Residency<K, V> {
 pub struct FontGlyphCache {
     pending: AssetCache<GlyphKey, GpuFontGlyph>,
     residents: Mutex<Residency<GlyphKey, GpuFontGlyph>>,
+    // One device context, two independent native key spaces. Keeping this
+    // inside the existing context cache avoids changing game/context fixtures.
+    pub(super) gerokasu2: Arc<Gerokasu2GlyphCache<GpuGerokasu2Glyph>>,
 }
 impl Default for FontGlyphCache {
     fn default() -> Self {
         Self {
             pending: AssetCache::new(),
             residents: Mutex::new(Residency::default()),
+            gerokasu2: Arc::new(Gerokasu2GlyphCache::default()),
         }
     }
 }
@@ -135,7 +147,7 @@ impl FontGlyphCache {
     ) {
         // A native cold allocation failure still consumes an age value, but
         // neither inserts a resident nor triggers eviction/compaction.
-        self.residents.lock().age += 1;
+        self.residents.lock().fail();
         self.pending.fail_load(producer, error);
     }
 }

@@ -109,14 +109,16 @@ pub fn locate_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo
     bail!("Failed to locate assets directory, tried: {:#?}", try_list);
 }
 
-/// Preserve Umineko's existing search policy. Higurashi uses its own named
-/// directories so it cannot silently pick up an unrelated Umineko install.
+/// Preserve Umineko's existing search policy. Other games use named roots
+/// so they cannot silently pick up assets from an unrelated game.
 pub fn locate_assets_for_game(
     game: Game,
     cli_assets: Option<&Path>,
 ) -> anyhow::Result<LayeredAssetIo> {
-    if game == Game::Umineko {
-        return locate_assets(cli_assets);
+    match game {
+        Game::Umineko => return locate_assets(cli_assets),
+        Game::Gerokasu2 => return locate_gerokasu2_assets(cli_assets),
+        Game::Higurashi => {}
     }
     if let Some(path) = cli_assets {
         return higurashi_directory(path);
@@ -242,5 +244,39 @@ mod higurashi_tests {
             HigurashiVariant::Updated
         );
         assert!(io.read_file("/newrodin.fnt").is_ok());
+    }
+}
+
+fn locate_gerokasu2_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo> {
+    let explicit = cli_assets
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("SHIN_GEROKASU2_ASSETS").map(PathBuf::from));
+    let paths = if let Some(path) = explicit {
+        vec![path]
+    } else {
+        let mut paths = vec![std::env::current_dir()?.join("gerokasu2")];
+        if let Some(parent) = std::env::current_exe()?.parent() {
+            paths.push(parent.join("gerokasu2"));
+        }
+        paths
+    };
+    for path in &paths {
+        if let Some(io) = try_assets_directory(path)? {
+            return Ok(io);
+        }
+    }
+    bail!(
+        "Failed to locate Gerokasu2 assets, tried {paths:?}. Use --assets-dir or SHIN_GEROKASU2_ASSETS."
+    );
+}
+
+#[cfg(test)]
+mod gerokasu2_tests {
+    use super::*;
+
+    #[test]
+    fn explicit_missing_directory_does_not_fall_back_to_another_game() {
+        let path = std::env::temp_dir().join(format!("shin-no-gerokasu2-{}", std::process::id()));
+        assert!(locate_assets_for_game(Game::Gerokasu2, Some(&path)).is_err());
     }
 }

@@ -12,6 +12,7 @@ use shin_core::format::{
         BustupSkeleton,
     },
     picture::PicBlock,
+    text::TextEncoding,
 };
 use std::collections::HashMap;
 
@@ -289,10 +290,20 @@ fn prepare_bustup(
     data: &[u8],
     args: GpuBustupBuilderArgs,
 ) -> Result<Bustup<CacheHandle<GpuPictureBlock>>> {
+    prepare_bustup_with_encoding(data, args, TextEncoding::ShiftJis)
+}
+
+fn prepare_bustup_with_encoding(
+    data: &[u8],
+    args: GpuBustupBuilderArgs,
+    encoding: TextEncoding,
+) -> Result<Bustup<CacheHandle<GpuPictureBlock>>> {
     // Decoder/upload panics must not escape a detached Rayon job and abort the
     // process. Producer guards cancel and wake pending IDs while unwinding.
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-        shin_core::format::bustup::read_bustup::<GpuBustupBuilder>(data, args)
+        shin_core::format::bustup::read_bustup_with_encoding::<GpuBustupBuilder>(
+            data, args, encoding,
+        )
     }))
     .map_err(|panic| {
         let message = panic
@@ -312,6 +323,8 @@ pub struct BustupArgs {
     pub disable_animations: bool,
 }
 
+pub mod gerokasu2;
+
 #[cfg(test)]
 mod tests;
 
@@ -330,28 +343,41 @@ impl Asset for Bustup {
         name: &str,
         data: AssetDataAccessor,
     ) -> Result<Self> {
-        let label = format!("{}[{}]", name, args.expression);
-        let data = data.read_all().await?;
-        let context = context.clone();
-
-        shin_tasks::compute::spawn(move || {
-            let args = GpuBustupBuilderArgs {
-                context: GpuTextureBuilderContext {
-                    wgpu_device: &context.wgpu_device,
-                    wgpu_queue: &context.wgpu_queue,
-                },
-                cache: &context.bustup_cache,
-                label,
-                expression: args.expression,
-                character_id: args.character_id,
-                disable_animations: args.disable_animations,
-                pending: Mutex::new(HashMap::default()),
-            };
-
-            prepare_bustup(&data, args)
-        })
-        .await?
-        .resolve()
-        .await
+        load_bustup(context, args, name, data, TextEncoding::ShiftJis).await
     }
+}
+
+async fn load_bustup(
+    context: &Arc<AssetLoadContext>,
+    args: BustupArgs,
+    name: &str,
+    data: AssetDataAccessor,
+    encoding: TextEncoding,
+) -> Result<Bustup> {
+    let label = format!("{}[{}]", name, args.expression);
+    let data = data.read_all().await?;
+    let context = context.clone();
+
+    shin_tasks::compute::spawn(move || {
+        let args = GpuBustupBuilderArgs {
+            context: GpuTextureBuilderContext {
+                wgpu_device: &context.wgpu_device,
+                wgpu_queue: &context.wgpu_queue,
+            },
+            cache: &context.bustup_cache,
+            label,
+            expression: args.expression,
+            character_id: args.character_id,
+            disable_animations: args.disable_animations,
+            pending: Mutex::new(HashMap::default()),
+        };
+
+        match encoding {
+            TextEncoding::ShiftJis => prepare_bustup(&data, args),
+            TextEncoding::Utf8 => prepare_bustup_with_encoding(&data, args, encoding),
+        }
+    })
+    .await?
+    .resolve()
+    .await
 }
