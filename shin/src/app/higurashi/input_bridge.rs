@@ -125,6 +125,8 @@ pub(super) struct Input {
     pointer: Vec2,
     mouse_left: bool,
     mouse_left_blocked: bool,
+    temporary_skip: bool,
+    temporary_skip_blocked: bool,
     right_stick: Vec2,
     right_stick_blocked: [bool; 2],
     left_stick: Vec2,
@@ -144,6 +146,8 @@ impl Default for Input {
             pointer: Vec2::ZERO,
             mouse_left: false,
             mouse_left_blocked: false,
+            temporary_skip: false,
+            temporary_skip_blocked: false,
             right_stick: Vec2::ZERO,
             right_stick_blocked: [false; 2],
             left_stick: Vec2::ZERO,
@@ -158,6 +162,9 @@ impl Input {
     /// Supply the original shin-window raw snapshot, before any AppAction
     /// lowering. Repeated calls merely replace the pending snapshot.
     pub fn raw_input(&mut self, raw: &RawInputState) {
+        self.temporary_skip = raw
+            .keyboard
+            .contains(&winit::keyboard::KeyCode::ControlLeft);
         let previous_y = self.raw[NativeAction::Y];
         let mapped = crate::app::keyboard_as_controller(raw);
         self.raw = lower(&mapped);
@@ -212,6 +219,7 @@ impl Input {
         if held[NativeAction::Up] {
             held[NativeAction::Down] = false;
         }
+        self.temporary_skip_blocked &= self.temporary_skip;
         self.mouse_left_blocked &= self.mouse_left;
         self.blocked_dpad &= self.raw_dpad;
         self.dpad_held = self.raw_dpad & !self.blocked_dpad;
@@ -261,6 +269,7 @@ impl Input {
         self.focused && self.mouse_left && !self.mouse_left_blocked
     }
     /// Y-positive is up, matching RawInputState and the approved K/L mapping.
+    #[cfg(test)]
     pub fn right_stick(&self) -> Vec2 {
         if !self.focused {
             return Vec2::ZERO;
@@ -278,6 +287,7 @@ impl Input {
             },
         )
     }
+    #[cfg(test)]
     pub fn right_stick_up(&self) -> bool {
         self.buttons.held & (1 << 20) != 0
     }
@@ -305,12 +315,19 @@ impl Input {
             dpad_held: self.dpad_held,
         }
     }
+    #[cfg(test)]
     pub fn right_stick_down(&self) -> bool {
         self.buttons.held & (1 << 21) != 0
     }
+    /// Desktop-only hold, independent of the native controller bit snapshot.
+    pub fn temporary_skip_held(&self) -> bool {
+        self.focused && self.temporary_skip && !self.temporary_skip_blocked
+    }
+
     /// Desktop replacement/modal flush: a previously held control cannot
     /// create a new edge/repeat in its replacement until it is released.
     pub fn flush(&mut self) {
+        self.temporary_skip_blocked |= self.temporary_skip;
         for (action, blocked) in &mut self.blocked {
             *blocked |= self.raw[action];
         }

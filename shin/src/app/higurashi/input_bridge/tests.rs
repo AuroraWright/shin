@@ -521,3 +521,37 @@ fn higurashi_flush_and_focus_quarantine_holds_until_real_release() {
     assert_eq!(words(bridge.update(FRAME)), [0; 4]);
     assert!(bridge.mouse_left_held());
 }
+
+#[test]
+fn temporary_ctrl_skip_is_separate_and_quarantined_until_physical_release() {
+    let mut input = Input::default();
+    let ctrl = raw_key(KeyCode::ControlLeft);
+    input.raw_input(&ctrl);
+    assert_eq!(words(input.update(FRAME)), [0; 4]);
+    assert!(input.temporary_skip_held());
+    input.flush();
+    input.raw_input(&ctrl);
+    input.update(FRAME);
+    assert!(!input.temporary_skip_held());
+    input.raw_input(&RawInputState::new());
+    input.update(FRAME);
+    input.raw_input(&ctrl);
+    input.update(FRAME);
+    assert!(input.temporary_skip_held());
+    input.focus_lost();
+    input.raw_input(&RawInputState::new());
+    input.update(FRAME); // unfocused blank sample must not release quarantine
+    assert!(!input.temporary_skip_held());
+    input.set_focused(true);
+    input.raw_input(&ctrl);
+    input.update(FRAME);
+    assert!(!input.temporary_skip_held());
+    input.raw_input(&RawInputState::new());
+    input.update(FRAME);
+    input.raw_input(&ctrl);
+    input.update(FRAME);
+    assert!(input.temporary_skip_held());
+    input.raw_input(&raw_key(KeyCode::ControlRight));
+    assert_eq!(words(input.update(FRAME)), [0; 4]);
+    assert!(!input.temporary_skip_held());
+}

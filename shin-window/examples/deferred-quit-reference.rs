@@ -5,7 +5,7 @@ mod macos_quit;
 
 #[cfg(target_os = "macos")]
 fn main() {
-    use objc2::{class, msg_send, msg_send_id, rc::Retained, runtime::AnyObject, sel};
+    use objc2::{class, msg_send, rc::Retained, runtime::AnyObject, sel};
     use winit::{
         application::ApplicationHandler,
         event_loop::{ActiveEventLoop, EventLoop, EventLoopProxy},
@@ -30,7 +30,7 @@ fn main() {
             // Native termination must return without ending the live event loop.
             unsafe {
                 let app: Retained<AnyObject> =
-                    msg_send_id![class!(NSApplication), sharedApplication];
+                    msg_send![class!(NSApplication), sharedApplication];
                 let delegate: *mut AnyObject = msg_send![&*app, delegate];
                 let menu: *mut AnyObject = msg_send![&*app, mainMenu];
                 let top: *mut AnyObject = msg_send![menu, itemAtIndex:0isize];

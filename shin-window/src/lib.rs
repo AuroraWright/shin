@@ -193,6 +193,7 @@ impl PlatformSuspension {
         !self.is_suspended() && (self.is_background_running() || surface.is_occluded())
     }
 
+    #[cfg(test)]
     fn change(
         &mut self,
         focused: Option<bool>,

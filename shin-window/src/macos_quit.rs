@@ -1,9 +1,9 @@
 //! Deliver AppKit Quit through the same deferred close path as the window.
 //! Winit's existing delegate and all activation/window methods remain intact.
 use objc2::{
-    class, ffi, msg_send, msg_send_id,
+    class, ffi, msg_send,
     rc::Retained,
-    runtime::{AnyClass, AnyObject, Sel},
+    runtime::{AnyClass, AnyObject, Bool, Sel},
     sel,
 };
 use std::{
@@ -50,7 +50,7 @@ pub(super) fn install(send: impl Fn() -> bool + 'static) -> anyhow::Result<QuitH
     // resumed is main-thread-only on macOS. Borrow its live delegate; do not
     // retain or replace it, or change any of its existing method implementations.
     unsafe {
-        let app: Retained<AnyObject> = msg_send_id![class!(NSApplication), sharedApplication];
+        let app: Retained<AnyObject> = msg_send![class!(NSApplication), sharedApplication];
         let delegate: *mut AnyObject = msg_send![&*app, delegate];
         let delegate = delegate
             .as_ref()
@@ -74,7 +74,7 @@ pub(super) fn install(send: impl Fn() -> bool + 'static) -> anyhow::Result<QuitH
             selector,
             implementation,
             c"Q@:@".as_ptr());
-        if added == ffi::NO {
+        if added == Bool::NO {
             let method = ffi::class_getInstanceMethod(class_ptr, selector);
             anyhow::ensure!(
                 !method.is_null(),
