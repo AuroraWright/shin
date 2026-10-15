@@ -13,7 +13,7 @@ use crate::{
 ///
 /// Used only in [crate::vm::command::Command::SELECT]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StringArray(pub SmallVec<String, 4>);
+pub struct StringArray(pub SmallVec<[String; 4]>);
 
 impl StringArray {
     pub fn new<T: Into<String>, I: IntoIterator<Item = T>>(iter: I) -> Self {
@@ -77,7 +77,7 @@ impl BinWrite for StringArray {
 }
 
 impl IntoRuntimeForm for StringArray {
-    type Output = SmallVec<String, 4>;
+    type Output = SmallVec<[String; 4]>;
     fn into_runtime_form(self, _: &VmCtx) -> Self::Output {
         self.0
     }

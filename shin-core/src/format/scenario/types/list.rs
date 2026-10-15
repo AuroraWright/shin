@@ -10,7 +10,7 @@ use crate::{
 
 /// A list of `T` with a length of `L`, stored in a `SmallVec` with size `N`
 #[derive(Clone)]
-pub struct SmallList<L, T, const N: usize>(pub SmallVec<T, N>, pub PhantomData<L>)
+pub struct SmallList<L, T, const N: usize>(pub SmallVec<[T; N]>, pub PhantomData<L>)
 where
     L: Into<usize> + TryFrom<usize> + 'static;
 
@@ -149,7 +149,7 @@ where
     L: Into<usize> + TryFrom<usize>,
     Ts: IntoRuntimeForm<Output = Td>,
 {
-    type Output = SmallVec<Ts::Output, N>;
+    type Output = SmallVec<[Ts::Output; N]>;
     fn into_runtime_form(self, ctx: &VmCtx) -> Self::Output {
         self.0
             .into_iter()
@@ -162,9 +162,9 @@ where
 mod tests {
     use std::iter;
 
-    use binrw::{io::NoSeek, BinWrite};
+    use binrw::{BinWrite, io::NoSeek};
 
-    use super::{SmallList, U16SmallList, U8SmallList};
+    use super::{SmallList, U8SmallList, U16SmallList};
     use crate::format::test_util::assert_enc_dec_pair;
 
     #[test]

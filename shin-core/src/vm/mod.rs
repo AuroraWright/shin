@@ -21,6 +21,7 @@
 
 pub mod breakpoint;
 pub mod command;
+pub mod higurashi;
 mod ctx;
 
 use anyhow::Result;
@@ -30,9 +31,9 @@ use tracing::{instrument, trace};
 
 use crate::{
     format::scenario::{
+        InstructionReader, Scenario,
         instruction_elements::CodeAddress,
         instructions::{BinaryOperation, Instruction, UnaryOperation},
-        InstructionReader, Scenario,
     },
     vm::{
         breakpoint::{BreakpointHandle, CodeBreakpointSet},
@@ -100,6 +101,18 @@ impl Scripter {
     /// Entry selector and seed needed to reconstruct a native saved route.
     pub fn initial_values(&self) -> (i32, u32) {
         self.initial_values
+    }
+
+    /// Copy execution state for a read-only simulation. Breakpoint observers
+    /// belong to live execution and must not receive visits from the probe.
+    pub fn fork_for_simulation(&self) -> Self {
+        Self {
+            initial_values: self.initial_values,
+            ctx: self.ctx.clone(),
+            instruction_reader: self.instruction_reader.clone(),
+            position: self.position,
+            breakpoints: CodeBreakpointSet::new(),
+        }
     }
 
     /// Execute one instruction
@@ -210,7 +223,7 @@ impl Scripter {
                     .0
                     .into_iter()
                     .map(|v| self.ctx.get_number(v))
-                    .collect::<SmallVec<i32, 6>>();
+                    .collect::<SmallVec<[i32; 6]>>();
                 trace!(?pc, ?target, ?args, "call");
 
                 self.ctx.push_code_stack(self.instruction_reader.position());
@@ -224,7 +237,7 @@ impl Scripter {
                     .0
                     .into_iter()
                     .map(|v| CodeAddress(self.ctx.get_number(v) as u32))
-                    .collect::<SmallVec<CodeAddress, 6>>();
+                    .collect::<SmallVec<[CodeAddress; 6]>>();
                 trace!(?pc, ?values, "push");
 
                 for value in values {
@@ -234,7 +247,7 @@ impl Scripter {
             Instruction::pop { dest } => {
                 let values = (0..dest.0.len())
                     .map(|_| self.ctx.pop_code_stack().0 as i32)
-                    .collect::<SmallVec<i32, 6>>();
+                    .collect::<SmallVec<[i32; 6]>>();
                 trace!(?pc, ?values, "pop");
 
                 for (dest, value) in dest.0.iter().zip(values) {
@@ -309,6 +322,60 @@ mod tests {
     include!("random_reference_tests.rs");
     include!("arithmetic_reference_tests.rs");
     include!("control_reference_tests.rs");
+
+    #[test]
+    fn simulation_fork_preserves_execution_and_isolates_observers() {
+        use crate::format::scenario::instruction_elements::Register;
+        let regular = Register::from_regular_register(4095);
+        let argument = Register::from_argument(1);
+        let mut live = Scripter {
+            initial_values: (7, 0x12345678),
+            ctx: VmCtx::new(7, 0x12345678),
+            instruction_reader: InstructionReader::new(
+                bytes::Bytes::from_static(&[0, 0, 0]),
+                CodeAddress(0),
+            ),
+            position: CodeAddress(123),
+            breakpoints: CodeBreakpointSet::new(),
+        };
+        live.ctx.write_register(regular, i32::MIN);
+        live.ctx.push_code_stack(CodeAddress(42));
+        live.ctx.push_data_stack_frame(&[-7, 19]);
+        live.ctx.update_prng();
+        let seed = live.ctx.get_prng_state();
+        let observer = live.add_breakpoint(CodeAddress(0));
+        let mut probe = live.fork_for_simulation();
+        assert_eq!(probe.initial_values(), live.initial_values());
+        assert_eq!(probe.position(), live.position());
+        assert_eq!(probe.ctx.read_register(regular), i32::MIN);
+        assert_eq!(probe.ctx.read_register(argument), 19);
+        assert_eq!(probe.ctx.get_prng_state(), seed);
+        assert_eq!(probe.ctx.pop_code_stack(), CodeAddress(42));
+        assert!(matches!(
+            probe
+                .run(CommandResult::WriteMemory(argument, -123))
+                .unwrap(),
+            RuntimeCommand::EXIT(_)
+        ));
+        assert_eq!(observer.hit_count(), 0);
+        assert_eq!(live.instruction_reader.position(), CodeAddress(0));
+        assert_eq!(live.position(), CodeAddress(123));
+        assert_eq!(live.ctx.read_register(argument), 19);
+        assert_eq!(live.ctx.get_prng_state(), seed);
+        assert_eq!(live.ctx.pop_code_stack(), CodeAddress(42));
+        assert!(matches!(
+            live.run(CommandResult::WriteMemory(argument, -123))
+                .unwrap(),
+            RuntimeCommand::EXIT(_)
+        ));
+        assert_eq!(observer.hit_count(), 1);
+        assert_eq!(
+            live.ctx.read_register(argument),
+            probe.ctx.read_register(argument)
+        );
+        assert_eq!(live.ctx.get_prng_state(), probe.ctx.get_prng_state());
+        assert_eq!(live.position(), probe.position());
+    }
 
     #[test]
     fn call_stack_preserves_signed_register_values() {

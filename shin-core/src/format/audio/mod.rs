@@ -8,14 +8,14 @@ mod audio_source;
 
 use std::io::Read;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 pub use audio_source::{AudioBuffer, AudioFrameSource, AudioSource};
 use binrw::{BinRead, BinWrite};
 use opus::Channels;
 
 #[derive(BinRead, BinWrite, Debug)]
 #[brw(little, magic = b"NXA1")]
-#[br(assert(version == 2))]
+#[br(assert(version == 1 || version == 2))]
 struct NxaHeader {
     version: u32,
     file_size: u32,
@@ -50,6 +50,7 @@ pub struct AudioInfo {
 pub struct AudioFile {
     info: AudioInfo,
     data: Vec<u8>,
+    packet_header_bytes: u8,
 }
 
 impl AudioFile {
@@ -115,12 +116,24 @@ impl<F: AsRef<AudioFile>> AudioFileFrameReader<F> {
         let end = self.bytes_position.checked_add(size)?;
         let data = self.file.as_ref().data.get(self.bytes_position..end)?;
         self.bytes_position = end;
-        Some(data)
+        if self.file.as_ref().packet_header_bytes == 8 {
+            let length = u32::from_be_bytes(data.get(..4)?.try_into().ok()?) as usize;
+            data.get(8..8usize.checked_add(length)?)
+        } else {
+            Some(data)
+        }
     }
 
     pub fn has_next_frame(&self) -> bool {
         let size = self.frame_size();
-        size != 0 && self.file.as_ref().data.len().saturating_sub(self.bytes_position) >= size
+        size != 0
+            && self
+                .file
+                .as_ref()
+                .data
+                .len()
+                .saturating_sub(self.bytes_position)
+                >= size
     }
 }
 
@@ -136,12 +149,15 @@ pub struct AudioDecoder<F: AsRef<AudioFile>> {
 impl<F: AsRef<AudioFile>> AudioDecoder<F> {
     pub fn new(file: F) -> Result<Self> {
         let info = &file.as_ref().info;
+        if info.frame_samples == 0 {
+            bail!("NXA frame sample count must be nonzero");
+        }
         let decoder = opus::Decoder::new(
             info.sample_rate,
             match info.channel_count {
                 1 => Channels::Mono,
                 2 => Channels::Stereo,
-                _ => panic!("Unsupported channel count"),
+                count => bail!("Unsupported NXA channel count: {count}"),
             },
         )?;
         let buffer =
@@ -218,8 +234,7 @@ impl<F: AsRef<AudioFile>> AudioFrameSource for AudioDecoder<F> {
         let decoded = if let Some(pcm16) = &mut self.pcm16_buffer {
             self.decoder.decode(data, pcm16, false)
         } else {
-            self.decoder
-                .decode_float(data, &mut self.buffer, false)
+            self.decoder.decode_float(data, &mut self.buffer, false)
         };
         let decoded = match decoded {
             Ok(count) => count,
@@ -309,19 +324,58 @@ impl<F: AsRef<AudioFile>> AudioFrameSource for AudioDecoder<F> {
 }
 
 pub fn read_audio(data: &[u8]) -> Result<AudioFile> {
+    read_audio_version(data, Some(2))
+}
+
+/// Higurashi NXA1 v1 retains the48-byte header; each fixed packet includes
+/// the8-byte Nintendo Opus length/final-range prefix that v2 omits.
+/// Updated Higurashi's append archive also contains v2 packets. Select this
+/// reader explicitly so Umineko keeps its version2 contract.
+pub fn read_higurashi_audio(data: &[u8]) -> Result<AudioFile> {
+    read_audio_version(data, None)
+}
+
+fn read_audio_version(data: &[u8], expected_version: Option<u32>) -> Result<AudioFile> {
     let mut cur = std::io::Cursor::new(data);
     let header = NxaHeader::read_le(&mut cur)?;
-
-    assert_eq!(header.file_size, data.len() as u32);
+    anyhow::ensure!(
+        expected_version.is_none_or(|version| header.version == version),
+        "Expected NXA version{expected_version:?}, got{}",
+        header.version
+    );
+    if header.file_size as usize != data.len() {
+        bail!(
+            "NXA declared file size {} does not match actual size {}",
+            header.file_size,
+            data.len()
+        );
+    }
 
     let mut data = Vec::new();
     cur.read_to_end(&mut data)?;
+    let version = header.version;
+
+    if version == 1 {
+        let stride = usize::from(header.info.frame_size);
+        anyhow::ensure!(stride > 8, "Higurashi NXA packet has no Opus payload");
+        for packet in data.chunks_exact(stride) {
+            let length = u32::from_be_bytes(packet[..4].try_into().unwrap()) as usize;
+            anyhow::ensure!(
+                length > 0 && length <= stride - 8,
+                "Invalid Higurashi NXA packet length"
+            );
+        }
+    }
 
     Ok(AudioFile {
         info: header.info,
         data,
+        packet_header_bytes: if version == 1 { 8 } else { 0 },
     })
 }
+
+#[cfg(test)]
+mod higurashi_tests;
 
 #[cfg(test)]
 mod pcm16_tests {
@@ -346,6 +400,7 @@ mod pcm16_tests {
                 for pre_skip in [312, 0, 64] {
                     let declared = frames as u32 * 20 - u32::from(pre_skip);
                     let file = Arc::new(AudioFile {
+                        packet_header_bytes: 0,
                         info: AudioInfo {
                             sample_rate: 48000,
                             channel_count: count as u16,
@@ -373,20 +428,21 @@ mod pcm16_tests {
                         0x80000000,
                         u32::MAX - 1,
                     ] {
-                        let output =
-                            Command::new(std::env::var_os("SHIN_REFERENCE_NXA_BOUNDS_ORACLE").unwrap())
-                                .arg(std::env::var_os("SHIN_REFERENCE_EXECUTABLE").unwrap())
-                                .args([
-                                    (size * 20).to_string(),
-                                    size.to_string(),
-                                    frames.to_string(),
-                                    declared.to_string(),
-                                    pre_skip.to_string(),
-                                    count.to_string(),
-                                    requested.to_string(),
-                                ])
-                                .output()
-                                .unwrap();
+                        let output = Command::new(
+                            std::env::var_os("SHIN_REFERENCE_NXA_BOUNDS_ORACLE").unwrap(),
+                        )
+                        .arg(std::env::var_os("SHIN_REFERENCE_EXECUTABLE").unwrap())
+                        .args([
+                            (size * 20).to_string(),
+                            size.to_string(),
+                            frames.to_string(),
+                            declared.to_string(),
+                            pre_skip.to_string(),
+                            count.to_string(),
+                            requested.to_string(),
+                        ])
+                        .output()
+                        .unwrap();
                         assert!(
                             output.status.success(),
                             "{}",
@@ -506,10 +562,15 @@ mod pcm16_tests {
             partial += usize::from(payload % u64::from(header.info.frame_size) != 0);
             let raw_samples = packets * u64::from(header.info.frame_samples);
             let end = u64::from(header.info.num_samples) + u64::from(header.info.pre_skip);
-            *loop_ends.entry(i64::from(header.info.loop_end) - i64::from(header.info.num_samples)).or_insert(0usize) += 1;
+            *loop_ends
+                .entry(i64::from(header.info.loop_end) - i64::from(header.info.num_samples))
+                .or_insert(0usize) += 1;
             nonzero_loop_starts += usize::from(header.info.loop_start != 0);
             if header.info.loop_end != header.info.num_samples || header.info.loop_start != 0 {
-                println!("NXA loop asset {path}: declared{}, start{}, end{}", header.info.num_samples, header.info.loop_start, header.info.loop_end);
+                println!(
+                    "NXA loop asset {path}: declared{}, start{}, end{}",
+                    header.info.num_samples, header.info.loop_start, header.info.loop_end
+                );
             }
             padded += usize::from(raw_samples > end);
             short += usize::from(raw_samples < end);
@@ -536,11 +597,14 @@ mod pcm16_tests {
             (count, padded, short, padding),
             (105970, 105896, 0, 50490199)
         );
-        let expected: BTreeMap<_, _> = [((48000, 1, 960, 312), 105594), ((48000, 2, 960, 312), 376)]
-            .into_iter()
-            .collect();
+        let expected: BTreeMap<_, _> =
+            [((48000, 1, 960, 312), 105594), ((48000, 2, 960, 312), 376)]
+                .into_iter()
+                .collect();
         assert_eq!(metadata, expected);
-        println!("Supplied NXA loop fields: end-minus-declared{loop_ends:?}, nonzero loop starts{nonzero_loop_starts}");
+        println!(
+            "Supplied NXA loop fields: end-minus-declared{loop_ends:?}, nonzero loop starts{nonzero_loop_starts}"
+        );
         assert_eq!(loop_ends, [(-1, 7), (0, 105963)].into_iter().collect());
         assert_eq!(nonzero_loop_starts, 2);
     }
@@ -552,7 +616,8 @@ mod pcm16_tests {
         let mut cases = 0;
         for channels in [Channels::Mono, Channels::Stereo] {
             let count = if channels == Channels::Mono { 1 } else { 2 };
-            let mut encoder = opus::Encoder::new(48000, channels, opus::Application::Audio).unwrap();
+            let mut encoder =
+                opus::Encoder::new(48000, channels, opus::Application::Audio).unwrap();
             let input: Vec<i16> = (0..960 * count)
                 .map(|i| if i % 48 < 24 { 22000 } else { -22000 })
                 .collect();
@@ -564,20 +629,21 @@ mod pcm16_tests {
                 for pre_skip in [0, 64, 960] {
                     let available = (packets * 960u32).saturating_sub(u32::from(pre_skip));
                     for declared in [0, 1, available, available + 1] {
-                        let output =
-                            Command::new(std::env::var_os("SHIN_REFERENCE_NXA_BOUNDS_ORACLE").unwrap())
-                                .arg(std::env::var_os("SHIN_REFERENCE_EXECUTABLE").unwrap())
-                                .args([
-                                    (size * packets as usize).to_string(),
-                                    size.to_string(),
-                                    "960".into(),
-                                    declared.to_string(),
-                                    pre_skip.to_string(),
-                                    count.to_string(),
-                                    u32::MAX.to_string(),
-                                ])
-                                .output()
-                                .unwrap();
+                        let output = Command::new(
+                            std::env::var_os("SHIN_REFERENCE_NXA_BOUNDS_ORACLE").unwrap(),
+                        )
+                        .arg(std::env::var_os("SHIN_REFERENCE_EXECUTABLE").unwrap())
+                        .args([
+                            (size * packets as usize).to_string(),
+                            size.to_string(),
+                            "960".into(),
+                            declared.to_string(),
+                            pre_skip.to_string(),
+                            count.to_string(),
+                            u32::MAX.to_string(),
+                        ])
+                        .output()
+                        .unwrap();
                         assert!(
                             output.status.success(),
                             "{}",
@@ -594,6 +660,7 @@ mod pcm16_tests {
                         assert_eq!(values["loop"], 0);
                         assert_eq!(values["failed"], 0);
                         let file = Arc::new(AudioFile {
+                            packet_header_bytes: 0,
                             info: AudioInfo {
                                 sample_rate: 48000,
                                 channel_count: count as u16,
@@ -632,7 +699,8 @@ mod pcm16_tests {
     fn nxa_incomplete_final_packet_preserves_complete_pcm_prefix() {
         for channels in [Channels::Mono, Channels::Stereo] {
             let count = if channels == Channels::Mono { 1 } else { 2 };
-            let mut encoder = opus::Encoder::new(48000, channels, opus::Application::Audio).unwrap();
+            let mut encoder =
+                opus::Encoder::new(48000, channels, opus::Application::Audio).unwrap();
             let input: Vec<i16> = (0..960 * count)
                 .map(|i| if i % 48 < 24 { 22000 } else { -22000 })
                 .collect();
@@ -657,6 +725,7 @@ mod pcm16_tests {
                         };
                         data.extend_from_slice(&packet[..tail]);
                         let file = std::sync::Arc::new(AudioFile {
+                            packet_header_bytes: 0,
                             info: AudioInfo {
                                 sample_rate: 48000,
                                 channel_count: count as u16,
@@ -704,7 +773,8 @@ mod pcm16_tests {
 
     #[test]
     fn nxa_decode_error_freezes_until_explicit_seek() {
-        let mut encoder = opus::Encoder::new(48000, Channels::Mono, opus::Application::Audio).unwrap();
+        let mut encoder =
+            opus::Encoder::new(48000, Channels::Mono, opus::Application::Audio).unwrap();
         let input: Vec<i16> = (0..960)
             .map(|i| if i % 48 < 24 { 24000 } else { -24000 })
             .collect();
@@ -729,6 +799,7 @@ mod pcm16_tests {
                 };
                 data.extend_from_slice(&invalid);
                 let file = AudioFile {
+                    packet_header_bytes: 0,
                     info: AudioInfo {
                         sample_rate: 48000,
                         channel_count: 1,
@@ -776,7 +847,8 @@ mod pcm16_tests {
     fn nxa_short_packet_uses_actual_decoded_count_and_normal_eof() {
         for channels in [Channels::Mono, Channels::Stereo] {
             let count = if channels == Channels::Mono { 1 } else { 2 };
-            let mut encoder = opus::Encoder::new(48000, channels, opus::Application::Audio).unwrap();
+            let mut encoder =
+                opus::Encoder::new(48000, channels, opus::Application::Audio).unwrap();
             let input: Vec<i16> = (0..120 * count)
                 .map(|i| if i % 24 < 12 { 20000 } else { -20000 })
                 .collect();
@@ -792,6 +864,7 @@ mod pcm16_tests {
                 120
             );
             let file = AudioFile {
+                packet_header_bytes: 0,
                 info: AudioInfo {
                     sample_rate: 48000,
                     channel_count: count as u16,
@@ -904,6 +977,7 @@ mod pcm16_tests {
         assert_eq!(native.decode(&packet, &mut expected, false).unwrap(), 960);
         for declared in [0, 1, 700, 896] {
             let file = AudioFile {
+                packet_header_bytes: 0,
                 info: AudioInfo {
                     sample_rate: 48000,
                     channel_count: 2,
@@ -938,7 +1012,9 @@ mod pcm16_tests {
             let sample = if target < declared {
                 let pair = &expected[(64 + target as usize) * 2..][..2];
                 Some((f32::from(pair[0]) / 32768.0, f32::from(pair[1]) / 32768.0))
-            } else { None };
+            } else {
+                None
+            };
             assert_eq!(actual.read_sample(), sample);
         }
     }

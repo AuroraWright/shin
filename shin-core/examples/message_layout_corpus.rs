@@ -1,16 +1,25 @@
 //! Extract every authored MSGSET without executing story or device commands.
-use std::io::{self, Write};
+use std::{fs::File, io::{self, Read, Write}, path::Path};
 
 use anyhow::Context;
 use shin_core::{
-    format::scenario::{Scenario, info::CharsSpriteSegment, instructions::Instruction},
+    format::{rom::RomReader, scenario::{Scenario, info::CharsSpriteSegment, instructions::Instruction}},
+    primitives::stateless_reader::StatelessFile,
     vm::command::CompiletimeCommand,
 };
 
 fn main() -> anyhow::Result<()> {
     let mut args = std::env::args().skip(1);
-    let path = args.next().context("Expected SNR path")?;
-    let scenario = Scenario::new(std::fs::read(path)?.into())?;
+    let path = args.next().context("Expected SNR or ROM path")?;
+    let bytes = if Path::new(&path).extension().is_some_and(|extension| extension == "rom") {
+        let mut rom = RomReader::new(StatelessFile::new(File::open(path)?)?)?;
+        let mut bytes = Vec::new();
+        rom.open_file(rom.find_file("/main.snr")?)?.read_to_end(&mut bytes)?;
+        bytes
+    } else {
+        std::fs::read(path)?
+    };
+    let scenario = Scenario::new(bytes.into())?;
     if args.next().as_deref() == Some("--ui") {
         let mut output = io::BufWriter::new(io::stdout().lock());
         let mut count = 0;

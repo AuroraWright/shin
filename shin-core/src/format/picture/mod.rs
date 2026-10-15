@@ -4,10 +4,14 @@
 //!
 //! It also stores a list of transparent and opaque rectangular regions of each block, allowing for a more efficient two-pass rendering.
 
-use std::{borrow::Cow, collections::{btree_map::Entry, BTreeMap}, io};
+use std::{
+    borrow::Cow,
+    collections::{BTreeMap, btree_map::Entry},
+    io,
+};
 
-use anyhow::{Context, Result};
-use binrw::{prelude::*, Endian};
+use anyhow::{Context, Result, ensure};
+use binrw::{Endian, prelude::*};
 use bitflags::bitflags;
 use bytemuck::{Pod, Zeroable};
 use image::{ImageBuffer, RgbaImage};
@@ -17,6 +21,61 @@ use rayon::prelude::*;
 
 #[cfg(test)]
 pub(crate) mod reference;
+
+/// Select the layout explicitly: Umineko's native loader ignores the stored
+/// version, so auto-detecting it would change that game's established behavior.
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
+pub enum PictureFormat {
+    #[default]
+    Umineko,
+    HigurashiV2,
+}
+
+#[derive(BinRead)]
+#[br(little, magic = b"PIC4")]
+#[br(assert(version == 2))]
+struct HigurashiPicHeader {
+    version: u32,
+    file_size: u32,
+    origin_x: i16,
+    origin_y: i16,
+    effective_width: u16,
+    effective_height: u16,
+    flags: u32,
+    block_count: u32,
+    picture_id: u32,
+}
+
+fn picture_header(
+    reader: &mut io::Cursor<&[u8]>,
+    format: PictureFormat,
+    file_size: u64,
+) -> Result<PicHeader> {
+    match format {
+        PictureFormat::Umineko => Ok(PicHeader::read(reader)?),
+        PictureFormat::HigurashiV2 => {
+            let header = HigurashiPicHeader::read(reader)?;
+            ensure!(
+                header.file_size as u64 == file_size,
+                "Higurashi PIC file size mismatch"
+            );
+            Ok(PicHeader {
+                _signature: u32::from_le_bytes(*b"PIC4"),
+                _version: header.version,
+                _file_size: header.file_size,
+                origin_x: header.origin_x,
+                origin_y: header.origin_y,
+                effective_width: header.effective_width,
+                effective_height: header.effective_height,
+                field_20: header.flags,
+                block_count: header.block_count,
+                picture_id: header.picture_id,
+                // Version 2 has no placement-scale word.
+                scale: 4096,
+            })
+        }
+    }
+}
 
 #[derive(BinRead, BinWrite, Debug)]
 #[brw(little)]
@@ -161,11 +220,17 @@ pub trait PictureBuilder: Send {
     /// Record authored placement order independently of parallel block decoding.
     fn set_placements(&mut self, _placements: Vec<(u32, (u32, u32))>) {}
 
+    /// Select game-specific composition without changing existing builders.
+    fn set_format(&mut self, _format: PictureFormat) {}
+
     fn build(self) -> Result<Self::Output>;
 }
 
 #[derive(Debug, Clone)]
 pub struct PicBlock {
+    /// Original compression word, retained by the native GPU block owner.
+    /// Higurashi's submission distinguishes dictionary/separate-alpha blocks.
+    pub native_format: u16,
     pub offset_x: u32,
     pub offset_y: u32,
     pub opaque_rects: Vec<PicBlockRect>,
@@ -183,6 +248,7 @@ impl PicBlock {
         transparent_rects: Vec<PicBlockRect>,
     ) -> Self {
         Self {
+            native_format: 0,
             offset_x,
             offset_y,
             opaque_rects,
@@ -193,6 +259,7 @@ impl PicBlock {
 
     pub fn empty() -> Self {
         Self {
+            native_format: 0,
             offset_x: 0,
             offset_y: 0,
             opaque_rects: Vec::new(),
@@ -211,6 +278,12 @@ pub struct SimpleMergedPicture {
     pub origin_x: i32,
     pub origin_y: i32,
     pub picture_id: u32,
+    ordered: Option<OrderedComposition>,
+}
+
+struct OrderedComposition {
+    placements: Vec<(u32, (u32, u32))>,
+    blocks: BTreeMap<u32, RgbaImage>,
 }
 
 impl PictureBuilder for SimpleMergedPicture {
@@ -230,12 +303,13 @@ impl PictureBuilder for SimpleMergedPicture {
             origin_x,
             origin_y,
             picture_id,
+            ordered: None,
         }
     }
 
     fn add_block(
         &mut self,
-        _data_offset: u32,
+        data_offset: u32,
         positions: Vec<(u32, u32)>,
         block: PicBlock,
     ) -> Result<()> {
@@ -245,6 +319,10 @@ impl PictureBuilder for SimpleMergedPicture {
         assert_eq!(block.offset_y, 0);
 
         let block_image = block.data;
+        if let Some(ordered) = &mut self.ordered {
+            ordered.blocks.insert(data_offset, block_image);
+            return Ok(());
+        }
         for &(x, y) in &positions {
             image::imageops::replace(&mut self.image, &block_image, x as i64, y as i64);
         }
@@ -252,7 +330,30 @@ impl PictureBuilder for SimpleMergedPicture {
         Ok(())
     }
 
-    fn build(self) -> Result<Self::Output> {
+    fn set_format(&mut self, format: PictureFormat) {
+        if format == PictureFormat::HigurashiV2 {
+            self.ordered = Some(OrderedComposition {
+                placements: Vec::new(),
+                blocks: BTreeMap::new(),
+            });
+        }
+    }
+
+    fn set_placements(&mut self, placements: Vec<(u32, (u32, u32))>) {
+        if let Some(ordered) = &mut self.ordered {
+            ordered.placements = placements;
+        }
+    }
+
+    fn build(mut self) -> Result<Self::Output> {
+        if let Some(ordered) = self.ordered.take() {
+            // Higurashi fragments overlap at their borders. Decode in parallel,
+            // then copy in descriptor order, including repeated placements.
+            for (offset, (x, y)) in ordered.placements {
+                let block = &ordered.blocks[&offset];
+                image::imageops::replace(&mut self.image, block, x as i64, y as i64);
+            }
+        }
         Ok(self)
     }
 }
@@ -420,11 +521,13 @@ pub fn read_texture(
         let dictionary = bytemuck::pod_read_unaligned::<[Rgba8; 0x100]>(dictionary);
 
         if !use_inline_alpha {
-            debug_assert!(dictionary
-                .iter()
-                // if we have inline alpha we can't have any transparent pixels
-                // (the second case is for empty dictionary entries, where all the components are 0)
-                .all(|v| v.a == 0xff || v == &Rgba8::default()));
+            debug_assert!(
+                dictionary
+                    .iter()
+                    // if we have inline alpha we can't have any transparent pixels
+                    // (the second case is for empty dictionary entries, where all the components are 0)
+                    .all(|v| v.a == 0xff || v == &Rgba8::default())
+            );
         }
 
         decode_dict(
@@ -453,6 +556,16 @@ pub fn read_texture(
 /// If the block data is an empty slice, the function will return an empry image block
 /// (this is used in some bustups)
 pub fn read_picture_block(block_data: &[u8]) -> Result<PicBlock> {
+    read_picture_block_with_format(block_data, PictureFormat::Umineko)
+}
+
+/// Both engines store a full u32 compressed length in the 20-byte fragment
+/// header. Updated Higurashi69974 loads that word before71e80; large BUP face
+/// fragments exceed64KiB and must not truncate its upper half.
+pub fn read_picture_block_with_format(
+    block_data: &[u8],
+    format: PictureFormat,
+) -> Result<PicBlock> {
     use io::Seek;
 
     if block_data.is_empty() {
@@ -463,6 +576,7 @@ pub fn read_picture_block(block_data: &[u8]) -> Result<PicBlock> {
 
     let mut reader = io::Cursor::new(block_data);
     let header: PicBlockHeader = reader.read_le().context("Reading block header")?;
+    let _ = format; // The enclosing PIC headers differ; fragment headers agree.
 
     let opaque_rects = (0..header.opaque_rect_count)
         .map(|_| reader.read_le())
@@ -485,6 +599,9 @@ pub fn read_picture_block(block_data: &[u8]) -> Result<PicBlock> {
         opaque_rects,
         transparent_rects,
     );
+    // Native699b8/699bc copies the complete u16, including ignored high bits.
+    // Pixel decoding still selects only the existing compression bits.
+    block.native_format = u16::from_le_bytes(block_data[..2].try_into().unwrap());
 
     read_texture(
         &block_data[reader.position() as usize..],
@@ -514,6 +631,34 @@ pub fn read_picture_header(source: &[u8]) -> Result<PictureHeaderInfo> {
     read_picture_header_prefix(source, source.len() as u64)
 }
 
+/// Read a complete file's header using the selected game layout.
+pub fn read_picture_header_with_format(
+    source: &[u8],
+    format: PictureFormat,
+) -> Result<PictureHeaderInfo> {
+    read_picture_header_prefix_with_format(source, source.len() as u64, format)
+}
+
+/// Read only the selected fixed header; Higurashi's declared size is checked
+/// against the accessor length rather than the length of this prefix.
+pub fn read_picture_header_prefix_with_format(
+    source: &[u8],
+    file_size: u64,
+    format: PictureFormat,
+) -> Result<PictureHeaderInfo> {
+    let header = picture_header(&mut io::Cursor::new(source), format, file_size)?;
+    Ok(PictureHeaderInfo {
+        origin_x: header.origin_x,
+        origin_y: header.origin_y,
+        effective_width: header.effective_width,
+        effective_height: header.effective_height,
+        block_count: header.block_count,
+        picture_id: header.picture_id,
+        flags: header.field_20,
+        scale: header.scale,
+    })
+}
+
 /// Read the fixed header without fetching block data, including cache hits.
 /// Native open does not validate the signature, version or declared file size.
 pub fn read_picture_header_prefix(source: &[u8], _file_size: u64) -> Result<PictureHeaderInfo> {
@@ -536,8 +681,18 @@ pub fn read_picture_header_prefix(source: &[u8], _file_size: u64) -> Result<Pict
 ///
 /// NOTE: this will spawn rayon tasks and block waiting for them. If you don't want blocking wrap it with [`shin_tasks::compute::spawn`].
 pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> Result<B::Output> {
+    read_picture_with_format::<B>(source, builder_args, PictureFormat::Umineko)
+}
+
+/// Decode Higurashi v2 or the existing Umineko layout with shared pixel codecs.
+pub fn read_picture_with_format<B: PictureBuilder>(
+    source: &[u8],
+    builder_args: B::Args,
+    format: PictureFormat,
+) -> Result<B::Output> {
     let mut source = io::Cursor::new(source);
-    let header: PicHeader = BinRead::read(&mut source)?;
+    let file_size = source.get_ref().len() as u64;
+    let header = picture_header(&mut source, format, file_size)?;
 
     let mut blocks = BTreeMap::new();
     let mut placements = Vec::new();
@@ -550,18 +705,26 @@ pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> 
             Entry::Vacant(entry) => {
                 // Native FileSlice rejects a range before creating a subsource.
                 // Return a loader error so cache waiters receive the failure.
-                let block_data =
-                    source.get_ref().get(block_desc.offset as usize..)
-                        .and_then(|tail| tail.get(..block_desc.size as usize))
-                        .with_context(|| format!(
+                let block_data = source
+                    .get_ref()
+                    .get(block_desc.offset as usize..)
+                    .and_then(|tail| tail.get(..block_desc.size as usize))
+                    .with_context(|| {
+                        format!(
                             "Picture block range error: offset={}, size={}, picture length={}",
-                            block_desc.offset, block_desc.size, source.get_ref().len()
-                        ))?;
+                            block_desc.offset,
+                            block_desc.size,
+                            source.get_ref().len()
+                        )
+                    })?;
                 entry.insert((Vec::new(), block_data))
             }
         };
         positions.push((block_desc.x as u32, block_desc.y as u32));
-        placements.push((block_desc.offset, (block_desc.x as u32, block_desc.y as u32)));
+        placements.push((
+            block_desc.offset,
+            (block_desc.x as u32, block_desc.y as u32),
+        ));
     }
 
     let mut builder = B::new(
@@ -572,6 +735,7 @@ pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> 
         header.origin_y as i32,
         header.picture_id,
     );
+    builder.set_format(format);
     builder.set_placements(placements);
 
     // TODO: in bustups we collect blocks into a vector, while here we call builder methods directly from rayon tasks
@@ -579,7 +743,13 @@ pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> 
     let builder = Mutex::new(builder);
     blocks
         .into_par_iter()
-        .map(|(data_offset, (pos, data))| (data_offset, pos, read_picture_block(data)))
+        .map(|(data_offset, (pos, data))| {
+            (
+                data_offset,
+                pos,
+                read_picture_block_with_format(data, format),
+            )
+        })
         .try_for_each(|(data_offset, pos, block)| {
             builder.lock().add_block(data_offset, pos, block?)
         })?;
@@ -588,3 +758,7 @@ pub fn read_picture<B: PictureBuilder>(source: &[u8], builder_args: B::Args) -> 
 
     builder.build()
 }
+
+#[cfg(test)]
+#[path = "higurashi_tests.rs"]
+mod higurashi_tests;

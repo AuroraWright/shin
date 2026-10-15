@@ -16,6 +16,7 @@ use crate::format::scenario::{
 /// Contains the full VM state
 ///
 /// It consists of a memory, two stacks (call and data)
+#[derive(Clone)]
 pub struct VmCtx {
     /// Memory (aka registers I guess)
     regular_registers: [i32; 0x1000],
@@ -32,7 +33,7 @@ pub struct VmCtx {
     /// Can be addressed via [Register] with value > 0x1000
     ///
     /// Also called mem3 in ShinDataUtil
-    arguments_stack: Vec<SmallVec<i32, 6>>,
+    arguments_stack: Vec<SmallVec<[i32; 6]>>,
     /// PRNG state, updated on each instruction executed
     prng_state: u32,
 }
@@ -44,11 +45,7 @@ fn bool(v: i32) -> bool {
 
 #[inline]
 fn unbool(v: bool) -> i32 {
-    if v {
-        -1
-    } else {
-        0
-    }
+    if v { -1 } else { 0 }
 }
 
 #[inline]
@@ -101,6 +98,23 @@ impl VmCtx {
 
     pub(super) fn get_prng_state(&self) -> u32 {
         self.prng_state
+    }
+
+    /// Native Higurashi checkpoints rewind the instruction's PRNG advance,
+    /// while retaining all registers and both complete active stacks.
+    pub(super) fn clone_with_prng(&self, state: u32) -> Self {
+        let mut copy = self.clone();
+        copy.prng_state = state;
+        copy
+    }
+
+    /// Native older-engine stack capacity checks, used before mutating a frame.
+    pub(super) fn stack_sizes(&self) -> (usize, usize, usize) {
+        (
+            self.call_stack.len(),
+            self.arguments_stack.len(),
+            self.arguments_stack.iter().map(|f| f.len() + 1).sum(),
+        )
     }
 
     /// Get the value from memory
@@ -183,11 +197,7 @@ impl VmCtx {
             JumpCondType::BitSet => (left & 1i32.wrapping_shl(right as u32)) != 0,
         };
 
-        if cond.is_negated {
-            !result
-        } else {
-            result
-        }
+        if cond.is_negated { !result } else { result }
     }
 
     pub fn push_code_stack(&mut self, addr: CodeAddress) {
@@ -211,7 +221,13 @@ impl VmCtx {
     pub(super) fn reference_stack_snapshot(&self) -> Vec<i64> {
         let mut words = vec![self.call_stack.len() as i64];
         words.extend(self.call_stack.iter().map(|v| i64::from(v.0)));
-        words.push(256 - self.arguments_stack.iter().map(|f| f.len() as i64 + 1).sum::<i64>());
+        words.push(
+            256 - self
+                .arguments_stack
+                .iter()
+                .map(|f| f.len() as i64 + 1)
+                .sum::<i64>(),
+        );
         for frame in self.arguments_stack.iter().rev() {
             words.push(frame.len() as i64);
             words.extend(frame.iter().map(|&v| i64::from(v)));
@@ -222,7 +238,7 @@ impl VmCtx {
     /// Evaluate an RPN expression with native wrapping integer/fixed-point semantics.
     /// Executed handler0xec050/0xec780 comparisons cover every term and depth32.
     pub fn evaluate_expression(&self, expr: &Expression) -> i32 {
-        let mut stack = SmallVec::<i32, 16>::new();
+        let mut stack = SmallVec::<[i32; 16]>::new();
         for term in expr.iter() {
             match term {
                 &ExpressionTerm::Push(v) => stack.push(self.get_number(v)),

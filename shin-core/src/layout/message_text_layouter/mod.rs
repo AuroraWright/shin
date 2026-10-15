@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod font;
+pub mod higurashi;
 pub mod mixins;
 
 use commands::{Char, Command, Section, Voice, VoiceSync, VoiceWait, Wait};
@@ -83,6 +84,29 @@ fn parse_color(color: i32) -> UnormColor {
     }
 }
 
+#[derive(Clone, Copy)]
+enum ColorEncoding {
+    Decimal,
+    Hexadecimal,
+}
+
+impl ColorEncoding {
+    fn parse(self, color: i32) -> UnormColor {
+        match self {
+            Self::Decimal => parse_color(color),
+            Self::Hexadecimal if color <= 0 => UnormColor(0),
+            Self::Hexadecimal if color >= 0xfff => UnormColor::WHITE,
+            Self::Hexadecimal => {
+                let color = color as u32;
+                let red = ((color >> 8) & 15) * 17;
+                let green = ((color >> 4) & 15) * 17;
+                let blue = (color & 15) * 17;
+                UnormColor(red | (green << 8) | (blue << 16) | 0xff000000)
+            }
+        }
+    }
+}
+
 fn parse_draw_speed(draw_speed: i32) -> f32 {
     let draw_speed = draw_speed.clamp(0, 100);
 
@@ -94,7 +118,15 @@ fn parse_fade(fade: i32) -> f32 {
 }
 
 fn parse_font_scale(size: i32) -> f32 {
-    size.clamp(10, 200) as f32 * 0.01
+    // Both native versions return explicit endpoint constants. Multiplying
+    // 10 by 0.01 rounds differently from the native 0.1 value.
+    if size <= 10 {
+        0.1
+    } else if size >= 200 {
+        2.0
+    } else {
+        size as f32 * 0.01
+    }
 }
 
 fn parse_voice_volume(volume: i32) -> f32 {
@@ -102,6 +134,7 @@ fn parse_voice_volume(volume: i32) -> f32 {
 }
 
 pub struct MessageTextLayouterImpl<Font> {
+    color_encoding: ColorEncoding,
     pub commands: Vec<Command>,
     pub lines: Vec<LineInfo>,
     pub font_normal: Font,
@@ -148,10 +181,27 @@ impl<Font> MessageTextLayouterImpl<Font> {
     pub fn new(
         font_normal: Font,
         font_bold: Font,
-        mut params: LayoutParams,
+        params: LayoutParams,
         defaults: MessageTextLayouterDefaults,
     ) -> Self {
+        Self::with_color_encoding(
+            font_normal,
+            font_bold,
+            params,
+            defaults,
+            ColorEncoding::Decimal,
+        )
+    }
+
+    fn with_color_encoding(
+        font_normal: Font,
+        font_bold: Font,
+        mut params: LayoutParams,
+        defaults: MessageTextLayouterDefaults,
+        color_encoding: ColorEncoding,
+    ) -> Self {
         Self {
+            color_encoding,
             commands: vec![],
             lines: vec![],
             font_normal,
@@ -164,7 +214,7 @@ impl<Font> MessageTextLayouterImpl<Font> {
                 params
             },
             default_font_scale: 1.0,
-            default_color_rgba: parse_color(defaults.color),
+            default_color_rgba: color_encoding.parse(defaults.color),
             default_draw_speed: parse_draw_speed(defaults.draw_speed),
             default_fade: parse_fade(defaults.fade),
             finalized_command_count: 0,
@@ -462,7 +512,7 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
         if color < 0 {
             self.color_rgba = self.default_color_rgba;
         } else {
-            self.color_rgba = parse_color(color);
+            self.color_rgba = self.color_encoding.parse(color);
         }
     }
 

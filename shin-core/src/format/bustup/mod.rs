@@ -15,6 +15,7 @@
 
 mod builder;
 pub mod default_builder;
+pub mod higurashi;
 #[cfg(test)]
 mod reference;
 
@@ -58,6 +59,10 @@ pub struct BustupId(u32);
 impl BustupId {
     pub fn new(id: u32) -> Self {
         Self(id)
+    }
+
+    pub fn raw(self) -> u32 {
+        self.0
     }
 }
 

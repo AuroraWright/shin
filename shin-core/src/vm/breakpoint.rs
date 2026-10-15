@@ -1,10 +1,10 @@
 //! Contains breakpoint functionality for the VM
 
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     sync::{
-        atomic::{AtomicU32, Ordering},
         Arc, Weak,
+        atomic::{AtomicU32, Ordering},
     },
 };
 

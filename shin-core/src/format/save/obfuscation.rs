@@ -1,7 +1,7 @@
 //! Implements "crypto" used by savefiles
 //! (it's just a bunch of XORs, actually)
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{Result, bail, ensure};
 use array_util::SliceExt;
 
 use crate::crc32::crc32;
@@ -85,7 +85,7 @@ pub fn encode(data: &[u8], key: u32) -> Vec<u8> {
 #[cfg(test)]
 mod test {
     use insta::assert_debug_snapshot;
-    use rand::{Rng, RngCore, SeedableRng};
+    use rand::{Rng, RngExt, SeedableRng};
 
     #[test]
     fn truncated_crc_returns_an_error_instead_of_panicking() {

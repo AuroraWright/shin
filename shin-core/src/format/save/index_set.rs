@@ -1,7 +1,7 @@
 use std::fmt;
 
-use serde::{de::SeqAccess, Deserialize, Deserializer, Serialize, Serializer};
-use shin_primitives::bit_utils::{bit_read, bit_write, BitBuffer, BitPosition};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de::SeqAccess};
+use shin_primitives::bit_utils::{BitBuffer, BitPosition, BitReadError, bit_read, bit_write};
 
 type WordType = u32;
 const WORD_BITS: usize = WordType::BITS as usize;
@@ -19,6 +19,15 @@ impl IndexSet {
     /// Creates an empty [`IndexSet`]
     pub fn new() -> Self {
         Self { bits: Vec::new() }
+    }
+
+    /// Preserve the physical word vector when importing the older save format.
+    pub fn from_words(bits: Vec<WordType>) -> Self {
+        Self { bits }
+    }
+
+    pub fn words(&self) -> &[WordType] {
+        &self.bits
     }
 
     /// Adds an index to the [`IndexSet`]
@@ -72,7 +81,11 @@ impl IndexSet {
     pub fn read(reader: &mut BitBuffer) -> bit_read::Result<Self> {
         let bits = bit_read::read_vec(reader, bit_read::read_u16, bit_read::read_u32)?;
 
-        assert_eq!(bits.len() % Self::ALLOC_AHEAD, 0);
+        if bits.len() % Self::ALLOC_AHEAD != 0 {
+            return Err(BitReadError::InvalidData {
+                reason: "Invalid save index vector length",
+            });
+        }
 
         Ok(Self { bits })
     }

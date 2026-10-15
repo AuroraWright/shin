@@ -123,3 +123,6 @@ pub fn read_mask(source: &[u8]) -> Result<MaskTexture> {
         texels,
     })
 }
+
+mod higurashi;
+pub use higurashi::read_higurashi_mask;

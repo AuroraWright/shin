@@ -2,6 +2,7 @@
 //!
 //! See also [crate::vm] for the VM that runs the scenario.
 
+pub mod higurashi;
 pub mod info;
 pub mod instruction_elements;
 pub mod instructions;
@@ -9,7 +10,7 @@ pub mod types;
 
 use std::io::Cursor;
 
-use anyhow::{bail, Result};
+use anyhow::{Result, bail};
 use binrw::{BinRead, BinWrite};
 use bytes::Bytes;
 use instruction_elements::CodeAddress;
@@ -63,6 +64,13 @@ impl Scenario {
     pub fn new(data: Bytes) -> Result<Self> {
         let mut cur = Cursor::new(&data);
         let header = ScenarioHeader::read(&mut cur)?;
+        // The older Higurashi layout has eleven pointers and u8 asset names.
+        // Feeding it to the Umineko reader also misinterprets its bytecode.
+        if matches!((header.unk2, header.unk3), (63, 129) | (65, 133)) {
+            bail!(
+                "Higurashi scenario requires HigurashiScenario; its VM dialect is not implemented yet"
+            );
+        }
         let info_tables = ScenarioInfoTables::read(&mut cur)?;
 
         if header.size as usize != data.len() {
@@ -93,6 +101,7 @@ impl Scenario {
     }
 }
 
+#[derive(Clone)]
 pub struct InstructionReader {
     cur: Cursor<Bytes>,
 }

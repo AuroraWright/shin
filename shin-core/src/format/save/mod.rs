@@ -4,11 +4,14 @@ use anyhow::Result;
 use chrono::{Datelike, NaiveDate, NaiveDateTime, Timelike};
 use serde::{Deserialize, Serialize};
 use serde_big_array::BigArray;
-use shin_primitives::bit_utils::{bit_read, bit_write, BitBuffer};
+use shin_primitives::bit_utils::{BitBuffer, BitReadError, bit_read, bit_write};
 
 use crate::{crc32, format::save::index_set::IndexSet};
 
+pub mod higurashi;
 pub mod index_set;
+#[cfg(test)]
+mod malformed_body_tests;
 #[cfg(test)]
 mod native_codec_tests;
 mod obfuscation;
@@ -206,7 +209,11 @@ impl PersistData {
     fn read(reader: &mut BitBuffer) -> bit_read::Result<Self> {
         let data = bit_read::read_vec(reader, bit_read::read_u16, bit_read::read_i16)?;
 
-        assert_eq!(data.len() % Self::ALLOC_AHEAD, 0);
+        if data.len() % Self::ALLOC_AHEAD != 0 {
+            return Err(BitReadError::InvalidData {
+                reason: "Invalid save persistence vector length",
+            });
+        }
 
         Ok(Self(data))
     }
@@ -536,7 +543,9 @@ fn read_date_time(reader: &mut BitBuffer) -> bit_read::Result<NaiveDateTime> {
 
     let datetime = NaiveDate::from_ymd_opt(year as i32, month, day)
         .and_then(|date| date.and_hms_opt(hour, minute, second))
-        .expect("invalid date");
+        .ok_or(BitReadError::InvalidData {
+            reason: "Invalid save timestamp",
+        })?;
 
     Ok(datetime)
 }
@@ -550,7 +559,7 @@ fn write_date_time(value: &NaiveDateTime, writer: &mut BitBuffer) {
     writer.write_int(6, value.second());
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GameDataEntry {
     pub scenario_id: i32,
     pub random_seed: u32,
@@ -593,7 +602,7 @@ impl GameDataEntry {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RouteData(Vec<u8>);
 
 impl RouteData {
@@ -641,12 +650,14 @@ mod tests {
         assert_eq!(decoded.play_seconds, 0);
         assert!(decoded.persist_data.0.is_empty());
         assert!(decoded.save_vectors.seen_messages.iter().next().is_none());
-        assert!(decoded
-            .save_vectors
-            .select_seen_choices
-            .iter()
-            .next()
-            .is_none());
+        assert!(
+            decoded
+                .save_vectors
+                .select_seen_choices
+                .iter()
+                .next()
+                .is_none()
+        );
         assert!(decoded.save_vectors.select_last_choices.is_empty());
         assert!(decoded.save_vectors.unlocked_cgs.iter().next().is_none());
         assert!(decoded.save_vectors.unlocked_bgms.iter().next().is_none());

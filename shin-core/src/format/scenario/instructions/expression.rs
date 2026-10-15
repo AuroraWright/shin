@@ -183,7 +183,7 @@ pub enum ExpressionValidationError {
 /// An expression is a sequence of terms that are evaluated in order.
 /// This is basically a reverse polish notation expression, which can be evaluated with a stack machine.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Expression(SmallVec<ExpressionTerm, 6>);
+pub struct Expression(SmallVec<[ExpressionTerm; 6]>);
 
 impl Expression {
     pub fn new_unchecked<I: IntoIterator<Item = ExpressionTerm>>(iter: I) -> Self {
@@ -278,7 +278,7 @@ impl BinWrite for Expression {
 
 #[cfg(test)]
 mod tests {
-    use binrw::{io::NoSeek, BinWrite};
+    use binrw::{BinWrite, io::NoSeek};
 
     use super::{Expression, ExpressionTerm, NumberSpec};
     use crate::format::{

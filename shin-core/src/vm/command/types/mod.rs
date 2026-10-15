@@ -6,8 +6,8 @@ mod property;
 
 pub use flags::{AudioWaitStatus, LayerCtrlFlags, LayerLoadFlags, MaskFlags, WipeFlags};
 pub use id::{
-    LayerId, LayerIdOpt, LayerbankId, LayerbankIdOpt, PlaneId, PlaneIdOpt, VLayerId, VLayerIdRepr,
-    LAYERBANKS_COUNT, LAYERS_COUNT, PLANES_COUNT,
+    LAYERBANKS_COUNT, LAYERS_COUNT, LayerId, LayerIdOpt, LayerbankId, LayerbankIdOpt, PLANES_COUNT,
+    PlaneId, PlaneIdOpt, VLayerId, VLayerIdRepr,
 };
 use num_derive::FromPrimitive;
 pub use property::LayerProperty;
@@ -112,12 +112,14 @@ mod message_style_tests {
     fn message_style_accepts_signed_words_and_independent_invalid_nibbles() {
         for (word, ty, layout) in [
             (-1, MessageboxType::Neutral, MessageTextLayout::Justify),
-            (i32::MIN, MessageboxType::Neutral, MessageTextLayout::Justify),
+            (i32::MIN, MessageboxType::Neutral, MessageTextLayout::Justify,
+            ),
             (0x26, MessageboxType::Neutral, MessageTextLayout::Center),
             (0x40, MessageboxType::Neutral, MessageTextLayout::Justify),
             (0x34, MessageboxType::Novel, MessageTextLayout::Right),
             (0x55, MessageboxType::NoText, MessageTextLayout::Justify),
-            (0x80000035u32 as i32, MessageboxType::NoText, MessageTextLayout::Right),
+            (0x80000035u32 as i32, MessageboxType::NoText, MessageTextLayout::Right,
+            ),
         ] {
             assert_eq!(MessageboxStyle::from_number(word), MessageboxStyle { messagebox_type: ty, text_layout: layout });
         }

@@ -20,7 +20,8 @@ use itertools::Itertools;
 use shin_primitives::stateless_reader::{StatelessIoWrapper, StatelessReader};
 use smartstring::alias::CompactString;
 
-const VERSION: u32 = 0x10001;
+// Higurashi uses the same index layout with version 1. Umineko uses 0x10001.
+const VERSIONS: [u32; 2] = [1, 0x10001];
 const DIRECTORY_OFFSET_MULTIPLIER: u64 = 16;
 
 #[derive(BinRead, BinWrite)]
@@ -252,7 +253,7 @@ impl<S: StatelessReader> RomReader<S> {
     pub fn new(reader: S) -> Result<Self> {
         let mut header_io = BufReader::new(StatelessIoWrapper::new(&reader));
         let header = RawHeader::read(&mut header_io).context("Reading rom header")?;
-        if VERSION != header.version {
+        if !VERSIONS.contains(&header.version) {
             bail!("Unknown version: 0x{:08x}", header.version)
         }
         let index_offset = header_io.stream_position()?;
@@ -445,6 +446,17 @@ impl<S: StatelessReader, Rom: Borrow<RomReader<S>>> io::Seek for RomFileReader<S
 #[cfg(test)]
 mod path_tests {
     use super::*;
+    #[test]
+    fn accepts_higurashi_and_umineko_versions_only() {
+        use shin_primitives::stateless_reader::StatelessCursor;
+        for (version, accepted) in [(1u32, true), (0x10001, true), (0, false), (2, false)] {
+            let mut data = b"ROM2".to_vec();
+            for word in [version, 4, 512, 0, 0, 0, 0, 0] {
+                data.extend_from_slice(&word.to_le_bytes());
+            }
+            assert_eq!(RomReader::new(StatelessCursor::new(data)).is_ok(), accepted);
+        }
+    }
     #[test]
     fn archive_parent_paths_require_real_directories() {
         use shin_primitives::stateless_reader::StatelessCursor;

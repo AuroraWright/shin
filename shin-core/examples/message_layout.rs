@@ -7,15 +7,23 @@ use std::{
 use shin_core::{
     format::font::read_font_metrics,
     layout::{
-        BacklogTextLayouter, LayoutParams, MessageLayerLayouter, MessageTextLayouter,
-        MessageTextLayouterDefaults,
+        BacklogTextLayouter, HigurashiMessageLayouter, LayoutParams, MessageLayerLayouter,
+        MessageTextLayouter, MessageTextLayouterDefaults,
         commands::{CharFontType, Command},
     },
     vm::command::types::{MessageTextLayout, MessageboxType},
 };
 
 fn main() -> anyhow::Result<()> {
-    let paths: Vec<_> = std::env::args().skip(1).collect();
+    let mut paths: Vec<_> = std::env::args().skip(1).collect();
+    let line_audit = paths.iter().any(|arg| arg == "--line-audit");
+    paths.retain(|arg| arg != "--line-audit");
+    let higurashi = paths.first().is_some_and(|arg| arg == "--higurashi");
+    if higurashi {
+        paths.remove(0);
+        anyhow::ensure!(paths.len() == 1, "Expected Higurashi newrodin FNT path");
+        paths.push(paths[0].clone());
+    }
     anyhow::ensure!(
         paths.len() == 2 || paths.len() == 3,
         "Expected regular/bold and optional system FNT paths"
@@ -27,6 +35,7 @@ fn main() -> anyhow::Result<()> {
         .map(|path| read_font_metrics(&mut BufReader::new(File::open(path)?)))
         .transpose()?;
     let mut output = io::BufWriter::new(io::stdout().lock());
+    let (mut audited, mut empty_lines, mut invalid_character_lines) = (0u64, 0u64, 0u64);
     for input in io::stdin().lock().lines() {
         let input = input?;
         let mut words = input.split_whitespace();
@@ -81,7 +90,33 @@ fn main() -> anyhow::Result<()> {
             draw_speed,
             fade,
         };
-        let (commands, lines, size) = if style_number == 6 {
+        let (commands, lines, size) = if higurashi {
+            anyhow::ensure!(style_number <= 4, "Invalid Higurashi style");
+            let expected = [
+                1500.0f32.to_bits(),
+                values[1],
+                0,
+                0,
+                4.0f32.to_bits(),
+                20.0f32.to_bits(),
+                50.0f32.to_bits(),
+                1.0f32.to_bits(),
+            ];
+            anyhow::ensure!(
+                values == expected && flags == 7 && color == 0xfff && fade == 200,
+                "Expected native Higurashi message caller parameters"
+            );
+            anyhow::ensure!(
+                style_number != 2 || draw_speed == 100,
+                "Native mode2 forces draw speed100"
+            );
+            HigurashiMessageLayouter::for_message(
+                &regular,
+                style_number as i32 | ((values[1] as i32) << 4),
+                draw_speed,
+            )
+            .parse(text)
+        } else if style_number == 6 {
             BacklogTextLayouter::new(&regular, &bold, parameters, defaults).parse(text)
         } else if style_number >= 7 {
             let font = match style_number {
@@ -96,6 +131,25 @@ fn main() -> anyhow::Result<()> {
         } else {
             MessageLayerLayouter::new(&regular, &bold, style, parameters, defaults).parse(text)
         };
+        if line_audit {
+            audited += 1;
+            if lines.is_empty() {
+                empty_lines += 1;
+                eprintln!("Empty line table: row{audited},style{style_number},text{hex}");
+            }
+            for command in &commands {
+                if let Command::Char(character) = command {
+                    if character.line_index >= lines.len() {
+                        invalid_character_lines += 1;
+                        eprintln!(
+                            "Invalid character line: row{audited},style{style_number},index{}",
+                            character.line_index
+                        );
+                    }
+                }
+            }
+            continue;
+        }
         let mut row = vec![
             commands.len() as u32,
             lines.len() as u32,
@@ -180,6 +234,16 @@ fn main() -> anyhow::Result<()> {
             write!(output, "{value}")?;
         }
         writeln!(output)?;
+    }
+    if line_audit {
+        writeln!(
+            output,
+            "LINE_AUDIT {audited} {empty_lines} {invalid_character_lines}"
+        )?;
+        anyhow::ensure!(
+            empty_lines == 0 && invalid_character_lines == 0,
+            "Message line preconditions failed"
+        );
     }
     Ok(())
 }

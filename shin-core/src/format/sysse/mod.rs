@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io::Read};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use binrw::{BinRead, BinWrite};
 use bytes::Buf;
 
@@ -10,6 +10,8 @@ use crate::format::{
 };
 
 mod kernel;
+#[cfg(test)]
+mod validation_tests;
 
 #[derive(BinRead, BinWrite)]
 #[brw(magic = b"SYSE")]
@@ -50,9 +52,13 @@ impl Sound {
         let mut cur = std::io::Cursor::new(data);
         let header = SoundHeader::read_le(&mut cur)?;
         assert_eq!(header.file_size, data.len() as u32);
+        ensure!(header.sample_rate != 0, "ADP1 sample rate must be nonzero");
 
         let mut sample_data = Vec::with_capacity(cur.remaining());
         cur.read_to_end(&mut sample_data)?;
+        // Validate before queuing a source on the non-unwinding audio callback.
+        // Complete channel blocks are decoded; a partial final block is ignored.
+        kernel::validate_block_headers(&sample_data, header.channel_count)?;
 
         Ok(Self {
             channel_count: header.channel_count,
@@ -169,7 +175,7 @@ pub fn read_sys_se(data: &[u8]) -> Result<SysSe> {
             .to_string();
 
         let data = &data[entry.offset as usize..][..entry.size as usize];
-        let sound = Sound::new(data).context("Failed to read sound")?;
+        let sound = Sound::new(data).with_context(|| format!("Failed to read sound {name:?}"))?;
         sounds.insert(name, sound);
     }
 

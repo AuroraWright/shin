@@ -4,7 +4,7 @@ use super::RouteData;
 
 /// The native route stream records values that cannot be reproduced from the
 /// initial script registers and random seed: SGET, SELECT, and QUIZ responses.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct RouteRecorder {
     data: RouteData,
     position: usize,

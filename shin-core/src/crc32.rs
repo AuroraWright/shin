@@ -49,7 +49,7 @@ const CRC32_TABLE: [u32; 256] = [
 
 #[cfg(test)]
 mod tests {
-    use rand::{Rng, RngCore, SeedableRng};
+    use rand::{Rng, RngExt, SeedableRng};
 
     use super::*;
 

@@ -50,6 +50,23 @@ const DECODER_FIR_TABLE: [Fir2; 5] = [
     },
 ];
 
+pub(super) fn validate_block_headers(data: &[u8], channels: ChannelCount) -> anyhow::Result<()> {
+    let stride = match channels {
+        ChannelCount::Mono => BLOCK_SIZE_BYTES,
+        ChannelCount::Stereo => 2 * BLOCK_SIZE_BYTES,
+    };
+    for (block, frame) in data.chunks_exact(stride).enumerate() {
+        for (channel, bytes) in frame.chunks_exact(BLOCK_SIZE_BYTES).enumerate() {
+            let filter = BlockHeader(bytes[0]).filter();
+            anyhow::ensure!(
+                filter < DECODER_FIR_TABLE.len(),
+                "Unsupported ADPCM filter {filter} at block {block}, channel {channel}"
+            );
+        }
+    }
+    Ok(())
+}
+
 #[derive(Copy, Clone)]
 struct History {
     history_1: i32,

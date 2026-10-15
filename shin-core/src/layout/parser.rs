@@ -58,11 +58,23 @@ pub enum ParsedCommand {
 
 pub struct MessageTextParser<'a> {
     message: &'a str,
+    supports_bold: bool,
 }
 
 impl<'a> MessageTextParser<'a> {
     pub fn new(message: &'a str) -> Self {
-        Self { message }
+        Self {
+            message,
+            supports_bold: true,
+        }
+    }
+
+    /// Older Higurashi parser emits braces as unknown commands; it has one font.
+    pub fn new_higurashi(message: &'a str) -> Self {
+        Self {
+            message,
+            supports_bold: false,
+        }
     }
 
     pub fn parse_into<L: TextLayouter>(self, layouter: &mut L) {
@@ -185,8 +197,8 @@ impl Iterator for MessageTextParser<'_> {
             '|' => ParsedCommand::CompleteSection,
             '[' => ParsedCommand::InstantTextStart,
             ']' => ParsedCommand::InstantTextEnd,
-            '{' => ParsedCommand::BoldTextStart,
-            '}' => ParsedCommand::BoldTextEnd,
+            '{' if self.supports_bold => ParsedCommand::BoldTextStart,
+            '}' if self.supports_bold => ParsedCommand::BoldTextEnd,
             // NB: the original engine does not do any validation here. We have to if we want to continue using the char type
             'u' => ParsedCommand::Char(
                 char::from_u32(self.read_int_argument() as u32).expect("Invalid char code"),
