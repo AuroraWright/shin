@@ -57,33 +57,32 @@ pub(super) fn install(send: impl Fn() -> bool + 'static) -> anyhow::Result<QuitH
             .ok_or_else(|| anyhow::anyhow!("No AppKit delegate"))?;
         let class = delegate.class();
         anyhow::ensure!(
-            class.name() == "WinitApplicationDelegate",
-            "Unreviewed AppKit delegate {}",
+            class.name() == c"WinitApplicationDelegate",
+            "Unreviewed AppKit delegate {:?}",
             class.name()
         );
         let selector = sel!(applicationShouldTerminate:);
         let class_ptr = (class as *const AnyClass).cast_mut().cast();
-        let implementation = Some(std::mem::transmute::<
+        let implementation = std::mem::transmute::<
             unsafe extern "C" fn(*mut AnyObject, Sel, *mut AnyObject) -> usize,
-            unsafe extern "C" fn(),
-        >(should_terminate));
+            objc2::runtime::Imp,
+        >(should_terminate);
         // Q = 64-bit unsigned reply; @ : @ = receiver, selector, application.
         // The callback's signature above matches this exact encoding.
         let added = ffi::class_addMethod(
             class_ptr,
-            selector.as_ptr(),
+            selector,
             implementation,
-            c"Q@:@".as_ptr(),
-        );
+            c"Q@:@".as_ptr());
         if added == ffi::NO {
-            let method = ffi::class_getInstanceMethod(class_ptr, selector.as_ptr());
+            let method = ffi::class_getInstanceMethod(class_ptr, selector);
             anyhow::ensure!(
                 !method.is_null(),
                 "AppKit Quit callback registration failed"
             );
             let installed = ffi::method_getImplementation(method);
             anyhow::ensure!(
-                installed.map(|f| f as usize) == implementation.map(|f| f as usize),
+                installed.map(|f| f as usize) == Some(implementation as usize),
                 "AppKit already owns a different Quit callback"
             );
         }

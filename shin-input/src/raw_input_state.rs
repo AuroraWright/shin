@@ -16,6 +16,8 @@ pub struct MouseState {
     /// Mouse buttons state, simple state of each button
     pub buttons: EnumMap<MouseButton, bool>,
     pub position: Vec2,
+    /// Accumulated vertical wheel displacement this frame, up-positive.
+    /// One line is one unit; pixel scrolling uses 32 logical pixels per unit.
     pub scroll_amount: f32,
 }
 
@@ -117,6 +119,7 @@ impl GamepadsState {
 pub struct RawInputAccumulator {
     gilrs: Option<Gilrs>,
     state: RawInputState,
+    mouse_scale_factor: f64,
 }
 
 impl RawInputAccumulator {
@@ -135,6 +138,13 @@ impl RawInputAccumulator {
                 }
             },
             state: RawInputState::new(),
+            mouse_scale_factor: 1.0,
+        }
+    }
+
+    pub fn set_mouse_scale_factor(&mut self, scale_factor: f64) {
+        if scale_factor.is_finite() && scale_factor > 0.0 {
+            self.mouse_scale_factor = scale_factor;
         }
     }
 
@@ -170,19 +180,20 @@ impl RawInputAccumulator {
                 state.mouse.position = vec2(position.x as f32, position.y as f32);
             }
             WindowEvent::MouseWheel { delta, .. } => {
-                // press virtual mouse buttons
-                // TODO: handle it in a smarter way or smth...
                 let amount = match delta {
                     &winit::event::MouseScrollDelta::LineDelta(_x, y) => y,
-                    winit::event::MouseScrollDelta::PixelDelta(p) => (p.y / 120.0) as f32, /* this value is windows-specific */
+                    winit::event::MouseScrollDelta::PixelDelta(p) => {
+                        (p.y / self.mouse_scale_factor / 32.0) as f32
+                    }
                 };
-
-                if amount > 0.0 {
-                    state.mouse.buttons[MouseButton::WheelUp] = true;
-                } else {
-                    state.mouse.buttons[MouseButton::WheelDown] = true;
+                if amount.is_finite() {
+                    let total = state.mouse.scroll_amount + amount;
+                    if total.is_finite() {
+                        state.mouse.scroll_amount = total;
+                    }
+                    state.mouse.buttons[MouseButton::WheelUp] = state.mouse.scroll_amount > 0.0;
+                    state.mouse.buttons[MouseButton::WheelDown] = state.mouse.scroll_amount < 0.0;
                 }
-                state.mouse.scroll_amount = amount;
             }
             &WindowEvent::MouseInput { button, state, .. } => {
                 if let Some(button) = convert_winit_mouse_button(button) {
@@ -339,12 +350,110 @@ fn convert_winit_mouse_button(winit: winit::event::MouseButton) -> Option<MouseB
 
 #[cfg(test)]
 mod tests {
+    fn wheel(
+        input: &mut super::RawInputAccumulator,
+        delta: winit::event::MouseScrollDelta,
+        phase: winit::event::TouchPhase,
+    ) {
+        input.on_winit_event(&winit::event::WindowEvent::MouseWheel {
+            device_id: winit::event::DeviceId::dummy(),
+            delta,
+            phase,
+        });
+    }
+    #[test]
+    fn trackpad_wheel_accumulates_retina_pixels_and_resets_each_frame() {
+        use super::*;
+        use winit::{
+            dpi::PhysicalPosition,
+            event::{MouseScrollDelta, TouchPhase},
+        };
+        let mut input = RawInputAccumulator {
+            gilrs: None,
+            state: RawInputState::new(),
+            mouse_scale_factor: 1.0,
+        };
+        input.set_mouse_scale_factor(2.0);
+        // Many subpixel packets before redraw, then a large momentum packet.
+        for _ in 0..16 {
+            wheel(
+                &mut input,
+                MouseScrollDelta::PixelDelta(PhysicalPosition::new(0.0, -0.5)),
+                TouchPhase::Moved,
+            );
+        }
+        wheel(
+            &mut input,
+            MouseScrollDelta::PixelDelta(PhysicalPosition::new(0.0, -200.0)),
+            TouchPhase::Moved,
+        );
+        assert_eq!(input.start_frame().mouse.scroll_amount, -3.25);
+        input.finish_frame();
+        assert_eq!(input.start_frame().mouse.scroll_amount, 0.0);
+        // Horizontal-only/ended packets must never invent a downward scroll.
+        wheel(
+            &mut input,
+            MouseScrollDelta::PixelDelta(PhysicalPosition::new(20.0, 0.0)),
+            TouchPhase::Ended,
+        );
+        assert!(input.start_frame().mouse.buttons.values().all(|held| !held));
+        wheel(
+            &mut input,
+            MouseScrollDelta::LineDelta(0.0, 0.25),
+            TouchPhase::Moved,
+        );
+        wheel(
+            &mut input,
+            MouseScrollDelta::LineDelta(0.0, -0.125),
+            TouchPhase::Moved,
+        );
+        assert_eq!(input.start_frame().mouse.scroll_amount, 0.125);
+        assert!(input.start_frame().mouse.buttons[MouseButton::WheelUp]);
+        assert!(!input.start_frame().mouse.buttons[MouseButton::WheelDown]);
+        wheel(
+            &mut input,
+            MouseScrollDelta::LineDelta(0.0, f32::NAN),
+            TouchPhase::Moved,
+        );
+        assert_eq!(input.start_frame().mouse.scroll_amount, 0.125);
+    }
+    #[test]
+    fn trackpad_wheel_distance_is_independent_of_retina_scale_and_packet_batching() {
+        use super::*;
+        use winit::{
+            dpi::PhysicalPosition,
+            event::{MouseScrollDelta, TouchPhase},
+        };
+        for scale in [1.0, 2.0, 3.0] {
+            for packets_per_frame in [1, 4, 16] {
+                let mut input = RawInputAccumulator {
+                    gilrs: None,
+                    state: RawInputState::new(),
+                    mouse_scale_factor: scale,
+                };
+                let mut distance = 0.0;
+                for _ in 0..32 / packets_per_frame {
+                    for _ in 0..packets_per_frame {
+                        wheel(
+                            &mut input,
+                            MouseScrollDelta::PixelDelta(PhysicalPosition::new(0.0, -0.5 * scale)),
+                            TouchPhase::Moved,
+                        );
+                    }
+                    distance += input.start_frame().mouse.scroll_amount;
+                    input.finish_frame();
+                }
+                assert_eq!(distance, -0.5);
+            }
+        }
+    }
     #[test]
     fn losing_focus_clears_captured_mouse_buttons_and_scroll() {
         use super::*;
         let mut input = RawInputAccumulator {
             gilrs: None,
             state: RawInputState::new(),
+            mouse_scale_factor: 1.0,
         };
         input.state.keyboard.insert(KeyCode::ControlLeft);
         input.state.mouse.buttons[MouseButton::Left] = true;

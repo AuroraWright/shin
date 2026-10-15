@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use kira::sound::{Sound, SoundData};
-use ringbuf::{traits::Split as _, HeapRb};
+use ringbuf::{HeapRb, traits::Split as _};
 use shin_core::format::audio::{AudioDecoder, AudioFile, AudioFrameSource};
 
 use super::AudioSettings;
@@ -50,13 +50,13 @@ impl<S: AudioFrameSource + Send + 'static> SoundData for AudioDataWithTweens<S> 
 }
 
 impl AudioData<AudioDecoder<Arc<AudioFile>>> {
-    pub fn from_audio_file(audio: Arc<AudioFile>, settings: AudioSettings) -> Self {
-        Self {
+    pub fn from_audio_file(audio: Arc<AudioFile>, settings: AudioSettings) -> Result<Self> {
+        Ok(Self {
             // Native NXA playback uses nn::codec::DecodeOpusInterleaved's
             // signed16 output, shared with the voice lip-sync detector.
-            source: AudioDecoder::new_pcm16(audio).expect("Failed to create audio decoder"),
+            source: AudioDecoder::new_pcm16(audio)?,
             settings,
-        }
+        })
     }
 }
 

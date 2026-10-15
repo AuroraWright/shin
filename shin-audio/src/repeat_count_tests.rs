@@ -91,19 +91,16 @@ fn finite_repeats_include_the_final_tail_and_fallback_eof() {
 
 #[test]
 fn finite_repeat_settings_survive_pause_and_volume_retarget_then_clear_waits() {
+    use crate::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use kira::{
-        manager::{
-            AudioManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        },
-        track::TrackId,
-    };
+            AudioManager, AudioManagerSettings};
     use shin_core::{
         time::Tween,
         vm::command::types::{AudioWaitStatus, Pan, Volume},
     };
     let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
         backend_settings: MockBackendSettings { sample_rate: 48000 },
+        internal_buffer_size: 1,
         ..Default::default()
     })
     .unwrap();
@@ -118,7 +115,6 @@ fn finite_repeat_settings_survive_pause_and_volume_retarget_then_clear_waits() {
             settings: crate::AudioSettings {
                 paused: true,
                 playback_rate: 1.0,
-                track: TrackId::Main,
                 fade_in: Tween::IMMEDIATE,
                 loop_start: Some(13),
                 loop_count: 3,

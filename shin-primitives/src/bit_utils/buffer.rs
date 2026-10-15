@@ -190,6 +190,8 @@ mod bits {
 
 #[derive(Debug, Copy, Clone)]
 pub enum BitReadError {
+    /// Bits were present, but their decoded value violates the format.
+    InvalidData { reason: &'static str },
     /// Not enough data in the buffer to read all requested bits
     NotEnoughData {
         /// The number of bits requested to read
@@ -202,6 +204,7 @@ pub enum BitReadError {
 impl Display for BitReadError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
+            BitReadError::InvalidData { reason } => f.write_str(reason),
             BitReadError::NotEnoughData {
                 requested,
                 bits_left,

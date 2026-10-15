@@ -22,6 +22,13 @@ impl AudioHandle {
             .load(std::sync::atomic::Ordering::SeqCst)
     }
 
+    /// Exclusive lower bound of PCM that has left all resampler inputs.
+    /// An EOF source can compare its exclusive last real sample against this
+    /// value while supplying silence to retain its media clock.
+    pub fn drained_position_samples(&self) -> u32 {
+        self.shared.drained_position_samples.load(std::sync::atomic::Ordering::Acquire)
+    }
+
     pub fn sample_rate(&self) -> u32 {
         self.shared.sample_rate
     }
@@ -83,6 +90,14 @@ impl AudioHandle {
             .map_err(|_| anyhow!("Command queue full"))
     }
 
+    /// Append a volume transition without replacing the current ramp. Older
+    /// Higurashi BGMVOL calls its native interpolator with flags0, not bit8.
+    pub fn enqueue_volume(&mut self, volume: Volume, tween: Tween) -> anyhow::Result<()> {
+        self.command_producer
+            .try_push(Command::EnqueueVolume(volume, tween))
+            .map_err(|_| anyhow!("Command queue full"))
+    }
+
     /// Sets the panning of the sound
     pub fn set_panning(&mut self, panning: Pan, tween: Tween) -> anyhow::Result<()> {
         self.command_producer
@@ -120,6 +135,21 @@ impl AudioHandle {
             .map_err(|_| anyhow!("Command queue full"))
     }
 
+    /// Older SE repeats may reuse a matching source during its stop fade.
+    /// Retarget its parameters and cancel that fade without restarting samples.
+    pub fn resume_parameters(
+        &mut self,
+        volume: Volume,
+        pan: Pan,
+        rate: f32,
+        tween: Tween,
+    ) -> anyhow::Result<()> {
+        anyhow::ensure!(rate.is_finite() && rate > 0.0, "Invalid playback rate");
+        self.command_producer
+            .try_push(Command::ResumeParameters(volume, pan, rate, tween))
+            .map_err(|_| anyhow!("Command queue full"))
+    }
+
     /// Fades out the sound to silence with the given tween and then
     /// stops playback.
     ///
@@ -127,6 +157,19 @@ impl AudioHandle {
     pub fn stop(&mut self, tween: Tween) -> anyhow::Result<()> {
         self.command_producer
             .try_push(Command::Stop(tween))
+            .map_err(|_| anyhow!("Command queue full"))
+    }
+
+    /// Older SE stop/reconstruction finishes the queued volume target before
+    /// fading. A stopping source restarts its retirement timer from silence.
+    pub fn finish_volume_and_stop(&mut self, tween: Tween) -> anyhow::Result<()> {
+        self.command_producer
+            .try_push(Command::FinishVolumeAndStop(tween))
+            .map_err(|_| anyhow!("Command queue full"))
+    }
+    /// Higurashi c3cc8 finishes volume and pan without changing source speed.
+    pub fn finish_volume_and_pan(&mut self) -> anyhow::Result<()> {
+        self.command_producer.try_push(Command::FinishVolumeAndPan)
             .map_err(|_| anyhow!("Command queue full"))
     }
 

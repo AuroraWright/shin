@@ -1,16 +1,13 @@
 use std::{
     f32::consts::SQRT_2,
     sync::{
-        atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering},
         Arc,
+        atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering},
     },
 };
 
-use kira::{
-    clock::clock_info::ClockInfoProvider, modulator::value_provider::ModulatorValueProvider,
-    sound::Sound, track::TrackId, Frame, OutputDestination,
-};
-use ringbuf::{traits::Consumer as _, HeapCons};
+use kira::{Frame, info::Info, sound::Sound};
+use ringbuf::{HeapCons, traits::Consumer as _};
 use shin_core::{
     format::audio::{AudioFrameSource, AudioSource},
     time::{Ticks, Tween, Tweener},
@@ -18,18 +15,22 @@ use shin_core::{
 };
 use tracing::debug;
 
-use crate::{resampler::Resampler, AudioData};
+use crate::{AudioData, resampler::Resampler};
 
 pub const COMMAND_BUFFER_CAPACITY: usize = 8;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Command {
     SetVolume(Volume, Tween),
+    EnqueueVolume(Volume, Tween),
     SetPanning(Pan, Tween),
     EnqueuePanning(Pan, Tween),
     SetPlaybackRate(f32, Tween),
     SetParameters(Volume, Pan, f32, Tween),
+    ResumeParameters(Volume, Pan, f32, Tween),
     Stop(Tween),
+    FinishVolumeAndStop(Tween),
+    FinishVolumeAndPan,
 }
 
 pub(crate) struct Shared {
@@ -43,6 +44,7 @@ pub(crate) struct Shared {
     // supplies the microsecond clock used by native media waits.
     pub position: AtomicU32,
     pub position_samples: AtomicU32,
+    pub drained_position_samples: AtomicU32,
     pub sample_rate: u32,
     // used for lip sync
     pub amplitude: AtomicU32,
@@ -57,6 +59,7 @@ impl Shared {
             immediate_stop: AtomicBool::new(false),
             position: AtomicU32::new(0),
             position_samples: AtomicU32::new(0),
+            drained_position_samples: AtomicU32::new(0),
             sample_rate,
             amplitude: AtomicU32::new(0),
         }
@@ -102,10 +105,18 @@ impl<S: AudioFrameSource + Send> SampleProvider<S> {
     }
 
     fn loop_back(&mut self) -> bool {
-        let Some(start) = self.loop_start else { return false; };
-        if self.loop_count == 1 { return false; }
-        if self.loop_count > 1 { self.loop_count -= 1; }
-        self.source.samples_seek(start).expect("Could not seek to loop start");
+        let Some(start) = self.loop_start else {
+            return false;
+        };
+        if self.loop_count == 1 {
+            return false;
+        }
+        if self.loop_count > 1 {
+            self.loop_count -= 1;
+        }
+        self.source
+            .samples_seek(start)
+            .expect("Could not seek to loop start");
         true
     }
 
@@ -157,7 +168,6 @@ impl<S: AudioFrameSource + Send> SampleProvider<S> {
 }
 
 pub struct AudioSound<S: AudioFrameSource + Send> {
-    track_id: TrackId,
     command_consumer: HeapCons<Command>,
     shared: Arc<Shared>,
     state: PlaybackState,
@@ -171,7 +181,7 @@ pub struct AudioSound<S: AudioFrameSource + Send> {
 impl<S: AudioFrameSource + Send> AudioSound<S> {
     pub fn new(data: AudioData<S>, command_consumer: HeapCons<Command>) -> Self {
         assert!(data.settings.playback_rate.is_finite() && data.settings.playback_rate > 0.0);
-        debug!("Creating audio sound for track {:?}", data.settings.track);
+        debug!("Creating audio sound");
 
         let mut volume_fade = Tweener::new(0.0);
         volume_fade.enqueue_now(1.0, data.settings.fade_in);
@@ -179,7 +189,6 @@ impl<S: AudioFrameSource + Send> AudioSound<S> {
         let shared = Arc::new(Shared::new(data.settings.paused, data.source.sample_rate()));
 
         let res = AudioSound {
-            track_id: data.settings.track,
             command_consumer,
             shared,
             state: PlaybackState::Playing,
@@ -187,7 +196,9 @@ impl<S: AudioFrameSource + Send> AudioSound<S> {
             panning: Tweener::new(data.settings.pan.0),
             volume_fade,
             sample_provider: SampleProvider::with_loop_count(
-                data.source, data.settings.loop_start, data.settings.loop_count,
+                data.source,
+                data.settings.loop_start,
+                data.settings.loop_count,
             ),
             playback_rate: Tweener::new(data.settings.playback_rate),
         };
@@ -261,10 +272,6 @@ impl<S: AudioFrameSource + Send> AudioSound<S> {
 }
 
 impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
-    fn output_destination(&mut self) -> OutputDestination {
-        OutputDestination::Track(self.track_id)
-    }
-
     fn on_start_processing(&mut self) {
         while let Some(command) = self.command_consumer.try_pop() {
             match command {
@@ -272,6 +279,7 @@ impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
                 // bacause we don't want to wait for previous audio changes to be applied
                 // ideally, this should never allocate the tweener queue
                 Command::SetVolume(volume, tween) => self.retarget_volume(volume, tween),
+                Command::EnqueueVolume(volume, tween) => self.volume.enqueue(volume.0, tween),
                 Command::SetPanning(panning, tween) => self.panning.enqueue_now(panning.0, tween),
                 Command::EnqueuePanning(pan, tween) => self.panning.enqueue(pan.0, tween),
                 Command::SetPlaybackRate(rate, tween) => {
@@ -282,7 +290,37 @@ impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
                     self.panning.enqueue_now(pan.0, tween);
                     self.playback_rate.enqueue_now(rate, tween);
                 }
+                Command::ResumeParameters(volume, pan, rate, tween) => {
+                    // Older SE repeats can revive a matching stopping entry.
+                    // Preserve its current audible gain and source position.
+                    if self.state != PlaybackState::Stopped {
+                        let current = self.volume.value() * self.volume_fade.value();
+                        self.volume.enqueue_now(current, Tween::IMMEDIATE);
+                        self.volume_fade.enqueue_now(1.0, Tween::IMMEDIATE);
+                        self.state = PlaybackState::Playing;
+                        self.retarget_volume(volume, tween);
+                        self.panning.enqueue_now(pan.0, tween);
+                        self.playback_rate.enqueue_now(rate, tween);
+                    }
+                }
                 Command::Stop(tween) => self.stop(tween),
+                Command::FinishVolumeAndStop(tween) => {
+                    if self.state != PlaybackState::Stopped {
+                        self.volume.fast_forward();
+                        self.volume_fade.fast_forward();
+                        let target = self.volume.value() * self.volume_fade.value();
+                        self.volume.fast_forward_to(target);
+                        self.volume_fade.fast_forward_to(1.0);
+                        self.stop(tween);
+                    }
+                }
+                Command::FinishVolumeAndPan => {
+                    if self.state != PlaybackState::Stopped {
+                        self.volume.fast_forward();
+                        self.volume_fade.fast_forward();
+                        self.panning.fast_forward();
+                    }
+                }
             }
         }
 
@@ -312,12 +350,26 @@ impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
         );
     }
 
-    fn process(
-        &mut self,
-        dt: f64,
-        _clock_info_provider: &ClockInfoProvider,
-        _modulator_value_provider: &ModulatorValueProvider,
-    ) -> Frame {
+    fn process(&mut self, out: &mut [Frame], dt: f64, _info: &Info) {
+        for frame in out {
+            *frame = self.process_frame(dt);
+        }
+    }
+
+    fn finished(&self) -> bool {
+        let result = self.state == PlaybackState::Stopped;
+        if result {
+            debug!("Audio sound finished");
+            self.shared
+                .wait_status
+                .store(self.wait_status().bits(), Ordering::SeqCst);
+        }
+        result
+    }
+}
+
+impl<S: AudioFrameSource + Send> AudioSound<S> {
+    fn process_frame(&mut self, dt: f64) -> Frame {
         let dt_ticks = Ticks::from_seconds(dt as f32);
 
         // update tweeners
@@ -345,6 +397,11 @@ impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
             .sample_provider
             .next(dt * f64::from(self.playback_rate.value()));
 
+        self.shared.drained_position_samples.store(
+            self.sample_provider.resampler.drained_frame_index(),
+            Ordering::Release,
+        );
+
         if self.sample_provider.reached_eof && self.sample_provider.resampler.outputting_silence() {
             self.state = PlaybackState::Stopped;
         }
@@ -360,24 +417,6 @@ impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
 
         f
     }
-
-    fn finished(&self) -> bool {
-        let result = self.state == PlaybackState::Stopped;
-        if result {
-            debug!(
-                "Track {:?} is finished, we are gonna get dropped soon",
-                &self.track_id
-            );
-            // make sure that before we get dropped, the wait status is updated
-            // otherwise SEWAIT can hand forever
-            self.shared.wait_status.store(
-                self.wait_status().bits(),
-                std::sync::atomic::Ordering::SeqCst,
-            );
-        }
-
-        result
-    }
 }
 
 #[cfg(test)]
@@ -385,13 +424,14 @@ impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
 mod repeat_count_tests;
 
 #[cfg(test)]
+mod reconstruction_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::AudioSettings;
-    use kira::manager::{
-        backend::mock::{MockBackend, MockBackendSettings},
-        AudioManager, AudioManagerSettings,
-    };
+    use crate::test_support::{MockBackendSettings, SampleBackend as MockBackend};
+    use kira::{AudioManager, AudioManagerSettings};
     use shin_core::format::audio::AudioBuffer;
 
     #[test]
@@ -399,7 +439,7 @@ mod tests {
     fn reference_rom_nxa_loop_end_and_nonrepeat_last_sample() {
         use shin_core::{
             format::{
-                audio::{read_audio, AudioDecoder},
+                audio::{AudioDecoder, read_audio},
                 rom::RomReader,
             },
             primitives::stateless_reader::StatelessFile,
@@ -450,7 +490,9 @@ mod tests {
                 assert!(!looping.source.inner().is_failed());
             }
             let mut counted = SampleProvider::with_loop_count(
-                AudioDecoder::new_pcm16(file.clone()).unwrap(), Some(info.loop_start), 2,
+                AudioDecoder::new_pcm16(file.clone()).unwrap(),
+                Some(info.loop_start),
+                2,
             );
             let mut reference = AudioSource::new(AudioDecoder::new_pcm16(file.clone()).unwrap());
             counted.source.samples_seek(info.loop_end - 2).unwrap();
@@ -494,7 +536,7 @@ mod tests {
         }
     }
 
-    struct ConstantSource {
+    pub(super) struct ConstantSource {
         sample_rate: u32,
         position: u32,
         length: u32,
@@ -536,15 +578,16 @@ mod tests {
         }
     }
 
-    fn manager() -> AudioManager<MockBackend> {
+    pub(super) fn manager() -> AudioManager<MockBackend> {
         AudioManager::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap()
     }
 
-    fn sound(length: u32, pan: f32) -> AudioData<ConstantSource> {
+    pub(super) fn sound(length: u32, pan: f32) -> AudioData<ConstantSource> {
         AudioData {
             source: ConstantSource {
                 sample_rate: 1000,
@@ -555,7 +598,7 @@ mod tests {
             settings: AudioSettings {
                 paused: false,
                 playback_rate: 1.0,
-                track: TrackId::Main,
+
                 fade_in: Tween::IMMEDIATE,
                 loop_start: None,
                 loop_count: 0,
@@ -565,7 +608,70 @@ mod tests {
         }
     }
 
-    fn advance(manager: &mut AudioManager<MockBackend>, samples: u32) -> Frame {
+    #[test]
+    fn batched_processing_preserves_pcm_pause_suspension_and_retirement() {
+        fn render(batch: usize) -> Vec<f32> {
+            let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
+                backend_settings: MockBackendSettings { sample_rate: 1000 },
+                internal_buffer_size: batch,
+                ..Default::default()
+            })
+            .unwrap();
+            let suspension = crate::AudioSuspension::default();
+            let mut data = sound(10_000, -0.25);
+            data.source.ramp = true;
+            data.settings.volume = Volume(0.4);
+            data.settings.playback_rate = 1.5;
+            let handle = manager.play(suspension.wrap(data)).unwrap();
+            let mut pcm = Vec::new();
+            for _ in 0..256 / batch {
+                manager.backend_mut().on_start_processing();
+                manager.backend_mut().process();
+                pcm.extend_from_slice(manager.backend_mut().samples());
+            }
+            for platform_pause in [false, true] {
+                handle.set_paused(!platform_pause);
+                suspension.set_suspended(platform_pause);
+                let position = handle.position_samples();
+                for _ in 0..3 {
+                    manager.backend_mut().on_start_processing();
+                    manager.backend_mut().process();
+                    assert!(
+                        manager
+                            .backend_mut()
+                            .samples()
+                            .iter()
+                            .all(|&sample| sample == 0.0)
+                    );
+                }
+                let frozen = handle.position_samples();
+                manager.backend_mut().on_start_processing();
+                manager.backend_mut().process();
+                assert_eq!(handle.position_samples(), frozen);
+                assert!(frozen >= position);
+            }
+            suspension.set_suspended(false);
+            handle.set_paused(false);
+            handle.stop_immediate();
+            manager.backend_mut().on_start_processing();
+            manager.backend_mut().process();
+            assert!(
+                manager
+                    .backend_mut()
+                    .samples()
+                    .iter()
+                    .all(|&sample| sample == 0.0)
+            );
+            pcm
+        }
+        let per_sample = render(1);
+        assert!(per_sample.iter().any(|sample| sample.abs() > 0.0));
+        for batch in [16, 128] {
+            assert_eq!(render(batch), per_sample);
+        }
+    }
+
+    pub(super) fn advance(manager: &mut AudioManager<MockBackend>, samples: u32) -> Frame {
         let backend = manager.backend_mut();
         let mut frame = Frame::ZERO;
         for _ in 0..samples {
@@ -578,9 +684,13 @@ mod tests {
     #[test]
     fn microsecond_clock_retains_sample_fraction_and_pause_state() {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
-            backend_settings: MockBackendSettings { sample_rate: 48_000 },
+            backend_settings: MockBackendSettings {
+                sample_rate: 48_000,
+            },
+            internal_buffer_size: 1,
             ..Default::default()
-        }).unwrap();
+        })
+        .unwrap();
         let mut data = sound(2000, 0.0);
         data.source.sample_rate = 48_000;
         let handle = manager.play(data).unwrap();
@@ -697,13 +807,13 @@ mod tests {
                 assert_eq!(advance(&mut manager, 32), Frame::ZERO);
                 assert_eq!(handle.position_samples(), 0);
                 assert_eq!(handle.get_wait_status(), AudioWaitStatus::empty());
-                assert_eq!(manager.num_sounds(), 1);
+                assert_eq!(manager.main_track().num_sounds(), 1);
             }
             handle
                 .stop(Tween::linear(Ticks::from_seconds(0.02)))
                 .unwrap();
             assert_eq!(advance(&mut manager, 30), Frame::ZERO);
-            assert_eq!(manager.num_sounds(), 0);
+            assert_eq!(manager.main_track().num_sounds(), 0);
             assert_eq!(handle.position_samples(), 0);
             assert_eq!(handle.get_wait_status(), AudioWaitStatus::empty());
         }
@@ -771,15 +881,15 @@ mod tests {
             assert_eq!(advance(&mut manager, 64), Frame::ZERO);
             assert_eq!(handle.position_samples(), frozen);
             assert!(handle.get_wait_status().contains(AudioWaitStatus::PLAYING));
-            assert_eq!(manager.num_sounds(), 1);
+            assert_eq!(manager.main_track().num_sounds(), 1);
         }
         handle
             .stop(Tween::linear(Ticks::from_seconds(0.02)))
             .unwrap();
         assert_eq!(advance(&mut manager, 10), Frame::ZERO);
-        assert_eq!(manager.num_sounds(), 1);
+        assert_eq!(manager.main_track().num_sounds(), 1);
         assert_eq!(advance(&mut manager, 20), Frame::ZERO);
-        assert_eq!(manager.num_sounds(), 0);
+        assert_eq!(manager.main_track().num_sounds(), 0);
         assert_eq!(handle.position_samples(), frozen);
         assert_eq!(handle.get_wait_status(), AudioWaitStatus::empty());
     }
@@ -807,9 +917,11 @@ mod tests {
         let position = paused_handle.position_millis();
         assert_eq!(advance(&mut paused_manager, 499), Frame::ZERO);
         assert_eq!(paused_handle.position_millis(), position);
-        assert!(paused_handle
-            .get_wait_status()
-            .contains(AudioWaitStatus::PLAYING));
+        assert!(
+            paused_handle
+                .get_wait_status()
+                .contains(AudioWaitStatus::PLAYING)
+        );
         paused_handle.set_paused(false);
         for _ in 0..100 {
             assert_eq!(
@@ -978,9 +1090,11 @@ mod tests {
             .set_playback_rate(3.0, Tween::linear(Ticks::from_millis(20.0)))
             .unwrap();
         advance(&mut manager, 10);
-        assert!(handle
-            .get_wait_status()
-            .contains(AudioWaitStatus::PLAY_SPEED_TWEENING));
+        assert!(
+            handle
+                .get_wait_status()
+                .contains(AudioWaitStatus::PLAY_SPEED_TWEENING)
+        );
         let half = handle.position_millis();
         assert!((half as i32 - before as i32 - 15).abs() <= 2);
         advance(&mut manager, 12);
@@ -990,9 +1104,11 @@ mod tests {
             .set_playback_rate(10.0, Tween::linear(Ticks::from_millis(100.0)))
             .unwrap();
         advance(&mut manager, 5);
-        assert!(handle
-            .get_wait_status()
-            .contains(AudioWaitStatus::PLAY_SPEED_TWEENING));
+        assert!(
+            handle
+                .get_wait_status()
+                .contains(AudioWaitStatus::PLAY_SPEED_TWEENING)
+        );
         handle.set_playback_rate(0.5, Tween::IMMEDIATE).unwrap();
         advance(&mut manager, 4);
         assert_eq!(handle.get_wait_status(), AudioWaitStatus::PLAYING);
@@ -1000,9 +1116,11 @@ mod tests {
         advance(&mut manager, 40);
         assert!((handle.position_millis() as i32 - before as i32 - 20).abs() <= 1);
         assert!(handle.set_playback_rate(0.0, Tween::IMMEDIATE).is_err());
-        assert!(handle
-            .set_playback_rate(f32::NAN, Tween::IMMEDIATE)
-            .is_err());
+        assert!(
+            handle
+                .set_playback_rate(f32::NAN, Tween::IMMEDIATE)
+                .is_err()
+        );
     }
 
     #[test]
@@ -1046,9 +1164,11 @@ mod tests {
             .set_panning(Pan(-1.0), Tween::linear(Ticks::from_seconds(1.0)))
             .unwrap();
         advance(&mut manager, 5);
-        assert!(handle
-            .get_wait_status()
-            .contains(AudioWaitStatus::VOLUME_TWEENING | AudioWaitStatus::PANNING_TWEENING));
+        assert!(
+            handle
+                .get_wait_status()
+                .contains(AudioWaitStatus::VOLUME_TWEENING | AudioWaitStatus::PANNING_TWEENING)
+        );
         advance(&mut manager, 32);
         assert!(handle.get_wait_status().is_empty());
     }
@@ -1086,9 +1206,11 @@ mod tests {
             let mut handle = manager.play(data).unwrap();
             let current = advance(&mut manager, 25);
             assert!((current.left - 0.05).abs() < 0.00001);
-            assert!(handle
-                .get_wait_status()
-                .contains(AudioWaitStatus::VOLUME_TWEENING));
+            assert!(
+                handle
+                    .get_wait_status()
+                    .contains(AudioWaitStatus::VOLUME_TWEENING)
+            );
             let tween = Tween::linear(Ticks::from_millis(50.0));
             if grouped {
                 handle
@@ -1106,5 +1228,78 @@ mod tests {
             assert!((end.left - 0.15).abs() < 0.00001);
             assert_eq!(handle.get_wait_status(), AudioWaitStatus::PLAYING);
         }
+    }
+
+    #[test]
+    fn queued_volume_preserves_active_ramp_and_replacement_clears_it() {
+        let mut manager = manager();
+        let mut data = sound(10000, 0.0);
+        data.settings.volume = Volume(0.0);
+        let mut handle = manager.play(data).unwrap();
+        handle
+            .enqueue_volume(Volume(1.0), Tween::linear(Ticks::from_millis(100.0)))
+            .unwrap();
+        handle
+            .enqueue_volume(Volume(0.0), Tween::linear(Ticks::from_millis(100.0)))
+            .unwrap();
+        let half = advance(&mut manager, 50);
+        assert!(
+            (half.left - 0.125).abs() < 0.00001,
+            "first ramp was replaced: {half:?}"
+        );
+        let descending = advance(&mut manager, 100);
+        assert!(
+            (descending.left - 0.125).abs() < 0.00001,
+            "queued second ramp did not run: {descending:?}"
+        );
+        assert!(
+            handle
+                .get_wait_status()
+                .contains(AudioWaitStatus::VOLUME_TWEENING)
+        );
+        handle.set_volume(Volume(0.8), Tween::IMMEDIATE).unwrap();
+        let replaced = advance(&mut manager, 5);
+        assert!((replaced.left - 0.2).abs() < 0.00001);
+        assert_eq!(handle.get_wait_status(), AudioWaitStatus::PLAYING);
+        advance(&mut manager, 100);
+        assert_eq!(handle.get_wait_status(), AudioWaitStatus::PLAYING);
+    }
+
+    #[test]
+    fn resume_matching_repeat_during_stop_preserves_gain_and_source_position() {
+        let mut manager = manager();
+        let mut data = sound(10000, 0.0);
+        data.settings.volume = Volume(0.8);
+        let mut handle = manager.play(data).unwrap();
+        advance(&mut manager, 50);
+        handle
+            .stop(Tween::linear(Ticks::from_millis(100.0)))
+            .unwrap();
+        let fading = advance(&mut manager, 50);
+        assert!((fading.left - 0.1).abs() < 0.00001);
+        let position = handle.position_samples();
+        handle
+            .resume_parameters(
+                Volume(0.6),
+                Pan(0.0),
+                1.0,
+                Tween::linear(Ticks::from_millis(100.0)),
+            )
+            .unwrap();
+        let half = advance(&mut manager, 50);
+        assert!((half.left - 0.125).abs() < 0.00001);
+        assert!(handle.position_samples() > position);
+        let end = advance(&mut manager, 100);
+        assert!((end.left - 0.15).abs() < 0.00001);
+        assert_eq!(handle.get_wait_status(), AudioWaitStatus::PLAYING);
+        handle.stop(Tween::IMMEDIATE).unwrap();
+        advance(&mut manager, 5);
+        assert!(handle.get_wait_status().is_empty());
+        // A source already removed by the backend cannot be resurrected.
+        handle
+            .resume_parameters(Volume(1.0), Pan(0.0), 1.0, Tween::IMMEDIATE)
+            .unwrap();
+        advance(&mut manager, 5);
+        assert!(handle.get_wait_status().is_empty());
     }
 }

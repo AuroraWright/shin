@@ -419,6 +419,86 @@ impl UniformType for BlurUniformParams {
 }
 
 #[derive(ShaderType)]
+pub struct HigurashiRasterUniformParams {
+    pub transform: Mat4,
+    pub color: Vec4,
+    pub amplitude_frequency: Vec4,
+    pub phase: Vec4,
+}
+impl UniformType for HigurashiRasterUniformParams {
+    const SCHEMA: TypeSchema = TypeSchema::Struct(StructSchema {
+        name: "HigurashiRasterUniformParams",
+        size: HigurashiRasterUniformParams::METADATA.min_size.get() as u32,
+        alignment: HigurashiRasterUniformParams::METADATA.alignment.get() as u32,
+        fields: &[
+            FieldSchema {
+                name: "transform",
+                ty: &<Mat4 as UniformType>::SCHEMA,
+                offset: HigurashiRasterUniformParams::METADATA.extra.offsets[0] as u32,
+            },
+            FieldSchema {
+                name: "color",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiRasterUniformParams::METADATA.extra.offsets[1] as u32,
+            },
+            FieldSchema {
+                name: "amplitude_frequency",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiRasterUniformParams::METADATA.extra.offsets[2] as u32,
+            },
+            FieldSchema {
+                name: "phase",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiRasterUniformParams::METADATA.extra.offsets[3] as u32,
+            },
+        ],
+    });
+}
+
+#[derive(ShaderType)]
+pub struct HigurashiBlurUniformParams {
+    pub transform: Mat4,
+    pub distances_first: Vec4,
+    pub distances_last: Vec4,
+    pub color: Vec4,
+    pub weights: Vec4,
+}
+impl UniformType for HigurashiBlurUniformParams {
+    const SCHEMA: TypeSchema = TypeSchema::Struct(StructSchema {
+        name: "HigurashiBlurUniformParams",
+        size: HigurashiBlurUniformParams::METADATA.min_size.get() as u32,
+        alignment: HigurashiBlurUniformParams::METADATA.alignment.get() as u32,
+        fields: &[
+            FieldSchema {
+                name: "transform",
+                ty: &<Mat4 as UniformType>::SCHEMA,
+                offset: HigurashiBlurUniformParams::METADATA.extra.offsets[0] as u32,
+            },
+            FieldSchema {
+                name: "distances_first",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiBlurUniformParams::METADATA.extra.offsets[1] as u32,
+            },
+            FieldSchema {
+                name: "distances_last",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiBlurUniformParams::METADATA.extra.offsets[2] as u32,
+            },
+            FieldSchema {
+                name: "color",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiBlurUniformParams::METADATA.extra.offsets[3] as u32,
+            },
+            FieldSchema {
+                name: "weights",
+                ty: &<Vec4 as UniformType>::SCHEMA,
+                offset: HigurashiBlurUniformParams::METADATA.extra.offsets[4] as u32,
+            },
+        ],
+    });
+}
+
+#[derive(ShaderType)]
 pub struct ZoomBlurUniformParams {
     pub transform: Mat4,
     pub center: Vec4,

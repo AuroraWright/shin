@@ -1,12 +1,12 @@
 use shin_render_shader_types::{
-    texture::{TextureSampler, TextureSource, TextureTarget, TextureTargetKind},
     RenderClone, RenderCloneCtx,
+    texture::{TextureSampler, TextureSource, TextureTarget, TextureTargetKind},
 };
 
 use crate::{
+    TEXTURE_FORMAT,
     resize::{CanvasSize, ResizeHandle},
     resizeable_texture::ResizeableTexture,
-    TEXTURE_FORMAT,
 };
 
 const TEXTURE_USAGES: wgpu::TextureUsages = {
@@ -58,6 +58,32 @@ impl RenderTexture {
     pub fn dimensions(&self) -> (u32, u32) {
         let texture = self.inner_texture.get_texture();
         (texture.width(), texture.height())
+    }
+
+    /// Copy the existing pixels and dimensions, independently of pending host
+    /// resize events. Native Higurashi a9510 reads the source texture's extent.
+    /// The snapshot remains unchanged when used as a texture source.
+    pub fn copy_snapshot(&self, ctx: &mut RenderCloneCtx) -> Self {
+        let (width, height) = self.dimensions();
+        let size = dpi::PhysicalSize::new(width, height);
+        let resize = crate::resize::SurfaceResizeSource::new(crate::resize::ViewportParams::both(size));
+        let snapshot = Self::new(ctx.device.clone(), resize.handle(), format!("{}/snapshot", self.label));
+        ctx.encoder.copy_texture_to_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: self.inner_texture.get_texture(),
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyTextureInfo {
+                texture: snapshot.inner_texture.get_texture(),
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::Extent3d { width, height, depth_or_array_layers: 1 },
+        );
+        snapshot
     }
 
     pub fn as_texture_source(&self) -> TextureSource {

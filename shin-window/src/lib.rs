@@ -104,6 +104,14 @@ pub struct ShinEventLoopProxy<E: Send + Debug + 'static> {
 }
 
 impl<E: Send + Debug + 'static> ShinEventLoopProxy<E> {
+    /// Request the same deferred application close used by the native window
+    /// and AppKit Quit handlers. Application-owned IO finishes before exit.
+    pub fn request_close(&self) -> Result<(), EventLoopClosed<()>> {
+        self.proxy
+            .send_event(ShinAppEventImpl::CloseRequested)
+            .map_err(|_| EventLoopClosed(()))
+    }
+
     pub fn send_event(&self, event: E) -> Result<(), EventLoopClosed<E>> {
         self.proxy
             .send_event(ShinAppEventImpl::Custom(event))
@@ -122,6 +130,42 @@ pub struct WindowState {
     pub window: Arc<Window>,
     pub resize_source: SurfaceResizeSource,
     suspension: PlatformSuspension,
+    surface_availability: SurfaceAvailability,
+}
+
+/// Surface availability does not change focus, audio or lifecycle policy.
+/// A separate probe permit lets a scheduled redraw retry once even though
+/// scheduling has already moved its next deadline into the future.
+#[derive(Default)]
+struct SurfaceAvailability {
+    next_probe: Option<Instant>,
+    probe_pending: bool,
+}
+impl SurfaceAvailability {
+    const PROBE_PERIOD: Duration = Duration::from_millis(250);
+
+    fn is_occluded(&self) -> bool {
+        self.next_probe.is_some()
+    }
+    fn occluded(&mut self, now: Instant) {
+        self.next_probe = Some(now + Self::PROBE_PERIOD);
+        self.probe_pending = false;
+    }
+    fn visible(&mut self) {
+        *self = Self::default();
+    }
+    fn request_probe(&mut self, now: Instant) -> bool {
+        if self.next_probe.is_some_and(|deadline| now >= deadline) {
+            self.next_probe = Some(now + Self::PROBE_PERIOD);
+            self.probe_pending = true;
+            true
+        } else {
+            false
+        }
+    }
+    fn acquire_allowed(&mut self) -> bool {
+        !self.is_occluded() || std::mem::take(&mut self.probe_pending)
+    }
 }
 
 struct PlatformSuspension {
@@ -144,6 +188,9 @@ impl PlatformSuspension {
     }
     fn is_background_running(&self) -> bool {
         !self.focused && !self.is_suspended()
+    }
+    fn updates_without_presentation(&self, surface: &SurfaceAvailability) -> bool {
+        !self.is_suspended() && (self.is_background_running() || surface.is_occluded())
     }
 
     fn change(
@@ -352,6 +399,96 @@ mod suspension_tests {
     }
 }
 
+#[cfg(test)]
+mod surface_availability_tests {
+    use super::*;
+
+    #[test]
+    fn occlusion_probes_are_bounded_and_survive_delayed_redraw_delivery() {
+        let initial = Instant::now();
+        let mut surface = SurfaceAvailability::default();
+        assert!(surface.acquire_allowed());
+        surface.occluded(initial);
+        for ms in 0..250 {
+            assert!(!surface.request_probe(initial + Duration::from_millis(ms)));
+            assert!(!surface.acquire_allowed());
+        }
+        assert!(surface.request_probe(initial + Duration::from_millis(250)));
+        // A delayed/missing redraw cannot turn the deadline into a hot loop.
+        assert!(!surface.request_probe(initial + Duration::from_millis(499)));
+        assert!(surface.request_probe(initial + Duration::from_millis(500)));
+        assert!(
+            surface.acquire_allowed(),
+            "The scheduled probe gets one permit"
+        );
+        assert!(
+            !surface.acquire_allowed(),
+            "Unsolicited redraws remain blocked"
+        );
+        surface.occluded(initial + Duration::from_millis(510));
+        assert!(!surface.request_probe(initial + Duration::from_millis(759)));
+        assert!(surface.request_probe(initial + Duration::from_millis(760)));
+        assert!(surface.acquire_allowed());
+        // Successful acquisition and actual visibility events use this same
+        // clear operation, so missing/reordered events cannot stick playback.
+        surface.visible();
+        assert!(!surface.is_occluded());
+        assert!(surface.acquire_allowed());
+        assert!(!surface.request_probe(initial + Duration::from_secs(10)));
+    }
+
+    #[test]
+    fn occluded_updates_preserve_focus_background_and_lifecycle_clock_policy() {
+        let initial = Instant::now();
+        let mut state = PlatformSuspension::new(true, initial);
+        let mut surface = SurfaceAvailability::default();
+        surface.occluded(initial);
+        assert!(state.updates_without_presentation(&surface));
+        assert!(
+            !state.is_background_running(),
+            "Focus is still owned by the game"
+        );
+        assert_eq!(
+            state.elapsed(initial + Duration::from_millis(17)),
+            Some(Duration::from_millis(17))
+        );
+        assert_eq!(
+            state.change(Some(false), None, initial + Duration::from_secs(1)),
+            Some(true)
+        );
+        assert!(!state.updates_without_presentation(&surface));
+        assert_eq!(
+            state.change_policy(None, None, Some(true), initial + Duration::from_secs(30)),
+            Some(false)
+        );
+        assert!(state.updates_without_presentation(&surface));
+        assert_eq!(
+            state.elapsed(initial + Duration::from_secs(30) + Duration::from_millis(17)),
+            Some(Duration::from_millis(17))
+        );
+        assert_eq!(
+            state.change(None, Some(true), initial + Duration::from_secs(31)),
+            Some(true)
+        );
+        assert!(
+            !state.updates_without_presentation(&surface),
+            "Lifecycle suspension still wins"
+        );
+        assert_eq!(
+            state.change(Some(true), Some(false), initial + Duration::from_secs(60)),
+            Some(false)
+        );
+        assert!(state.updates_without_presentation(&surface));
+        assert_eq!(
+            state.elapsed(initial + Duration::from_secs(60) + Duration::from_millis(17)),
+            Some(Duration::from_millis(17))
+        );
+        surface.visible();
+        assert!(!state.updates_without_presentation(&surface));
+        assert!(!state.is_suspended());
+    }
+}
+
 fn fullscreen_shortcut_pressed(
     shortcut: Option<KeyCode>,
     physical_key: PhysicalKey,
@@ -458,6 +595,7 @@ impl WindowState {
             #[cfg(target_os = "macos")]
             quit_handler: None,
             suspension: PlatformSuspension::new(window.has_focus(), Instant::now()),
+            surface_availability: SurfaceAvailability::default(),
             window,
             resize_source: window_resize_source,
         }
@@ -469,6 +607,11 @@ impl WindowState {
         if window.fullscreen().is_some() {
             info!("Exiting fullscreen mode");
             window.set_fullscreen(None);
+        } else if cfg!(target_os = "macos") {
+            // Match the green window button: AppKit owns the fullscreen Space
+            // and restores its window frame without changing the display mode.
+            info!("Attempting to enter native macOS fullscreen mode");
+            window.set_fullscreen(Some(winit::window::Fullscreen::Borderless(None)));
         } else if let Some(monitor) = window.current_monitor() {
             if let Some(video_mode) = monitor.video_modes().next() {
                 info!(
@@ -960,6 +1103,10 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
         window_id: WindowId,
         event: WindowEvent,
     ) {
+        let scale_factor = self
+            .winit()
+            .map_or(1.0, |winit| winit.window.scale_factor());
+        self.input_mut().set_mouse_scale_factor(scale_factor);
         self.input_mut().on_winit_event(&event);
 
         let Some(winit) = self.winit() else {
@@ -989,6 +1136,22 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
             }
             WindowEvent::CloseRequested => self.request_close(event_loop),
             WindowEvent::Focused(focused) => self.change_suspension(Some(focused), None),
+            WindowEvent::Occluded(occluded) => {
+                let winit = match self {
+                    Self::WaitingForInitialResume { .. } | Self::Poison => return,
+                    Self::WaitingForNonzeroSize { winit, .. }
+                    | Self::WaitingForWgpuInit { winit, .. } => winit,
+                    Self::Operational { context, .. } => &mut context.winit,
+                };
+                if occluded {
+                    if !winit.surface_availability.is_occluded() {
+                        winit.surface_availability.occluded(Instant::now());
+                    }
+                } else {
+                    winit.surface_availability.visible();
+                    winit.window.request_redraw();
+                }
+            }
             WindowEvent::Resized(physical_size) => {
                 // Retain a valid offscreen canvas when a minimized window
                 // reports zero extent; background updates can still use it.
@@ -1054,6 +1217,7 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                     || size.height == 0
                     || winit.suspension.is_suspended()
                     || winit.suspension.is_background_running()
+                    || !winit.surface_availability.acquire_allowed()
                 {
                     return;
                 }
@@ -1062,15 +1226,22 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                 // failure during a native fullscreen transition skips a frame
                 // without dropping updates or panicking in an AppKit callback.
                 let (viewport, surface_texture) = match render.surface.get_current_texture() {
-                    Ok(frame) => frame,
-                    Err(wgpu::SurfaceError::OutOfMemory) => {
-                        warn!("GPU surface ran out of memory");
-                        event_loop.exit();
+                    Ok(frame) => {
+                        winit.surface_availability.visible();
+                        frame
+                    }
+                    Err(shin_render::init::SurfaceError::Occluded) => {
+                        winit.surface_availability.occluded(Instant::now());
+                        debug!("Surface occluded; waiting for a bounded presentation probe");
                         return;
                     }
                     Err(error) => {
                         debug!(?error, "Surface frame temporarily unavailable");
-                        winit.window.request_redraw();
+                        if winit.surface_availability.is_occluded() {
+                            winit.surface_availability.occluded(Instant::now());
+                        } else {
+                            winit.window.request_redraw();
+                        }
                         return;
                     }
                 };
@@ -1140,7 +1311,7 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
 
                 info_span!("present").in_scope(|| {
                     winit.window.pre_present_notify();
-                    surface_texture.texture.present();
+                    wgpu.queue.present(surface_texture.texture);
                 });
 
                 tracy_client::frame_mark();
@@ -1176,7 +1347,10 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
             return;
         };
 
-        if winit.suspension.is_background_running() {
+        if winit
+            .suspension
+            .updates_without_presentation(&winit.surface_availability)
+        {
             // Hidden/occluded windows may receive no redraw events. Advance
             // playback without acquiring or presenting the window surface.
             const PERIOD: Duration = Duration::from_nanos(1_000_000_000 / 60);
@@ -1204,7 +1378,16 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                 render.dynamic_buffer.finish(&mut dynamic);
                 wgpu.queue.submit([dynamic.finish(), update.finish()]);
                 render.dynamic_buffer.recall();
-                debug!(?elapsed, "Background playback tick");
+                if winit.suspension.is_background_running() {
+                    debug!(?elapsed, "Background playback tick");
+                } else {
+                    debug!(?elapsed, "Occluded playback tick");
+                }
+            }
+            if !winit.suspension.is_background_running()
+                && winit.surface_availability.request_probe(Instant::now())
+            {
+                winit.window.request_redraw();
             }
             _event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
                 winit.suspension.last_update + PERIOD,

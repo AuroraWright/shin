@@ -135,6 +135,14 @@ impl From<ColorBlendType> for wgpu::BlendState {
                 },
                 alpha: layer_alpha,
             },
+            ColorBlendType::HigurashiLayer3 => BlendState {
+                color: wgpu::BlendComponent {
+                    src_factor: BlendFactor::SrcAlpha,
+                    dst_factor: BlendFactor::One,
+                    operation: BlendOperation::ReverseSubtract,
+                },
+                alpha: layer_alpha,
+            },
             ColorBlendType::LayerPremultiplied1 => BlendState {
                 color: wgpu::BlendComponent {
                     src_factor: BlendFactor::One,
@@ -171,6 +179,7 @@ impl From<ColorBlendType> for wgpu::ColorWrites {
             | ColorBlendType::Layer1
             | ColorBlendType::Layer2
             | ColorBlendType::Layer3
+            | ColorBlendType::HigurashiLayer3
             | ColorBlendType::LayerPremultiplied1
             | ColorBlendType::LayerPremultiplied2
             | ColorBlendType::LayerPremultiplied3 => wgpu::ColorWrites::all(),

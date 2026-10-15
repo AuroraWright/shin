@@ -1,4 +1,4 @@
-use kira::{interpolate_frame, Frame};
+use kira::{Frame, interpolate_frame};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 struct RecentFrame {
@@ -57,6 +57,12 @@ impl Resampler {
     #[allow(unused)] // TODO: use to implement BGMSYNC
     pub fn current_frame_index(&self) -> u32 {
         self.frames[1].frame_index
+    }
+
+    /// Earliest source index still retained for interpolation. All samples
+    /// before this index have left the resampler, including silent PCM.
+    pub fn drained_frame_index(&self) -> u32 {
+        self.frames[0].frame_index
     }
 
     pub fn outputting_silence(&self) -> bool {

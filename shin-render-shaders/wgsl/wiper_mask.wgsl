@@ -40,6 +40,14 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let sampled_mask = textureSample(mask_texture, mask_sampler, input.mask_position).x;
 
+    if params.minmax.z != 0.0 {
+        // Original older program22 preserves these separate expression stages.
+        let span = -params.minmax.x + params.minmax.y;
+        let old_weight = clamp(sampled_mask * span + params.minmax.x, 0.0, 1.0);
+        let incoming = (1.0 - old_weight) * sampled_target;
+        return sampled_source * old_weight + incoming;
+    }
+
     // Native program37 uses FFMA.SAT for the outgoing weight, then
     // new - weight*new followed by weight*old + that result for all RGBA.
     let old_weight = clamp(fma(sampled_mask, params.minmax.y - params.minmax.x, params.minmax.x), 0.0, 1.0);

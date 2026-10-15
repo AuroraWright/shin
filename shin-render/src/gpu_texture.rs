@@ -1,5 +1,5 @@
 use dpi::PhysicalSize;
-use glam::{vec2, Vec2};
+use glam::{Vec2, vec2};
 use shin_render_shader_types::texture::{TextureSampler, TextureSource};
 use wgpu::TextureDimension;
 

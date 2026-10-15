@@ -92,6 +92,21 @@ struct TapRippleUniformParams {
     wave_params: vec4<f32>,
 }
 
+struct HigurashiBlurUniformParams {
+    transform: mat4x4<f32>,
+    distances_first: vec4<f32>,
+    distances_last: vec4<f32>,
+    color: vec4<f32>,
+    weights: vec4<f32>,
+}
+
+struct HigurashiRasterUniformParams {
+    transform: mat4x4<f32>,
+    color: vec4<f32>,
+    amplitude_frequency: vec4<f32>,
+    phase: vec4<f32>,
+}
+
 struct BlurUniformParams {
     transform: mat4x4<f32>,
     step: vec4<f32>,

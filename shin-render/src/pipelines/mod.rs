@@ -44,11 +44,17 @@ impl PipelineStorageKey {
                 module: &context.shader_module,
                 entry_point: Some(context.shader_descriptor.vertex_entry),
                 compilation_options: Default::default(),
-                buffers: &[context.shader_descriptor.vertex_buffer_layout.clone()],
+                buffers: &[Some(context.shader_descriptor.vertex_buffer_layout.clone())],
             },
             primitive: wgpu::PrimitiveState {
                 topology: draw_primitive.into(),
-                strip_index_format: None,
+                // VertexSource binds 16-bit indices. WGPU requires the strip
+                // pipeline to declare their format for indexed draws, including
+                // the dialogue window; non-indexed strips can use it as well.
+                strip_index_format: match draw_primitive {
+                    DrawPrimitive::Triangles => None,
+                    DrawPrimitive::TrianglesStrip => Some(wgpu::IndexFormat::Uint16),
+                },
                 // TODO: is this correct?
                 front_face: wgpu::FrontFace::Ccw,
                 cull_mode: cull_face.into(),
@@ -59,8 +65,8 @@ impl PipelineStorageKey {
             depth_stencil: depth_stencil.map(|DepthStencilPipelineState { depth, stencil }| {
                 wgpu::DepthStencilState {
                     format: DEPTH_STENCIL_FORMAT,
-                    depth_write_enabled: depth.write_enable,
-                    depth_compare: depth.function.into(),
+                    depth_write_enabled: Some(depth.write_enable),
+                    depth_compare: Some(depth.function.into()),
                     stencil: wgpu::StencilState {
                         front: stencil.into(),
                         back: stencil.into(),
@@ -88,7 +94,7 @@ impl PipelineStorageKey {
                     write_mask: blend_type.into(),
                 })],
             }),
-            multiview: None,
+            multiview_mask: None,
             cache: None,
         })
     }

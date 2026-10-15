@@ -180,7 +180,7 @@ impl<O: BufferOwnership, T: BufferType> Buffer<O, T> {
             .write_buffer_with(self.ownership.get(), offset.get(), write_size)
             .expect("failed to write buffer");
 
-        staging[..data.len()].copy_from_slice(data);
+        staging.slice(..data.len()).copy_from_slice(data);
     }
 
     pub fn as_buffer_ref(&self) -> BufferRef<T> {
@@ -246,13 +246,15 @@ impl<'a, T: BufferType> BufferRef<'a, T> {
         }
     }
 
-    pub fn get_mapped_range(&self) -> wgpu::BufferView<'a> {
+    pub fn get_mapped_range(&self) -> wgpu::BufferView {
         // TODO: the call to `as_wgpu_slice` could go on the next version of wgpu since the merge of https://github.com/gfx-rs/wgpu/pull/7123
         self.as_wgpu_slice().get_mapped_range()
+            .expect("Buffer must be mapped before reading")
     }
 
-    pub fn get_mapped_range_mut(&self) -> wgpu::BufferViewMut<'a> {
+    pub fn get_mapped_range_mut(&self) -> wgpu::BufferViewMut {
         self.as_wgpu_slice().get_mapped_range_mut()
+            .expect("Buffer must be mapped before writing")
     }
 
     pub fn into_parts(self) -> (&'a wgpu::Buffer, BytesAddress, BytesAddress) {

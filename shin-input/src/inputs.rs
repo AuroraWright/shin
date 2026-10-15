@@ -64,11 +64,13 @@ pub enum VirtualGamepadButton {
 impl GamepadButton {
     pub fn from_gilrs(button: gilrs::Button) -> Option<Self> {
         use gilrs::Button::*;
+        // Gilrs mappings normalize the labelled A/B/X/Y buttons to
+        // South/East/West/North. Do not swap these a second time.
         Some(match button {
-            South => GamepadButton::B,
-            East => GamepadButton::A,
-            West => GamepadButton::Y,
-            North => GamepadButton::X,
+            South => GamepadButton::A,
+            East => GamepadButton::B,
+            West => GamepadButton::X,
+            North => GamepadButton::Y,
             Start => GamepadButton::Plus,
             Select => GamepadButton::Minus,
             LeftTrigger => GamepadButton::L,
@@ -100,4 +102,20 @@ pub enum MouseButton {
     WheelDown,
     // Ignore "other" mouse buttons for the sake of simplicity
     // Other(u16),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn normalized_face_buttons_keep_their_labels() {
+        for (input, expected) in [
+            (gilrs::Button::South, GamepadButton::A),
+            (gilrs::Button::East, GamepadButton::B),
+            (gilrs::Button::West, GamepadButton::X),
+            (gilrs::Button::North, GamepadButton::Y),
+        ] {
+            assert_eq!(GamepadButton::from_gilrs(input), Some(expected));
+        }
+    }
 }

@@ -94,8 +94,8 @@ impl ShaderDescriptor {
         });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some(&format!("{} pipeline layout", self.name)),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         });
 
         let mut shader_module = None;
@@ -105,15 +105,18 @@ impl ShaderDescriptor {
         if shader_module.is_none()
             && device
                 .features()
-                .contains(wgpu::Features::SPIRV_SHADER_PASSTHROUGH)
+                .contains(wgpu::Features::PASSTHROUGH_SHADERS)
         {
             shader_module = Some(
                 // SAFETY: well, naga spit it out, so it should be good, right?
                 unsafe {
-                    device.create_shader_module_spirv(&wgpu::ShaderModuleDescriptorSpirV {
+                    device.create_shader_module_passthrough(
+                        wgpu::ShaderModuleDescriptorPassthrough {
                         label: Some(&format!("{} shader module", self.name)),
-                        source: self.spirv.into(),
-                    })
+                            spirv: Some(self.spirv.into()),
+                            ..Default::default()
+                        },
+                    )
                 },
             )
         }

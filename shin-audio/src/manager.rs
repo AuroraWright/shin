@@ -1,14 +1,12 @@
 use kira::{
-    clock::clock_info::ClockInfoProvider,
-    manager::AudioManagerSettings,
-    modulator::value_provider::ModulatorValueProvider,
+    AudioManagerSettings, Frame,
+    info::Info,
     sound::{Sound, SoundData},
-    Frame, OutputDestination,
 };
 use parking_lot::Mutex;
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     Arc,
+    atomic::{AtomicBool, Ordering},
 };
 
 /// Platform suspension is independent of a sound's own paused/start state.
@@ -53,22 +51,14 @@ struct SuspendedSound {
     suspension: AudioSuspension,
 }
 impl Sound for SuspendedSound {
-    fn output_destination(&mut self) -> OutputDestination {
-        self.sound.output_destination()
-    }
     fn on_start_processing(&mut self) {
         self.sound.on_start_processing();
     }
-    fn process(
-        &mut self,
-        dt: f64,
-        clocks: &ClockInfoProvider,
-        modulators: &ModulatorValueProvider,
-    ) -> Frame {
+    fn process(&mut self, out: &mut [Frame], dt: f64, info: &Info) {
         if self.suspension.is_suspended() {
-            Frame::ZERO
+            out.fill(Frame::ZERO);
         } else {
-            self.sound.process(dt, clocks, modulators)
+            self.sound.process(out, dt, info);
         }
     }
     fn finished(&self) -> bool {
@@ -76,10 +66,10 @@ impl Sound for SuspendedSound {
     }
 }
 
-type Backend = kira::manager::backend::cpal::CpalBackend;
+type Backend = kira::backend::cpal::CpalBackend;
 
 pub struct AudioManager {
-    manager: Mutex<kira::manager::AudioManager<Backend>>,
+    manager: Mutex<kira::AudioManager<Backend>>,
     suspension: AudioSuspension,
 }
 
@@ -87,7 +77,7 @@ impl AudioManager {
     #[allow(clippy::new_without_default)]
     #[cfg(not(test))]
     pub fn new() -> Self {
-        let manager = kira::manager::AudioManager::new(AudioManagerSettings::default())
+        let manager = kira::AudioManager::new(AudioManagerSettings::default())
             .expect("Failed to create kira audio manager");
 
         Self {
@@ -105,23 +95,26 @@ impl AudioManager {
     /// Missing or unusable test devices fail instead of using the default output.
     pub fn new_for_tests() -> Self {
         use cpal::traits::{DeviceTrait, HostTrait};
-        use kira::manager::backend::cpal::CpalBackendSettings;
+        use kira::backend::cpal::CpalBackendSettings;
 
-        let mut output_names = Vec::new();
+        let mut device_names = Vec::new();
         let device = cpal::default_host()
-            .output_devices()
-            .expect("Failed to enumerate test audio outputs")
+            // output_devices() queries every device's stream configuration.
+            // Select the exact test device by name before initializing audio,
+            // so an unrelated output cannot stall the hardware checks.
+            .devices()
+            .expect("Failed to enumerate test audio devices")
             .find(|device| {
-                let name = device.name().expect("Failed to read test audio device name");
-                let matches = name.eq_ignore_ascii_case("Loopback Audio");
-                output_names.push(name);
+                let name = device.description().expect("Failed to read test audio device name").name().to_owned();
+                let matches = name == "Loopback Audio";
+                device_names.push(name);
                 matches
             })
             .unwrap_or_else(|| {
-                panic!("Tests require the system audio output device named 'Loopback Audio'; available outputs: {output_names:?}")
+                panic!("Tests require the system audio output device named 'Loopback Audio'; available devices: {device_names:?}")
             });
-        tracing::info!(device = %device.name().expect("Failed to read test audio device name"), "Using test audio output");
-        let manager = kira::manager::AudioManager::new(AudioManagerSettings {
+        tracing::info!(device = %device.description().expect("Failed to read test audio device name").name().to_owned(), "Using test audio output");
+        let manager = kira::AudioManager::new(AudioManagerSettings {
             backend_settings: CpalBackendSettings {
                 device: Some(device),
                 ..Default::default()
@@ -136,8 +129,8 @@ impl AudioManager {
     }
 
     #[cfg(test)]
-    pub(crate) fn reference_sound_count(&self) -> u16 {
-        self.manager.lock().num_sounds()
+    pub(crate) fn reference_sound_count(&self) -> usize {
+        self.manager.lock().main_track().num_sounds()
     }
 
     pub fn play<S: SoundData>(&self, data: S) -> S::Handle
@@ -151,6 +144,20 @@ impl AudioManager {
             .expect("Failed to start playing audio")
     }
 
+    /// Play into a category track while retaining platform suspension behavior.
+    pub fn play_on_track<S: SoundData>(
+        &self,
+        track: &mut kira::track::TrackHandle,
+        data: S,
+    ) -> S::Handle
+    where
+        S::Error: std::fmt::Debug,
+    {
+        track
+            .play(self.suspension.wrap(data))
+            .expect("Failed to start playing audio")
+    }
+
     pub fn suspension(&self) -> AudioSuspension {
         self.suspension.clone()
     }
@@ -158,7 +165,7 @@ impl AudioManager {
         self.suspension.set_suspended(suspended);
     }
 
-    pub fn kira_manager(&self) -> &Mutex<kira::manager::AudioManager<Backend>> {
+    pub fn kira_manager(&self) -> &Mutex<kira::AudioManager<Backend>> {
         &self.manager
     }
 }

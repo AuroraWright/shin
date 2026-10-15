@@ -107,7 +107,9 @@ impl DynamicBufferBackend for DynamicBuffer {
         self.stats.alignment_histogram.add(alignment.get() as f64);
         self.stats.size_histogram.add(logical_size.get() as f64);
 
-        staging.get_mapped_range_mut()[..data.len()].copy_from_slice(data);
+        staging.get_mapped_range_mut()
+            .slice(..data.len())
+            .copy_from_slice(data);
 
         actual
     }

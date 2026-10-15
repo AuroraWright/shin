@@ -141,7 +141,7 @@ impl<T> Debug for AsyncTask<T> {
 }
 
 pub struct ComputeTask<T> {
-    receiver: oneshot::Receiver<T>,
+    receiver: oneshot::AsyncReceiver<T>,
 }
 
 /// A compute producer whose owned child work can be drained by its caller.
@@ -184,10 +184,12 @@ impl<T> Future for LoaderComputeTask<T> {
 
 impl<T> ComputeTask<T> {
     pub fn poll_naive(&mut self) -> Option<T> {
-        match self.receiver.try_recv() {
-            Ok(result) => Some(result),
-            Err(oneshot::TryRecvError::Empty) => None,
-            Err(oneshot::TryRecvError::Disconnected) => {
+        match std::pin::Pin::new(&mut self.receiver)
+            .poll(&mut std::task::Context::from_waker(std::task::Waker::noop()))
+        {
+            std::task::Poll::Ready(Ok(result)) => Some(result),
+            std::task::Poll::Pending => None,
+            std::task::Poll::Ready(Err(_)) => {
                 panic!("Either a completed task was polled again, or the sender was dropped");
             }
         }
@@ -201,7 +203,7 @@ impl<T> Future for ComputeTask<T> {
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
-        match self.get_mut().receiver.poll(cx) {
+        match std::pin::Pin::new(&mut self.get_mut().receiver).poll(cx) {
             std::task::Poll::Ready(Ok(result)) => std::task::Poll::Ready(result),
             std::task::Poll::Ready(Err(_)) => {
                 panic!("Either a completed task was polled again, or the sender was dropped");
@@ -305,7 +307,8 @@ pub mod compute {
             let _ = sender.send(f());
         });
 
-        ComputeTask { receiver }
+        ComputeTask { receiver: std::future::IntoFuture::into_future(receiver),
+        }
     }
 
     pub fn spawn_and_forget<F>(f: F)

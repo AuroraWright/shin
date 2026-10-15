@@ -17,7 +17,7 @@ pub mod resize;
 pub mod resizeable_texture;
 
 use enum_iterator::Sequence;
-use glam::{vec3, vec4, Mat4, Vec2, Vec3, Vec4};
+use glam::{Mat4, Vec2, Vec3, Vec4, vec3, vec4};
 use shin_primitives::color::FloatColor4;
 use shin_render_shader_types::{
     buffer::VertexSource,
@@ -194,6 +194,21 @@ pub enum RenderProgramWithArguments<'a> {
         color_multiplier: FloatColor4,
         fragment_shader_param: Vec4,
     },
+    HigurashiPostprocess {
+        vertices: VertexSource<'a, PosTexVertex>,
+        texture: TextureSource<'a>,
+        transform: Mat4,
+        color: FloatColor4,
+        operation: LayerFragmentShader,
+        param: Vec4,
+    },
+    HigurashiOverlay {
+        vertices: VertexSource<'a, MaskVertex>,
+        texture: TextureSource<'a>,
+        mask: TextureSource<'a>,
+        transform: Mat4,
+        minmax: Vec2,
+    },
     Mask {
         fragment_shader: LayerFragmentShader,
         vertices: VertexSource<'a, MaskVertex>,
@@ -245,7 +260,22 @@ pub enum RenderProgramWithArguments<'a> {
         transform: Mat4,
         alpha: f32,
     },
+    WiperHigurashiDefault {
+        vertices: VertexSource<'a, PosTexVertex>,
+        texture_source: TextureSource<'a>,
+        texture_target: TextureSource<'a>,
+        transform: Mat4,
+        alpha: f32,
+    },
     WiperMask {
+        vertices: VertexSource<'a, MaskVertex>,
+        texture_source: TextureSource<'a>,
+        texture_target: TextureSource<'a>,
+        texture_mask: TextureSource<'a>,
+        transform: Mat4,
+        minmax: Vec2,
+    },
+    WiperHigurashiMask {
         vertices: VertexSource<'a, MaskVertex>,
         texture_source: TextureSource<'a>,
         texture_target: TextureSource<'a>,
@@ -291,6 +321,22 @@ pub enum RenderProgramWithArguments<'a> {
         effect: Vec4,
     },
 
+    HigurashiRaster {
+        vertices: VertexSource<'a, PosTexVertex>,
+        texture: TextureSource<'a>,
+        transform: Mat4,
+        color: Vec4,
+        amplitude_frequency: Vec4,
+        phase: Vec4,
+    },
+    HigurashiBlur {
+        vertices: VertexSource<'a, PosTexVertex>,
+        texture: TextureSource<'a>,
+        transform: Mat4,
+        distances: [Vec4; 2],
+        color: Vec4,
+        weights: Vec4,
+    },
     Blur {
         vertices: VertexSource<'a, PosTexVertex>,
         texture: TextureSource<'a>,
@@ -345,21 +391,29 @@ impl RenderProgramWithArguments<'_> {
             RenderProgramWithArguments::FontBorder { .. } => ShaderName::FontBorder,
             RenderProgramWithArguments::Layer { .. } => ShaderName::Layer,
             RenderProgramWithArguments::Mask { .. } => ShaderName::Mask,
+            RenderProgramWithArguments::HigurashiOverlay { .. } => ShaderName::HigurashiOverlay,
+            RenderProgramWithArguments::HigurashiPostprocess { .. } => {
+                ShaderName::HigurashiPostprocess
+            }
             RenderProgramWithArguments::Dissolve { .. } => ShaderName::Dissolve,
             RenderProgramWithArguments::Mosaic { .. } => ShaderName::Mosaic,
             RenderProgramWithArguments::Raster { .. } => ShaderName::Raster,
             RenderProgramWithArguments::Ripple { .. } => ShaderName::Ripple,
             RenderProgramWithArguments::TapRipple { .. } => ShaderName::TapRipple,
+            RenderProgramWithArguments::HigurashiBlur { .. } => ShaderName::HigurashiBlur,
+            RenderProgramWithArguments::HigurashiRaster { .. } => ShaderName::HigurashiRaster,
             RenderProgramWithArguments::Blur { .. } => ShaderName::Blur,
             RenderProgramWithArguments::ZoomBlur { .. } => ShaderName::ZoomBlur,
             RenderProgramWithArguments::Movie { .. } => ShaderName::Movie,
             RenderProgramWithArguments::WiperDefault { .. } => ShaderName::WiperDefault,
+            RenderProgramWithArguments::WiperHigurashiDefault { .. } => ShaderName::WiperDefault,
             RenderProgramWithArguments::WiperWhirl { .. } => ShaderName::WiperWhirl,
             RenderProgramWithArguments::WiperWave { .. } => ShaderName::WiperWave,
             RenderProgramWithArguments::WiperRipple { .. } => ShaderName::WiperRipple,
             RenderProgramWithArguments::CharacterPortrait { .. } => ShaderName::CharacterPortrait,
             RenderProgramWithArguments::WiperGlass { .. } => ShaderName::WiperGlass,
-            RenderProgramWithArguments::WiperMask { .. } => ShaderName::WiperMask,
+            RenderProgramWithArguments::WiperMask { .. }
+            | RenderProgramWithArguments::WiperHigurashiMask { .. } => ShaderName::WiperMask,
             RenderProgramWithArguments::ScreenCurtain { .. } => ShaderName::ScreenCurtain,
 
             ref program => todo!("Implement shader for {:?}", program),
@@ -521,9 +575,19 @@ pub enum ColorBlendType {
     LayerPremultiplied1,
     LayerPremultiplied2,
     LayerPremultiplied3,
+    /// Updated Higurashi a8630: straight alpha with reverse subtraction.
+    HigurashiLayer3,
 }
 
 impl ColorBlendType {
+    pub fn from_higurashi_layer(layer: LayerBlendType) -> Self {
+        match layer {
+            LayerBlendType::Type1 => Self::Layer1,
+            LayerBlendType::Type2 => Self::Layer2,
+            LayerBlendType::Type3 => Self::HigurashiLayer3,
+        }
+    }
+
     pub fn from_regular_layer(layer: LayerBlendType) -> Self {
         match layer {
             LayerBlendType::Type1 => ColorBlendType::Layer1,
@@ -654,7 +718,7 @@ pub fn shin_orthographic_projection_matrix(
         0.0, 0.0, 0.5, 1.0,
     ]);
 
-    SHIN_TO_WGPU_MATRIX * Mat4::orthographic_rh_gl(left, right, bottom, top, near, far)
+    SHIN_TO_WGPU_MATRIX * glam::camera::rh::proj::opengl::orthographic(left, right, bottom, top, near, far)
 }
 
 #[cfg(test)]
@@ -765,11 +829,13 @@ mod native_cpu_fragment_tests {
             let color = FloatColor4::from_vec4(vec4(0.25, 0.5, 0.75, f32::MAX));
             // Finite opposite alpha endpoints overflow their difference;
             // original FMUL(infinity,0) then FADD yields NaN.
-            assert!(operation
-                .evaluate(color, vec4(0.5, 0.25, 0.75, -f32::MAX))
-                .into_vec4()
-                .w
-                .is_nan());
+            assert!(
+                operation
+                    .evaluate(color, vec4(0.5, 0.25, 0.75, -f32::MAX))
+                    .into_vec4()
+                    .w
+                    .is_nan()
+            );
         }
     }
     #[test]
@@ -867,7 +933,9 @@ mod native_cpu_fragment_tests {
         drop(compare);
         drop(input);
         assert!(child.wait().unwrap().success());
-        eprintln!("Native CPU color: {compared} exact RGBA bit-pattern comparisons across Default/Mono/Fill/Fill2/Negative; original pure AArch64 evaluator, host FP environment; Gamma excluded");
+        eprintln!(
+            "Native CPU color: {compared} exact RGBA bit-pattern comparisons across Default/Mono/Fill/Fill2/Negative; original pure AArch64 evaluator, host FP environment; Gamma excluded"
+        );
     }
     #[test]
     #[ignore = "requires supplied executable alongside SHIN_REFERENCE_ROM"]

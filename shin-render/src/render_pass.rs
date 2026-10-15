@@ -6,8 +6,9 @@ use shin_render_shader_types::{
     uniforms::{
         BlendUniformParams, BlurUniformParams, ButtonUniformParams, CharacterPortraitUniformParams,
         ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontUniformParams,
-        LayerUniformParams, MaskUniformParams, MosaicUniformParams, MovieUniformParams,
-        RasterUniformParams, RippleUniformParams, SpriteUniformParams, TapRippleUniformParams,
+        HigurashiBlurUniformParams, HigurashiRasterUniformParams, LayerUniformParams,
+        MaskUniformParams, MosaicUniformParams, MovieUniformParams, RasterUniformParams,
+        RippleUniformParams, SpriteUniformParams, TapRippleUniformParams,
         WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
         WiperRippleUniformParams, WiperWaveUniformParams, WiperWhirlUniformParams,
         ZoomBlurUniformParams,
@@ -17,20 +18,22 @@ use shin_render_shader_types::{
 use shin_render_shaders::{
     Blend, BlendBindings, Blur, BlurBindings, Button, ButtonBindings, CharacterPortrait,
     CharacterPortraitBindings, Clear, ClearBindings, Dissolve, DissolveBindings, Fill,
-    FillBindings, Font, FontBindings, FontBorder, FontBorderBindings, Layer, LayerBindings, Mask,
-    MaskBindings, Mosaic, MosaicBindings, Movie, MovieBindings, Raster, RasterBindings, Ripple,
-    RippleBindings, ScreenCurtain, ScreenCurtainBindings, Shader, Sprite, SpriteBindings,
+    FillBindings, Font, FontBindings, FontBorder, FontBorderBindings, HigurashiBlur,
+    HigurashiBlurBindings, HigurashiOverlay, HigurashiOverlayBindings, HigurashiPostprocess,
+    HigurashiPostprocessBindings, HigurashiRaster, HigurashiRasterBindings, Layer, LayerBindings,
+    Mask, MaskBindings, Mosaic, MosaicBindings, Movie, MovieBindings, Raster, RasterBindings,
+    Ripple, RippleBindings, ScreenCurtain, ScreenCurtainBindings, Shader, Sprite, SpriteBindings,
     TapRipple, TapRippleBindings, WiperDefault, WiperDefaultBindings, WiperGlass,
     WiperGlassBindings, WiperMask, WiperMaskBindings, WiperRipple, WiperRippleBindings, WiperWave,
     WiperWaveBindings, WiperWhirl, WiperWhirlBindings, ZoomBlur, ZoomBlurBindings,
 };
 
 use crate::{
-    dynamic_buffer::DynamicBuffer,
-    pipelines::{PipelineStorage, PipelineStorageKey},
     ColorBlendType, CullFace, DepthFunction, DepthState, DepthStencilState, DrawPrimitive,
     RenderProgramWithArguments, RenderRequest, RenderRequestBuilder, StencilFunction,
     StencilOperation, StencilPipelineState, StencilState,
+    dynamic_buffer::DynamicBuffer,
+    pipelines::{PipelineStorage, PipelineStorageKey},
 };
 
 pub struct RenderPass<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder> {
@@ -57,9 +60,39 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
         viewport: Option<(f32, f32, f32, f32)>,
         label: &str,
     ) -> Self {
+        Self::new_with_depth_preservation(
+            pipeline_storage,
+            dynamic_buffer,
+            sampler_store,
+            device,
+            encoder,
+            target_color,
+            target_depth_stencil,
+            viewport,
+            label,
+            false,
+        )
+    }
+
+    /// A native target restore preserves its existing depth/stencil contents.
+    /// Ordinary callers retain the original constructor's clearing behavior.
+    pub fn new_with_depth_preservation(
+        pipeline_storage: &'pipelines mut PipelineStorage,
+        dynamic_buffer: &'dynbuffer mut DynamicBuffer,
+        sampler_store: &'sampler TextureSamplerStore,
+        device: &'device wgpu::Device,
+        encoder: &'encoder mut wgpu::CommandEncoder,
+        target_color: TextureTarget,
+        target_depth_stencil: Option<DepthStencilTarget>,
+        viewport: Option<(f32, f32, f32, f32)>,
+        label: &str,
+        preserve_depth_stencil: bool,
+    ) -> Self {
         let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            multiview_mask: None,
             label: Some(label),
             color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                depth_slice: None,
                 view: target_color.view,
                 resolve_target: None,
                 ops: wgpu::Operations {
@@ -75,12 +108,20 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                     view: target_depth_stencil.view,
                     depth_ops: Some(wgpu::Operations {
                         // NOTE: potential incompatibility, shin _might_ not perform a clear when changing a render target
-                        load: wgpu::LoadOp::Clear(0.0),
+                        load: if preserve_depth_stencil {
+                            wgpu::LoadOp::Load
+                        } else {
+                            wgpu::LoadOp::Clear(0.0)
+                        },
                         store: wgpu::StoreOp::Store,
                     }),
                     stencil_ops: Some(wgpu::Operations {
                         // NOTE: potential incompatibility, shin _might_ not perform a clear when changing a render target
-                        load: wgpu::LoadOp::Clear(0),
+                        load: if preserve_depth_stencil {
+                            wgpu::LoadOp::Load
+                        } else {
+                            wgpu::LoadOp::Clear(0)
+                        },
                         store: wgpu::StoreOp::Store,
                     }),
                 }
@@ -156,6 +197,14 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
         };
         pass.set_stencil_reference(stencil_reference as u32);
 
+        let higurashi_default = matches!(
+            program,
+            RenderProgramWithArguments::WiperHigurashiDefault { .. }
+        );
+        let higurashi_mask = matches!(
+            program,
+            RenderProgramWithArguments::WiperHigurashiMask { .. }
+        );
         match program {
             RenderProgramWithArguments::Clear { vertices, color } => self.run_impl::<Clear>(
                 key,
@@ -266,6 +315,45 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 },
                 vertices,
             ),
+            RenderProgramWithArguments::HigurashiPostprocess {
+                vertices,
+                texture,
+                transform,
+                color,
+                operation,
+                param,
+            } => self.run_impl::<HigurashiPostprocess>(
+                key,
+                HigurashiPostprocessBindings {
+                    params: &LayerUniformParams {
+                        transform,
+                        color,
+                        fragment_param: param,
+                        output_type: 0,
+                        fragment_operation: operation as u32,
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::HigurashiOverlay {
+                vertices,
+                texture,
+                mask,
+                transform,
+                minmax,
+            } => self.run_impl::<HigurashiOverlay>(
+                key,
+                HigurashiOverlayBindings {
+                    params: &WiperMaskUniformParams {
+                        transform,
+                        minmax: minmax.extend(0.0).extend(0.0),
+                    },
+                    texture,
+                    mask,
+                },
+                vertices,
+            ),
             RenderProgramWithArguments::Mask {
                 fragment_shader,
                 vertices,
@@ -317,6 +405,47 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 key,
                 RippleBindings {
                     params: &RippleUniformParams { transform, wave },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::HigurashiRaster {
+                vertices,
+                texture,
+                transform,
+                color,
+                amplitude_frequency,
+                phase,
+            } => self.run_impl::<HigurashiRaster>(
+                key,
+                HigurashiRasterBindings {
+                    params: &HigurashiRasterUniformParams {
+                        transform,
+                        color,
+                        amplitude_frequency,
+                        phase,
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::HigurashiBlur {
+                vertices,
+                texture,
+                transform,
+                distances,
+                color,
+                weights,
+            } => self.run_impl::<HigurashiBlur>(
+                key,
+                HigurashiBlurBindings {
+                    params: &HigurashiBlurUniformParams {
+                        transform,
+                        distances_first: distances[0],
+                        distances_last: distances[1],
+                        color,
+                        weights,
+                    },
                     source: texture,
                 },
                 vertices,
@@ -540,12 +669,19 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 texture_target,
                 transform,
                 alpha,
+            }
+            | RenderProgramWithArguments::WiperHigurashiDefault {
+                vertices,
+                texture_source,
+                texture_target,
+                transform,
+                alpha,
             } => self.run_impl::<WiperDefault>(
                 key,
                 WiperDefaultBindings {
                     params: &WiperDefaultUniformParams {
                         transform,
-                        alpha: vec4(alpha, 0.0, 0.0, 0.0),
+                        alpha: vec4(alpha, if higurashi_default { 1.0 } else { 0.0 }, 0.0, 0.0),
                     },
                     source: texture_source,
                     target: texture_target,
@@ -560,12 +696,22 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 texture_mask,
                 transform,
                 minmax,
+            }
+            | RenderProgramWithArguments::WiperHigurashiMask {
+                vertices,
+                texture_source,
+                texture_target,
+                texture_mask,
+                transform,
+                minmax,
             } => self.run_impl::<WiperMask>(
                 key,
                 WiperMaskBindings {
                     params: &WiperMaskUniformParams {
                         transform,
-                        minmax: minmax.extend(0.0).extend(0.0),
+                        minmax: minmax
+                            .extend(if higurashi_mask { 1.0 } else { 0.0 })
+                            .extend(0.0),
                     },
                     source: texture_source,
                     target: texture_target,

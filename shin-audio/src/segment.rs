@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use shin_core::format::audio::{AudioBuffer, AudioFrameSource, AudioSource};
 
 /// A sample-exact slice of a decoded source. Seeking and Opus pre-roll are

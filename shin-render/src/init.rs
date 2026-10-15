@@ -23,10 +23,10 @@ pub struct ResizeableSurface<'window> {
 impl ResizeableSurface<'_> {
     pub fn get_current_texture(
         &mut self,
-    ) -> Result<((f32, f32, f32, f32), SurfaceTextureWithView), wgpu::SurfaceError> {
+    ) -> Result<((f32, f32, f32, f32), SurfaceTextureWithView), SurfaceError> {
         if let Some(new_size) = self.resize_handle.update() {
             if new_size.width == 0 || new_size.height == 0 {
-                return Err(wgpu::SurfaceError::Outdated);
+                return Err(SurfaceError::Outdated);
             }
             self.surface_config.width = new_size.width;
             self.surface_config.height = new_size.height;
@@ -34,19 +34,18 @@ impl ResizeableSurface<'_> {
         }
         let size = self.resize_handle.get_without_update();
         if size.width == 0 || size.height == 0 {
-            return Err(wgpu::SurfaceError::Outdated);
+            return Err(SurfaceError::Outdated);
         }
 
         let viewport = self.resize_handle.get_viewport();
 
-        let texture = match self.surface.get_current_texture() {
+        let texture = match acquire_surface_texture(&self.surface) {
             Ok(texture) => texture,
-            Err(wgpu::SurfaceError::Outdated | wgpu::SurfaceError::Lost) => {
+            Err(SurfaceError::Outdated | SurfaceError::Lost) => {
                 debug!("Surface error, recreating surface");
                 self.surface.configure(&self.device, &self.surface_config);
-                // Fullscreen/Space transitions may stay unavailable for more
-                // than one frame. Retry once, then let the window loop wait.
-                self.surface.get_current_texture()?
+                // A transition can keep the surface unavailable for several frames.
+                acquire_surface_texture(&self.surface)?
             }
             Err(e) => return Err(e),
         };
@@ -55,6 +54,29 @@ impl ResizeableSurface<'_> {
             .create_view(&wgpu::TextureViewDescriptor::default());
 
         Ok((viewport, SurfaceTextureWithView { texture, view }))
+    }
+}
+
+#[derive(Debug)]
+pub enum SurfaceError {
+    Timeout,
+    Occluded,
+    Outdated,
+    Lost,
+    Validation,
+}
+
+fn acquire_surface_texture(
+    surface: &wgpu::Surface<'_>,
+) -> Result<wgpu::SurfaceTexture, SurfaceError> {
+    match surface.get_current_texture() {
+        wgpu::CurrentSurfaceTexture::Success(texture)
+        | wgpu::CurrentSurfaceTexture::Suboptimal(texture) => Ok(texture),
+        wgpu::CurrentSurfaceTexture::Timeout => Err(SurfaceError::Timeout),
+        wgpu::CurrentSurfaceTexture::Occluded => Err(SurfaceError::Occluded),
+        wgpu::CurrentSurfaceTexture::Outdated => Err(SurfaceError::Outdated),
+        wgpu::CurrentSurfaceTexture::Lost => Err(SurfaceError::Lost),
+        wgpu::CurrentSurfaceTexture::Validation => Err(SurfaceError::Validation),
     }
 }
 
@@ -80,6 +102,7 @@ fn configure_surface(
         desired_maximum_frame_latency: 2,
         alpha_mode: wgpu::CompositeAlphaMode::Auto,
         view_formats: vec![],
+        color_space: Default::default(),
     };
     surface.configure(&device, &surface_config);
 
@@ -154,18 +177,18 @@ pub async fn init_wgpu<'window>(
     info!("Initializing wgpu...");
 
     let backends = wgpu::Backends::from_env().unwrap_or(wgpu::Backends::all());
-    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
+    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
         backends,
         // this will disable vulkan validation in release mode
         // TODO: add a compile-time flag to toggle this
         flags: InstanceFlags::default(), // InstanceFlags::debugging(),
-        ..Default::default()
+        ..wgpu::InstanceDescriptor::new_without_display_handle()
     });
     let surface = instance
         .create_surface(surface_target)
         .context("Creating surface")?;
 
-    let adapters = instance.enumerate_adapters(wgpu::Backends::all());
+    let adapters = instance.enumerate_adapters(wgpu::Backends::all()).await;
     for adapter in adapters {
         let info = adapter.get_info();
         info!("Found adapter: {:?}", info);
@@ -188,16 +211,22 @@ pub async fn init_wgpu<'window>(
             &wgpu::DeviceDescriptor {
                 label: None,
                 // this enables SPIRV_SHADER_PASSTHROUGH if available
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+            } else {
+                wgpu::Features::empty()
+            },
                 // Retina fullscreen can exceed4096 physical pixels even
                 // during its animation. Use the adapter's texture dimensions
                 // while retaining conservative non-resolution requirements.
                 required_limits: wgpu::Limits::downlevel_webgl2_defaults()
                     .using_resolution(adapter.limits()),
                 memory_hints: Default::default(),
-            },
-            trace_path,
-        )
+            trace: trace_path.map_or(wgpu::Trace::Off, |path| {
+                wgpu::Trace::Directory(path.to_owned())
+            }),
+            ..Default::default()
+        })
         .await
         .map_err(|e| anyhow::Error::msg(format!("Failed to create wgpu device: {:?}", e)))
         .context("Failed to create wgpu device")?;

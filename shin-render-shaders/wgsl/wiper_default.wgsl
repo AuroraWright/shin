@@ -34,6 +34,14 @@ fn fragment_main(input: VertexOutput) -> @location(0) vec4<f32> {
 
     let alpha = params.alpha.x;
 
+    if params.alpha.y != 0.0 {
+        // Updated Higurashi program21's embedded GLSL (1c50ff..1c5405):
+        // incoming * alpha + outgoing * (1 - alpha), including RGBA.
+        let incoming = sampled_target * alpha;
+        let outgoing = sampled_source * (1.0 - alpha);
+        return outgoing + incoming;
+    }
+
     // Native program36 weights outgoing RGBA with FFMA(-alpha, source,
     // source), then adds the incoming RGBA in a second fused stage.
     let outgoing = fma(vec4<f32>(-alpha), sampled_source, sampled_source);
