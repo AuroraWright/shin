@@ -1,0 +1,14 @@
+[package]
+name = "block"
+version = "0.1.6"
+authors = ["Steven Sheldon"]
+edition = "2015"
+description = "Rust interface for Apple's C language extension of blocks."
+repository = "https://github.com/SSheldon/rust-block"
+license = "MIT"
+
+[lib]
+# Upstream unit tests require an Objective-C helper omitted from its published crate.
+# The standalone integration regression below exercises the patched ABI directly.
+test = false
+doctest = false

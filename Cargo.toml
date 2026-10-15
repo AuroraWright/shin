@@ -17,6 +17,7 @@ members = [
     "junk",
     "junk/mesh-vis",
 ]
+exclude = ["vendor/block"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -67,6 +68,8 @@ rayon = "1.12.0"
 
 [profile.release]
 debug = true
+# Keep native symbols and avoid implicit host-tool stripping when debug=0.
+strip = "none"
 #lto = 'thin'
 
 # optimize deps
@@ -97,3 +100,7 @@ useless_format = "allow"
 shared-version = true
 publish = false # workspace release readiness is tracked separately
 tag-prefix = ""
+
+# Keep the stable version baseline while fixing Rust 1.99 FFI diagnostics.
+[patch.crates-io]
+block = { path = "vendor/block" }
