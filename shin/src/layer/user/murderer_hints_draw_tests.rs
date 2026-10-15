@@ -374,8 +374,11 @@ pub(crate) fn reference_hints_draw(context: &mut PreRenderContext, server: &Arc<
                 is_held: lowered[action],
                 ..Default::default()
             });
-            for _ in 0..20 {
-                assert!(layer.handle_controller_input(&input));
+            for _ in 0..1000 {
+                assert!(layer.handle_controller_input_with_scroll(
+                    &input,
+                    crate::app::text_scroll_axis(&raw)
+                ));
             }
             assert_eq!(
                 layer.inner_ref().model.lock().unwrap().hint_scroll,

@@ -15,6 +15,8 @@ pub(crate) use tests::reference_live_msgclose;
 pub(crate) use tests::reference_live_msgset;
 #[cfg(test)]
 pub(crate) use tests::reference_live_msgsync;
+#[cfg(test)]
+pub(crate) use tests::reference_saved_sentence_state;
 
 use std::sync::Arc;
 
@@ -1300,7 +1302,8 @@ impl Layer for MessageLayer {
         }
         pass.pop_debug();
 
-        pass.pop_debug();
+        pass.pop_debug(); // MessageLayer/text
+        pass.pop_debug(); // MessageLayer
     }
 }
 

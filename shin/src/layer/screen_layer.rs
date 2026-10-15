@@ -304,6 +304,24 @@ impl RenderClone for ScreenLayer {
 }
 
 impl ScreenLayer {
+    pub(crate) fn preserve_drawable_state_from(&mut self, source: &mut Self) {
+        std::mem::swap(&mut self.update_tracker, &mut source.update_tracker);
+        std::mem::swap(&mut self.new_drawable_state, &mut source.new_drawable_state);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_drawable_state(&self) -> (u32, [f32; 3]) {
+        (
+            self.new_drawable_state.reference_dissolve_seed(),
+            self.new_drawable_state.reference_effect_phases(),
+        )
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_active_wiper(&self) -> Option<&AnyWiper> {
+        self.active_layer.wiper.as_ref()
+    }
+
     #[cfg(test)]
     pub(crate) fn reference_pages(&self) -> impl Iterator<Item = &PageLayer> {
         fn collect<'a>(transition: &'a TransitionLayer, pages: &mut Vec<&'a PageLayer>) {

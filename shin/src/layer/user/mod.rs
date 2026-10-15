@@ -36,6 +36,7 @@ mod bustup_layer;
 #[cfg(test)]
 mod bustup_voice_tests;
 pub mod cake_layer;
+pub mod higurashi;
 pub mod last_layer;
 #[expect(unused)]
 mod movie_layer;
@@ -61,21 +62,27 @@ mod null_layer;
 mod picture_layer;
 pub(crate) use picture_layer::{PictureBlockParams, PictureBlockPassKind, render_block};
 mod effect_layer;
+#[cfg(test)]
+pub(crate) use effect_layer::EffectLayer;
 mod focus_line_layer;
-mod focus_line_model;
+pub(crate) mod focus_line_model;
 #[cfg(test)]
 mod focus_owner_tests;
 pub mod purple_text;
 mod purple_view;
 #[cfg(test)]
 pub(crate) use purple_view::reference_transcript_colors_render;
+#[cfg(test)]
+mod effects_atlas_tests;
+#[cfg(test)]
+mod particle_artwork_failure_tests;
 pub mod quiz_layer;
 mod rain_layer;
 #[cfg(test)]
 mod rain_owner_tests;
-mod rain_particles;
+pub(crate) mod rain_particles;
 mod sakura_layer;
-mod sakura_particles;
+pub(crate) mod sakura_particles;
 mod tile_layer;
 
 pub use self::{
@@ -87,8 +94,8 @@ pub use self::{
 /// Preparing an atlas must not consume constructor RNG or create particle state.
 pub(crate) enum PreparedUserLayer {
     Prototype(UserLayer),
-    FocusLine(Arc<crate::asset::effects::EffectTextures>, i32, i32),
-    Rain(Arc<crate::asset::effects::EffectTextures>, i32, i32, i32),
+    FocusLine(crate::asset::effects::EffectsAtlasBorrow, i32, i32),
+    Rain(crate::asset::effects::EffectsAtlasBorrow, i32, i32, i32),
     Animation(sakura_layer::PreparedSakuraLayer),
     Quiz(Arc<quiz_layer::QuizTextures>, i32),
     Cake(Arc<cake_layer::CakeTextures>),
@@ -159,11 +166,79 @@ pub enum UserLayer {
     Last(#[render_clone(needs_render)] last_layer::LastLayer),
 }
 
+/// A direct view borrows an already-scoped layer; an owned view retains the
+/// actual UserLayer cell and locks it only for each callback. Neither path copies
+/// controllers, drawable state or resources, or keeps a lock across frame updates.
+pub enum InteractiveView<'a, T> {
+    Borrowed(&'a T),
+    Owned {
+        owner: crate::layer::owner::LayerOwner<UserLayer>,
+        project: fn(&UserLayer) -> &T,
+    },
+}
+impl<T> InteractiveView<'_, T> {
+    fn with<R>(&self, callback: impl FnOnce(&T) -> R) -> R {
+        match self {
+            Self::Borrowed(layer) => callback(layer),
+            Self::Owned { owner, project } => callback(project(&owner.read())),
+        }
+    }
+}
 pub enum InteractiveLayerRef<'a> {
-    Quiz(&'a quiz_layer::QuizLayer),
-    Cake(&'a cake_layer::CakeLayer),
-    Murderer(&'a murderer_accusation::MurdererAccusationView),
-    Last(&'a last_layer::LastLayer),
+    Quiz(InteractiveView<'a, quiz_layer::QuizLayer>),
+    Cake(InteractiveView<'a, cake_layer::CakeLayer>),
+    Murderer(InteractiveView<'a, murderer_accusation::MurdererAccusationView>),
+    Last(InteractiveView<'a, last_layer::LastLayer>),
+}
+impl InteractiveLayerRef<'static> {
+    pub(crate) fn from_owned(owner: crate::layer::owner::LayerOwner<UserLayer>) -> Option<Self> {
+        let kind = match &*owner.read() {
+            UserLayer::Quiz(_) => 0,
+            UserLayer::Cake(_) => 1,
+            UserLayer::Murderer(_) => 2,
+            UserLayer::Last(_) => 3,
+            _ => return None,
+        };
+        Some(match kind {
+            0 => Self::Quiz(InteractiveView::Owned {
+                owner,
+                project: |layer| {
+                    let UserLayer::Quiz(layer) = layer else {
+                        unreachable!()
+                    };
+                    layer
+                },
+            }),
+            1 => Self::Cake(InteractiveView::Owned {
+                owner,
+                project: |layer| {
+                    let UserLayer::Cake(layer) = layer else {
+                        unreachable!()
+                    };
+                    layer
+                },
+            }),
+            2 => Self::Murderer(InteractiveView::Owned {
+                owner,
+                project: |layer| {
+                    let UserLayer::Murderer(layer) = layer else {
+                        unreachable!()
+                    };
+                    layer
+                },
+            }),
+            3 => Self::Last(InteractiveView::Owned {
+                owner,
+                project: |layer| {
+                    let UserLayer::Last(layer) = layer else {
+                        unreachable!()
+                    };
+                    layer
+                },
+            }),
+            _ => unreachable!(),
+        })
+    }
 }
 impl InteractiveLayerRef<'_> {
     pub fn handle_controller_input(
@@ -298,8 +373,9 @@ impl InteractiveLayerRef<'_> {
         }
     }
 }
+
 impl UserLayer {
-    pub(crate) async fn prepare(
+    pub(crate) async fn prepare_checked(
         device: &wgpu::Device,
         asset_server: &Arc<AssetServer>,
         audio_manager: &Arc<shin_audio::AudioManager>,
@@ -307,15 +383,12 @@ impl UserLayer {
         movie_volume_settings: crate::audio::MovieVolumeSettings,
         layer_ty: LayerType,
         params: UntypedNumberArray,
-    ) -> PreparedUserLayer {
-        match layer_ty {
+    ) -> anyhow::Result<PreparedUserLayer> {
+        Ok(match layer_ty {
             LayerType::FocusLine => {
                 let (x, y, ..): TypedNumberArray = lower_number_array(params);
                 PreparedUserLayer::FocusLine(
-                    asset_server
-                        .load("/effects.txa")
-                        .await
-                        .expect("Failed to load focus line texture"),
+                    asset_server.effects_atlas_for("focusline").await?,
                     x,
                     y,
                 )
@@ -324,9 +397,8 @@ impl UserLayer {
                 let (mode, min, max, ..): TypedNumberArray = lower_number_array(params);
                 PreparedUserLayer::Rain(
                     asset_server
-                        .load("/effects.txa")
-                        .await
-                        .expect("Failed to load rain textures"),
+                        .effects_atlas_for(rain_layer::RainLayer::texture_name(mode))
+                        .await?,
                     mode,
                     min,
                     max,
@@ -337,7 +409,7 @@ impl UserLayer {
                 // Native8489c retains the possibly-null factory result until
                 // LAYERLOAD publication. Preparation must not fail ahead of
                 // its independent transition readiness gate.
-                match sakura_layer::SakuraLayer::prepare(asset_server, mode).await {
+                match sakura_layer::SakuraLayer::prepare_checked(asset_server, mode).await? {
                     Some(prepared) => PreparedUserLayer::Animation(prepared),
                     None => PreparedUserLayer::InvalidAnimation(mode),
                 }
@@ -345,36 +417,20 @@ impl UserLayer {
             LayerType::Quiz => {
                 let (kind, mask, ..): TypedNumberArray = lower_number_array(params);
                 match kind {
-                    0 => PreparedUserLayer::Quiz(
-                        asset_server
-                            .load("/quiz.txa")
-                            .await
-                            .expect("Failed to load quiz textures"),
-                        mask,
-                    ),
-                    1 => PreparedUserLayer::Cake(
-                        asset_server
-                            .load("/cake.txa")
-                            .await
-                            .expect("Failed to load cake textures"),
-                    ),
+                    0 => PreparedUserLayer::Quiz(asset_server.load("/quiz.txa").await?, mask),
+                    1 => PreparedUserLayer::Cake(asset_server.load("/cake.txa").await?),
                     2 => PreparedUserLayer::Murderer(
                         murderer_accusation::MurdererAccusationView::prepare(asset_server, mask)
                             .await,
                     ),
-                    3 => PreparedUserLayer::Last(
-                        asset_server
-                            .load("/last.txa")
-                            .await
-                            .expect("Failed to load final choice textures"),
-                    ),
+                    3 => PreparedUserLayer::Last(asset_server.load("/last.txa").await?),
                     // Native849bc rejects unsigned kind>3, including negatives.
                     // Keep its failed factory result until publication readiness.
                     _ => PreparedUserLayer::InvalidInteractive(kind),
                 }
             }
             _ => PreparedUserLayer::Prototype(
-                Self::load(
+                Self::load_checked(
                     device,
                     asset_server,
                     audio_manager,
@@ -383,17 +439,19 @@ impl UserLayer {
                     layer_ty,
                     params,
                 )
-                .await,
+                .await?,
             ),
-        }
+        })
     }
 
     pub fn interactive(&self) -> Option<InteractiveLayerRef<'_>> {
         match self {
-            Self::Quiz(layer) => Some(InteractiveLayerRef::Quiz(layer)),
-            Self::Cake(layer) => Some(InteractiveLayerRef::Cake(layer)),
-            Self::Murderer(layer) => Some(InteractiveLayerRef::Murderer(layer)),
-            Self::Last(layer) => Some(InteractiveLayerRef::Last(layer)),
+            Self::Quiz(layer) => Some(InteractiveLayerRef::Quiz(InteractiveView::Borrowed(layer))),
+            Self::Cake(layer) => Some(InteractiveLayerRef::Cake(InteractiveView::Borrowed(layer))),
+            Self::Murderer(layer) => Some(InteractiveLayerRef::Murderer(
+                InteractiveView::Borrowed(layer),
+            )),
+            Self::Last(layer) => Some(InteractiveLayerRef::Last(InteractiveView::Borrowed(layer))),
             _ => None,
         }
     }
@@ -439,7 +497,31 @@ impl UserLayer {
         layer_ty: LayerType,
         params: UntypedNumberArray,
     ) -> Self {
-        match layer_ty {
+        Self::load_checked(
+            device,
+            asset_server,
+            audio_manager,
+            scenario,
+            movie_volume_settings,
+            layer_ty,
+            params,
+        )
+        .await
+        .expect("Failed to load user layer")
+    }
+
+    /// Saved-scene preparation must report resource IO/decode errors without
+    /// panicking out of its asynchronous producer.
+    pub(crate) async fn load_checked(
+        device: &wgpu::Device,
+        asset_server: &AssetServer,
+        audio_manager: &Arc<shin_audio::AudioManager>,
+        scenario: &Scenario,
+        movie_volume_settings: crate::audio::MovieVolumeSettings,
+        layer_ty: LayerType,
+        params: UntypedNumberArray,
+    ) -> anyhow::Result<Self> {
+        Ok(match layer_ty {
             LayerType::Null | LayerType::Tile | LayerType::Effect => {
                 Self::load_resource_free(layer_ty, params).expect("Resource-free factory")
             }
@@ -450,13 +532,10 @@ impl UserLayer {
                 else {
                     // Native factory207a8/20c50 requests a Null drawable when
                     // the metadata getter rejects a negative/out-of-range ID.
-                    return NullLayer::new().into();
+                    return Ok(NullLayer::new().into());
                 };
                 debug!("Load picture: {} -> {} {:?}", pic_id, name, linked_cg_id);
-                let pic = asset_server
-                    .load::<Picture, _>(pic_info.path())
-                    .await
-                    .expect("Failed to load picture");
+                let pic = asset_server.load::<Picture, _>(pic_info.path()).await?;
                 PictureLayer::new(pic, Some(name.to_string())).into()
             }
             LayerType::Bustup => {
@@ -470,7 +549,7 @@ impl UserLayer {
                 ) = scenario.info_tables().bustup_info.get(bup_id as usize)
                 else {
                     // Native207fc/20cb4 uses the same Null request fallback.
-                    return NullLayer::new().into();
+                    return Ok(NullLayer::new().into());
                 };
                 debug!(
                     "Load bustup: {} -> {} {} {}",
@@ -485,8 +564,7 @@ impl UserLayer {
                             disable_animations: false,
                         },
                     )
-                    .await
-                    .expect("Failed to load bustup");
+                    .await?;
 
                 BustupLayer::new(bup, Some(name.to_string())).into()
             }
@@ -504,7 +582,7 @@ impl UserLayer {
                 ) = scenario.info_tables().movie_info.get(movie_id as usize)
                 else {
                     // Native20b38/20d18 uses the same Null request fallback.
-                    return NullLayer::new().into();
+                    return Ok(NullLayer::new().into());
                 };
                 let still_info = scenario
                     .info_tables()
@@ -513,21 +591,13 @@ impl UserLayer {
                 debug!(
                     "Load movie: {movie_id} -> {name} {linked_picture_id} {volume_source:?} {transparency:?} {linked_bgm_id:?}"
                 );
-                let movie = asset_server
-                    .load::<Movie, _>(movie_info.path())
-                    .await
-                    .expect("Failed to load movie");
+                let movie = asset_server.load::<Movie, _>(movie_info.path()).await?;
 
                 // Native21050/21058 leaves the still filename empty on a
                 // rejected signed16-bit cross-reference. Movie worker839a0
                 // then skips its Picture factory and still constructs Movie.
                 let still_picture = if let Some(info) = still_info {
-                    Some(
-                        asset_server
-                            .load::<Picture, _>(info.path())
-                            .await
-                            .expect("Failed to load still picture"),
-                    )
+                    Some(asset_server.load::<Picture, _>(info.path()).await?)
                 } else {
                     None
                 };
@@ -566,25 +636,35 @@ impl UserLayer {
             }
             LayerType::Animation => {
                 let (mode, ..): TypedNumberArray = lower_number_array(params);
-                sakura_layer::SakuraLayer::load(asset_server, mode)
-                    .await
+                sakura_layer::SakuraLayer::prepare_checked(asset_server, mode)
+                    .await?
                     .expect("Invalid Animation mode: native constructor returns a null layer")
+                    .construct()
                     .into()
             }
             LayerType::FocusLine => {
                 let (x, y, ..): TypedNumberArray = lower_number_array(params);
-                focus_line_layer::FocusLineLayer::load(asset_server, x, y)
-                    .await
-                    .into()
+                focus_line_layer::FocusLineLayer::new(
+                    asset_server.effects_atlas_for("focusline").await?,
+                    x,
+                    y,
+                )
+                .into()
             }
             LayerType::Rain => {
                 let (mode, min_distance, max_distance, ..): TypedNumberArray =
                     lower_number_array(params);
-                rain_layer::RainLayer::load(asset_server, mode, min_distance, max_distance)
-                    .await
-                    .into()
+                rain_layer::RainLayer::new(
+                    asset_server
+                        .effects_atlas_for(rain_layer::RainLayer::texture_name(mode))
+                        .await?,
+                    mode,
+                    min_distance,
+                    max_distance,
+                )
+                .into()
             }
-        }
+        })
     }
 }
 

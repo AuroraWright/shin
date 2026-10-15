@@ -197,7 +197,7 @@ impl LayerGroup<TileLayer> {
         wiping.update(update);
         assert_eq!(wiping.layers.len(), 1);
         assert_eq!(wiping.layers[0].removal_delay, Ticks::ZERO);
-        assert!(wiping.layers[0].layer.is_transition_active());
+        assert!(wiping.layers[0].layer.read().is_transition_active());
         assert!(wiping.get_layer(bank).is_none());
         // Countdown advances while animations are suspended; the wipe's own
         // timer waits for animation permission before it can finish.

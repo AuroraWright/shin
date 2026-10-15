@@ -1,4 +1,5 @@
 mod default;
+pub mod higurashi;
 pub(crate) mod glass;
 mod mask;
 mod ripple;
@@ -46,6 +47,27 @@ pub trait Wiper: AdvUpdatable {
     );
 }
 
+// Native prepared batches retain the original slot's mutable wipe, rather than
+// copying it. Slot updates and batch rendering observe the same clock and frame
+// guard; explicit RenderClone still invokes the actual wipe copy body.
+impl<T: Wiper> Wiper for crate::layer::owner::LayerOwner<T> {
+    fn is_running(&self) -> bool {
+        self.read().is_running()
+    }
+    fn fast_forward(&mut self) {
+        self.write().fast_forward();
+    }
+    fn render(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        target: TextureSource,
+        source: TextureSource,
+    ) {
+        self.read().render(pass, builder, target, source);
+    }
+}
+
 #[derive(Debug, RenderClone, FromVariants)]
 pub enum AnyWiper {
     Default(DefaultWiper),
@@ -89,6 +111,21 @@ impl AnyWiper {
         Some(Self::load(asset_server, scenario, ty, duration, params).await)
     }
 
+    pub(crate) async fn load_raw_checked(
+        asset_server: &AssetServer,
+        scenario: &Scenario,
+        ty: i32,
+        duration: Ticks,
+        params: UntypedNumberArray,
+    ) -> anyhow::Result<Option<AnyWiper>> {
+        let Some(ty) = num_traits::FromPrimitive::from_i32(ty) else {
+            return Ok(None);
+        };
+        Self::load_checked(asset_server, scenario, ty, duration, params)
+            .await
+            .map(Some)
+    }
+
     pub async fn load(
         asset_server: &AssetServer,
         scenario: &Scenario,
@@ -96,7 +133,19 @@ impl AnyWiper {
         duration: Ticks,
         params: UntypedNumberArray,
     ) -> AnyWiper {
-        match ty {
+        Self::load_checked(asset_server, scenario, ty, duration, params)
+            .await
+            .expect("Failed to load wipe")
+    }
+
+    async fn load_checked(
+        asset_server: &AssetServer,
+        scenario: &Scenario,
+        ty: WiperType,
+        duration: Ticks,
+        params: UntypedNumberArray,
+    ) -> anyhow::Result<AnyWiper> {
+        Ok(match ty {
             WiperType::Default => AnyWiper::Default(DefaultWiper::new(duration)),
             WiperType::Mask => {
                 // Native21c14 queries the raw signed ID before reading the
@@ -105,17 +154,14 @@ impl AnyWiper {
                     .ok()
                     .and_then(|index| scenario.info_tables().mask_info.get(index));
                 let Some(mask_info) = mask_info else {
-                    return AnyWiper::Default(DefaultWiper::new(duration));
+                    return Ok(AnyWiper::Default(DefaultWiper::new(duration)));
                 };
                 let (_, param2, flags, _, _, _, _, _): TypedNumberArray<i32, MaskParam, MaskFlags> =
                     lower_number_array(params);
 
                 let mask_path = mask_info.path();
 
-                let mask: std::sync::Arc<MaskTexture> = asset_server
-                    .load(&mask_path)
-                    .await
-                    .expect("Failed to load mask");
+                let mask: std::sync::Arc<MaskTexture> = asset_server.load(&mask_path).await?;
 
                 AnyWiper::Mask(MaskWiper::new(duration, mask, param2, flags))
             }
@@ -135,7 +181,7 @@ impl AnyWiper {
                     lower_number_array(params);
                 AnyWiper::Whirl(whirl::WhirlWiper::new(duration, direction, 1.0))
             }
-        }
+        })
     }
 }
 

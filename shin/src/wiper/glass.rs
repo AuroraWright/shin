@@ -236,7 +236,8 @@ impl TimedWiper for GlassWiperImpl {
             0.0
         };
         // Native OpenGL perspective, converted to wgpu's [0,1] clip depth.
-        let projection = Mat4::perspective_rh(0.99026656, 1920.0 / 1080.0, 10.0, 10000.0)
+        let projection = glam::camera::rh::proj::directx::perspective(0.99026656, 1920.0 / 1080.0, 10.0, 10000.0,
+        )
             * Mat4::from_translation(Vec3::new(0.0, 0.0, -1000.0));
         for piece in &self.pieces {
             let model = Mat4::from_translation(piece.position)

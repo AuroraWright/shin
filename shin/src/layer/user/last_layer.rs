@@ -1588,3 +1588,70 @@ impl LastLayer {
             .collect()
     }
 }
+
+// Owned interactive views dispatch through the same actual layer.
+impl super::InteractiveView<'_, LastLayer> {
+    #[cfg(test)]
+    pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
+        self.with(|layer| layer.reference_controller_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_draw_commands(&self, commands: &[&str]) {
+        self.with(|layer| layer.reference_draw_commands(commands))
+    }
+    pub fn navigate(&self, delta: i32) {
+        self.with(|layer| layer.navigate(delta))
+    }
+    pub(crate) fn handle_controller_input(
+        &self,
+        state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
+    ) {
+        self.with(|layer| layer.handle_controller_input(state))
+    }
+    pub(crate) fn pointer_frame(
+        &self,
+        frame: &crate::adv::input_area::PointerFrame<'_>,
+        extent: (u16, u16),
+    ) {
+        self.with(|layer| layer.pointer_frame(frame, extent))
+    }
+    pub(crate) fn ignore_pointer_state(&self) {
+        self.with(|layer| layer.ignore_pointer_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_accepts_input(&self) -> bool {
+        self.with(|layer| layer.reference_accepts_input())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_pointer_feedback(&self) -> (Option<usize>, bool, [f32; 7]) {
+        self.with(|layer| layer.reference_pointer_feedback())
+    }
+    pub fn confirm(&self) {
+        self.with(|layer| layer.confirm())
+    }
+    pub fn back(&self) {
+        self.with(|layer| layer.back())
+    }
+    pub fn pointer(&self, position: Vec2, clicked: bool) {
+        self.with(|layer| layer.pointer(position, clicked))
+    }
+    pub fn take_sounds(&self) -> Vec<&'static str> {
+        self.with(|layer| layer.take_sounds())
+    }
+    pub fn advance_animation(&self, ticks: f32) {
+        self.with(|layer| layer.advance_animation(ticks))
+    }
+    pub fn result(&self) -> Option<i32> {
+        self.with(|layer| layer.result())
+    }
+    pub fn reset(&self) {
+        self.with(|layer| layer.reset())
+    }
+    pub fn restore_completed_answer(&self, answer: i32) {
+        self.with(|layer| layer.restore_completed_answer(answer))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_restored_tweens(&self) -> [f32; 7] {
+        self.with(|layer| layer.reference_restored_tweens())
+    }
+}

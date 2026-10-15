@@ -14,10 +14,10 @@ fn turn_direction_angle_and_alpha_match_executed_native_branches() {
         for x in [-960.0f32, 0.0, 960.0] {
             for y in [-540.0f32, 0.0, 540.0] {
                 let clip = turn_transform(angle) * glam::vec4(x, y, 0.0, 1.0);
-                let w = 1000.0 + f64::from(x) * sine;
+                let w = 1000.0 + x as f64 * sine;
                 let expected = [
-                    focal / f64::from(1920.0f32 / 1080.0) * f64::from(x) * cosine / w,
-                    -focal * f64::from(y) / w,
+                    focal / f64::from(1920.0f32 / 1080.0) * x as f64 * cosine / w,
+                    -focal * y as f64 / w,
                 ];
                 for i in 0..2 {
                     assert!((f64::from(clip[i] / clip.w) - expected[i]).abs() < 0.00002);
@@ -109,11 +109,13 @@ fn reference_turn_gpu_native_direction_branches_quantized_alpha_and_uncovered_pi
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     if let Ok(rom) = std::env::var("SHIN_REFERENCE_ROM") {
@@ -123,6 +125,8 @@ fn reference_turn_gpu_native_direction_branches_quantized_alpha_and_uncovered_pi
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -308,8 +312,8 @@ fn reference_turn_gpu_native_direction_branches_quantized_alpha_and_uncovered_pi
                 // do not invert or reuse the implementation's matrix.
                 let (sine, cosine) = (f64::from(angle).sin(), f64::from(angle).cos());
                 let focal = 1.0 / (f64::from(0.99026656f32) * 0.5).tan();
-                let qx = (f64::from(x) + 0.5) / 32.0 - 1.0;
-                let qy = (f64::from(y) + 0.5) / 32.0 - 1.0;
+                let qx = (x as f64 + 0.5) / 32.0 - 1.0;
+                let qy = (y as f64 + 0.5) / 32.0 - 1.0;
                 let object_x =
                     1000.0 * qx / (focal / f64::from(1920.0f32 / 1080.0) * cosine - qx * sine);
                 let distance = 1000.0 + object_x * sine;

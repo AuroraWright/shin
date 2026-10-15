@@ -3,11 +3,8 @@ use crate::{layer::user::TileLayer, wiper::DefaultWiper};
 use shin_render::shaders::types::{RenderClone, RenderCloneCtx};
 use std::{fs, process::Command};
 
-fn collect<'a>(slot: &'a SlotLayer<TileLayer>, nodes: &mut Vec<&'a TileLayer>) {
-    if let Some(source) = &slot.source {
-        collect(source, nodes);
-    }
-    nodes.push(&slot.target);
+fn collect<'a>(slot: &'a SlotLayer<TileLayer>, nodes: &mut Vec<ReferenceLayerLeaf<'a, TileLayer>>) {
+    slot.reference_owner_leaves(nodes);
 }
 
 #[test]
@@ -34,7 +31,7 @@ fn reference_native_nested_slot_property_aliases() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, _queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut encoder = device.create_command_encoder(&Default::default());
     let mut context = RenderCloneCtx {
         device: &device,
@@ -97,6 +94,7 @@ fn reference_native_nested_slot_property_aliases() {
                 .source
                 .as_mut()
                 .unwrap()
+                .write()
                 .target
                 .properties_mut()
                 .property_tweener_mut(LayerProperty::TranslateX)
@@ -114,7 +112,15 @@ fn reference_native_nested_slot_property_aliases() {
             }
             words.push(u32::from(copied.is_transition_active()).to_string());
             words.push(
-                u32::from(copied.source.as_ref().unwrap().is_transition_active()).to_string(),
+                u32::from(
+                    copied
+                        .source
+                        .as_ref()
+                        .unwrap()
+                        .read()
+                        .is_transition_active(),
+                )
+                .to_string(),
             );
             expected.push(words.join(" "));
         }

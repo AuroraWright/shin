@@ -190,10 +190,13 @@ impl EffectLayer {
             "Effect transform does not move captured siblings"
         );
 
-        let UserLayer::Effect(effect) = group.get_layer(LayerbankId::new(0)).unwrap() else {
-            panic!("Effect")
+        let mut copy = {
+            let layer = group.get_layer(LayerbankId::new(0)).unwrap();
+            let UserLayer::Effect(effect) = &*layer else {
+                panic!("Effect")
+            };
+            effect.render_clone(&mut context.render_clone_ctx())
         };
-        let mut copy = effect.render_clone(&mut context.render_clone_ctx());
         copy.pre_render(context, &TransformParams::default());
         assert!(
             pixels == draw(&copy, context),
@@ -320,10 +323,130 @@ impl EffectLayer {
         println!(
             "Effect/mask composition:96 cases across supplied test/cut/c masks, all32 flag combinations, captured versus independently tinted ordinary tiles, full RGBA comparison worst error{worst}"
         );
+        // Move the existing stable groups into a Page. Its parent preparation
+        // and two-plane stencil/composition must preserve the owned capture.
+        let mut captured_page = crate::layer::PageLayer::new(2);
+        let mut ordinary_page = crate::layer::PageLayer::new(2);
+        let plane = shin_core::vm::command::types::PlaneId::new(1);
+        *captured_page.get_plane_mut(plane) = captured;
+        *ordinary_page.get_plane_mut(plane) = ordinary;
+        for page in [&mut captured_page, &mut ordinary_page] {
+            page.get_plane_mut(shin_core::vm::command::types::PlaneId::new(0))
+                .add_layer(
+                    LayerbankId::new(0),
+                    tile(
+                        FloatColor4::from_rgba(0.1, 0.3, 0.2, 1.0),
+                        vec4(-960.0, -540.0, 1920.0, 1080.0),
+                        3000.0,
+                    ),
+                );
+        }
+        let mut page_worst = 0;
+        for path in ["/mask/test.msk", "/mask/cut.msk", "/mask/c.msk"] {
+            let mask: Arc<crate::asset::mask::MaskTexture> =
+                shin_tasks::block_on(server.load(path)).unwrap();
+            for raw in 0..32 {
+                for page in [&mut captured_page, &mut ordinary_page] {
+                    page.get_plane_mut(plane)
+                        .set_mask_texture(mask.clone(), MaskFlags::from_bits_retain(raw));
+                    page.pre_render(context, &TransformParams::default());
+                }
+                let actual = draw(&captured_page, context);
+                let expected = draw(&ordinary_page, context);
+                let error = actual
+                    .iter()
+                    .zip(&expected)
+                    .map(|(&a, &b)| a.abs_diff(b))
+                    .max()
+                    .unwrap();
+                assert!(
+                    error <= 2,
+                    "Page/Effect mask {path} flags{raw:x}:error{error}"
+                );
+                page_worst = page_worst.max(error);
+            }
+        }
+        println!(
+            "Page/owned Effect/mask composition:96 cases, two real planes, all32 flags, full RGBA comparison worst error{page_worst}"
+        );
         println!(
             "Native Effect type5: captured lower batch, base-only/duplicate clocks, translated-parent preservation, tint/successive effects, copied texture/empty recapture and replacement-wipe source/target pass"
         );
     }
+}
+
+#[test]
+#[ignore = "focused supplied-ROM Group/Page/owned Effect mask composition; offscreen Metal, no audio/windows/saves"]
+fn reference_owned_effect_group_page_mask_composition() {
+    use crate::asset::system::{AssetLoadContext, LayeredAssetIo, cache::AssetCache};
+    use shin_render::{
+        dynamic_buffer::DynamicBuffer,
+        pipelines::PipelineStorage,
+        resize::{SurfaceResizeSource, ViewportParams},
+        shaders::types::{buffer::BytesAddress, texture::TextureSamplerStore},
+    };
+    crate::init_test_task_pools();
+    let adapter =
+        shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
+            .unwrap();
+    let (device, queue) =
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
+    let mut io = LayeredAssetIo::new();
+    io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
+        .unwrap();
+    let server = Arc::new(AssetServer::new(
+        io.into(),
+        AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
+            wgpu_device: device.clone(),
+            wgpu_queue: queue.clone(),
+            bustup_cache: AssetCache::new(),
+            picture_cache: Default::default(),
+            font_cache: Default::default(),
+        },
+    ));
+    let resize = SurfaceResizeSource::new(ViewportParams::both(winit::dpi::PhysicalSize::new(
+        1920, 1080,
+    )));
+    let depth = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Owned Effect/Page mask depth"),
+        size: wgpu::Extent3d {
+            width: 1920,
+            height: 1080,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: shin_render::DEPTH_STENCIL_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let view = depth.create_view(&Default::default());
+    let samplers = TextureSamplerStore::new(&device);
+    let mut pipelines = PipelineStorage::new(device.clone(), wgpu::TextureFormat::Rgba8Unorm);
+    let mut dynamic = DynamicBuffer::new(device.clone(), BytesAddress::new(1024 * 1024));
+    let mut encoder = device.create_command_encoder(&Default::default());
+    let mut context = PreRenderContext {
+        breakup_texture: None,
+        device: &device,
+        queue: &queue,
+        resize_source: &resize,
+        sampler_store: &samplers,
+        depth_stencil: DepthStencilTarget { view: &view },
+        pipeline_storage: &mut pipelines,
+        dynamic_buffer: &mut dynamic,
+        encoder: &mut encoder,
+    };
+    EffectLayer::new().assert_reference_capture(&mut context, &server);
+    drop(context);
+    dynamic.finish(&mut encoder);
+    queue.submit([encoder.finish()]);
+    device
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("GPU work must complete before readback or retirement");
+    dynamic.recall();
 }
 
 #[test]

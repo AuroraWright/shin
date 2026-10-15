@@ -45,6 +45,8 @@ pub(crate) fn reference_masks(device: &wgpu::Device, queue: &wgpu::Queue) -> [Ar
     let server = AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -138,7 +140,7 @@ fn reference_all_native_wiper_batch_comparisons() {
         shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
             .unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+        shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
             .unwrap();
     let masks = reference_masks(&device, &queue);
     let path = std::env::var("SHIN_NATIVE_WIPER_BATCH_FIXTURES").unwrap();

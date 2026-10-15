@@ -1,9 +1,6 @@
 use super::sakura_particles::SakuraParticles;
 use crate::{
-    asset::{
-        system::AssetServer,
-        texture_archive::{TextureArchive, TextureArchiveBuilder},
-    },
+    asset::{effects::EffectsAtlasBorrow, system::AssetServer},
     layer::{
         DrawableLayer, NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
@@ -15,51 +12,14 @@ use parking_lot::Mutex;
 use shin_core::vm::command::types::LayerProperty;
 use shin_render::{
     ColorBlendType, PassKind, RenderRequestBuilder,
-    gpu_texture::GpuTexture,
     quad_vertices::QuadVertices,
     render_pass::RenderPass,
     shaders::types::{RenderClone, RenderCloneCtx},
 };
-use std::sync::Arc;
-
-// Keep the native name lookup optional until a visible tile actually draws.
-// In the supplied atlas Sakura is absent. Native118180 dereferences an invalid
-// iterator in that case; report the missing resource instead of invoking UB.
-#[derive(Debug, Default)]
-struct SakuraTextures {
-    sakura: Option<GpuTexture>,
-    retained_textures: Vec<GpuTexture>,
-}
-impl TextureArchive for SakuraTextures {
-    type Builder = Self;
-}
-impl TextureArchiveBuilder for SakuraTextures {
-    type Output = Self;
-    fn new() -> Self {
-        Self::default()
-    }
-    fn add_texture(&mut self, name: &str, texture: GpuTexture) {
-        if name == "Sakura" {
-            self.sakura = Some(texture);
-        } else {
-            self.retained_textures.push(texture);
-        }
-    }
-    fn build(self) -> Self {
-        self
-    }
-}
-impl SakuraTextures {
-    fn required(&self) -> &GpuTexture {
-        self.sakura.as_ref().expect(
-            "Animation layer requires texture 'Sakura' in /effects.txa; the supplied Umineko atlas does not contain it",
-        )
-    }
-}
 
 #[derive(Debug)]
 pub struct SakuraLayerImpl {
-    textures: Arc<SakuraTextures>,
+    textures: EffectsAtlasBorrow,
     // Native rendering marks particles dead. Each layer/clone owns this state;
     // sharing only GPU textures keeps render clones' expiry independent.
     particles: Mutex<SakuraParticles>,
@@ -79,7 +39,7 @@ impl RenderClone for SakuraLayerImpl {
 }
 pub type SakuraLayer = NewDrawableLayerWrapper<SakuraLayerImpl>;
 pub(crate) struct PreparedSakuraLayer {
-    textures: Arc<SakuraTextures>,
+    textures: EffectsAtlasBorrow,
     mode: i32,
 }
 
@@ -95,7 +55,9 @@ impl PreparedSakuraLayer {
         // first base effect update78820 materializes the property owner and
         // consumes seven RNG draws. Default effect periods are zero, so the
         // warm-up leaves effect phases and property clocks at their defaults.
-        let _ = layer.properties().get_value(LayerProperty::RasterHorizontalTPeriod);
+        let _ = layer
+            .properties()
+            .get_value(LayerProperty::RasterHorizontalTPeriod);
         layer
     }
 }
@@ -104,17 +66,31 @@ impl SakuraLayer {
     #[cfg(test)]
     pub(crate) fn reference_constructor_state(&self) -> (usize, u32, u32) {
         (
-            Arc::as_ptr(&self.inner_ref().textures) as usize,
+            self.inner_ref().textures.reference_identity(),
             self.reference_dissolve_seed(),
             self.inner_ref().particles.lock().reference_seed(),
         )
     }
+    pub(crate) async fn prepare_checked(
+        server: &AssetServer,
+        mode: i32,
+    ) -> anyhow::Result<Option<PreparedSakuraLayer>> {
+        if !(0..6).contains(&mode) {
+            return Ok(None);
+        }
+        let textures = server.effects_atlas_for("Sakura").await?;
+        Ok(Some(PreparedSakuraLayer { textures, mode }))
+    }
+    // Conditional owner/geometry references construct the native factory even
+    // when supplied art lacks Sakura. Production preparation validates it above.
+    #[cfg(test)]
     pub async fn load(server: &AssetServer, mode: i32) -> Option<Self> {
         Self::prepare(server, mode)
             .await
             .map(|prepared| prepared.construct())
     }
 
+    #[cfg(test)]
     pub(crate) async fn prepare(server: &AssetServer, mode: i32) -> Option<PreparedSakuraLayer> {
         // Check before constructing either drawable base or derived RNG state.
         // Native25340 publishes a null pointer for unsigned modes>=6.
@@ -122,7 +98,7 @@ impl SakuraLayer {
             return None;
         }
         let textures = server
-            .load("/effects.txa")
+            .effects_atlas()
             .await
             .expect("Failed to load animation atlas");
         Some(PreparedSakuraLayer { textures, mode })
@@ -165,6 +141,7 @@ impl NewDrawableLayer for SakuraLayerImpl {
             .simplify(drawable.shader_param)
             .evaluate(drawable.color_multiplier, drawable.shader_param)
             .into_unorm();
+        let textures = self.textures.read();
         self.particles.lock().render_particles(
             transform.compute_final_transform(),
             |matrix, sprite| {
@@ -174,7 +151,12 @@ impl NewDrawableLayer for SakuraLayerImpl {
                     .with_box(left, top, right, bottom)
                     .with_tex_box(u0, v0, u1, v1)
                     .with_color(color)
-                    .render_sprite(pass, builder, self.textures.required().as_source(), matrix);
+                    .render_sprite(
+                        pass,
+                        builder,
+                        textures.required("Sakura").as_source(),
+                        matrix,
+                    );
             },
         );
     }

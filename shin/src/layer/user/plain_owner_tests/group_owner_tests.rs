@@ -68,7 +68,7 @@ fn graph(
     }
     group
 }
-fn target(group: &mut LayerGroup) -> &mut UserLayer {
+fn target(group: &mut LayerGroup) -> crate::layer::owner::LayerWrite<'_, UserLayer> {
     group.get_layer_mut(LayerbankId::new(0)).unwrap()
 }
 fn snapshot(
@@ -105,7 +105,7 @@ fn snapshot(
             slots += g.reference_transition_words().len();
         }
         for l in leaves {
-            let probe = owner(l);
+            let probe = owner(&l);
             assert!(
                 current.insert(probe.0),
                 "Every mutable controller is distinct"
@@ -117,8 +117,8 @@ fn snapshot(
             let identity = p.initialized_identity();
             properties.push(identity);
             words.extend([
-                selected(l).to_string(),
-                usize::from(complete(l)).to_string(),
+                selected(&l).to_string(),
+                usize::from(complete(&l)).to_string(),
                 usize::from(identity.is_some()).to_string(),
             ]);
             if identity.is_some() {
@@ -134,7 +134,7 @@ fn snapshot(
                     ]);
                 }
             }
-            let c = clocks(l, "observe", 0, 0.0);
+            let c = clocks(&l, "observe", 0, 0.0);
             words.push(c.len().to_string());
             for (bits, busy) in c {
                 words.extend([format!("{bits:08x}"), usize::from(busy).to_string()]);
@@ -167,7 +167,7 @@ fn reference_native_plain_group_slot_clone_and_final_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut cases = 0;
     for version in ["original", "1.03"] {
         let native = std::fs::read_to_string(output.join(format!("{version}.trace"))).unwrap();
@@ -184,6 +184,8 @@ fn reference_native_plain_group_slot_clone_and_final_retirement() {
             let server = AssetServer::new(
                 io.into(),
                 AssetLoadContext {
+                    game: crate::cli::Game::Umineko,
+                    higurashi_bustup_cache: Default::default(),
                     wgpu_device: device.clone(),
                     wgpu_queue: queue.clone(),
                     bustup_cache: AssetCache::new(),
@@ -233,13 +235,14 @@ fn reference_native_plain_group_slot_clone_and_final_retirement() {
                 }
                 queue.submit(Some(encoder.finish()));
                 rows.push(snapshot(id, "copies", &roots, &textures, &mut probes));
-                advance(target(roots[1].as_mut().unwrap()), 5.0);
+                advance(&mut target(roots[1].as_mut().unwrap()), 5.0);
                 rows.push(snapshot(id, "advance-copy", &roots, &textures, &mut probes));
-                let l = target(roots[1].as_mut().unwrap());
-                clocks(l, "mutate", 0, 0.0);
+                let mut l = target(roots[1].as_mut().unwrap());
+                clocks(&l, "mutate", 0, 0.0);
                 l.properties_mut()
                     .property_tweener_mut(<LayerProperty as enum_map::Enum>::from_usize(0))
                     .fast_forward_to(-123.0);
+                drop(l);
                 rows.push(snapshot(id, "mutate-copy", &roots, &textures, &mut probes));
                 roots[1].as_mut().unwrap().fast_forward();
                 rows.push(snapshot(id, "forward-copy", &roots, &textures, &mut probes));
@@ -247,7 +250,7 @@ fn reference_native_plain_group_slot_clone_and_final_retirement() {
                     drop(roots[if order != 0 { 2 - i } else { i }].take());
                     rows.push(snapshot(id, "drop", &roots, &textures, &mut probes));
                     for g in roots.iter_mut().flatten() {
-                        advance(target(g), 10.0);
+                        advance(&mut target(g), 10.0);
                     }
                     rows.push(snapshot(id, "survivors", &roots, &textures, &mut probes));
                 }
@@ -257,7 +260,7 @@ fn reference_native_plain_group_slot_clone_and_final_retirement() {
             }
             drop(textures);
             assert_eq!(atlas(), 0, "Final decoded fixture atlas retired");
-            device.poll(wgpu::Maintain::Wait);
+            device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
         }
         std::fs::write(
             output.join(format!("{version}.port.trace")),

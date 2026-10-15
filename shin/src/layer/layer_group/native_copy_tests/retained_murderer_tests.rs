@@ -31,10 +31,11 @@ fn snapshot(
         if let Some(root) = root {
             for entry in &root.layers {
                 let bank = entry.layerbank_id.map_or(-1, |b| b.raw() as i32);
-                let kind = if entry.layer.wiper.is_some() {
+                let slot = entry.layer.read();
+                let kind = if slot.wiper.is_some() {
                     2
                 } else {
-                    usize::from(matches!(entry.layer.target, UserLayer::Murderer(_)))
+                    usize::from(matches!(&*slot.target.read(), UserLayer::Murderer(_)))
                 };
                 words.extend([
                     bank.to_string(),
@@ -53,7 +54,7 @@ fn snapshot(
         }
     }
     words.extend(leaves.iter().map(|v| v.len().to_string()));
-    let all: Vec<_> = leaves.iter().flatten().copied().collect();
+    let all: Vec<_> = leaves.iter().flatten().map(|l| &**l).collect();
     for leaf in &all {
         let props = leaf.properties().reference_copy_words();
         words.extend([
@@ -133,7 +134,7 @@ fn reference_native_retained_murderer_copy_and_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut io = LayeredAssetIo::new();
     // This task concerns CPU ownership, not changed ROM artwork. Prepare once;
     // reuse the same real resources for every independent model construction.
@@ -142,6 +143,8 @@ fn reference_native_retained_murderer_copy_and_retirement() {
     let server = AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),

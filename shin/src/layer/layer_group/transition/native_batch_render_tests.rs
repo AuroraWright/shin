@@ -134,11 +134,11 @@ pub(super) fn run(
             );
             group.layers_to_render = vec![
                 crate::layer::layer_group::LayerRenderItem {
-                    layer_index: 0,
+                    source: crate::layer::layer_group::LayerRenderSource::Entry(0),
                     stencil_ref_relative: 1,
                 },
                 crate::layer::layer_group::LayerRenderItem {
-                    layer_index: 1,
+                    source: crate::layer::layer_group::LayerRenderSource::Entry(1),
                     stencil_ref_relative: 0,
                 },
             ];

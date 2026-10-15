@@ -107,7 +107,7 @@ fn reference_native_populated_slot_copy_and_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, _queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut encoder = device.create_command_encoder(&Default::default());
     let mut ctx = RenderCloneCtx {
         device: &device,

@@ -2,7 +2,7 @@
 use super::*;
 use crate::{
     asset::{
-        effects::EffectTextures,
+        effects::EffectsAtlasBorrow,
         system::{AssetLoadContext, LayeredAssetIo, cache::AssetCache},
     },
     layer::LayerGroup,
@@ -20,15 +20,15 @@ enum Root {
     Group(LayerGroup),
 }
 impl Root {
-    fn leaves(&self) -> Vec<&UserLayer> {
+    fn leaves(&self) -> Vec<crate::layer::layer_group::ReferenceLayerLeaf<'_, UserLayer>> {
         match self {
-            Self::Rain(l) => vec![l],
+            Self::Rain(l) => vec![crate::layer::layer_group::ReferenceLayerLeaf::borrowed(l)],
             Self::Group(g) => g.reference_owner_leaves(),
         }
     }
-    fn target(&mut self) -> &mut UserLayer {
+    fn target(&mut self) -> crate::layer::owner::LayerWrite<'_, UserLayer> {
         match self {
-            Self::Rain(l) => l,
+            Self::Rain(l) => crate::layer::owner::LayerWrite::Direct(l),
             Self::Group(g) => g.get_layer_mut(LayerbankId::new(0)).unwrap(),
         }
     }
@@ -64,7 +64,7 @@ fn rain_mut(l: &mut UserLayer) -> &mut rain_layer::RainLayer {
     l
 }
 fn make_rain(
-    textures: &Arc<EffectTextures>,
+    textures: &EffectsAtlasBorrow,
     mode: i32,
     count: usize,
     identity: usize,
@@ -91,7 +91,7 @@ fn make_rain(
     l
 }
 fn prepare_root(
-    textures: &Arc<EffectTextures>,
+    textures: &EffectsAtlasBorrow,
     mode: i32,
     count: usize,
     populated: bool,
@@ -140,7 +140,7 @@ fn snapshot(
     id: usize,
     phase: &str,
     roots: &[Option<Root>; 3],
-    textures: &Arc<EffectTextures>,
+    textures: &EffectsAtlasBorrow,
     last_rng: &mut usize,
 ) -> String {
     let now = crate::engine_random::seed_call_count();
@@ -153,7 +153,7 @@ fn snapshot(
     *last_rng = now;
     let mut owners = Vec::new();
     let mut pointers = BTreeSet::new();
-    let mut live = 0;
+    let mut _live = 0;
     let mut slots = 0;
     for root in roots {
         let leaves = root.as_ref().map_or_else(Vec::new, Root::leaves);
@@ -165,8 +165,8 @@ fn snapshot(
             slots += root.slots();
         }
         for l in leaves {
-            live += 1;
-            let r = rain(l);
+            _live += 1;
+            let r = rain(&l);
             let (pointer, data) = r.inner_ref().reference_owner_words();
             if let Some(pointer) = pointer {
                 assert!(
@@ -204,20 +204,20 @@ fn snapshot(
     }
     words.push(slots.to_string());
     assert_eq!(
-        Arc::strong_count(textures),
-        live + 1,
-        "One explicit fixture atlas plus actual layer owners"
+        textures.reference_strong_count(),
+        1,
+        "Engine atlas owner only; layer and copy handles borrow"
     );
     words.join(" ")
 }
 fn advance(root: &mut Root) {
-    let l = root.target();
+    let mut l = root.target();
     // Execute the particle model independently of rendering/warm-up. Getter
     // lazily allocates properties as native c9eb0/75d20 does, even with dt0.
     let intensity = l.properties().get_value(LayerProperty::RainIntensity);
     let direction = l.properties().get_value(LayerProperty::RainDirection);
     let speed = l.properties().get_value(LayerProperty::RainSpeed);
-    rain_mut(l)
+    rain_mut(&mut l)
         .inner_mut()
         .reference_owner_advance(intensity, direction, speed);
     for i in 0..90 {
@@ -236,7 +236,7 @@ fn reference_native_rain_clone_group_slot_and_final_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut total = 0;
     for version in ["original", "1.03"] {
         let mut io = LayeredAssetIo::new();
@@ -249,6 +249,8 @@ fn reference_native_rain_clone_group_slot_and_final_retirement() {
         let server = AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -256,10 +258,8 @@ fn reference_native_rain_clone_group_slot_and_final_retirement() {
                 font_cache: Default::default(),
             },
         );
-        let textures: Arc<EffectTextures> =
-            shin_tasks::block_on(server.load("/effects.txa")).unwrap();
-        drop(server);
-        let weak = Arc::downgrade(&textures);
+        let textures: EffectsAtlasBorrow = shin_tasks::block_on(server.effects_atlas()).unwrap();
+        let weak = textures.reference_weak();
         assert_eq!(weak.strong_count(), 1);
         let mut actual = Vec::new();
         for (id, line) in request.lines().enumerate() {
@@ -294,7 +294,7 @@ fn reference_native_rain_clone_group_slot_and_final_retirement() {
                     &textures,
                     &mut last_rng,
                 ));
-                rain_mut(roots[1].as_mut().unwrap().target())
+                rain_mut(&mut roots[1].as_mut().unwrap().target())
                     .inner_mut()
                     .reference_owner_mutate();
                 actual.push(snapshot(
@@ -339,10 +339,12 @@ fn reference_native_rain_clone_group_slot_and_final_retirement() {
         drop(textures);
         assert_eq!(
             weak.strong_count(),
-            0,
-            "Final effects atlas fixture owner retired"
+            1,
+            "Engine retains atlas after all layers"
         );
-        device.poll(wgpu::Maintain::Wait);
+        drop(server);
+        assert_eq!(weak.strong_count(), 0, "Engine atlas owner retired");
+        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     println!(
         "Rain ownership:{total} cases;all individual/group/active/nested Slot particle vectors independent;both final atlas owners retired"

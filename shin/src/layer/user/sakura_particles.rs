@@ -24,7 +24,7 @@ const PARAMETERS: [[f32; 8]; 6] = [
 const DURATIONS: [[i32; 12]; 2] = [[3; 12], [5, 4, 3, 2, 3, 4, 5, 4, 3, 2, 3, 4]];
 
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct Particle {
+pub(crate) struct Particle {
     pub alive: bool,
     pub variant: usize,
     pub origin: Vec2,
@@ -68,7 +68,7 @@ impl Particle {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(super) struct SakuraParticles {
+pub(crate) struct SakuraParticles {
     pub mode: usize,
     pub elapsed: f32,
     seed: u32,
@@ -78,11 +78,11 @@ pub(super) struct SakuraParticles {
 
 impl SakuraParticles {
     #[cfg(test)]
-    pub(super) fn reference_seed(&self) -> u32 {
+    pub(crate) fn reference_seed(&self) -> u32 {
         self.seed
     }
     #[cfg(test)]
-    pub(super) fn reference_owner_emission(&self) -> f32 {
+    pub(crate) fn reference_owner_emission(&self) -> f32 {
         self.emission
     }
     #[cfg(test)]
@@ -193,7 +193,7 @@ impl SakuraParticles {
 }
 
 #[derive(Debug, PartialEq)]
-pub(super) struct SpriteFrame {
+pub(crate) struct SpriteFrame {
     pub uv: [f32; 4],
     pub bounds: [i32; 4],
 }

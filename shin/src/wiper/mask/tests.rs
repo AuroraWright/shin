@@ -125,11 +125,13 @@ fn reference_mask_factory_invalid_metadata_default_pixels_and_valid_retained_fla
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     if let Ok(rom) = std::env::var("SHIN_REFERENCE_ROM") {
@@ -139,6 +141,8 @@ fn reference_mask_factory_invalid_metadata_default_pixels_and_valid_retained_fla
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -245,6 +249,8 @@ fn reference_mask_factory_invalid_metadata_default_pixels_and_valid_retained_fla
     let empty_server = std::sync::Arc::new(AssetServer::new(
         LayeredAssetIo::new().into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -566,11 +572,13 @@ fn reference_mask_native_sampling_flags_and_weight_pixels() {
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let root = std::env::temp_dir().join(format!("shin-mask-wipe-oracle-{}", std::process::id()));
     std::fs::create_dir_all(&root).unwrap();
@@ -610,6 +618,8 @@ fn reference_mask_native_sampling_flags_and_weight_pixels() {
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),

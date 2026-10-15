@@ -1,6 +1,6 @@
 use super::rain_particles::RainParticles;
 use crate::{
-    asset::{effects::EffectTextures, system::AssetServer},
+    asset::{effects::EffectsAtlasBorrow, system::AssetServer},
     layer::{
         LayerProperties, NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 #[derive(Clone, RenderClone)]
 pub struct RainLayerImpl {
-    textures: Arc<EffectTextures>,
+    textures: EffectsAtlasBorrow,
     particles: RainParticles,
 }
 impl std::fmt::Debug for RainLayerImpl {
@@ -33,20 +33,28 @@ impl RainLayer {
     #[cfg(test)]
     pub(crate) fn reference_constructor_state(&self) -> (usize, u32, u32) {
         (
-            Arc::as_ptr(&self.inner_ref().textures) as usize,
+            self.inner_ref().textures.reference_identity(),
             self.reference_dissolve_seed(),
             self.inner_ref().particles.reference_seed(),
         )
     }
+    pub(crate) fn texture_name(mode: i32) -> &'static str {
+        match mode.clamp(0, 3) {
+            0 => "rain",
+            1 => "hanabira",
+            2 => "snow",
+            _ => "goldsnow",
+        }
+    }
     pub async fn load(server: &AssetServer, mode: i32, min: i32, max: i32) -> Self {
         let textures = server
-            .load("/effects.txa")
+            .effects_atlas_for(Self::texture_name(mode))
             .await
             .expect("Failed to load rain textures");
         Self::new(textures, mode, min, max)
     }
 
-    pub(crate) fn new(textures: Arc<EffectTextures>, mode: i32, min: i32, max: i32) -> Self {
+    pub(crate) fn new(textures: EffectsAtlasBorrow, mode: i32, min: i32, max: i32) -> Self {
         Self::from_inner_constructor(|| RainLayerImpl {
             textures,
             particles: RainParticles::new(mode, min, max, crate::engine_random::next_seed()),
@@ -104,11 +112,12 @@ impl NewDrawableLayer for RainLayerImpl {
             DrawableClipMode::None,
             "Rain clipping is not implemented"
         );
+        let textures = self.textures.read();
         let (texture, width, height) = match self.particles.mode {
-            0 => (&self.textures.rain, 4.0, 150.0),
-            1 => (&self.textures.petals, 30.0, 30.0),
-            2 => (&self.textures.snow, 15.0, 15.0),
-            _ => (&self.textures.gold, 15.0, 15.0),
+            0 => (textures.required("rain"), 4.0, 150.0),
+            1 => (textures.required("hanabira"), 30.0, 30.0),
+            2 => (textures.required("snow"), 15.0, 15.0),
+            _ => (textures.required("goldsnow"), 15.0, 15.0),
         };
         let color = drawable
             .fragment_shader

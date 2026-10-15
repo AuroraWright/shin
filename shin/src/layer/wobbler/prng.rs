@@ -22,7 +22,11 @@ fn prng_one(mut seed: u32) -> f32 {
     if seed == 0 {
         seed = 0x12345678;
     }
+    first_mt_sample(seed)
+}
 
+/// Shared MT arithmetic; callers retain their game's zero-seed policy.
+pub(in crate::layer) fn first_mt_sample(seed: u32) -> f32 {
     // the game uses mersenne twister to implement this PRNG
     // its REALLY redundant, they just seed it and call 2 times
     // and we can actually optimize out the "twister" array used

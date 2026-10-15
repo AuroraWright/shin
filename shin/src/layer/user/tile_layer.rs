@@ -2055,7 +2055,7 @@ impl TileLayer {
             view_formats: &[],
         });
         let view = output.create_view(&Default::default());
-        let projection = glam::Mat4::orthographic_rh(0.0, 304.0, 258.0, 0.0, -1.0, 1.0);
+        let projection = glam::camera::rh::proj::directx::orthographic(0.0, 304.0, 258.0, 0.0, -1.0, 1.0);
         let names = ["bea0", "eva0", "null"];
         {
             let mut pass = context.begin_pass(
@@ -2219,7 +2219,8 @@ impl TileLayer {
                     let image = &original.textures[original.name_to_index[name]];
                     assert_eq!((image.width(), image.height()), (w as u32, h as u32));
                     // The small target preserves one source texel per output pixel.
-                    let transform = glam::Mat4::orthographic_rh(0.0, 384.0, 288.0, 0.0, -1.0, 1.0);
+                    let transform = glam::camera::rh::proj::directx::orthographic(0.0, 384.0, 288.0, 0.0, -1.0, 1.0,
+                    );
                     atlas.render_button(
                         &mut pass,
                         name,

@@ -61,10 +61,23 @@ impl Root {
 }
 struct Node<'a> {
     kind: usize,
-    properties: &'a LayerProperties,
+    properties: NodeProperties<'a>,
     seed: u32,
     phases: [f32; 3],
     geometry: [u32; 8],
+}
+enum NodeProperties<'a> {
+    Borrowed(&'a LayerProperties),
+    Leaf(ReferenceLayerLeaf<'a, UserLayer>),
+}
+impl std::ops::Deref for NodeProperties<'_> {
+    type Target = LayerProperties;
+    fn deref(&self) -> &LayerProperties {
+        match self {
+            Self::Borrowed(p) => p,
+            Self::Leaf(layer) => layer.properties(),
+        }
+    }
 }
 impl<'a> Node<'a> {
     fn new(
@@ -76,7 +89,7 @@ impl<'a> Node<'a> {
     ) -> Self {
         Self {
             kind,
-            properties,
+            properties: NodeProperties::Borrowed(properties),
             seed,
             phases,
             geometry: tile
@@ -94,16 +107,19 @@ fn collect_group<'a>(group: &'a LayerGroup, nodes: &mut Vec<Node<'a>>) {
         None,
     ));
     for layer in group.reference_owner_leaves() {
-        let UserLayer::Tile(tile) = layer else {
+        let UserLayer::Tile(tile) = &*layer else {
             unreachable!()
         };
-        nodes.push(Node::new(
-            3,
-            tile.properties(),
-            tile.reference_dissolve_seed(),
-            tile.reference_effect_phases(),
-            Some(tile),
-        ));
+        let seed = tile.reference_dissolve_seed();
+        let phases = tile.reference_effect_phases();
+        let geometry = tile.reference_geometry_words();
+        nodes.push(Node {
+            kind: 3,
+            properties: NodeProperties::Leaf(layer),
+            seed,
+            phases,
+            geometry,
+        });
     }
 }
 fn collect_page<'a>(page: &'a PageLayer, nodes: &mut Vec<Node<'a>>, planes: usize) {
@@ -240,7 +256,7 @@ fn run_native_populated_layer_copy(workload: usize) {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, _queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut encoder = device.create_command_encoder(&Default::default());
     let mut ctx = RenderCloneCtx {
         device: &device,
@@ -447,7 +463,7 @@ fn run_native_populated_layer_copy(workload: usize) {
                             }
                             let mut groups = Vec::new();
                             for n in nodes.iter().filter(|n| n.kind == 3) {
-                                groups.push(n.properties);
+                                groups.push(&n.properties);
                             }
                             let shared: Vec<_> = groups
                                 .iter()

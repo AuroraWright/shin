@@ -1,6 +1,6 @@
 use super::focus_line_model::FocusLineRays;
 use crate::{
-    asset::{effects::EffectTextures, system::AssetServer},
+    asset::{effects::EffectsAtlasBorrow, system::AssetServer},
     layer::{
         NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
@@ -17,7 +17,7 @@ use std::sync::Arc;
 
 #[derive(Clone, RenderClone)]
 pub struct FocusLineLayerImpl {
-    textures: Arc<EffectTextures>,
+    textures: EffectsAtlasBorrow,
     offset: Vec2,
     rays: FocusLineRays,
 }
@@ -48,20 +48,20 @@ impl FocusLineLayer {
     #[cfg(test)]
     pub(crate) fn reference_constructor_state(&self) -> (usize, u32, u32) {
         (
-            Arc::as_ptr(&self.inner_ref().textures) as usize,
+            self.inner_ref().textures.reference_identity(),
             self.reference_dissolve_seed(),
             self.inner_ref().rays.reference_seed(),
         )
     }
     pub async fn load(server: &AssetServer, x: i32, y: i32) -> Self {
         let textures = server
-            .load("/effects.txa")
+            .effects_atlas_for("focusline")
             .await
             .expect("Failed to load focus line texture");
         Self::new(textures, x, y)
     }
 
-    pub(crate) fn new(textures: Arc<EffectTextures>, x: i32, y: i32) -> Self {
+    pub(crate) fn new(textures: EffectsAtlasBorrow, x: i32, y: i32) -> Self {
         Self::from_inner_constructor(|| FocusLineLayerImpl {
             textures,
             offset: Vec2::new(x as f32, y as f32),
@@ -103,6 +103,7 @@ impl NewDrawableLayer for FocusLineLayerImpl {
             .color_blend_type(ColorBlendType::from_regular_layer(drawable.blend_type));
         let matrix =
             transform.compute_final_transform() * Mat4::from_translation(self.offset.extend(0.0));
+        let textures = self.textures.read();
         for ray in &self.rays.rays {
             let color = drawable
                 .color_multiplier
@@ -120,7 +121,7 @@ impl NewDrawableLayer for FocusLineLayerImpl {
                 .render_sprite(
                     pass,
                     builder,
-                    self.textures._focusline.as_source(),
+                    textures.required("focusline").as_source(),
                     matrix * Mat4::from_rotation_z(ray.angle),
                 );
         }

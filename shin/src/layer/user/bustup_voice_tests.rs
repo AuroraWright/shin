@@ -125,7 +125,7 @@ pub(super) fn reference_callbacks(
     clone.update(&update);
     assert_eq!(*events.borrow(), vec![(character, 0.25)]);
     events.borrow_mut().clear();
-    let layer = group.get_layer_mut(bank).unwrap();
+    let mut layer = group.get_layer_mut(bank).unwrap();
     layer
         .properties_mut()
         .property_tweener_mut(LayerProperty::Prop27)

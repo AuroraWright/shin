@@ -20,7 +20,7 @@ pub struct ScrollWiperImpl {
 
 // Native ef5c0 reads two independent eight-way selectors. Zero and values
 // outside1..8 are stationary; do not fold the second direction into the first.
-fn direction(value: i32) -> Vec2 {
+pub(super) fn direction(value: i32) -> Vec2 {
     match value {
         1 => vec2(1.0, 0.0),
         2 => vec2(1.0, 1.0),
@@ -33,7 +33,7 @@ fn direction(value: i32) -> Vec2 {
         _ => Vec2::ZERO,
     }
 }
-fn outgoing_offset(direction: i32, progress: f32) -> Vec2 {
+pub(super) fn outgoing_offset(direction: i32, progress: f32) -> Vec2 {
     // Native ef688..ef6d8 wraps each nonzero remaining displacement across
     // the opposite edge. At exactly completion the old image returns to0,
     // underneath the incoming image with vertex alpha1.

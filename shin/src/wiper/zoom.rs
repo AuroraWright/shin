@@ -20,7 +20,7 @@ pub struct ZoomWiperImpl {
 
 // Native factory21b08 converts signed integer parameters to thousandths.
 // Renderer11c580..11c5ac interpolates each scale independently without clamps.
-fn scales(incoming: f32, outgoing: f32, progress: f32) -> (f32, f32) {
+pub(super) fn scales(incoming: f32, outgoing: f32, progress: f32) -> (f32, f32) {
     (
         1.0 + (1.0 - progress) * (incoming - 1.0),
         1.0 + progress * (outgoing - 1.0),

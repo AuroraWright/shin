@@ -45,6 +45,115 @@ macro_rules! make_vertices {
 }
 
 impl MessageLayer {
+    #[cfg(test)]
+    pub(crate) fn assert_reference_message_submission(
+        &mut self,
+        context: &mut crate::render::PreRenderContext,
+        scenario: &std::sync::Arc<shin_core::format::scenario::Scenario>,
+    ) {
+        use super::{MessageFlags, MsgsetParams, WaitKind};
+        use crate::layer::{Layer, render_params::TransformParams};
+        use shin_core::{
+            format::scenario::instruction_elements::MessageId, primitives::color::UnormColor,
+            vm::command::types::MessageTextLayout,
+        };
+        use shin_render::{
+            PassKind,
+            shaders::types::texture::{TextureTarget, TextureTargetKind},
+        };
+        let target = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Full dialogue debug scopes"),
+            size: wgpu::Extent3d {
+                width: 1920,
+                height: 1080,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let view = target.create_view(&Default::default());
+        let mut cases = 0;
+        for ty in [
+            MessageboxType::Neutral,
+            MessageboxType::WitchSpace,
+            MessageboxType::Ushiromiya,
+            MessageboxType::Transparent,
+            MessageboxType::Novel,
+            MessageboxType::NoText,
+        ] {
+            self.on_msgset(
+                context,
+                scenario,
+                "右代宮　戦人@r「右代宮金蔵は死亡している。」",
+                MsgsetParams {
+                    flags: MessageFlags::empty(),
+                    messagebox_type: ty,
+                    text_layout: MessageTextLayout::Justify,
+                    message_id: MessageId(0),
+                },
+                false,
+            );
+            self.sliding_out_messageboxes.clear();
+            for char in &mut self.chars {
+                char.current_progress = 1.0;
+            }
+            self.rebuild_vertices(context);
+            for wait in [
+                None,
+                Some(WaitKind::Regular),
+                Some(WaitKind::Last),
+                Some(WaitKind::AutoClick),
+            ] {
+                self.wait_kind = wait;
+                for state in 0..4 {
+                    self.natural_slide
+                        .set_value(if state == 1 { 0.5 } else { 1.0 });
+                    self.modal_slide
+                        .set_value(if state == 2 { 0.5 } else { 1.0 });
+                    let vertices = if state == 3 {
+                        self.vertex_buffer.take()
+                    } else {
+                        None
+                    };
+                    {
+                        let mut pass = context.begin_pass(
+                            TextureTarget {
+                                view: &view,
+                                kind: TextureTargetKind::Screen,
+                            },
+                            Some(context.depth_stencil),
+                            "Full dialogue submission",
+                        );
+                        pass.clear(Some(UnormColor::BLACK), Some(0), Some(1.0));
+                        pass.push_debug("ADV parent");
+                        for kind in [PassKind::Opaque, PassKind::Transparent] {
+                            self.render(&mut pass, &TransformParams::default(), 1, kind);
+                        }
+                        pass.pop_debug();
+                    }
+                    let pixels = crate::layer::user::readback_test_texture(context, &target);
+                    if state == 0 && ty != MessageboxType::NoText {
+                        assert!(
+                            pixels.chunks_exact(4).any(|p| p[..3] != [0, 0, 0]),
+                            "Fully visible {ty:?} must submit actual dialogue pixels"
+                        );
+                    }
+                    if state == 3 {
+                        self.vertex_buffer = vertices;
+                    }
+                    cases += 1;
+                }
+            }
+        }
+        println!(
+            "Full dialogue submission: {cases} cases, including nested parent scope and all return paths"
+        );
+    }
+
     pub(super) fn render_messagebox(
         &self,
         pass: &mut RenderPass,
@@ -176,8 +285,7 @@ impl MessageLayer {
 }
 
 #[cfg(test)]
-impl MessageLayer {
-    pub(crate) fn assert_reference_window_opacity(
+impl MessageLayer {    pub(crate) fn assert_reference_window_opacity(
         &mut self,
         context: &mut crate::render::PreRenderContext,
     ) {

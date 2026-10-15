@@ -1218,3 +1218,119 @@ pub(crate) use accusation_draw_tests::reference_accusation_draw;
 
 #[path = "murderer_select.rs"]
 mod select;
+
+// Owned interactive views dispatch through the same actual layer.
+impl super::InteractiveView<'_, MurdererAccusationView> {
+    #[cfg(test)]
+    pub(crate) fn reference_retirement_probe(
+        &self,
+        device: &wgpu::Device,
+        resize: &shin_render::resize::SurfaceResizeSource,
+        extra: bool,
+    ) -> Box<dyn Fn() -> bool> {
+        self.with(|layer| layer.reference_retirement_probe(device, resize, extra))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_open_menu(&self, index: usize) {
+        self.with(|layer| layer.reference_open_menu(index))
+    }
+    pub fn restore_completed_answer(&self, answer: i32) {
+        self.with(|layer| layer.restore_completed_answer(answer))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_completed_visuals(&self) -> (usize, Vec<usize>, Option<usize>) {
+        self.with(|layer| layer.reference_completed_visuals())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
+        self.with(|layer| layer.reference_controller_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_menu_state(&self) -> (super::murderer_model::MurdererMenu, bool) {
+        self.with(|layer| layer.reference_menu_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_retained_state(&self) -> (usize, f32) {
+        self.with(|layer| layer.reference_retained_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_wipe_state(&self) -> Option<(u64, f32, f32)> {
+        self.with(|layer| layer.reference_wipe_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_wipe_kind(&self) -> Option<super::murderer_model::MurdererWipeKind> {
+        self.with(|layer| layer.reference_wipe_kind())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_frozen_pixels(&self, context: &mut PreRenderContext) -> Vec<u8> {
+        self.with(|layer| layer.reference_frozen_pixels(context))
+    }
+    pub fn scroll_text(&self, delta: f32) {
+        self.with(|layer| layer.scroll_text(delta))
+    }
+    pub fn navigate(&self, delta: i32) {
+        self.with(|layer| layer.navigate(delta))
+    }
+    pub fn handle_controller_input(
+        &self,
+        state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
+    ) -> bool {
+        self.with(|layer| layer.handle_controller_input(state))
+    }
+    pub fn handle_controller_input_with_scroll(
+        &self,
+        state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
+        scroll_axis: f32,
+    ) -> bool {
+        self.with(|layer| layer.handle_controller_input_with_scroll(state, scroll_axis))
+    }
+    pub fn confirm(&self) {
+        self.with(|layer| layer.confirm())
+    }
+    pub fn back(&self) {
+        self.with(|layer| layer.back())
+    }
+    pub fn reset(&self) {
+        self.with(|layer| layer.reset())
+    }
+    pub fn pointer(&self, position: Vec2, clicked: bool) {
+        self.with(|layer| layer.pointer(position, clicked))
+    }
+    pub fn pointer_state(&self, position: Vec2, held: bool) {
+        self.with(|layer| layer.pointer_state(position, held))
+    }
+    pub fn pointer_state_with_time(&self, position: Vec2, held: bool, seconds: f64) {
+        self.with(|layer| layer.pointer_state_with_time(position, held, seconds))
+    }
+    pub fn ignore_pointer_state(&self, held: bool) {
+        self.with(|layer| layer.ignore_pointer_state(held))
+    }
+    pub fn take_sounds(&self) -> Vec<&'static str> {
+        self.with(|layer| layer.take_sounds())
+    }
+    pub fn advance_animation(&self, ticks: f32) {
+        self.with(|layer| layer.advance_animation(ticks))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_hint_selection(&self) -> (usize, f32) {
+        self.with(|layer| layer.reference_hint_selection())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_set_purple_list_scroll(&self, scroll: f32) {
+        self.with(|layer| layer.reference_set_purple_list_scroll(scroll))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_purple_selection(&self) -> (Option<usize>, f32, f32) {
+        self.with(|layer| layer.reference_purple_selection())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_accusation_selection(&self, entry: usize) -> (Option<usize>, bool) {
+        self.with(|layer| layer.reference_accusation_selection(entry))
+    }
+    pub fn result(&self) -> Option<i32> {
+        self.with(|layer| layer.result())
+    }
+    pub fn allows_playback_mode_changes(&self) -> bool {
+        self.with(|layer| layer.allows_playback_mode_changes())
+    }
+}

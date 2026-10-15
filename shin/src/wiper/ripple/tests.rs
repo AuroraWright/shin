@@ -129,11 +129,13 @@ fn reference_ripple_gpu_native_radial_warp_time_phase_envelope_and_rgba_blend() 
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     if let Ok(rom) = std::env::var("SHIN_REFERENCE_ROM") {
@@ -143,6 +145,8 @@ fn reference_ripple_gpu_native_radial_warp_time_phase_envelope_and_rgba_blend() 
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -377,8 +381,8 @@ fn reference_ripple_gpu_native_radial_warp_time_phase_envelope_and_rgba_blend() 
         let pixels = crate::layer::user::readback_test_texture(&mut context, &target);
         for y in 0..64 {
             for x in 0..64 {
-                let u = (f64::from(x) + 0.5) / 64.0;
-                let v = (f64::from(y) + 0.5) / 64.0;
+                let u = (x as f64 + 0.5) / 64.0;
+                let v = (y as f64 + 0.5) / 64.0;
                 let dx = (u - f64::from(center[0])) * f64::from(center[2]);
                 let dy = (v - f64::from(center[1])) * f64::from(center[3]);
                 let radius = dx.hypot(dy);

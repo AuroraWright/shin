@@ -2,11 +2,23 @@
 mod delayed_tests;
 #[cfg(test)]
 mod native_copy_tests;
+#[cfg(test)]
+mod native_scheduling_tests;
+#[cfg(test)]
+mod owned_capture_tests;
+mod prepared_batch;
+#[cfg(test)]
+mod prepared_batch_owner_tests;
 mod transition;
+use prepared_batch::{PreparedPair, PreparedSlotBatch};
 #[cfg(test)]
 mod update_tests;
+#[cfg(test)]
+mod debug_group_tests;
 use crate::wiper::AnyWiper;
 use std::sync::Arc;
+#[cfg(test)]
+pub(crate) use transition::ReferenceLayerLeaf;
 use transition::SlotLayer;
 
 use glam::{Mat4, Vec3, Vec3Swizzles as _, vec2, vec3};
@@ -36,6 +48,7 @@ use crate::{
         new_drawable_layer::{
             NewDrawableLayerNeedsSeparatePass, NewDrawableLayerState, PrerenderedDrawable,
         },
+        owner::{LayerOwner, LayerRead, LayerStorage, LayerWrite, RetainedLayer},
         properties::LayerProperties,
         render_params::{DrawableClipMode, DrawableClipParams, DrawableParams, TransformParams},
     },
@@ -50,19 +63,38 @@ struct LayerItem<T> {
     pub layerbank_id: Option<LayerbankId>,
     removal_delay: Ticks,
     #[render_clone(needs_render)]
-    pub layer: SlotLayer<T>,
+    pub layer: LayerStorage<SlotLayer<T>>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
+enum LayerRenderSource {
+    Entry(usize),
+    Retained(RetainedLayer),
+}
+impl LayerRenderSource {
+    fn layer<'a, T: Layer>(&'a self, layers: &'a [LayerItem<T>]) -> &'a dyn Layer {
+        match self {
+            Self::Entry(index) => &layers[*index].layer,
+            Self::Retained(owner) => owner,
+        }
+    }
+    fn retain<T: Layer + Send + Sync + 'static>(&self, group: &LayerGroup<T>) -> RetainedLayer {
+        match self {
+            Self::Entry(index) => group.retained_slot(*index),
+            Self::Retained(owner) => owner.clone(),
+        }
+    }
+}
+#[derive(Clone)]
 struct LayerRenderItem {
-    // TODO: maybe we should make the layers actually shareable with `Arc`s, yknow...
-    pub layer_index: usize,
+    source: LayerRenderSource,
     pub stencil_ref_relative: u8,
 }
 
 pub struct LayerGroup<T = UserLayer> {
     update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
     layers: Vec<LayerItem<T>>,
+    shared_targets: bool,
 
     stencil_bump: u8,
     layers_to_render: Vec<LayerRenderItem>,
@@ -85,6 +117,7 @@ impl<T: DrawableLayer + RenderClone> RenderClone for LayerGroup<T> {
         Self {
             update_tracker: self.update_tracker.clone(),
             layers,
+            shared_targets: self.shared_targets,
             stencil_bump: self.stencil_bump,
             // Native79ce8/79cec leave the prepared render list empty.
             layers_to_render: Vec::new(),
@@ -98,103 +131,130 @@ impl<T: DrawableLayer + RenderClone> RenderClone for LayerGroup<T> {
 }
 
 impl<T> LayerGroup<T> {
+    /// In-place native hydration resets property values and replaces children,
+    /// while retaining the parent drawable's clocks and render resources.
+    pub(crate) fn preserve_drawable_state_from(&mut self, source: &mut Self) {
+        std::mem::swap(&mut self.update_tracker, &mut source.update_tracker);
+        std::mem::swap(&mut self.new_drawable_state, &mut source.new_drawable_state);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_drawable_state(&self) -> (u32, [f32; 3]) {
+        (
+            self.new_drawable_state.reference_dissolve_seed(),
+            self.new_drawable_state.reference_effect_phases(),
+        )
+    }
+
+    fn selected_source(&self, index: usize) -> LayerRenderSource
+    where
+        T: Layer + Send + Sync + 'static,
+    {
+        if self.shared_targets {
+            // Native7c694/7c6cc keeps the actual selected child in the prepared
+            // list. Bank removal/reuse must not redirect this frame's render.
+            LayerRenderSource::Retained(self.retained_slot(index))
+        } else {
+            // The closed Screen/Message root has fixed direct children and
+            // cannot expose an Effect capture or replace a prepared child.
+            LayerRenderSource::Entry(index)
+        }
+    }
     fn pre_render_slot_batch(
-        &mut self,
+        &self,
         indices: &[usize],
-        lower: &[usize],
+        lower: &[LayerRenderSource],
         context: &mut PreRenderContext,
         transform: &TransformParams,
-    ) where
-        T: Layer,
+    ) -> RetainedLayer
+    where
+        T: Layer + Send + Sync + 'static,
     {
-        // Native7ca30/806b0 retain pairs in a transient render batch. The
-        // semantic children stay in this group; borrow them for the same two
-        // captures and store the result in the first slot's scratch holders.
-        for source_side in [true, false] {
-            let mut pending: Vec<(usize, Option<bool>)> =
-                lower.iter().map(|&i| (i, None)).collect();
-            for &index in indices {
-                if self.layers[index].layer.batch_layer(source_side).is_none() {
-                    continue;
-                }
-                let (left, current_and_right) = self.layers.split_at_mut(index);
-                let (current, right) = current_and_right.split_first_mut().unwrap();
-                let lower = pending
-                    .iter()
-                    .filter_map(|&(i, side)| {
-                        let item = if i < index {
-                            &left[i]
-                        } else {
-                            &right[i - index - 1]
-                        };
-                        side.map_or(Some(&item.layer as &dyn Layer), |s| {
-                            item.layer.batch_layer(s)
-                        })
-                    })
-                    .collect::<Vec<_>>();
-                let consumed =
-                    current
-                        .layer
-                        .pre_render_batch_layer(source_side, context, transform, &lower);
-                if consumed {
-                    pending.clear();
-                }
-                pending.push((index, Some(source_side)));
-            }
-            let index = indices[0];
-            let (left, current_and_right) = self.layers.split_at_mut(index);
-            let (current, right) = current_and_right.split_first_mut().unwrap();
-            let SlotLayer {
-                source,
-                target,
-                wiper,
-                source_texture,
-                target_texture,
-                ..
-            } = &mut current.layer;
-            let layers = pending
-                .iter()
-                .filter_map(|&(i, side)| {
-                    if i == index {
-                        let source_side = side.unwrap();
-                        if source_side && wiper.is_some() {
-                            source.as_deref().map(|s| s as &dyn Layer)
-                        } else {
-                            Some(&*target as &dyn Layer)
-                        }
-                    } else {
-                        let item = if i < index {
-                            &left[i]
-                        } else {
-                            &right[i - index - 1]
-                        };
-                        side.map_or(Some(&item.layer as &dyn Layer), |s| {
-                            item.layer.batch_layer(s)
-                        })
-                    }
-                })
-                .collect::<Vec<_>>();
-            let holder = if source_side {
-                source_texture
-            } else {
-                target_texture
-            };
-            let texture = holder.get_or_init(context);
-            let mut pass = context.begin_pass(
-                texture.as_texture_target(),
-                Some(context.depth_stencil),
-                "SlotLayer/batch",
-            );
-            pass.clear(None, Some(0), None);
-            crate::layer::render_layers(&mut pass, transform, &layers, FloatColor4::BLACK, 0);
+        let mut batch = self.build_slot_batch(indices);
+        let lower = lower
+            .iter()
+            .map(|source| source.retain(self))
+            .collect::<Vec<_>>();
+        batch.pre_render_with_owned_lower(context, transform, &lower);
+        batch.retain()
+    }
+
+    fn build_slot_batch(&self, indices: &[usize]) -> LayerOwner<PreparedSlotBatch>
+    where
+        T: Layer + Send + Sync + 'static,
+    {
+        let first = self.layers[indices[0]].layer.read();
+        let wiper = first
+            .wiper
+            .as_ref()
+            .expect("batch starts with active wipe")
+            .clone();
+        drop(first);
+        let mut batch = PreparedSlotBatch::new(self.prepared_pair(indices[0]), wiper);
+        for &index in &indices[1..] {
+            batch.append(self.prepared_pair(index));
+        }
+        LayerOwner::new(batch)
+    }
+
+    fn prepared_pair(&self, index: usize) -> PreparedPair
+    where
+        T: Layer + Send + Sync + 'static,
+    {
+        let slot = self.layers[index].layer.read();
+        let target = slot
+            .target
+            .shared_owner()
+            .expect("capturable target has a stable owner")
+            .retain();
+        let source = if slot.wiper.is_some() {
+            slot.source.as_ref().map(|source| {
+                let source = source.read();
+                assert!(
+                    source.wiper.is_none(),
+                    "native batch refuses active nested source"
+                );
+                source
+                    .target
+                    .shared_owner()
+                    .expect("capturable source has a stable owner")
+                    .retain()
+            })
+        } else {
+            Some(target.clone())
+        };
+        PreparedPair { source, target }
+    }
+
+    fn retained_slot(&self, index: usize) -> RetainedLayer
+    where
+        T: Layer + Send + Sync + 'static,
+    {
+        let storage = &self.layers[index].layer;
+        let slot = storage.read();
+        if slot.wiper.is_none() {
+            slot.target
+                .shared_owner()
+                .expect("capturable target has a stable owner")
+                .retain()
+        } else {
+            storage
+                .shared_owner()
+                .expect("capturable wrapper has a stable owner")
+                .retain()
         }
     }
 
     #[cfg(test)]
-    pub(crate) fn reference_owner_leaves(&self) -> Vec<&T> {
+    pub(crate) fn reference_owner_leaves(&self) -> Vec<ReferenceLayerLeaf<'_, T>> {
         let mut leaves = Vec::new();
         for item in &self.layers {
-            item.layer.reference_owner_leaves(&mut leaves);
+            match &item.layer {
+                LayerStorage::Direct(slot) => slot.reference_owner_leaves(&mut leaves),
+                LayerStorage::Shared(owner) => {
+                    SlotLayer::reference_owned_leaves(owner, &mut leaves)
+                }
+            }
         }
         leaves
     }
@@ -211,7 +271,7 @@ impl<T> LayerGroup<T> {
                     } else {
                         0
                     },
-                    entry.layer.wiper.is_some(),
+                    entry.layer.read().wiper.is_some(),
                 )
             })
             .collect()
@@ -220,14 +280,14 @@ impl<T> LayerGroup<T> {
     pub(crate) fn reference_transition_words(&self) -> Vec<[u32; 7]> {
         let mut words = Vec::new();
         for item in &self.layers {
-            item.layer.reference_transition_words(&mut words);
+            item.layer.read().reference_transition_words(&mut words);
         }
         words
     }
     #[cfg(test)]
     pub(crate) fn reference_advance_transition_clocks(&mut self, delta: f32) {
         for item in &mut self.layers {
-            item.layer.reference_advance_clocks(delta);
+            item.layer.write().reference_advance_clocks(delta);
         }
     }
     #[cfg(test)]
@@ -238,7 +298,7 @@ impl<T> LayerGroup<T> {
     ) -> usize {
         self.layers
             .iter_mut()
-            .map(|i| i.layer.reference_prepare_textures(device, resize))
+            .map(|i| i.layer.write().reference_prepare_textures(device, resize))
             .sum()
     }
     #[cfg(test)]
@@ -260,7 +320,8 @@ impl<T> LayerGroup<T> {
         Self {
             update_tracker: Default::default(),
             layers: vec![],
-            stencil_bump: 0,
+            shared_targets: true,
+            stencil_bump: 1,
             layers_to_render: vec![],
             new_drawable_state: NewDrawableLayerState::new(),
             mask_texture: None,
@@ -270,6 +331,13 @@ impl<T> LayerGroup<T> {
         }
     }
 
+    /// The private root container has only Screen/Message targets and exposes
+    /// no replacement or Effect capture API; its borrowed accessors stay direct.
+    pub(crate) fn new_direct(label: Option<String>) -> Self {
+        let mut group = Self::new(label);
+        group.shared_targets = false;
+        group
+    }
     pub fn add_layer(&mut self, layerbank_id: LayerbankId, layer: T) {
         self.add_layer_with_wiper(layerbank_id, layer, None);
     }
@@ -281,11 +349,25 @@ impl<T> LayerGroup<T> {
         layer: T,
         wiper: Option<AnyWiper>,
     ) {
+        let layer = if self.shared_targets {
+            LayerStorage::new_shared(layer)
+        } else {
+            LayerStorage::Direct(layer)
+        };
+        self.add_layer_storage(layerbank_id, layer, wiper);
+    }
+    /// Install an existing target owner without copying or changing its identity.
+    pub(crate) fn add_layer_storage(
+        &mut self,
+        layerbank_id: LayerbankId,
+        layer: LayerStorage<T>,
+        wiper: Option<AnyWiper>,
+    ) {
         let (index, source) = match self
             .layers
             .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
         {
-            Ok(index) => (index, Some(self.layers.remove(index).layer)),
+            Ok(index) => (index, Some(self.layers.remove(index).layer.into_owner())),
             Err(index) => (index, None),
         };
         self.layers.insert(
@@ -293,21 +375,41 @@ impl<T> LayerGroup<T> {
             LayerItem {
                 layerbank_id: Some(layerbank_id),
                 removal_delay: Ticks::ZERO,
-                layer: SlotLayer::new(layer, source, wiper),
+                layer: {
+                    let slot = SlotLayer::new_stored(layer, source, wiper);
+                    if self.shared_targets {
+                        LayerStorage::new_shared(slot)
+                    } else {
+                        LayerStorage::Direct(slot)
+                    }
+                },
             },
         );
     }
 
     /// Immediate removal returns the target. Delayed removal retains the whole
     /// slot under native ID -1 and returns None; its old bank is free for reuse.
-    pub fn remove_layer(&mut self, layerbank_id: LayerbankId, delay_time: Ticks) -> Option<T> {
+    pub fn remove_layer(
+        &mut self,
+        layerbank_id: LayerbankId,
+        delay_time: Ticks,
+    ) -> Option<LayerStorage<T>> {
         let index = self
             .layers
             .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
             .ok()?;
         let mut removed = self.layers.remove(index);
         if delay_time == Ticks::ZERO {
-            Some(removed.layer.target)
+            Some(match removed.layer {
+                LayerStorage::Direct(slot) => slot.target,
+                LayerStorage::Shared(owner) => LayerStorage::Shared(
+                    owner
+                        .read()
+                        .target
+                        .shared_owner()
+                        .expect("shared slot has a shared target"),
+                ),
+            })
         } else {
             // Native7b510..7b520 stores ID -1 and the float countdown, then
             // 7b6e4..7b6f4 inserts the retained entry at the vector beginning.
@@ -318,20 +420,72 @@ impl<T> LayerGroup<T> {
         }
     }
 
-    pub fn get_layer(&self, layerbank_id: LayerbankId) -> Option<&T> {
+    pub fn get_layer(&self, layerbank_id: LayerbankId) -> Option<LayerRead<'_, T>> {
         self.layers
             .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
-            .map(|index| &self.layers[index].layer.target)
+            .map(|index| match &self.layers[index].layer {
+                LayerStorage::Direct(slot) => slot.target.read(),
+                LayerStorage::Shared(owner) => LayerRead::Shared(
+                    owner
+                        .read()
+                        .target
+                        .shared_owner()
+                        .expect("shared slot has a shared target")
+                        .read_owned(),
+                ),
+            })
             .ok()
     }
 
-    pub fn get_layer_mut(&mut self, layerbank_id: LayerbankId) -> Option<&mut T> {
+    pub fn get_layer_mut(&mut self, layerbank_id: LayerbankId) -> Option<LayerWrite<'_, T>> {
         self.layers
             .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
-            .map(|index| &mut self.layers[index].layer.target)
+            .map(|index| match &mut self.layers[index].layer {
+                LayerStorage::Direct(slot) => slot.target.write(),
+                LayerStorage::Shared(owner) => LayerWrite::Shared(
+                    owner
+                        .read()
+                        .target
+                        .shared_owner()
+                        .expect("shared slot has a shared target")
+                        .write_owned(),
+                ),
+            })
             .ok()
     }
 
+    pub(crate) fn layer_owner(
+        &self,
+        bank: LayerbankId,
+    ) -> Option<crate::layer::owner::LayerOwner<T>> {
+        let index = self
+            .layers
+            .binary_search_by_key(&Some(bank), |item| item.layerbank_id)
+            .ok()?;
+        self.layers[index].layer.read().target.shared_owner()
+    }
+    pub(crate) fn get_direct_layer(&self, bank: LayerbankId) -> Option<&T> {
+        self.layers
+            .binary_search_by_key(&Some(bank), |item| item.layerbank_id)
+            .ok()
+            .and_then(|index| {
+                self.layers[index]
+                    .layer
+                    .direct()
+                    .and_then(|slot| slot.target.direct())
+            })
+    }
+    pub(crate) fn get_direct_layer_mut(&mut self, bank: LayerbankId) -> Option<&mut T> {
+        self.layers
+            .binary_search_by_key(&Some(bank), |item| item.layerbank_id)
+            .ok()
+            .and_then(|index| {
+                self.layers[index]
+                    .layer
+                    .direct_mut()
+                    .and_then(|slot| slot.target.direct_mut())
+            })
+    }
     pub fn get_used_layerbank_ids(&self) -> Vec<LayerbankId> {
         self.layers
             .iter()
@@ -359,6 +513,7 @@ impl<T> LayerGroup<T> {
         {
             self.layers[index]
                 .layer
+                .read()
                 .property_trace(property, &mut output);
         }
         output
@@ -367,7 +522,7 @@ impl<T> LayerGroup<T> {
     pub fn has_wiper_for_layerbank(&self, layerbank_id: LayerbankId) -> bool {
         self.layers
             .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
-            .is_ok_and(|index| self.layers[index].layer.is_transition_active())
+            .is_ok_and(|index| self.layers[index].layer.read().is_transition_active())
     }
 
     pub fn set_mask_texture(&mut self, mask_texture: Arc<MaskTexture>, flags: MaskFlags) {
@@ -661,7 +816,7 @@ where
             }
 
             for render_item in self.layers_to_render.iter().rev() {
-                self.layers[render_item.layer_index].layer.render(
+                render_item.source.layer(self.layers).render(
                     &mut pass,
                     &self_transform,
                     render_item.stencil_ref_relative,
@@ -669,7 +824,7 @@ where
                 );
             }
             for render_item in &self.layers_to_render {
-                self.layers[render_item.layer_index].layer.render(
+                render_item.source.layer(self.layers).render(
                     &mut pass,
                     &self_transform,
                     render_item.stencil_ref_relative,
@@ -723,14 +878,15 @@ where
             item.removal_delay = Ticks::from_f32(
                 (item.removal_delay.as_f32() - context.delta_ticks.as_f32()).max(0.0),
             );
-            item.removal_delay.as_f32().abs() >= f32::EPSILON || item.layer.is_transition_active()
+            item.removal_delay.as_f32().abs() >= f32::EPSILON
+                || item.layer.read().is_transition_active()
         });
     }
 }
 
 impl<T> Layer for LayerGroup<T>
 where
-    T: DrawableLayer,
+    T: DrawableLayer + Send + Sync + 'static,
 {
     fn fast_forward(&mut self) {
         self.props.fast_forward();
@@ -756,7 +912,7 @@ where
                 // Native comparator81274/81348 reads drawable properties+20,
                 // not the group's storage bank. Non-drawable root children
                 // use native position/ID sentinels instead.
-                layer.layer.render_order_key()
+                layer.layer.read().render_order_key()
             };
 
             let (left_position, left_id) = get_values(left);
@@ -774,7 +930,7 @@ where
         });
 
         let self_transform = self.properties().get_composed_transform_params(transform);
-        let mut pending: Vec<usize> = Vec::new();
+        let mut pending: Vec<LayerRenderSource> = Vec::new();
         let mut position = 0;
         while position < layers.len() {
             let index = layers[position];
@@ -782,18 +938,19 @@ where
             while end < layers.len()
                 && self.layers[index]
                     .layer
-                    .can_batch_with(&self.layers[layers[end]].layer)
+                    .read()
+                    .can_batch_with(&self.layers[layers[end]].layer.read())
             {
                 end += 1;
             }
             if end > position + 1 {
-                self.pre_render_slot_batch(
+                let batch = self.pre_render_slot_batch(
                     &layers[position..end],
                     &pending,
                     context,
                     &self_transform,
                 );
-                pending.push(index);
+                pending.push(LayerRenderSource::Retained(batch));
                 position = end;
                 continue;
             }
@@ -804,44 +961,35 @@ where
                 self.layers[index]
                     .layer
                     .pre_render(context, &self_transform);
-                pending.push(index);
+                pending.push(self.selected_source(index));
                 continue;
             }
-            // Split by storage index while retaining the native rendering order.
-            // Lower siblings are borrowed: captures never advance them a second time.
-            let (left, current_and_right) = self.layers.split_at_mut(index);
-            let (current, right) = current_and_right.split_first_mut().unwrap();
             let lower = pending
                 .iter()
-                .map(|&lower_index| {
-                    let item = if lower_index < index {
-                        &left[lower_index]
-                    } else {
-                        &right[lower_index - index - 1]
-                    };
-                    &item.layer as &dyn Layer
-                })
+                .map(|source| source.retain(self))
                 .collect::<Vec<_>>();
-            let consumed = current
-                .layer
-                .pre_render_with_lower(context, &self_transform, &lower);
+            let consumed = self.layers[index].layer.pre_render_with_owned_lower(
+                context,
+                &self_transform,
+                &lower,
+            );
             if consumed {
                 pending.clear();
             }
-            pending.push(index);
+            pending.push(self.selected_source(index));
         }
 
         self.layers_to_render.clear();
         let mut layers_to_render = std::mem::take(&mut self.layers_to_render);
 
         let mut stencil_value = 1;
-        for &index in &pending {
+        for source in pending {
+            let bump = source.layer(&self.layers).get_stencil_bump();
             layers_to_render.push(LayerRenderItem {
-                layer_index: index,
+                source,
                 stencil_ref_relative: stencil_value,
             });
-
-            stencil_value += self.layers[index].layer.get_stencil_bump();
+            stencil_value += bump;
         }
 
         self.stencil_bump = stencil_value;
@@ -915,15 +1063,11 @@ where
 
         match pass_kind {
             PassKind::Opaque => {
-                for &LayerRenderItem {
-                    layer_index,
-                    stencil_ref_relative,
-                } in self.layers_to_render.iter().rev()
-                {
-                    self.layers[layer_index].layer.render(
+                for item in self.layers_to_render.iter().rev() {
+                    item.source.layer(&self.layers).render(
                         pass,
                         &self_transform,
-                        stencil_ref + stencil_ref_relative,
+                        stencil_ref + item.stencil_ref_relative,
                         pass_kind,
                     )
                 }
@@ -968,15 +1112,11 @@ where
                 pass.pop_debug();
             }
             PassKind::Transparent => {
-                for &LayerRenderItem {
-                    layer_index,
-                    stencil_ref_relative,
-                } in &self.layers_to_render
-                {
-                    self.layers[layer_index].layer.render(
+                for item in &self.layers_to_render {
+                    item.source.layer(&self.layers).render(
                         pass,
                         &self_transform,
-                        stencil_ref + stencil_ref_relative,
+                        stencil_ref + item.stencil_ref_relative,
                         pass_kind,
                     )
                 }
@@ -998,8 +1138,6 @@ impl<T> LayerGroup<T> {
         stencil_ref: u8,
         pass_kind: PassKind,
     ) {
-        pass.push_debug("LayerGroup/finish_render_with_mask");
-
         let props = &self.props;
         if !props.is_visible() {
             return;
@@ -1021,6 +1159,9 @@ impl<T> LayerGroup<T> {
             }
             (false, PassKind::Transparent) => (true, true),
         };
+
+        // Rejected passes must return before opening a GPU debug group.
+        pass.push_debug("LayerGroup/finish_render_with_mask");
 
         let transform_params = props.get_composed_transform_params(transform_params);
 
@@ -1131,7 +1272,7 @@ impl<T> LayerGroup<T> {
 
 impl<T> DrawableLayer for LayerGroup<T>
 where
-    T: DrawableLayer,
+    T: DrawableLayer + Send + Sync + 'static,
 {
     fn properties(&self) -> &LayerProperties {
         &self.props

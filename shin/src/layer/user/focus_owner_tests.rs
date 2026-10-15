@@ -2,7 +2,7 @@
 use super::*;
 use crate::{
     asset::{
-        effects::EffectTextures,
+        effects::EffectsAtlasBorrow,
         system::{AssetLoadContext, LayeredAssetIo, cache::AssetCache},
     },
     layer::LayerGroup,
@@ -22,15 +22,15 @@ enum Root {
     Group(LayerGroup),
 }
 impl Root {
-    fn leaves(&self) -> Vec<&UserLayer> {
+    fn leaves(&self) -> Vec<crate::layer::layer_group::ReferenceLayerLeaf<'_, UserLayer>> {
         match self {
-            Self::Focus(l) => vec![l],
+            Self::Focus(l) => vec![crate::layer::layer_group::ReferenceLayerLeaf::borrowed(l)],
             Self::Group(g) => g.reference_owner_leaves(),
         }
     }
-    fn target(&mut self) -> &mut UserLayer {
+    fn target(&mut self) -> crate::layer::owner::LayerWrite<'_, UserLayer> {
         match self {
-            Self::Focus(l) => l,
+            Self::Focus(l) => crate::layer::owner::LayerWrite::Direct(l),
             Self::Group(g) => g.get_layer_mut(LayerbankId::new(0)).unwrap(),
         }
     }
@@ -65,7 +65,7 @@ fn focus_mut(l: &mut UserLayer) -> &mut focus_line_layer::FocusLineLayer {
     };
     l
 }
-fn make_focus(textures: &Arc<EffectTextures>, queued: bool, populated: bool) -> UserLayer {
+fn make_focus(textures: &EffectsAtlasBorrow, queued: bool, populated: bool) -> UserLayer {
     let mut l: UserLayer =
         focus_line_layer::FocusLineLayer::new(textures.clone(), -200, 100).into();
     if queued {
@@ -91,7 +91,7 @@ fn make_focus(textures: &Arc<EffectTextures>, queued: bool, populated: bool) -> 
     l
 }
 fn prepare_root(
-    textures: &Arc<EffectTextures>,
+    textures: &EffectsAtlasBorrow,
     queued: bool,
     populated: bool,
     graph: usize,
@@ -124,7 +124,7 @@ fn snapshot(
     id: usize,
     phase: &str,
     roots: &[Option<Root>; 3],
-    textures: &Arc<EffectTextures>,
+    textures: &EffectsAtlasBorrow,
     last_rng: &mut usize,
 ) -> String {
     let now = crate::engine_random::seed_call_count();
@@ -137,7 +137,7 @@ fn snapshot(
     *last_rng = now;
     let mut owners = Vec::new();
     let mut pointers = BTreeSet::new();
-    let mut live = 0;
+    let mut _live = 0;
     let mut slots = 0;
     for root in roots {
         let leaves = root.as_ref().map_or_else(Vec::new, Root::leaves);
@@ -149,8 +149,8 @@ fn snapshot(
             slots += root.slots();
         }
         for l in leaves {
-            live += 1;
-            let f = focus(l);
+            _live += 1;
+            let f = focus(&l);
             let rays = f.reference_owner_rays();
             assert_eq!(rays.rays.len(), 40);
             assert!(
@@ -198,9 +198,9 @@ fn snapshot(
     }
     words.push(slots.to_string());
     assert_eq!(
-        Arc::strong_count(textures),
-        live + 1,
-        "Desktop policy: explicit fixture atlas plus layer-owned Arcs"
+        textures.reference_strong_count(),
+        1,
+        "Engine atlas owner only; layer and copy handles borrow"
     );
     words.join(" ")
 }
@@ -215,7 +215,7 @@ fn reference_native_focusline_clone_group_slot_and_final_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut total = 0;
     for version in ["original", "1.03"] {
         let mut io = LayeredAssetIo::new();
@@ -228,6 +228,8 @@ fn reference_native_focusline_clone_group_slot_and_final_retirement() {
         let server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -235,9 +237,8 @@ fn reference_native_focusline_clone_group_slot_and_final_retirement() {
                 font_cache: Default::default(),
             },
         ));
-        let textures: Arc<EffectTextures> =
-            shin_tasks::block_on(server.load("/effects.txa")).unwrap();
-        let weak = Arc::downgrade(&textures);
+        let textures: EffectsAtlasBorrow = shin_tasks::block_on(server.effects_atlas()).unwrap();
+        let weak = textures.reference_weak();
         assert_eq!(weak.strong_count(), 1);
         let mut actual = Vec::new();
         let mut frame = FrameId::default();
@@ -287,7 +288,7 @@ fn reference_native_focusline_clone_group_slot_and_final_retirement() {
                     &textures,
                     &mut last_rng,
                 ));
-                focus_mut(roots[1].as_mut().unwrap().target())
+                focus_mut(&mut roots[1].as_mut().unwrap().target())
                     .reference_owner_rays_mut()
                     .reference_owner_mutate();
                 actual.push(snapshot(
@@ -332,11 +333,12 @@ fn reference_native_focusline_clone_group_slot_and_final_retirement() {
         drop(textures);
         assert_eq!(
             weak.strong_count(),
-            0,
-            "Desktop final effects atlas fixture owner retired"
+            1,
+            "Engine retains atlas after all layers"
         );
         drop(server);
-        device.poll(wgpu::Maintain::Wait);
+        assert_eq!(weak.strong_count(), 0, "Engine atlas owner retired");
+        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     println!(
         "FocusLine ownership:{total} cases;actual warmed rays/queued tweens/Group/Slot copies independent;two final desktop atlas fixtures retired"

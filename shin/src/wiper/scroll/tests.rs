@@ -93,11 +93,13 @@ fn reference_scroll_gpu_native_direction_pairs_quantized_alpha_and_uncovered_pix
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     if let Ok(rom) = std::env::var("SHIN_REFERENCE_ROM") {
@@ -107,6 +109,8 @@ fn reference_scroll_gpu_native_direction_pairs_quantized_alpha_and_uncovered_pix
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),

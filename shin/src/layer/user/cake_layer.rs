@@ -661,7 +661,7 @@ mod tests {
             shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
                 .unwrap();
         let (device, queue) =
-            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
                 .unwrap();
         let mut io = LayeredAssetIo::new();
         if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
@@ -672,6 +672,8 @@ mod tests {
         let server = AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device,
                 wgpu_queue: queue,
                 bustup_cache: AssetCache::new(),
@@ -1166,5 +1168,69 @@ impl CakeLayer {
                 (t.value().to_bits(), !t.is_idle())
             })
             .collect()
+    }
+}
+
+// Owned interactive views dispatch through the same actual layer.
+impl super::InteractiveView<'_, CakeLayer> {
+    #[cfg(test)]
+    pub(crate) fn reference_draw_command(&self, command: &str) {
+        self.with(|layer| layer.reference_draw_command(command))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
+        self.with(|layer| layer.reference_controller_state())
+    }
+    pub fn reset(&self) {
+        self.with(|layer| layer.reset())
+    }
+    pub fn restore_completed_answer(&self, answer: i32) {
+        self.with(|layer| layer.restore_completed_answer(answer))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_visual_slice(&self) -> Option<usize> {
+        self.with(|layer| layer.reference_visual_slice())
+    }
+    pub fn pointer(&self, position: Vec2, clicked: bool) {
+        self.with(|layer| layer.pointer(position, clicked))
+    }
+    pub fn navigate(&self, delta: i32) {
+        self.with(|layer| layer.navigate(delta))
+    }
+    pub fn confirm(&self) {
+        self.with(|layer| layer.confirm())
+    }
+    pub(crate) fn handle_controller_input(
+        &self,
+        state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
+        axes: Vec2,
+    ) {
+        self.with(|layer| layer.handle_controller_input(state, axes))
+    }
+    pub(crate) fn pointer_frame(
+        &self,
+        frame: &crate::adv::input_area::PointerFrame<'_>,
+        extent: (u16, u16),
+    ) {
+        self.with(|layer| layer.pointer_frame(frame, extent))
+    }
+    pub(crate) fn ignore_pointer_state(&self) {
+        self.with(|layer| layer.ignore_pointer_state())
+    }
+    pub(crate) fn take_sounds(&self) -> Vec<&'static str> {
+        self.with(|layer| layer.take_sounds())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_feedback(
+        &self,
+    ) -> (Vec2, Option<usize>, bool, f32, [f32; 15], [f32; 15]) {
+        self.with(|layer| layer.reference_feedback())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_update(&self, ticks: f32) {
+        self.with(|layer| layer.reference_update(ticks))
+    }
+    pub fn result(&self) -> Option<i32> {
+        self.with(|layer| layer.result())
     }
 }

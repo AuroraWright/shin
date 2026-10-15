@@ -3,7 +3,17 @@ use glam::{Vec2, vec2};
 /// Native text0xa4950..0xa4a80: eight circular taps, optionally shifted for
 /// saved outline mode1. Other stored values retain the centered outline.
 pub(crate) fn distances(scale: Vec2, glyph_pixels: Vec2, glyph_uv: Vec2, mode: u8) -> [Vec2; 8] {
-    let radius = Vec2::splat(2.5) / scale / glyph_pixels * glyph_uv;
+    distances_with_radius(scale, glyph_pixels, glyph_uv, mode, 2.5)
+}
+
+pub(crate) fn distances_with_radius(
+    scale: Vec2,
+    glyph_pixels: Vec2,
+    glyph_uv: Vec2,
+    mode: u8,
+    radius: f32,
+) -> [Vec2; 8] {
+    let radius = Vec2::splat(radius) / scale / glyph_pixels * glyph_uv;
     let diagonal = f32::from_bits(0x3f34fdf4); // native0.707, not1/sqrt(2)
     let shift = if mode == 1 {
         Vec2::splat(f32::from_bits(0x3f99999a)) / scale / glyph_pixels * glyph_uv

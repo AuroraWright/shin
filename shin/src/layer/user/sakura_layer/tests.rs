@@ -1,4 +1,8 @@
 use super::*;
+use crate::asset::{
+    effects::{EffectTextures, EffectsAtlas},
+    texture_archive::TextureArchiveBuilder,
+};
 use crate::{
     layer::{DrawableLayer, Layer},
     render::PreRenderContext,
@@ -9,21 +13,28 @@ use shin_core::{
     time::Ticks,
     vm::command::types::LayerProperty,
 };
+use shin_render::gpu_texture::GpuTexture;
 use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
+use std::sync::Arc;
 
 #[test]
 fn clone_owns_render_expiry_and_missing_texture_has_explicit_error() {
+    let atlas = EffectsAtlas::default();
+    atlas.publish(Arc::new(EffectTextures::default()));
     let layer = SakuraLayerImpl {
-        textures: Arc::new(SakuraTextures::default()),
+        textures: atlas.borrower(),
         particles: Mutex::new(SakuraParticles::new(0, 1).unwrap()),
     };
     let copy = layer.clone();
-    assert!(Arc::ptr_eq(&copy.textures, &layer.textures));
+    assert_eq!(
+        copy.textures.reference_identity(),
+        layer.textures.reference_identity()
+    );
     layer.particles.lock().particles[0].alive = false;
     assert!(copy.particles.lock().particles[0].alive);
     assert!(
         std::panic::catch_unwind(|| {
-            SakuraTextures::default().required();
+            EffectTextures::default().required("Sakura");
         })
         .is_err()
     );
@@ -43,7 +54,7 @@ impl SakuraLayer {
         assert!(model.particles.iter().all(|p| p.alive));
         drop(model);
         assert!(
-            self.inner_ref().textures.sakura.is_none(),
+            self.inner_ref().textures.read().get("Sakura").is_none(),
             "Actual supplied atlas lacks Sakura"
         );
         for invalid in [-1, 6, i32::MIN, i32::MAX] {
@@ -209,17 +220,22 @@ impl SakuraLayer {
                 }
             })
             .collect();
-        self.inner_mut().textures = Arc::new(SakuraTextures {
-            sakura: Some(GpuTexture::new_static_with_data(
+        let synthetic_atlas = EffectsAtlas::default();
+        let mut synthetic_textures = EffectTextures::default();
+        synthetic_textures.add_texture(
+            "Sakura",
+            GpuTexture::new_static_with_data(
                 context.device,
                 context.queue,
                 Some("Synthetic Sakura atlas"),
                 winit::dpi::PhysicalSize::new(288, 408),
                 wgpu::TextureFormat::Rgba8Unorm,
                 &pixels,
-            )),
-            retained_textures: Vec::new(),
-        });
+            ),
+        );
+        synthetic_atlas.publish(Arc::new(synthetic_textures));
+        let original_borrower = self.inner_ref().textures.clone();
+        self.inner_mut().textures = synthetic_atlas.borrower();
         let initial = draw(
             self,
             context,
@@ -296,6 +312,7 @@ impl SakuraLayer {
         update.delta_ticks = Ticks::ZERO;
         self.update(&update);
         assert!(self.inner_ref().particles.lock().particles.is_empty());
+        self.inner_mut().textures = original_borrower;
         println!(
             "Animation0..5 loader/update/clone/guard/fast-forward, native missing Sakura error and synthetic sprite UV/bounds/radial transform/render expiry pass"
         );

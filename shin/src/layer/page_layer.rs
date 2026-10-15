@@ -55,7 +55,8 @@ impl RenderClone for PageLayer {
             planes,
             stencil_bump: self.stencil_bump,
             needs_force_blending: self.needs_force_blending,
-            layers_to_render: self.layers_to_render.clone(),
+            // Native9ed60/9ed64 starts the copied prepared plane list empty.
+            layers_to_render: Vec::new(),
             new_drawable_state,
             props,
         }
@@ -63,6 +64,10 @@ impl RenderClone for PageLayer {
 }
 
 impl PageLayer {
+    #[cfg(test)]
+    pub(crate) fn reference_prepared_plane_state(&self) -> (usize, u8) {
+        (self.layers_to_render.len(), self.stencil_bump)
+    }
     #[cfg(test)]
     pub(crate) fn reference_dissolve_seed(&self) -> u32 {
         self.new_drawable_state.reference_dissolve_seed()
@@ -101,7 +106,9 @@ impl PageLayer {
     ) {
         for plane in &self.planes {
             for id in plane.get_used_layerbank_ids() {
-                if let Some(crate::layer::user::UserLayer::Bustup(layer)) = plane.get_layer(id) {
+                if let Some(crate::layer::user::UserLayer::Bustup(layer)) =
+                    plane.get_layer(id).as_deref()
+                {
                     let transform = layer.properties().get_transform_params();
                     positions.push((
                         layer.inner_ref().character_id(),

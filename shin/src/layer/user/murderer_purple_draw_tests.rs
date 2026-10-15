@@ -28,7 +28,7 @@ impl Asset for FontBytes {
         _name: &str,
         data: AssetDataAccessor,
     ) -> anyhow::Result<Self> {
-        Ok(Self(data.read_all().await))
+        Ok(Self(data.read_all().await?))
     }
 }
 struct Case {

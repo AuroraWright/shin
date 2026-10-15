@@ -36,7 +36,7 @@ impl RainParticles {
             });
         }
     }
-    pub(super) fn reference_owner_words(&self) -> (Option<usize>, Vec<String>) {
+    pub(crate) fn reference_owner_words(&self) -> (Option<usize>, Vec<String>) {
         let mut hash = 0xcbf29ce484222325u64;
         for p in &self.particles {
             for v in p.shape.to_cols_array().into_iter().chain([
@@ -95,6 +95,8 @@ pub struct RainParticles {
     pub max_distance: i32,
     seed: u32,
     emission: f32,
+    rain_fall: f32,
+    retry_rejected: bool,
     pub particles: Vec<Particle>,
     pub expired: u32,
     pub needs_warm_up: bool,
@@ -102,7 +104,7 @@ pub struct RainParticles {
 
 impl RainParticles {
     #[cfg(test)]
-    pub(super) fn reference_seed(&self) -> u32 {
+    pub(crate) fn reference_seed(&self) -> u32 {
         self.seed
     }
     pub fn new(mode: i32, first_distance: i32, second_distance: i32, seed: u32) -> Self {
@@ -114,9 +116,27 @@ impl RainParticles {
             max_distance,
             seed: (seed % 2_147_483_647).max(1),
             emission: 1.0,
+            rain_fall: 400.0,
+            retry_rejected: false,
             particles: Vec::new(),
             expired: 0,
             needs_warm_up: true,
+        }
+    }
+
+    /// The older Higurashi a1848 emitter counts accepted particles rather than
+    /// attempts, and mode0 uses a1f14's 300.0 falling distance. Keep the later
+    /// Umineko constructor and its attempt-counting behavior unchanged.
+    pub(crate) fn new_higurashi(
+        mode: i32,
+        first_distance: i32,
+        second_distance: i32,
+        seed: u32,
+    ) -> Self {
+        Self {
+            rain_fall: 300.0,
+            retry_rejected: true,
+            ..Self::new(mode, first_distance, second_distance, seed)
         }
     }
 
@@ -153,7 +173,7 @@ impl RainParticles {
             let attempts = self.emission.trunc() as i32;
             self.emission = self.emission.fract();
             for _ in 0..attempts {
-                self.spawn(direction, speed);
+                while !self.spawn(direction, speed) && self.retry_rejected {}
             }
         }
         // The native update uses delta for emission, but advances each existing
@@ -169,13 +189,13 @@ impl RainParticles {
         });
     }
 
-    fn spawn(&mut self, direction: f32, speed: f32) {
+    fn spawn(&mut self, direction: f32, speed: f32) -> bool {
         let depth = self.random();
         let distance =
             depth * (self.max_distance - self.min_distance) as f32 + self.min_distance as f32;
         let horizontal = self.random() * self.max_distance as f32;
         if horizontal > distance {
-            return;
+            return false;
         }
         let projection = 1000.0 / distance;
         let direction = ((direction * 0.001).clamp(-1.0, 1.0) * 1.0471966)
@@ -191,7 +211,7 @@ impl RainParticles {
         } * projection)
             * speed;
         let fall = match self.mode {
-            0 => 400.0,
+            0 => self.rain_fall,
             1 => 8.0,
             _ => 5.0,
         };
@@ -212,6 +232,7 @@ impl RainParticles {
             velocity,
             radius,
         });
+        true
     }
 }
 

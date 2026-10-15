@@ -3777,11 +3777,13 @@ mod tests {
                 .unwrap();
         let (device, queue) = shin_tasks::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
+            }))
         .unwrap();
         let mut io = LayeredAssetIo::new();
         if let Some(patch) = std::env::var_os("SHIN_REFERENCE_PATCH_ROM") {
@@ -3792,6 +3794,8 @@ mod tests {
         let server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -3816,7 +3820,10 @@ mod tests {
                 cake.reference_update(ticks);
             }
         }
-        assert!(super::super::InteractiveLayerRef::Cake(&cake).allows_playback_mode_changes());
+        assert!(
+            super::super::InteractiveLayerRef::Cake(super::super::InteractiveView::Borrowed(&cake))
+                .allows_playback_mode_changes()
+        );
         let mut accusation = if let Some(menu) = menu {
             let view = shin_tasks::block_on(
                 super::super::murderer_accusation::MurdererAccusationView::load_menu(&server, 20),
@@ -3958,7 +3965,10 @@ mod tests {
             }
             assert_eq!(view.result(), None);
             assert_eq!(
-                super::super::InteractiveLayerRef::Murderer(&view).allows_playback_mode_changes(),
+                super::super::InteractiveLayerRef::Murderer(
+                    super::super::InteractiveView::Borrowed(&view)
+                )
+                .allows_playback_mode_changes(),
                 matches!(
                     top_feedback,
                     Some(MurdererFeedback::MurdererRestored(0..=5))
@@ -4404,9 +4414,10 @@ mod tests {
             .map_async(wgpu::MapMode::Read, move |result| {
                 send.send(result).unwrap()
             });
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
         receive.recv().unwrap().unwrap();
-        let pixels = readback.slice(..).get_mapped_range();
+        let pixels = readback.slice(..).get_mapped_range()
+            .expect("Readback mapping must be ready");
         if matches!(
             top_feedback,
             Some(
@@ -4815,5 +4826,66 @@ impl QuizLayer {
                 (t.value().to_bits(), !t.is_idle())
             })
             .collect()
+    }
+}
+
+// Owned interactive views dispatch through the same actual layer.
+impl super::InteractiveView<'_, QuizLayer> {
+    #[cfg(test)]
+    pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
+        self.with(|layer| layer.reference_controller_state())
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_button_rect(&self, row: usize) -> glam::Vec4 {
+        self.with(|layer| layer.reference_button_rect(row))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_pointer_feedback(
+        &self,
+        row: usize,
+    ) -> (Option<usize>, f32, Option<usize>) {
+        self.with(|layer| layer.reference_pointer_feedback(row))
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_focus_values(&self) -> Vec<f32> {
+        self.with(|layer| layer.reference_focus_values())
+    }
+    pub fn reset(&self) {
+        self.with(|layer| layer.reset())
+    }
+    pub(crate) fn restore_completed_answer(&self, answer: i32) {
+        self.with(|layer| layer.restore_completed_answer(answer))
+    }
+    pub fn pointer(&self, position: Vec2, clicked: bool) {
+        self.with(|layer| layer.pointer(position, clicked))
+    }
+    pub(crate) fn pointer_frame(
+        &self,
+        frame: &crate::adv::input_area::PointerFrame<'_>,
+        extent: (u16, u16),
+        canvas_position: Vec2,
+    ) {
+        self.with(|layer| layer.pointer_frame(frame, extent, canvas_position))
+    }
+    pub(crate) fn ignore_pointer_state(&self) {
+        self.with(|layer| layer.ignore_pointer_state())
+    }
+    pub(crate) fn handle_controller_input(
+        &self,
+        state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
+    ) {
+        self.with(|layer| layer.handle_controller_input(state))
+    }
+    pub fn navigate(&self, delta: i32) {
+        self.with(|layer| layer.navigate(delta))
+    }
+    pub fn confirm(&self) {
+        self.with(|layer| layer.confirm())
+    }
+    pub fn take_sounds(&self) -> Vec<&'static str> {
+        self.with(|layer| layer.take_sounds())
+    }
+    pub fn result(&self) -> Option<i32> {
+        self.with(|layer| layer.result())
     }
 }

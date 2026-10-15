@@ -441,7 +441,7 @@ impl MovieLayer {
                 let before = player.upgrade().unwrap().current_time();
                 std::thread::sleep(std::time::Duration::from_millis(150));
                 assert!(player.upgrade().unwrap().current_time() > before);
-                assert_eq!(audio.kira_manager().lock().num_sounds(), 1);
+                assert_eq!(audio.kira_manager().lock().main_track().num_sounds(), 1);
                 Layer::fast_forward(&mut clone);
             } else {
                 AdvUpdatable::update(&mut layer, &update);
@@ -466,7 +466,7 @@ impl MovieLayer {
                 "Final reference releases decoder/texture owner"
             );
             let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
-            while audio.kira_manager().lock().num_sounds() != 0 {
+            while audio.kira_manager().lock().main_track().num_sounds() != 0 {
                 assert!(
                     std::time::Instant::now() < deadline,
                     "Retired movie leaked audio capacity"
@@ -552,6 +552,8 @@ impl MovieLayer {
         let test_server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: context.device.clone(),
                 wgpu_queue: context.queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -594,7 +596,7 @@ impl MovieLayer {
                 "Initialization error must be terminal even for repeat"
             );
             assert!(layer.inner_ref().shared.is_none());
-            assert_eq!(audio.kira_manager().lock().num_sounds(), 0);
+            assert_eq!(audio.kira_manager().lock().main_track().num_sounds(), 0);
             let mut clone = layer.render_clone(&mut context.render_clone_ctx());
             let update = AdvUpdateContext {
                 frame_id: FrameId::default(),
@@ -1642,9 +1644,10 @@ pub(crate) fn readback_test_texture(
         .map_async(wgpu::MapMode::Read, move |result| {
             send.send(result).unwrap()
         });
-    context.device.poll(wgpu::Maintain::Wait);
+    context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     receive.recv().unwrap().unwrap();
-    let mapped = readback.slice(..).get_mapped_range();
+    let mapped = readback.slice(..).get_mapped_range()
+        .expect("Readback mapping must be ready");
     if padded_row_bytes == row_bytes {
         return mapped.to_vec();
     }

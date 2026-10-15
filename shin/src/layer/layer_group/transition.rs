@@ -1,18 +1,49 @@
 //! Native per-slot replacement wrapper (7e5e0), including lower-layer captures.
 use super::*;
 use crate::{
-    layer::render_layers,
+    layer::{
+        owner::{LayerOwner, LayerOwnerRead, LayerPropertyRead, LayerPropertyWrite, LayerStorage},
+        render_layers,
+    },
     render::render_texture_holder::RenderTextureHolder,
     wiper::{AnyWiper, Wiper as _},
 };
 
 pub(super) struct SlotLayer<T> {
     update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
-    pub target: T,
-    pub(super) source: Option<Box<SlotLayer<T>>>,
-    pub(super) wiper: Option<AnyWiper>,
+    pub target: LayerStorage<T>,
+    pub(super) source: Option<LayerOwner<SlotLayer<T>>>,
+    pub(super) wiper: Option<LayerOwner<AnyWiper>>,
     pub(super) source_texture: RenderTextureHolder,
     pub(super) target_texture: RenderTextureHolder,
+}
+
+/// Scoped views keep nested source locks and their actual owners alive. Fixtures
+/// never return a bare reference obtained from a temporary owner guard.
+#[cfg(test)]
+pub(crate) struct ReferenceLayerLeaf<'a, T>(ReferenceLeafState<'a, T>);
+#[cfg(test)]
+enum ReferenceLeafState<'a, T> {
+    Borrowed(&'a T),
+    Owned(LayerOwnerRead<SlotLayer<T>>),
+    Target(LayerOwnerRead<T>),
+}
+#[cfg(test)]
+impl<'a, T> ReferenceLayerLeaf<'a, T> {
+    pub(crate) fn borrowed(layer: &'a T) -> Self {
+        Self(ReferenceLeafState::Borrowed(layer))
+    }
+}
+#[cfg(test)]
+impl<T> std::ops::Deref for ReferenceLayerLeaf<'_, T> {
+    type Target = T;
+    fn deref(&self) -> &T {
+        match &self.0 {
+            ReferenceLeafState::Borrowed(layer) => layer,
+            ReferenceLeafState::Owned(layer) => layer.target.direct().unwrap(),
+            ReferenceLeafState::Target(layer) => layer,
+        }
+    }
 }
 
 impl<T: DrawableLayer + shin_render::shaders::types::RenderClone>
@@ -27,10 +58,10 @@ impl<T: DrawableLayer + shin_render::shaders::types::RenderClone>
             // Native7fc20..7fc9c accesses both original property objects after
             // cloning, then repairs only this source/target pair.7fd34 also
             // rebinds retained targets; a whole-tree alias map changes semantics.
-            let source_properties = original_source.target.properties().share();
+            let source_properties = original_source.read().target.properties().share();
             let target_properties = self.target.properties().share();
             if source_properties.identity() == target_properties.identity() {
-                target.set_properties(copied_source.target.properties().share());
+                target.set_properties(copied_source.read().target.properties().share());
             }
         }
         Self {
@@ -48,20 +79,50 @@ impl<T: DrawableLayer + shin_render::shaders::types::RenderClone>
 
 impl<T> SlotLayer<T> {
     #[cfg(test)]
-    pub(super) fn reference_owner_leaves<'a>(&'a self, leaves: &mut Vec<&'a T>) {
+    pub(super) fn reference_owner_leaves<'a>(
+        &'a self,
+        leaves: &mut Vec<ReferenceLayerLeaf<'a, T>>,
+    ) {
         if let Some(source) = &self.source {
-            source.reference_owner_leaves(leaves);
+            Self::reference_owned_leaves(source, leaves);
         }
-        leaves.push(&self.target);
+        match &self.target {
+            LayerStorage::Direct(target) => leaves.push(ReferenceLayerLeaf::borrowed(target)),
+            LayerStorage::Shared(target) => leaves.push(ReferenceLayerLeaf(
+                ReferenceLeafState::Target(target.read_owned()),
+            )),
+        }
+    }
+    #[cfg(test)]
+    pub(super) fn reference_owned_leaves<'a>(
+        owner: &LayerOwner<Self>,
+        leaves: &mut Vec<ReferenceLayerLeaf<'a, T>>,
+    ) {
+        let layer = owner.read_owned();
+        if let Some(source) = &layer.source {
+            Self::reference_owned_leaves(source, leaves);
+        }
+        match &layer.target {
+            LayerStorage::Shared(target) => leaves.push(ReferenceLayerLeaf(
+                ReferenceLeafState::Target(target.read_owned()),
+            )),
+            LayerStorage::Direct(_) => {
+                leaves.push(ReferenceLayerLeaf(ReferenceLeafState::Owned(layer)))
+            }
+        }
     }
     #[cfg(test)]
     pub(super) fn reference_transition_words(&self, words: &mut Vec<[u32; 7]>) {
-        if let Some(AnyWiper::Default(wipe)) = &self.wiper {
+        if let Some(wiper) = &self.wiper {
+            let wiper = wiper.read();
+            let AnyWiper::Default(wipe) = &*wiper else {
+                panic!("reference Default wipe")
+            };
             let [current, total] = wipe.reference_time_words();
             words.push([
                 self.source
                     .as_ref()
-                    .map_or(0, |s| if s.wiper.is_some() { 2 } else { 1 }),
+                    .map_or(0, |s| if s.read().wiper.is_some() { 2 } else { 1 }),
                 1,
                 1,
                 current,
@@ -73,18 +134,22 @@ impl<T> SlotLayer<T> {
             assert!(self.wiper.is_none());
         }
         if let Some(source) = &self.source {
-            source.reference_transition_words(words);
+            source.read().reference_transition_words(words);
         }
     }
     #[cfg(test)]
     pub(super) fn reference_advance_clocks(&mut self, delta: f32) {
-        if let Some(AnyWiper::Default(wipe)) = &mut self.wiper {
+        if let Some(wiper) = &self.wiper {
+            let mut wiper = wiper.write();
+            let AnyWiper::Default(wipe) = &mut *wiper else {
+                panic!("reference Default wipe")
+            };
             wipe.advance_ticks(delta);
         } else {
             assert!(self.wiper.is_none());
         }
         if let Some(source) = &mut self.source {
-            source.reference_advance_clocks(delta);
+            source.write().reference_advance_clocks(delta);
         }
     }
     #[cfg(test)]
@@ -106,16 +171,27 @@ impl<T> SlotLayer<T> {
             }
         }
         if let Some(source) = &mut self.source {
-            count += source.reference_prepare_textures(device, resize);
+            count += source.write().reference_prepare_textures(device, resize);
         }
         count
     }
     pub fn new(target: T, source: Option<Self>, wiper: Option<AnyWiper>) -> Self {
+        Self::new_stored(
+            LayerStorage::new_shared(target),
+            source.map(LayerOwner::new),
+            wiper,
+        )
+    }
+    pub(super) fn new_stored(
+        target: LayerStorage<T>,
+        source: Option<LayerOwner<Self>>,
+        wiper: Option<AnyWiper>,
+    ) -> Self {
         Self {
             update_tracker: Default::default(),
             target,
-            source: source.filter(|_| wiper.is_some()).map(Box::new),
-            wiper,
+            source: source.filter(|_| wiper.is_some()),
+            wiper: wiper.map(LayerOwner::new),
             source_texture: RenderTextureHolder::new("SlotLayer/source"),
             target_texture: RenderTextureHolder::new("SlotLayer/target"),
         }
@@ -135,28 +211,44 @@ impl<T: Layer> SlotLayer<T> {
         if self
             .source
             .as_ref()
-            .is_some_and(|s| s.is_transition_active())
+            .is_some_and(|s| s.read().is_transition_active())
             || next
                 .source
                 .as_ref()
-                .is_some_and(|s| s.is_transition_active())
+                .is_some_and(|s| s.read().is_transition_active())
         {
             return false;
         }
         match &next.wiper {
-            Some(other) => wipe.can_batch_with(other),
+            Some(other) => wipe.read().can_batch_with(&other.read()),
             None => !next.target.needs_lower_capture(),
         }
     }
 
     pub(super) fn batch_layer(&self, source: bool) -> Option<&dyn Layer> {
         if source && self.wiper.is_some() {
-            self.source.as_deref().map(|layer| layer as &dyn Layer)
+            self.source.as_ref().map(|layer| layer as &dyn Layer)
         } else {
             Some(&self.target)
         }
     }
 
+    pub(super) fn pre_render_owned_batch_layer(
+        &mut self,
+        source: bool,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[crate::layer::owner::RetainedLayer],
+    ) -> bool {
+        if source && self.wiper.is_some() {
+            self.source
+                .as_mut()
+                .is_some_and(|layer| layer.pre_render_with_owned_lower(context, transform, lower))
+        } else {
+            self.target
+                .pre_render_with_owned_lower(context, transform, lower)
+        }
+    }
     pub(super) fn pre_render_batch_layer(
         &mut self,
         source: bool,
@@ -188,6 +280,48 @@ impl<T: Layer> SlotLayer<T> {
             .is_some_and(|source| source.pre_render_with_lower(context, transform, lower));
         let target_consumed = self.target.pre_render_with_lower(context, transform, lower);
 
+        self.capture_prepared_sides(context, transform, lower, source_consumed, target_consumed)
+    }
+
+    pub fn pre_render_with_owned_lower(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[crate::layer::owner::RetainedLayer],
+    ) -> bool {
+        if self.wiper.is_none() {
+            return self
+                .target
+                .pre_render_with_owned_lower(context, transform, lower);
+        }
+        let source_consumed = self
+            .source
+            .as_mut()
+            .is_some_and(|source| source.pre_render_with_owned_lower(context, transform, lower));
+        let target_consumed = self
+            .target
+            .pre_render_with_owned_lower(context, transform, lower);
+        let borrowed = lower
+            .iter()
+            .map(|layer| layer as &dyn Layer)
+            .collect::<Vec<_>>();
+        self.capture_prepared_sides(
+            context,
+            transform,
+            &borrowed,
+            source_consumed,
+            target_consumed,
+        )
+    }
+
+    fn capture_prepared_sides(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[&dyn Layer],
+        source_consumed: bool,
+        target_consumed: bool,
+    ) -> bool {
         // Native 7f1d4/7f418 copies the lower-layer list and appends the old/new
         // layer. Capturing only the character would fade its transparency to black.
         let source_texture = self.source_texture.get_or_init(context);
@@ -204,7 +338,7 @@ impl<T: Layer> SlotLayer<T> {
                 lower.to_vec()
             };
             if let Some(source) = &self.source {
-                layers.push(source.as_ref());
+                layers.push(source);
             }
             render_layers(&mut pass, transform, &layers, FloatColor4::BLACK, 0);
         }
@@ -254,6 +388,14 @@ impl<T: AdvUpdatable> AdvUpdatable for SlotLayer<T> {
 }
 
 impl<T: Layer> Layer for SlotLayer<T> {
+    fn pre_render_with_owned_lower(
+        &mut self,
+        context: &mut PreRenderContext,
+        transform: &TransformParams,
+        lower: &[crate::layer::owner::RetainedLayer],
+    ) -> bool {
+        SlotLayer::pre_render_with_owned_lower(self, context, transform, lower)
+    }
     fn needs_lower_capture(&self) -> bool {
         self.wiper.is_some() || self.target.needs_lower_capture()
     }
@@ -310,7 +452,7 @@ impl<T: DrawableLayer> SlotLayer<T> {
     #[cfg(test)]
     pub(super) fn property_trace(&self, property: LayerProperty, output: &mut Vec<(usize, f32)>) {
         if let Some(source) = &self.source {
-            source.property_trace(property, output);
+            source.read().property_trace(property, output);
         }
         output.push((
             self.target.properties().identity(),
@@ -319,14 +461,14 @@ impl<T: DrawableLayer> SlotLayer<T> {
     }
 }
 
-impl<T: DrawableLayer> DrawableLayer for SlotLayer<T> {
-    fn render_order_key(&self) -> (f32, i32) {
+impl<T: DrawableLayer> SlotLayer<T> {
+    pub(super) fn render_order_key(&self) -> (f32, i32) {
         self.target.render_order_key()
     }
-    fn properties(&self) -> &LayerProperties {
+    fn properties(&self) -> LayerPropertyRead<'_, T> {
         self.target.properties()
     }
-    fn properties_mut(&mut self) -> &mut LayerProperties {
+    fn properties_mut(&mut self) -> LayerPropertyWrite<'_, T> {
         self.target.properties_mut()
     }
 }
@@ -365,7 +507,7 @@ mod tests {
     }
     fn motions(layer: &SlotLayer<TileLayer>, output: &mut Vec<f32>) {
         if let Some(source) = &layer.source {
-            motions(source, output);
+            motions(&source.read(), output);
         }
         output.push(
             layer
@@ -395,9 +537,90 @@ mod tests {
         );
         group.add_layer(slot, tile(FloatColor4::WHITE, false, 1000.0));
         assert!(!group.has_wiper_for_layerbank(slot));
-        assert!(group.layers[0].layer.source.is_none());
+        assert!(group.layers[0].layer.read().source.is_none());
         assert!(group.remove_layer(slot, Ticks::ZERO).is_some());
         assert!(group.get_layer(slot).is_none());
+    }
+    #[test]
+    fn retained_nested_source_survives_bank_replacement_and_group_removal() {
+        let bank = LayerbankId::new(0);
+        let mut group = LayerGroup::new(None);
+        group.add_layer(bank, tile(FloatColor4::BLUE, false, 1000.0));
+        for color in [FloatColor4::RED, FloatColor4::WHITE] {
+            group.add_layer_with_wiper(
+                bank,
+                tile(color, false, 1000.0),
+                Some(DefaultWiper::new(Ticks::from_f32(10.0)).into()),
+            );
+        }
+        let source = group.layers[0]
+            .layer
+            .read()
+            .source
+            .as_ref()
+            .unwrap()
+            .clone();
+        let outer_weak = source.reference_weak();
+        let inner_weak = source.read().source.as_ref().unwrap().reference_weak();
+        let identity = source.reference_identity();
+        let mut captured = source.retain();
+        assert_eq!(captured.reference_identity(), identity);
+        source
+            .write()
+            .target
+            .properties_mut()
+            .property_tweener_mut(LayerProperty::TranslateX)
+            .fast_forward_to(17.0);
+        assert_eq!(
+            source
+                .read()
+                .target
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            17.0
+        );
+        // A fresh layer in the old bank must not redirect the retained capture.
+        group.add_layer(bank, tile(FloatColor4::BLACK, false, 1000.0));
+        assert_eq!(outer_weak(), 2);
+        assert_eq!(inner_weak(), 1);
+        captured.fast_forward();
+        assert_eq!(
+            source
+                .read()
+                .source
+                .as_ref()
+                .unwrap()
+                .read()
+                .target
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            60.0
+        );
+        assert_eq!(
+            group
+                .get_layer(bank)
+                .unwrap()
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            0.0
+        );
+        drop(group.remove_layer(bank, Ticks::ZERO));
+        drop(group);
+        // An owned read view safely outlives both typed and erased handles.
+        let view = source.read_owned();
+        drop(source);
+        drop(captured);
+        assert_eq!(outer_weak(), 1);
+        assert_eq!(inner_weak(), 1);
+        assert_eq!(
+            view.target
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            17.0
+        );
+        drop(view);
+        assert_eq!(outer_weak(), 0);
+        assert_eq!(inner_weak(), 0);
     }
     #[test]
     #[ignore = "requires supplied executable alongside SHIN_REFERENCE_ROM"]
@@ -486,6 +709,12 @@ mod tests {
         run_reference_capture_gpu(false, 2);
     }
 
+    #[test]
+    #[ignore = "requires Metal;actual owned replacement sides and invisible child retirement;no audio/window/saves"]
+    fn reference_owned_slot_capture_source_target_and_retirement() {
+        run_reference_capture_gpu(false, 3);
+    }
+
     fn run_reference_capture_gpu(screen_only: bool, batch_mode: u8) {
         use crate::asset::system::{
             AssetLoadContext, AssetServer, LayeredAssetIo, cache::AssetCache,
@@ -508,17 +737,21 @@ mod tests {
                 .unwrap();
         let (device, queue) = shin_tasks::block_on(adapter.request_device(
             &wgpu::DeviceDescriptor {
-                required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
+                required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+                    adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+                } else {
+                    wgpu::Features::empty()
+                },
                 ..Default::default()
-            },
-            None,
-        ))
+            }))
         .unwrap();
         let io = LayeredAssetIo::new();
 
         let server = std::sync::Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -576,6 +809,76 @@ mod tests {
             encoder: &mut encoder,
         };
 
+        if batch_mode == 3 {
+            for empty_recapture in [false, true] {
+                let child = LayerOwner::new(UserLayer::from(tile(FloatColor4::BLUE, true, 1000.0)));
+                let child_weak = child.reference_weak();
+                let hidden_effect = || {
+                    let mut effect = crate::layer::user::EffectLayer::new();
+                    effect
+                        .properties_mut()
+                        .property_tweener_mut(LayerProperty::ShowLayer)
+                        .fast_forward_to(0.0);
+                    UserLayer::from(effect)
+                };
+                let mut slot = SlotLayer::new(
+                    hidden_effect(),
+                    Some(SlotLayer::new(hidden_effect(), None, None)),
+                    Some(DefaultWiper::new(Ticks::from_f32(10.0)).into()),
+                );
+                let lower = vec![child.retain()];
+                assert!(!slot.pre_render_with_owned_lower(
+                    &mut context,
+                    &TransformParams::default(),
+                    &lower
+                ));
+                drop(lower);
+                assert_eq!(child_weak(), 3); // graph child plus both invisible Effects
+                let copy = slot.render_clone(&mut context.render_clone_ctx());
+                let mut leaves = Vec::new();
+                copy.reference_owner_leaves(&mut leaves);
+                for leaf in &leaves {
+                    let UserLayer::Effect(effect) = &**leaf else {
+                        unreachable!()
+                    };
+                    assert_eq!(effect.reference_pending_owner_count(), 0);
+                }
+                drop(leaves);
+                let mut retained_source = slot.source.as_ref().unwrap().clone();
+                let source_weak = retained_source.reference_weak();
+                drop(child);
+                assert_eq!(child_weak(), 2);
+                drop(slot); // target retires; the actual old source stays retained
+                assert_eq!(source_weak(), 1);
+                assert_eq!(child_weak(), 1);
+                drop(copy);
+                if empty_recapture {
+                    assert!(retained_source.pre_render_with_owned_lower(
+                        &mut context,
+                        &TransformParams::default(),
+                        &[]
+                    ));
+                    assert_eq!(child_weak(), 0);
+                }
+                drop(retained_source);
+                assert_eq!(source_weak(), 0);
+                assert_eq!(child_weak(), 0);
+            }
+            context.dynamic_buffer.finish(context.encoder);
+            let finished = std::mem::replace(
+                context.encoder,
+                device.create_command_encoder(&Default::default()),
+            )
+            .finish();
+            queue.submit([finished]);
+            device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
+            context.dynamic_buffer.recall();
+            eprintln!(
+                "Owned replacement source/target: invisible pending children, empty copied lists, source detach, empty recapture/destruction and four final owner retirements passed"
+            );
+            return;
+        }
+
         if screen_only {
             crate::layer::ScreenLayer::assert_reference_nested_transitions(&mut context, &server);
             eprintln!(
@@ -617,6 +920,7 @@ mod tests {
                     .find(|item| item.layerbank_id == Some(bank))
                     .unwrap()
                     .layer
+                    .write()
                     .reference_advance_clocks(7.5);
             }
             group.pre_render(&mut context, &TransformParams::default());
@@ -736,9 +1040,9 @@ mod tests {
                 elapsed += delta;
                 property_elapsed += delta.max(0.0);
             }
-            let current = &group.layers[2].layer;
+            let current = group.layers[2].layer.read();
             let mut values = Vec::new();
-            motions(current, &mut values);
+            motions(&current, &mut values);
             assert_eq!(
                 values.len(),
                 if elapsed < 10.0 {
@@ -758,11 +1062,13 @@ mod tests {
             assert_eq!(
                 group.layers[1]
                     .layer
+                    .read()
                     .target
                     .properties()
                     .get_value(LayerProperty::TranslateX),
                 property_elapsed
             );
+            drop(current);
             assert_eq!(group.has_wiper_for_layerbank(slot), elapsed < 20.0);
             group.pre_render(&mut context, &TransformParams::default());
             {
@@ -816,7 +1122,7 @@ mod tests {
             previous = Some(pixels);
             if elapsed == 2.0 && allowed {
                 let mut clone = group.render_clone(&mut context.render_clone_ctx());
-                let copied_slot = &clone.layers[2].layer;
+                let copied_slot = clone.layers[2].layer.read();
                 assert!(copied_slot.source_texture.get().is_none());
                 assert!(copied_slot.target_texture.get().is_none());
                 assert!(
@@ -824,6 +1130,7 @@ mod tests {
                         .source
                         .as_ref()
                         .unwrap()
+                        .read()
                         .source_texture
                         .get()
                         .is_none()
@@ -833,12 +1140,14 @@ mod tests {
                         .source
                         .as_ref()
                         .unwrap()
+                        .read()
                         .target_texture
                         .get()
                         .is_none()
                 );
-                assert!(group.layers[2].layer.source_texture.get().is_some());
-                assert!(group.layers[2].layer.target_texture.get().is_some());
+                assert!(group.layers[2].layer.read().source_texture.get().is_some());
+                assert!(group.layers[2].layer.read().target_texture.get().is_some());
+                drop(copied_slot);
                 clone.pre_render(&mut context, &TransformParams::default());
                 {
                     let mut pass = context.begin_pass(
@@ -874,13 +1183,13 @@ mod tests {
                     movie_volume_settings: Default::default(),
                 });
                 assert!(!clone.has_wiper_for_layerbank(slot));
-                assert!(clone.layers[2].layer.source.is_none());
-                assert!(clone.layers[2].layer.source_texture.get().is_none());
-                assert!(clone.layers[2].layer.target_texture.get().is_none());
+                assert!(clone.layers[2].layer.read().source.is_none());
+                assert!(clone.layers[2].layer.read().source_texture.get().is_none());
+                assert!(clone.layers[2].layer.read().target_texture.get().is_none());
                 assert!(group.has_wiper_for_layerbank(slot));
             }
         }
-        let finished = &group.layers[2].layer;
+        let finished = group.layers[2].layer.read();
         assert!(finished.source.is_none());
         assert!(finished.source_texture.get().is_none());
         assert!(finished.target_texture.get().is_none());

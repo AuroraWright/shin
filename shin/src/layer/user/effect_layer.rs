@@ -39,6 +39,14 @@ impl RenderClone for EffectLayer {
     }
 }
 impl EffectLayer {
+    #[cfg(test)]
+    pub(crate) fn reference_pending_owner_count(&self) -> usize {
+        self.pending_children.len()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_pending_children(&self) -> &[RetainedLayer] {
+        &self.pending_children
+    }
     fn assign_owned_lower(&mut self, lower: &[RetainedLayer]) {
         let common = self.pending_children.len().min(lower.len());
         for (current, next) in self.pending_children[..common].iter_mut().zip(lower) {

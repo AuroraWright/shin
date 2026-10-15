@@ -6,7 +6,10 @@ use shin_render::{
 };
 
 use crate::{
-    asset::bustup::Bustup,
+    asset::{
+        bustup::{Bustup, higurashi::HigurashiBustup},
+        picture::GpuPictureBlock,
+    },
     layer::{
         NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
@@ -17,8 +20,115 @@ use crate::{
 };
 
 #[derive(Clone, RenderClone)]
+enum BustupResource {
+    Umineko(Arc<Bustup>),
+    Higurashi(Arc<HigurashiBustup>),
+}
+
+impl BustupResource {
+    fn origin(&self) -> (i16, i16) {
+        match self {
+            Self::Umineko(b) => (b.origin_x, b.origin_y),
+            Self::Higurashi(b) => (b.origin_x, b.origin_y),
+        }
+    }
+    fn character_id(&self) -> i32 {
+        match self {
+            Self::Umineko(b) => b.character_id.raw(),
+            Self::Higurashi(b) => b.character_id.raw(),
+        }
+    }
+    fn eye_count(&self) -> usize {
+        match self {
+            Self::Umineko(b) => b.eye_blocks.len(),
+            Self::Higurashi(_) => 0,
+        }
+    }
+    fn base_blocks(&self) -> impl Iterator<Item = &Arc<GpuPictureBlock>> {
+        let (umineko, higurashi) = match self {
+            Self::Umineko(b) => (Some(&b.base_blocks), None),
+            Self::Higurashi(b) => (None, Some(&b.body.blocks)),
+        };
+        umineko
+            .into_iter()
+            .flatten()
+            .chain(higurashi.into_iter().flatten().filter_map(Option::as_ref))
+    }
+    fn face1(&self) -> Option<&Arc<GpuPictureBlock>> {
+        match self {
+            Self::Umineko(b) => b.face1.as_ref(),
+            Self::Higurashi(b) => b.auxiliary.as_ref().and_then(|a| a.block.as_ref()),
+        }
+    }
+    fn face2(&self) -> Option<&Arc<GpuPictureBlock>> {
+        match self {
+            Self::Umineko(b) => b.face2.as_ref(),
+            Self::Higurashi(b) => b.face.as_ref(),
+        }
+    }
+    fn mouth(&self, state: u32) -> Option<&Arc<GpuPictureBlock>> {
+        match self {
+            Self::Umineko(b) => b.mouth_blocks.get(state as usize),
+            Self::Higurashi(b) => b.mouths.get(state as usize).and_then(Option::as_ref),
+        }
+    }
+    fn eye(&self, state: u32) -> Option<&Arc<GpuPictureBlock>> {
+        match self {
+            Self::Umineko(b) => b.eye_blocks.get(state as usize),
+            Self::Higurashi(b) => b.eye.as_ref(),
+        }
+    }
+    fn mouth_count(&self) -> usize {
+        match self {
+            Self::Umineko(b) => b.mouth_blocks.len(),
+            Self::Higurashi(b) => {
+                if b.disable_animations {
+                    0
+                } else {
+                    3
+                }
+            }
+        }
+    }
+    fn mouth_state(&self, enabled: bool, level: Option<u8>) -> u32 {
+        match self {
+            Self::Umineko(b) => {
+                if !enabled {
+                    return 0;
+                }
+                let count = b.mouth_blocks.len();
+                if count == 0 {
+                    0
+                } else {
+                    (usize::from(level.unwrap_or(0)) * count / 3).min(count - 1) as u32
+                }
+            }
+            Self::Higurashi(b) => {
+                if b.disable_animations {
+                    0
+                } else {
+                    // Updated369a4..369c4 resets out-of-range feedback to zero.
+                    // It does not read Umineko's animation property27.
+                    match level.unwrap_or(0) {
+                        level @ 0..=2 => u32::from(level),
+                        _ => 0,
+                    }
+                }
+            }
+        }
+    }
+    #[cfg(test)]
+    fn umineko(&self) -> &Arc<Bustup> {
+        let Self::Umineko(bustup) = self else {
+            panic!("Umineko resource oracle used with Higurashi")
+        };
+        bustup
+    }
+}
+
+#[derive(Clone, RenderClone)]
 pub struct BustupLayerImpl {
-    bustup: Arc<Bustup>,
+    bustup: BustupResource,
     label: String,
     mouth_state: u32,
     eyes_state: u32,
@@ -26,9 +136,48 @@ pub struct BustupLayerImpl {
 }
 
 impl BustupLayerImpl {
+    pub(super) fn new_higurashi(bustup: Arc<HigurashiBustup>, name: Option<String>) -> Self {
+        Self::from_resource(BustupResource::Higurashi(bustup), name)
+    }
+
+    pub(super) fn origin(&self) -> (i16, i16) {
+        self.bustup.origin()
+    }
+
+    pub(super) fn update_higurashi_voice(
+        &mut self,
+        properties: &crate::layer::higurashi_properties::HigurashiProperties,
+        callback: Option<&dyn Fn(i32, f32) -> Option<u8>>,
+    ) {
+        let BustupResource::Higurashi(bustup) = &self.bustup else {
+            panic!("Higurashi update requires an older resource");
+        };
+        let level = if bustup.disable_animations {
+            None
+        } else {
+            callback.and_then(|callback| {
+                let pan = properties
+                    .local_transform()
+                    .compute_final_transform()
+                    .transform_point3(Vec3::ZERO)
+                    .x
+                    .clamp(-1.0, 1.0);
+                callback(self.character_id(), pan)
+            })
+        };
+        self.mouth_state = self.bustup.mouth_state(true, level);
+    }
+
     pub fn new(bustup: Arc<Bustup>, bustup_name: Option<String>) -> Self {
-        let seed = crate::engine_random::next_seed();
-        let blink = super::bustup_blink::BustupBlink::new(bustup.eye_blocks.len(), seed);
+        Self::from_resource(BustupResource::Umineko(bustup), bustup_name)
+    }
+
+    fn from_resource(bustup: BustupResource, bustup_name: Option<String>) -> Self {
+        let seed = match &bustup {
+            BustupResource::Umineko(_) => crate::engine_random::next_seed(),
+            BustupResource::Higurashi(_) => 0,
+        };
+        let blink = super::bustup_blink::BustupBlink::new(bustup.eye_count(), seed);
         Self {
             blink,
             bustup,
@@ -39,7 +188,7 @@ impl BustupLayerImpl {
     }
 
     pub fn character_id(&self) -> i32 {
-        self.bustup.character_id.raw()
+        self.bustup.character_id()
     }
 
     #[tracing::instrument(skip_all)]
@@ -50,16 +199,62 @@ impl BustupLayerImpl {
         params: PictureBlockParams,
         transform: Mat4,
     ) {
-        let translation = Mat4::from_translation(vec3(
-            -self.bustup.origin_x as f32,
-            -self.bustup.origin_y as f32,
-            0.0,
-        ));
+        let (origin_x, origin_y) = self.bustup.origin();
+        let translation = Mat4::from_translation(vec3(-origin_x as f32, -origin_y as f32, 0.0));
         // NOTE: this scale is a ¿device-specific? scale (which is 1.0 on switch)
         let scale = Mat4::from_scale(Vec3::ONE);
 
         let transform = transform * scale * translation;
 
+        self.render_blocks_with_asset_transform(pass, builder, params, transform);
+    }
+
+    pub(super) fn render_blocks_with_asset_transform(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        transform: Mat4,
+    ) {
+        let render_block = match &self.bustup {
+            BustupResource::Umineko(_) => super::picture_layer::render_block,
+            BustupResource::Higurashi(_) => super::higurashi::block::render,
+        };
+        self.render_blocks_using(pass, builder, params, transform, render_block);
+    }
+
+    /// Older caller supplies the native matrix for conservative Core culling.
+    pub(super) fn render_higurashi_blocks_with_asset_transform(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        native_transform: Mat4,
+    ) {
+        debug_assert!(matches!(self.bustup, BustupResource::Higurashi(_)));
+        self.render_blocks_using(
+            pass,
+            builder,
+            params,
+            native_transform,
+            super::higurashi::block::render_native,
+        );
+    }
+
+    fn render_blocks_using(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        transform: Mat4,
+        render_block: fn(
+            &GpuPictureBlock,
+            &mut RenderPass,
+            RenderRequestBuilder,
+            PictureBlockParams,
+            Mat4,
+        ),
+    ) {
         pass.push_debug(&format!(
             "BustupLayer[{}]/{}",
             &self.label,
@@ -71,44 +266,32 @@ impl BustupLayerImpl {
         ));
 
         pass.push_debug("Base");
-        for block in &self.bustup.base_blocks {
-            super::picture_layer::render_block(block, pass, builder, params, transform);
+        for block in self.bustup.base_blocks() {
+            render_block(block, pass, builder, params, transform);
         }
         pass.pop_debug();
 
-        if let Some(block) = &self.bustup.face1 {
+        if let Some(block) = self.bustup.face1() {
             pass.push_debug("Face1");
-            super::picture_layer::render_block(block, pass, builder, params, transform);
+            render_block(block, pass, builder, params, transform);
             pass.pop_debug();
         }
 
-        if let Some(block) = &self.bustup.face2 {
+        if let Some(block) = self.bustup.face2() {
             pass.push_debug("Face2");
-            super::picture_layer::render_block(block, pass, builder, params, transform);
+            render_block(block, pass, builder, params, transform);
             pass.pop_debug();
         }
 
-        if !self.bustup.mouth_blocks.is_empty() {
+        if let Some(block) = self.bustup.mouth(self.mouth_state) {
             pass.push_debug("Mouth");
-            super::picture_layer::render_block(
-                &self.bustup.mouth_blocks[self.mouth_state as usize],
-                pass,
-                builder,
-                params,
-                transform,
-            );
+            render_block(block, pass, builder, params, transform);
             pass.pop_debug();
         }
 
-        if !self.bustup.eye_blocks.is_empty() {
+        if let Some(block) = self.bustup.eye(self.eyes_state) {
             pass.push_debug("Eyes");
-            super::picture_layer::render_block(
-                &self.bustup.eye_blocks[self.eyes_state as usize],
-                pass,
-                builder,
-                params,
-                transform,
-            );
+            render_block(block, pass, builder, params, transform);
             pass.pop_debug();
         }
 
@@ -121,11 +304,11 @@ pub type BustupLayer = NewDrawableLayerWrapper<BustupLayerImpl>;
 impl BustupLayer {
     #[cfg(test)]
     pub(crate) fn reference_resource_owner(&self) -> std::sync::Weak<Bustup> {
-        Arc::downgrade(&self.inner_ref().bustup)
+        Arc::downgrade(self.inner_ref().bustup.umineko())
     }
     #[cfg(test)]
     pub(crate) fn reference_resource_identity(&self) -> usize {
-        Arc::as_ptr(&self.inner_ref().bustup) as usize
+        Arc::as_ptr(self.inner_ref().bustup.umineko()) as usize
     }
 
     #[cfg(test)]
@@ -138,8 +321,7 @@ impl BustupLayer {
         // Match the bounded native resource oracle's seed service and prepared
         // elapsed clock. The fixture compares cloning,not RNG/update timing.
         let inner = self.inner_mut();
-        inner.blink =
-            super::bustup_blink::BustupBlink::new(inner.bustup.eye_blocks.len(), 0x12345678);
+        inner.blink = super::bustup_blink::BustupBlink::new(inner.bustup.eye_count(), 0x12345678);
         inner.blink.update(1.0, true);
     }
 
@@ -153,12 +335,7 @@ impl BustupLayer {
         use shin_core::vm::command::types::LayerProperty;
         let enabled = self.properties().get_value(LayerProperty::Prop27) as i32 != 0;
         let inner = self.inner_mut();
-        let count = inner.bustup.mouth_blocks.len();
-        inner.mouth_state = if enabled && count != 0 {
-            (usize::from(level.unwrap_or(0)) * count / 3).min(count - 1) as u32
-        } else {
-            0
-        };
+        inner.mouth_state = inner.bustup.mouth_state(enabled, level);
     }
 
     #[cfg(test)]
@@ -167,8 +344,12 @@ impl BustupLayer {
     }
     #[cfg(test)]
     pub(crate) fn reference_frame_counts(&self) -> (usize, usize) {
-        let asset = &self.inner_ref().bustup;
+        let asset = self.inner_ref().bustup.umineko();
         (asset.mouth_blocks.len(), asset.eye_blocks.len())
+    }
+
+    pub fn new_higurashi(bustup: Arc<HigurashiBustup>, name: Option<String>) -> Self {
+        Self::from_inner_constructor(|| BustupLayerImpl::new_higurashi(bustup, name))
     }
 
     pub fn new(picture: Arc<Bustup>, picture_name: Option<String>) -> Self {
@@ -188,8 +369,12 @@ impl NewDrawableLayer for BustupLayerImpl {
         // Native0x36aa0 passes the animation permission to the property update,
         // but its blink clock is controlled by integer property27 alone.
         let enabled = props.get_value(LayerProperty::Prop27) as i32 != 0;
-        let count = self.bustup.mouth_blocks.len();
-        self.mouth_state = if enabled && count != 0 {
+        let count = self.bustup.mouth_count();
+        let poll_voice = match &self.bustup {
+            BustupResource::Umineko(_) => enabled && count != 0,
+            BustupResource::Higurashi(b) => !b.disable_animations,
+        };
+        self.mouth_state = if poll_voice {
             let level = context.voice_callback.and_then(|callback| {
                 // Native369a0 ->754d0 ->71b70 projects the local property
                 // transform and its own wobble, without composing a parent.
@@ -201,7 +386,7 @@ impl NewDrawableLayer for BustupLayerImpl {
                     .clamp(-1.0, 1.0);
                 callback(self.character_id(), pan)
             });
-            (usize::from(level.unwrap_or(0)) * count / 3).min(count - 1) as u32
+            self.bustup.mouth_state(enabled, level)
         } else {
             0
         };
@@ -351,7 +536,7 @@ impl BustupLayer {
         assert_eq!(render(&mut layer, context), frames[0]);
         // No supplied Umineko expression has eye blocks. Exercise the native
         // eye-render path using three distinct uploaded authored mouth images.
-        let original = &layer.inner_ref().bustup;
+        let original = layer.inner_ref().bustup.umineko();
         let synthetic = Arc::new(Bustup {
             character_id: original.character_id,
             origin_x: original.origin_x,

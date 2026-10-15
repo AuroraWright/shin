@@ -18,7 +18,7 @@ pub struct TurnWiperImpl {
 }
 
 // Native116e9c treats every nonzero parameter as the outgoing turn.
-fn rotation_and_opacity(direction: i32, progress: f32) -> (f32, u8) {
+pub(super) fn rotation_and_opacity(direction: i32, progress: f32) -> (f32, u8) {
     let (rotation, opacity) = if direction == 0 {
         (progress - 1.0, progress)
     } else {
@@ -31,7 +31,7 @@ fn rotation_and_opacity(direction: i32, progress: f32) -> (f32, u8) {
 }
 fn turn_transform(angle: f32) -> Mat4 {
     // Native a1990 composes its row matrices in reverse order in glam.
-    Mat4::perspective_rh_gl(0.99026656, 1920.0 / 1080.0, 1.0, 10000.0)
+    glam::camera::rh::proj::opengl::perspective(0.99026656, 1920.0 / 1080.0, 1.0, 10000.0)
         * Mat4::from_translation(vec3(0.0, 0.0, -1000.0))
         * Mat4::from_scale(vec3(1.0, -1.0, 1.0))
         * Mat4::from_rotation_y(angle)

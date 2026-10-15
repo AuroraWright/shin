@@ -28,7 +28,7 @@ enum Root {
 }
 enum Children {
     Borrowed(Vec<UserLayer>),
-    Owned(Vec<LayerOwner<TileLayer>>),
+    Owned(Vec<LayerOwner<UserLayer>>),
 }
 impl Children {
     fn new(owned: bool) -> Self {
@@ -36,7 +36,7 @@ impl Children {
             .into_iter()
             .map(|color| TileLayer::new(color, glam::vec4(-8.0, -8.0, 16.0, 16.0)));
         if owned {
-            Self::Owned(tiles.map(LayerOwner::new).collect())
+            Self::Owned(tiles.map(UserLayer::from).map(LayerOwner::new).collect())
         } else {
             Self::Borrowed(tiles.map(UserLayer::from).collect())
         }
@@ -109,15 +109,15 @@ impl Children {
     }
 }
 impl Root {
-    fn leaves(&self) -> Vec<&UserLayer> {
+    fn leaves(&self) -> Vec<crate::layer::layer_group::ReferenceLayerLeaf<'_, UserLayer>> {
         match self {
-            Self::Effect(l) => vec![l],
+            Self::Effect(l) => vec![crate::layer::layer_group::ReferenceLayerLeaf::borrowed(l)],
             Self::Group(g) => g.reference_owner_leaves(),
         }
     }
-    fn target(&mut self) -> &mut UserLayer {
+    fn target(&mut self) -> crate::layer::owner::LayerWrite<'_, UserLayer> {
         match self {
-            Self::Effect(l) => l,
+            Self::Effect(l) => crate::layer::owner::LayerWrite::Direct(l),
             Self::Group(g) => g.get_layer_mut(LayerbankId::new(0)).unwrap(),
         }
     }
@@ -225,7 +225,7 @@ fn snapshot(id: usize, phase: &str, roots: &[Option<Root>; 3], last_rng: &mut us
             slots += root.slots();
         }
         for l in leaves {
-            let f = effect(l);
+            let f = effect(&l);
             let props = l.properties();
             let owner = props.initialized_identity();
             owners.push(owner);
@@ -289,7 +289,7 @@ fn run_reference(owned: bool) {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let resize =
         SurfaceResizeSource::new(ViewportParams::both(winit::dpi::PhysicalSize::new(16, 16)));
     let depth = device.create_texture(&wgpu::TextureDescriptor {
@@ -322,6 +322,8 @@ fn run_reference(owned: bool) {
         let server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -329,6 +331,27 @@ fn run_reference(owned: bool) {
                 font_cache: Default::default(),
             },
         ));
+        if owned {
+            assert_retained_user_mutation_and_explicit_copy(&server, &device, &queue);
+            let mut encoder = device.create_command_encoder(&Default::default());
+            let mut context = PreRenderContext {
+                breakup_texture: None,
+                device: &device,
+                queue: &queue,
+                resize_source: &resize,
+                sampler_store: &samplers,
+                depth_stencil: DepthStencilTarget { view: &depth_view },
+                pipeline_storage: &mut pipelines,
+                dynamic_buffer: &mut dynamic,
+                encoder: &mut encoder,
+            };
+            LayerGroup::reference_integrated_owned_capture(&mut context, &server);
+            drop(context);
+            dynamic.finish(&mut encoder);
+            queue.submit(Some(encoder.finish()));
+            device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
+            dynamic.recall();
+        }
         let mut actual = Vec::new();
         let mut frame = FrameId::default();
         for (id, line) in request.lines().enumerate() {
@@ -383,14 +406,19 @@ fn run_reference(owned: bool) {
                 }
                 actual.push(snapshot(id, "copies", &roots, &mut last_rng));
                 if mode != 0 {
-                    let target = roots[1].as_mut().unwrap().target();
+                    let mut target = roots[1].as_mut().unwrap().target();
                     target
                         .properties_mut()
                         .property_tweener_mut(LayerProperty::ShowLayer)
                         .fast_forward_to(1.0);
-                    children.capture(target, &mut context, false);
+                    children.capture(&mut *target, &mut context, false);
+                    drop(target);
                     actual.push(snapshot(id, "recapture-copy", &roots, &mut last_rng));
-                    children.capture(roots[1].as_mut().unwrap().target(), &mut context, true);
+                    children.capture(
+                        &mut *roots[1].as_mut().unwrap().target(),
+                        &mut context,
+                        true,
+                    );
                     actual.push(snapshot(id, "empty-recapture-copy", &roots, &mut last_rng));
                 }
                 frame.advance();
@@ -443,7 +471,7 @@ fn run_reference(owned: bool) {
                             .iter()
                             .flatten()
                             .flat_map(Root::leaves)
-                            .map(|l| effect(l).pending_children.len())
+                            .map(|l| effect(&l).pending_children.len())
                             .sum::<usize>();
                         for owner in &weak {
                             assert_eq!(owner(), pending / 2);
@@ -455,7 +483,7 @@ fn run_reference(owned: bool) {
                 drop(context);
                 dynamic.finish(&mut encoder);
                 queue.submit(Some(encoder.finish()));
-                device.poll(wgpu::Maintain::Wait);
+                device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
                 dynamic.recall();
             });
             total += 1;
@@ -493,4 +521,96 @@ fn run_reference(owned: bool) {
     println!(
         "Effect capture parity:owned={owned},cases={total};real child owner counts/final retirement,two production render-copy generations,recapture,empty recapture,properties and root drops;Group scheduling adoption remains separate"
     );
+}
+
+fn assert_retained_user_mutation_and_explicit_copy(
+    server: &Arc<AssetServer>,
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+) {
+    crate::engine_random::with_reference_seed(1234, || {
+        let owner = LayerOwner::new(UserLayer::Tile(TileLayer::new(
+            FloatColor4::RED,
+            glam::vec4(-8.0, -8.0, 16.0, 16.0),
+        )));
+        let weak = owner.reference_weak();
+        let before = crate::engine_random::seed_call_count();
+        let typed = owner.clone();
+        let mut retained = owner.retain();
+        assert_eq!(owner.reference_identity(), retained.reference_identity());
+        assert_eq!(
+            crate::engine_random::seed_call_count(),
+            before,
+            "Retain never deep-copies state or consumes RNG"
+        );
+        assert_eq!(weak(), 3);
+        {
+            let mut layer = typed.write();
+            let mut t = layer
+                .properties_mut()
+                .property_tweener_mut(LayerProperty::TranslateX);
+            t.fast_forward_to(13.0);
+            t.enqueue(23.0, Tween::linear(Ticks::from_f32(10.0)));
+        }
+        let mut frame = FrameId::default();
+        frame.advance();
+        retained.update(&AdvUpdateContext {
+            frame_id: frame,
+            delta_ticks: Ticks::from_f32(5.0),
+            asset_server: server,
+            device,
+            queue,
+            are_animations_allowed: true,
+            voice_callback: None,
+            movie_volume_settings: Default::default(),
+        });
+        assert_eq!(
+            owner
+                .read()
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            18.0
+        );
+        let mut encoder = device.create_command_encoder(&Default::default());
+        let before_copy = crate::engine_random::seed_call_count();
+        let copied = owner.render_clone(&mut RenderCloneCtx {
+            device,
+            encoder: &mut encoder,
+        });
+        assert_eq!(crate::engine_random::seed_call_count(), before_copy + 6);
+        assert_ne!(owner.reference_identity(), copied.reference_identity());
+        let copied_weak = copied.reference_weak();
+        copied
+            .write()
+            .properties_mut()
+            .property_tweener_mut(LayerProperty::TranslateX)
+            .fast_forward_to(-55.0);
+        retained.fast_forward();
+        assert_eq!(
+            typed
+                .read()
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            23.0
+        );
+        assert_eq!(
+            copied
+                .read()
+                .properties()
+                .get_value(LayerProperty::TranslateX),
+            -55.0
+        );
+        drop(owner);
+        drop(typed);
+        assert_eq!(
+            weak(),
+            1,
+            "Erased retained handle owns the actual mutable UserLayer"
+        );
+        drop(retained);
+        assert_eq!(weak(), 0);
+        drop(copied);
+        assert_eq!(copied_weak(), 0);
+        queue.submit(Some(encoder.finish()));
+    });
 }

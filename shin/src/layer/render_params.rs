@@ -5,6 +5,8 @@ use shin_render::{LayerBlendType, LayerFragmentShader};
 
 use crate::render::centered_projection_matrix;
 
+pub mod higurashi;
+
 bitflags! {
     #[derive(PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Clone, Copy)]
     pub struct ComposeFlags: i32 {
@@ -15,7 +17,7 @@ bitflags! {
 }
 
 /// Native a1990: one rounded multiply followed by three ordered FMAs per lane.
-pub(super) fn multiply_transforms(left: Mat4, right: Mat4) -> Mat4 {
+pub(crate) fn multiply_transforms(left: Mat4, right: Mat4) -> Mat4 {
     let left = left.to_cols_array();
     let right = right.to_cols_array();
     let mut result = [0.0; 16];

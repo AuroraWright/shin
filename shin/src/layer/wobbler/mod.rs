@@ -1,4 +1,4 @@
-mod prng;
+pub(super) mod prng;
 
 use std::f32::consts::PI;
 

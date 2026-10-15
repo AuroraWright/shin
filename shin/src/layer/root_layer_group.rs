@@ -149,12 +149,23 @@ pub struct RootLayerGroup {
 }
 
 impl RootLayerGroup {
+    pub(crate) fn preserve_drawable_state_from(&mut self, source: &mut Self) {
+        self.inner.preserve_drawable_state_from(&mut source.inner);
+        self.screen_layer_mut()
+            .preserve_drawable_state_from(source.screen_layer_mut());
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_drawable_state(&self) -> (u32, [f32; 3]) {
+        self.inner.reference_drawable_state()
+    }
+
     pub fn new(
         adv_fonts: AdvFonts,
         messagebox_textures: Arc<MessageboxTextures>,
         voice_player: VoicePlayer,
     ) -> Self {
-        let mut inner = LayerGroup::new(Some("RootLayerGroup".to_string()));
+        let mut inner = LayerGroup::new_direct(Some("RootLayerGroup".to_string()));
         inner.add_layer(
             MESSAGE_LAYERBANK,
             SharedMessageLayer::new(MessageLayer::new(
@@ -198,10 +209,10 @@ impl RootLayerGroup {
             render_layer_without_bg(&mut pass, &transform, self, 0);
         }
         if let Some(layer) = message {
-            self.inner.add_layer(MESSAGE_LAYERBANK, layer);
+            self.inner.add_layer_storage(MESSAGE_LAYERBANK, layer, None);
         }
         if let Some(layer) = overlay {
-            self.inner.add_layer(OVERLAY_LAYERBANK, layer);
+            self.inner.add_layer_storage(OVERLAY_LAYERBANK, layer, None);
         }
         // Restore the port's prepared draw list/offscreen caches as well as layers.
         // No update occurs, so message clocks, voices and transitions remain intact.
@@ -210,7 +221,7 @@ impl RootLayerGroup {
     }
 
     pub fn screen_layer(&self) -> &ScreenLayer {
-        let Some(RootLayer::Screen(screen)) = self.inner.get_layer(SCREEN_LAYERBANK) else {
+        let Some(RootLayer::Screen(screen)) = self.inner.get_direct_layer(SCREEN_LAYERBANK) else {
             unreachable!();
         };
 
@@ -218,7 +229,8 @@ impl RootLayerGroup {
     }
 
     pub fn screen_layer_mut(&mut self) -> &mut ScreenLayer {
-        let Some(RootLayer::Screen(screen)) = self.inner.get_layer_mut(SCREEN_LAYERBANK) else {
+        let Some(RootLayer::Screen(screen)) = self.inner.get_direct_layer_mut(SCREEN_LAYERBANK)
+        else {
             unreachable!();
         };
 
@@ -226,14 +238,16 @@ impl RootLayerGroup {
     }
 
     pub(crate) fn message_owner(&self) -> Arc<Mutex<MessageLayer>> {
-        let Some(RootLayer::Message(message)) = self.inner.get_layer(MESSAGE_LAYERBANK) else {
+        let Some(RootLayer::Message(message)) = self.inner.get_direct_layer(MESSAGE_LAYERBANK)
+        else {
             unreachable!();
         };
         message.inner.clone()
     }
 
     pub fn message_layer(&self) -> MutexGuard<'_, MessageLayer> {
-        let Some(RootLayer::Message(message)) = self.inner.get_layer(MESSAGE_LAYERBANK) else {
+        let Some(RootLayer::Message(message)) = self.inner.get_direct_layer(MESSAGE_LAYERBANK)
+        else {
             unreachable!();
         };
 
@@ -241,7 +255,8 @@ impl RootLayerGroup {
     }
 
     pub fn message_layer_mut(&mut self) -> MutexGuard<'_, MessageLayer> {
-        let Some(RootLayer::Message(message)) = self.inner.get_layer_mut(MESSAGE_LAYERBANK) else {
+        let Some(RootLayer::Message(message)) = self.inner.get_direct_layer_mut(MESSAGE_LAYERBANK)
+        else {
             unreachable!();
         };
 
@@ -304,7 +319,8 @@ impl RootLayerGroup {
             update,
         );
         let weak = {
-            let Some(RootLayer::Message(message)) = self.inner.get_layer(MESSAGE_LAYERBANK) else {
+            let Some(RootLayer::Message(message)) = self.inner.get_direct_layer(MESSAGE_LAYERBANK)
+            else {
                 panic!()
             };
             Arc::downgrade(&message.inner)
@@ -324,7 +340,8 @@ impl RootLayerGroup {
             self.screen_layer().properties().identity(),
             back.screen_layer().properties().identity()
         );
-        let Some(RootLayer::Message(message)) = back.inner.get_layer_mut(MESSAGE_LAYERBANK) else {
+        let Some(RootLayer::Message(message)) = back.inner.get_direct_layer_mut(MESSAGE_LAYERBANK)
+        else {
             panic!()
         };
         message.props.set_layer_id(LayerId::new(71));

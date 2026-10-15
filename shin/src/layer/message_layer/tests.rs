@@ -1,6 +1,26 @@
 use super::*;
 use shin_core::{primitives::update::FrameId, time::Tween, vm::command::types::LayerProperty};
 
+pub(crate) fn reference_saved_sentence_state(message: &MessageLayer, static_snapshot: bool) {
+    assert_eq!(message.disable_voice, static_snapshot);
+    assert!(message.recv_sync_is_waiting(-1));
+    assert!(message.total_voices_count > 0);
+    if static_snapshot {
+        assert!(message.chars.iter().filter(|c| c.block_index <= message.current_block_index && c.time <= message.current_time).all(|c| c.current_progress == 1.0));
+        assert!(message.wait_kind == Some(WaitKind::Last)
+            || matches!(message.blocks[message.current_block_index].ty, BlockType::Sync(_)));
+    } else {
+        assert_eq!(message.current_time, 0.0);
+        assert_eq!(message.voice_counter, 0);
+        assert_eq!(message.completed_sections, 0);
+        assert!(message.recv_sync_is_waiting(0));
+        assert!(matches!(&message.blocks[message.voice_block_index].ty,
+            BlockType::Voice(voice) if voice.filename == "10/10100035"));
+        assert!(message.chars.iter().all(|c| c.current_progress == 0.0));
+        assert!(message.current_block_index < message.blocks.len());
+    }
+}
+
 #[test]
 fn voice_sync_tracks_indices_milliseconds_and_unsigned_negative_targets() {
     let playing = AudioWaitStatus::PLAYING;

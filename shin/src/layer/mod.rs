@@ -5,6 +5,7 @@ mod new_drawable_layer;
 pub(crate) mod owner;
 mod page_layer;
 mod properties;
+pub mod higurashi_properties;
 pub mod render_params;
 #[expect(unused)]
 mod root_layer_group;

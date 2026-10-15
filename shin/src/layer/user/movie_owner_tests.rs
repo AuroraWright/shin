@@ -16,15 +16,15 @@ enum Root {
     Group(LayerGroup),
 }
 impl Root {
-    fn leaves(&self) -> Vec<&UserLayer> {
+    fn leaves(&self) -> Vec<crate::layer::layer_group::ReferenceLayerLeaf<'_, UserLayer>> {
         match self {
-            Self::Movie(l) => vec![l],
+            Self::Movie(l) => vec![crate::layer::layer_group::ReferenceLayerLeaf::borrowed(l)],
             Self::Group(g) => g.reference_owner_leaves(),
         }
     }
-    fn target(&mut self) -> &mut UserLayer {
+    fn target(&mut self) -> crate::layer::owner::LayerWrite<'_, UserLayer> {
         match self {
-            Self::Movie(l) => l,
+            Self::Movie(l) => crate::layer::owner::LayerWrite::Direct(l),
             Self::Group(g) => g.get_layer_mut(LayerbankId::new(0)).unwrap(),
         }
     }
@@ -89,11 +89,15 @@ fn root(
     let mut group = LayerGroup::new(None);
     group.add_layer(LayerbankId::new(0), source);
     for _ in 1..graph {
-        let first = group.reference_owner_leaves()[0];
-        let mut next = first.render_clone(ctx);
-        if populated {
-            next.set_properties(first.properties().share());
-        }
+        let next = {
+            let leaves = group.reference_owner_leaves();
+            let first = &leaves[0];
+            let mut next = first.render_clone(ctx);
+            if populated {
+                next.set_properties(first.properties().share());
+            }
+            next
+        };
         group.add_layer_with_wiper(
             LayerbankId::new(0),
             next,
@@ -173,7 +177,7 @@ fn state(
             slots += root.slots();
         }
         for l in leaves {
-            let m = movie(l);
+            let m = movie(&l);
             let (transparency, repeat, back, still) = m.reference_composed_owner_flags();
             shared += usize::from(back);
             assert!(
@@ -221,7 +225,7 @@ fn reference_native_movie_composed_clone_and_final_owners() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let audio = Arc::new(AudioManager::new_for_tests());
     audio.suspension().set_suspended(true);
     let mut cases = 0;
@@ -243,6 +247,8 @@ fn reference_native_movie_composed_clone_and_final_owners() {
         let server = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -351,18 +357,19 @@ fn reference_native_movie_composed_clone_and_final_owners() {
                                 &picture,
                                 fixture_picture_owners,
                             ));
-                            let p = roots[1].as_mut().unwrap().target();
+                            let mut p = roots[1].as_mut().unwrap().target();
                             p.properties_mut()
                                 .property_tweener_mut(
                                     <LayerProperty as enum_map::Enum>::from_usize(0),
                                 )
                                 .fast_forward_to(999.0);
-                            movie(p)
+                            movie(&p)
                                 .reference_still_properties()
                                 .property_tweener_mut(
                                     <LayerProperty as enum_map::Enum>::from_usize(0),
                                 )
                                 .fast_forward_to(-123.0);
+                            drop(p);
                             rows.push(state(
                                 fixture,
                                 "mutate-copy",
@@ -372,7 +379,7 @@ fn reference_native_movie_composed_clone_and_final_owners() {
                                 fixture_picture_owners,
                             ));
                             if detach != 0 {
-                                movie_mut(roots[1].as_mut().unwrap().target())
+                                movie_mut(&mut roots[1].as_mut().unwrap().target())
                                     .reference_composed_owner_detach();
                                 rows.push(state(
                                     fixture,
@@ -456,7 +463,7 @@ fn reference_native_movie_composed_clone_and_final_owners() {
         for picture in fixture_pictures {
             assert_eq!(picture.strong_count(), 0);
         }
-        device.poll(wgpu::Maintain::Wait);
+        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
     }
     println!(
         "Movie ownership:{cases} cases;exact native composed rows;per-case graph owners released;10 final fixture playback/player retirements and all linked-Picture Weak retirements"

@@ -89,7 +89,7 @@ fn reference_native_resource_group_clone_and_final_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut observations = 0;
     for version in ["original", "1.03"] {
         let snr = std::fs::read(
@@ -109,6 +109,8 @@ fn reference_native_resource_group_clone_and_final_retirement() {
         let server = AssetServer::new(
             io.into(),
             AssetLoadContext {
+                game: crate::cli::Game::Umineko,
+                higurashi_bustup_cache: Default::default(),
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -191,7 +193,7 @@ fn reference_native_resource_group_clone_and_final_retirement() {
                                 .collect();
                             if sharing {
                                 for n in 0..owners.len() {
-                                    let layer =
+                                    let mut layer =
                                         group.get_layer_mut(LayerbankId::new(n as u8)).unwrap();
                                     for i in 0..90 {
                                         layer
@@ -288,7 +290,7 @@ fn reference_native_resource_group_clone_and_final_retirement() {
                             assert!(owners.iter().all(|o| !o.live()));
                             assert!(picture_probes.iter().all(|p| p.strong_count() == 0));
                             assert!(block_probes.iter().all(|p| p.strong_count() == 0));
-                            device.poll(wgpu::Maintain::Wait);
+                            device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
                         }
                         std::fs::write(
                             output.join(format!("{label}.port.trace")),

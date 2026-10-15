@@ -178,7 +178,7 @@ fn reference_native_plain_controller_clone_and_final_retirement() {
     let instance = wgpu::Instance::default();
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&Default::default(), None)).unwrap();
+        shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let mut total = 0;
     for version in ["original", "1.03"] {
         let expected = std::fs::read_to_string(output.join(format!("{version}.trace"))).unwrap();
@@ -195,6 +195,8 @@ fn reference_native_plain_controller_clone_and_final_retirement() {
             let server = AssetServer::new(
                 io.into(),
                 AssetLoadContext {
+                    game: crate::cli::Game::Umineko,
+                    higurashi_bustup_cache: Default::default(),
                     wgpu_device: device.clone(),
                     wgpu_queue: queue.clone(),
                     bustup_cache: AssetCache::new(),
@@ -300,7 +302,7 @@ fn reference_native_plain_controller_clone_and_final_retirement() {
             }
             drop(textures);
             assert_eq!(texture_probe(), 0, "Final decoded atlas owner retired");
-            device.poll(wgpu::Maintain::Wait);
+            device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
         }
         assert_eq!(rows.len(), expected.len());
         for (i, (a, b)) in rows.iter().zip(expected).enumerate() {

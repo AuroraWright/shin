@@ -186,6 +186,27 @@ impl PictureLayerImpl {
         params: PictureBlockParams,
         transform: Mat4,
     ) {
+        self.render_blocks_with_asset_transform(
+            pass,
+            builder,
+            params,
+            self.local_transform(transform),
+        );
+    }
+
+    pub(super) fn origin(&self) -> (i16, i16) {
+        // The asset decoder sign-extends the two i16 header fields.
+        (self.picture.origin_x as i16, self.picture.origin_y as i16)
+    }
+
+    /// Shared GPU submission after the game-specific header/projection policy.
+    pub(super) fn render_blocks_with_asset_transform(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        transform: Mat4,
+    ) {
         pass.push_debug(&format!(
             "PictureLayer[{}]/{}",
             &self.label,
@@ -195,7 +216,7 @@ impl PictureLayerImpl {
                 PictureBlockPassKind::OpaqueAndTransparent => "opaque_and_transparent",
             }
         ));
-        for (offset, block, placement) in self.placement_transforms(transform) {
+        for (offset, block, placement) in self.placements_with_asset_transform(transform) {
             pass.push_debug(&format!("Block[{}]", offset));
             render_block(block, pass, builder, params, placement);
             pass.pop_debug();
@@ -208,6 +229,50 @@ impl PictureLayerImpl {
         parent: Mat4,
     ) -> impl Iterator<Item = (u32, &GpuPictureBlock, Mat4)> {
         let transform = self.local_transform(parent);
+        self.placements_with_asset_transform(transform)
+    }
+
+    /// Older native ordinary shaders and format-dependent index order.
+    pub(super) fn render_higurashi_blocks_with_asset_transform(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        transform: Mat4,
+    ) {
+        Self::render_higurashi_asset_with_transform(
+            &self.picture,
+            &self.label,
+            pass,
+            builder,
+            params,
+            transform,
+        );
+    }
+
+    pub(super) fn render_higurashi_asset_with_transform(
+        picture: &Picture,
+        label: &str,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        transform: Mat4,
+    ) {
+        pass.push_debug(&format!("Higurashi PictureLayer[{label}]"));
+        for (offset, position, block) in picture.blocks.iter_placements() {
+            let placement =
+                multiply_transforms(transform, Mat4::from_translation(position.extend(0.0)));
+            pass.push_debug(&format!("Block[{offset}]"));
+            super::higurashi::block::render_native(block, pass, builder, params, placement);
+            pass.pop_debug();
+        }
+        pass.pop_debug();
+    }
+
+    fn placements_with_asset_transform(
+        &self,
+        transform: Mat4,
+    ) -> impl Iterator<Item = (u32, &GpuPictureBlock, Mat4)> {
         self.picture
             .blocks
             .iter_placements()

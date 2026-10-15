@@ -2033,21 +2033,7 @@ impl MurdererModel {
                 self.back();
             } else if scroll_axis.is_finite() && scroll_axis != 0.0 {
                 // Native969f4..96a60 adds32*rightY after direction/Back.
-                self.scroll_purple_text(scroll_axis.clamp(-1.0, 1.0) * 32.0, text_height);
-            } else if (state[AppAction::PageUp].is_clicked_or_repeated
-                || state[AppAction::PageDown].is_clicked_or_repeated)
-                && ![
-                    AppAction::Left,
-                    AppAction::Right,
-                    AppAction::Up,
-                    AppAction::AnyDown,
-                ]
-                .iter()
-                .any(|action| state[*action].is_clicked_or_repeated)
-            {
-                // Preserve desktop transcript scrolling via ADV's existing
-                // scroll_text path when no native analog axis is present.
-                return false;
+                self.scroll_purple_text(scroll_axis * 32.0, text_height);
             }
             return true;
         }
@@ -2073,13 +2059,9 @@ impl MurdererModel {
             self.request_hint(selected);
         } else if state[AppAction::Cancel].is_clicked {
             self.back();
-        } else if state[AppAction::KeyboardScrollUp].is_clicked_or_repeated {
-            self.scroll_hint_list(-180.0);
-        } else if state[AppAction::KeyboardScrollDown].is_clicked_or_repeated {
-            self.scroll_hint_list(180.0);
         } else if scroll_axis.is_finite() && scroll_axis != 0.0 {
-            let next = (self.hint_scroll + scroll_axis.clamp(-1.0, 1.0) * 32.0)
-                .clamp(0.0, self.hint_scroll_maximum());
+            let next =
+                (self.hint_scroll + scroll_axis * 32.0).clamp(0.0, self.hint_scroll_maximum());
             self.reconcile_hint_selection(next);
             self.hint_scroll_motion = Tweener::new(next);
             self.hint_scroll = next;
@@ -5079,7 +5061,7 @@ mod tests {
         assert!(!model.purple_list_scrolling());
         let mut page = enum_map::EnumMap::<AppAction, shin_input::ActionState>::default();
         page[AppAction::PageDown].is_clicked_or_repeated = true;
-        assert!(!model.handle_controller_input(&page)); // Desktop fallback only.
+        assert!(model.handle_controller_input(&page)); // Native shoulders do not scroll purple text.
         page[AppAction::Up].is_clicked_or_repeated = true;
         assert!(model.handle_controller_input(&page));
         model.reset();
@@ -6625,7 +6607,7 @@ mod tests {
         }
     }
     #[test]
-    fn hint_keyboard_scrolling_uses_physical_k_l_bounds_and_native_input_gates() {
+    fn hint_keyboard_scrolling_uses_right_stick_gain_and_native_input_gates() {
         use crate::app::AppAction as A;
         use shin_input::{Action, RawInputState};
         use winit::keyboard::KeyCode;
@@ -6633,12 +6615,15 @@ mod tests {
             let mut raw = RawInputState::new();
             raw.keyboard.insert(key);
             let lowered = A::lower(&raw);
-            enum_map::EnumMap::from_fn(|action| shin_input::ActionState {
-                is_clicked: lowered[action],
-                is_clicked_or_repeated: lowered[action],
-                is_held: lowered[action],
-                ..Default::default()
-            })
+            (
+                enum_map::EnumMap::from_fn(|action| shin_input::ActionState {
+                    is_clicked: lowered[action],
+                    is_clicked_or_repeated: lowered[action],
+                    is_held: lowered[action],
+                    ..Default::default()
+                }),
+                crate::app::text_scroll_axis(&raw),
+            )
         };
         let up = input(KeyCode::KeyK);
         let down = input(KeyCode::KeyL);
@@ -6646,29 +6631,28 @@ mod tests {
         model.open_menu(4);
         model.navigate(-20);
         model.take_sounds();
-        model.handle_controller_input_with_scroll(&up, 0., 0.);
+        model.handle_controller_input_with_scroll(&up.0, up.1, 0.);
         assert_eq!(model.hint_scroll, 0.);
-        model.handle_controller_input_with_scroll(&down, 0., 0.);
-        assert_eq!(model.hint_scroll, 180.);
-        assert_eq!(model.menu_focus, 2);
-        model.handle_controller_input_with_scroll(&down, 0., 0.);
-        assert_eq!(model.hint_scroll, 360.);
-        model.handle_controller_input_with_scroll(&up, 0., 0.);
-        assert_eq!(model.hint_scroll, 180.);
+        model.handle_controller_input_with_scroll(&down.0, down.1, 0.);
+        assert_eq!(model.hint_scroll, 32.);
+        assert_eq!(model.menu_focus, 1);
+        model.handle_controller_input_with_scroll(&down.0, down.1, 0.);
+        assert_eq!(model.hint_scroll, 64.);
+        model.handle_controller_input_with_scroll(&up.0, up.1, 0.);
+        assert_eq!(model.hint_scroll, 32.);
         assert!(model.take_sounds().is_empty());
-        for _ in 0..20 {
-            model.handle_controller_input_with_scroll(&down, 0., 0.);
+        for _ in 0..1000 {
+            model.handle_controller_input_with_scroll(&down.0, down.1, 0.);
         }
         assert_eq!(model.hint_scroll, model.hint_scroll_maximum());
-        for _ in 0..20 {
-            model.handle_controller_input_with_scroll(&up, 0., 0.);
+        for _ in 0..1000 {
+            model.handle_controller_input_with_scroll(&up.0, up.1, 0.);
         }
         assert_eq!(model.hint_scroll, 0.);
         let mut raw = RawInputState::new();
         raw.gamepads.unified.buttons[shin_input::inputs::GamepadButton::R] = true;
         let lowered = A::lower(&raw);
         assert!(lowered[A::PageDown]);
-        assert!(!lowered[A::KeyboardScrollDown]);
         let shoulder = enum_map::EnumMap::from_fn(|action| shin_input::ActionState {
             is_clicked: lowered[action],
             is_clicked_or_repeated: lowered[action],
@@ -6679,24 +6663,24 @@ mod tests {
         model.scroll_hint_list(f32::NAN);
         assert_eq!(model.hint_scroll, 0.);
         model.scroll_hint_list(180.);
-        let mut select = down.clone();
+        let mut select = down.0.clone();
         select[A::Up].is_clicked_or_repeated = true;
         model.handle_controller_input_with_scroll(&select, 0., 0.);
         assert_eq!(
             model.hint_scroll, 180.,
             "Selection takes priority over scroll"
         );
-        model.handle_controller_input_with_scroll(&down, 0., 0.);
+        model.handle_controller_input_with_scroll(&down.0, down.1, 0.);
         assert_eq!(
             model.hint_scroll, 180.,
             "Four-tick focus tween blocks input"
         );
         model.update(4.);
-        let mut confirm = down.clone();
+        let mut confirm = down.0.clone();
         confirm[A::Enter].is_clicked = true;
         model.handle_controller_input_with_scroll(&confirm, 0., 0.);
         let captured = model.hint_scroll;
-        model.handle_controller_input_with_scroll(&up, 0., 0.);
+        model.handle_controller_input_with_scroll(&up.0, up.1, 0.);
         assert_eq!(
             model.hint_scroll, captured,
             "Response phase blocks scrolling"
@@ -6704,8 +6688,39 @@ mod tests {
         for progress in [-1, 0, 7] {
             let mut short = MurdererModel::new(progress);
             short.open_menu(4);
-            short.handle_controller_input_with_scroll(&down, 0., 0.);
+            short.handle_controller_input_with_scroll(&down.0, down.1, 0.);
             assert_eq!(short.hint_scroll, 0., "Short lists have no scroll range");
+        }
+    }
+    #[test]
+    fn trackpad_wheel_scrolls_murderer_hints_and_both_purple_transcripts() {
+        for menu in [2, 3, 4] {
+            let mut model = MurdererModel::new(20);
+            assert!(model.open_menu(menu));
+            if menu == 4 {
+                model.navigate(-20);
+            }
+            model.take_sounds();
+            for (amount, expected) in [
+                (-3.25, 104.0),
+                (-0.125, 108.0),
+                (3.25, 4.0),
+                (0.0, 4.0),
+                (100.0, 0.0),
+            ] {
+                let (input, scroll) = crate::app::wheel_scroll_test_input(amount);
+                model.handle_controller_input_with_scroll(&input, scroll, 1500.0);
+                assert_eq!(
+                    if menu == 4 {
+                        model.hint_scroll
+                    } else {
+                        model.purple_text_scroll
+                    },
+                    expected,
+                    "menu{menu}"
+                );
+                assert!(model.take_sounds().is_empty());
+            }
         }
     }
 
