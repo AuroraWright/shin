@@ -18,6 +18,7 @@ mod cli;
 mod engine_random;
 #[expect(unused)]
 mod fps_counter;
+mod game_inspection;
 mod layer;
 mod render;
 mod time;
@@ -33,9 +34,16 @@ pub(crate) fn init_test_task_pools() {
     POOLS.call_once(shin_tasks::create_task_pools);
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     shin_window::init_tracing();
-    let cli = cli::Cli::parse();
+    let mut cli = cli::Cli::parse();
+
+    if cli.inspect_assets {
+        return game_inspection::inspect(&cli);
+    }
+    if cli.game == cli::Game::Higurashi {
+        app::prepare_higurashi_launch(&mut cli)?;
+    }
 
     // Create a background thread which checks for deadlocks every 10s
     std::thread::spawn(move || {
@@ -59,5 +67,9 @@ fn main() {
 
     shin_tasks::create_task_pools();
 
-    shin_window::run_window::<app::App>(cli);
+    match cli.game {
+        cli::Game::Umineko => shin_window::run_window::<app::App>(cli),
+        cli::Game::Higurashi => shin_window::run_window::<app::HigurashiApp>(cli),
+    }
+    Ok(())
 }
