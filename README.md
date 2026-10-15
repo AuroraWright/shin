@@ -138,6 +138,20 @@ However, there are still a lot of missing advanced features. It's not fully play
 
 The intent is to follow the engine as closely as possible, so that it can be used to run the original games.
 
+Gerokasu2 reimplementation is in progress. Umineko remains the default game;
+`shin --game gerokasu2 --inspect-assets --assets-dir gerokasu2` inspects the
+supplied Gerokasu2 ROM without starting graphics, audio or saves. Scenario,
+atlas and FNT6 font decoding, story rendering, command execution and basic
+message/card/choice input, read tracking, skip and autoplay are connected through a
+separate game adapter. The Ger native save codec, resource preparation and
+retained-command restoration are connected to `--load-save`/`--save-slot`;
+`--save-file` enables Ger autosave/global writes. Current end-to-end hardware
+validation is pending because exact Loopback Audio initialization is blocked.
+Ger mask loading/unloading, automatic resource gallery commits and the retained
+RESUME reconstruction worker are connected; their CPU/native checks pass.
+Title/menu, settings, backlog and full gameplay remain under implementation.
+See [Gerokasu2 status and evidence](gerokasu2/STATUS.md).
+
 ![screenshot.png](screenshot.png)
 
 ## Try it

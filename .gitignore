@@ -6,6 +6,9 @@ __pycache__/
 /umineko_switch_files/
 /higurashi/*.rom
 /higurashi/uncompressed_executable*
+/gerokasu2/*.rom
+/gerokasu2/uncompressed_executable*
+/gerokasu2/.local/
 /builds/manual-engine/shin
 /builds/manual-engine/Shin.app/
 /builds/manual-engine/assets*/
@@ -25,6 +28,8 @@ heaptrack.*.zst
 /higurashi/main.npdm
 /higurashi/rtld
 /.workspace-recovery-*/
+# Local reverse-engineering diagnostics and scratch binaries.
+/.local/
 
 # Reverse-engineering evidence and agent working files
 /reverse-engineering/

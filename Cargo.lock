@@ -5626,6 +5626,7 @@ dependencies = [
  "derivative",
  "derive_more",
  "enum-map",
+ "flate2",
  "float-ord",
  "glam 0.34.1",
  "hex",
