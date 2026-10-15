@@ -239,6 +239,7 @@ fn native_synthetic_UTF8_tags_names_modes_and_alignment_match_shared_layout() {
         "人物@r🐈𠮷※\u{10ffff}",
         "人@r@v声_01.@+台詞@-@/@x25.@y@|@k終わり",
         "@r@c900.赤@c0.黒@c.白@z150.大@z.元@a0.瞬時@a200.戻る",
+        "@r@z0.a@z9.b@z10.c@z11.d@z199.e@z200.f@z201.g@z.終わり",
         "@r@bかんじ.@<漢字@>と@{bold@}と@[即時@]通常@w100.@t並行@e",
         "名前がとても長いので横幅を調整する必要があります@r『引用（入れ子）です。』@r次の行。",
     ];
