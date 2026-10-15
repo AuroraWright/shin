@@ -56,23 +56,23 @@ pub fn input_case(line: &str) -> Case {
 #[derive(Clone, Debug)]
 pub enum Event {
     Draw(Box<[u32; 113]>),
-    Owner(Box<[u32; 73]>),
+    Owner(#[allow(dead_code, reason = "Retain complete native trace payload for evidence diagnostics.")] Box<[u32; 73]>),
     Resource([u32; 4]),
     Target([u32; 4]),
     Viewport([u32; 2]),
     Restore([u32; 4]),
     Clear([u32; 5]),
-    Bind([u32; 3], Option<[u32; 5]>),
-    Stencil([u32; 5]),
+    Bind(#[allow(dead_code, reason = "Retain complete native trace payload for evidence diagnostics.")] [u32; 3], Option<[u32; 5]>),
+    Stencil(#[allow(dead_code, reason = "Retain complete native trace payload for evidence diagnostics.")] [u32; 5]),
     Render([u32; 4]),
     Lower([u32; 3], Vec<u32>),
     SamplerFilter([u32; 2]),
     SamplerWrap([u32; 3]),
     Drop([u32; 2]),
-    Keep([u32; 2]),
+    Keep(#[allow(dead_code, reason = "Retain complete native trace payload for evidence diagnostics.")] [u32; 2]),
     Copy([u32; 2]),
     InitialClear([u32; 2]),
-    Flush(u32),
+    Flush(#[allow(dead_code, reason = "Retain complete native trace payload for evidence diagnostics.")] u32),
     Depth([u32; 2]),
 }
 pub struct Original {

@@ -21,7 +21,6 @@ mod model_tests;
 /// complete composed source before submitting that First worker.
 pub(super) const ATLAS_PATH: &str = "/bgmmode.txa";
 pub(super) const MASK_PATH: &str = "/default.msk";
-pub(super) const INPUT_EXTENT: (u16, u16) = (1920, 1080);
 pub(super) mod opening;
 pub(super) mod owner;
 pub(super) mod view;
@@ -47,15 +46,18 @@ pub(super) enum Action {
     },
 }
 pub(super) struct Row {
+    #[allow(dead_code, reason = "Preserve source catalog identity alongside filtered rows.")]
     pub catalog_index: usize,
     pub bgm: u16,
     pub once: u16,
     pub name: u16,
     pub unlocked: bool,
+    #[allow(dead_code, reason = "Preserve the native append flag in model and row snapshots.")]
     pub append: bool,
     pub flash: HigurashiTweener,
 }
 pub(super) struct Model {
+    #[allow(dead_code, reason = "Preserve the native append flag in model and row snapshots.")]
     pub append: bool,
     pub rows: Vec<Row>,
     pub document_height: i32,
@@ -272,6 +274,7 @@ impl Model {
     }
     /// Parent2fe2c tail: atlas controls scrollbar visibility independently of
     /// executor status. Sample scrollbar BEFORE advancing the scroll clock.
+    #[cfg(test)]
     pub fn advance_clocks(&mut self, delta: Ticks, atlas: bool, bgm_status: u32) {
         if self.velocity != 0. {
             self.move_scroll(self.scroll.value() - self.velocity, true);
@@ -394,6 +397,7 @@ pub(super) enum Task {
     Input { done: bool },
     Close { done: bool },
 }
+#[cfg(test)]
 pub(super) trait Services {
     fn job_status(&mut self) -> Result<u32>;
     fn mask_published(&self) -> bool;
@@ -416,6 +420,7 @@ impl Task {
     }
     /// Returns append-only tasks for the same native scope. Newly pushed tasks
     /// start on the following scope poll; overlay advancement follows phase tests.
+    #[cfg(test)]
     pub fn poll_native(
         &mut self,
         model: &mut Model,

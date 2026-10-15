@@ -257,6 +257,7 @@ impl Owned {
             resume: None,
         }
     }
+    #[cfg(test)]
     fn pending_event(&self) -> Option<&Action> {
         match self.resume.as_ref()? {
             Resume::FirstStop(_) => Some(&Action::StopBgm(60)),
@@ -829,23 +830,30 @@ impl Owner {
             .unwrap()
             .disable(self.model.as_mut().unwrap());
     }
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Retained native owner lifecycle inspection hook.")]
     pub fn closing(&self) -> bool {
         self.model().closing
     }
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Retained native owner lifecycle inspection hook.")]
     pub fn has_save_task(&self) -> bool {
         false
     }
     /// A failed parent event remains owned here; the next poll resumes the same
     /// frozen callback before admitting any new delta/buttons/pointer frame.
+    #[cfg(test)]
     pub fn pending_event(&self) -> Option<&Action> {
         self.scope
             .iter()
             .find_map(Owned::pending_event)
             .or_else(|| self.events.front())
     }
+    #[cfg(test)]
     pub fn pending_frame(&self) -> bool {
         self.pending.is_some()
     }
+    #[cfg(test)]
     pub fn retirements(&self) -> Vec<shin_tasks::LoaderRetirement> {
         self.loader
             .job
@@ -878,10 +886,12 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_model(&self) -> &Model {
         self.model()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (bool, bool, bool, bool, bool, bool) {
         let published = self.loader.published.lock();
         (
@@ -896,6 +906,7 @@ impl Owner {
         )
     }
     #[cfg(test)]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_resources(&self) -> ReferenceResources {
         let published = self.loader.published.lock();
         ReferenceResources {

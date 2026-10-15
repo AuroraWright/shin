@@ -10,9 +10,9 @@ use crate::{
 };
 
 pub trait DynamicBufferBackend {
-    fn get_with_raw_data(&mut self, alignment: BytesAddress, data: &[u8]) -> BufferRef<RawMarker>;
+    fn get_with_raw_data(&mut self, alignment: BytesAddress, data: &[u8]) -> BufferRef<'_, RawMarker>;
 
-    fn get_with_struct_data<T: StructBufferType>(&mut self, data: &T::Value) -> BufferRef<T> {
+    fn get_with_struct_data<T: StructBufferType>(&mut self, data: &T::Value) -> BufferRef<'_, T> {
         // can't use a statically-sized array here because of `<T::Value as encase::ShaderSize>::SHADER_SIZE.get() as usize`
         let mut buffer = vec![0u8; <T::Value as encase::ShaderSize>::SHADER_SIZE.get() as usize];
 
@@ -24,7 +24,7 @@ pub trait DynamicBufferBackend {
             .downcast()
     }
 
-    fn get_with_slice_data<T: ArrayBufferType>(&mut self, data: &[T::Element]) -> BufferRef<T> {
+    fn get_with_slice_data<T: ArrayBufferType>(&mut self, data: &[T::Element]) -> BufferRef<'_, T> {
         let data: &[u8] = bytemuck::cast_slice(data);
 
         self.get_with_raw_data(T::OFFSET_ALIGNMENT, data).downcast()
@@ -33,15 +33,15 @@ pub trait DynamicBufferBackend {
     fn get_uniform_with_data<T: encase::ShaderSize + encase::internal::WriteInto>(
         &mut self,
         data: &T,
-    ) -> BufferRef<UniformMarker<T>> {
+    ) -> BufferRef<'_, UniformMarker<T>> {
         self.get_with_struct_data(data)
     }
 
-    fn get_vertex_with_data<T: VertexType>(&mut self, data: &[T]) -> BufferRef<VertexMarker<T>> {
+    fn get_vertex_with_data<T: VertexType>(&mut self, data: &[T]) -> BufferRef<'_, VertexMarker<T>> {
         self.get_with_slice_data(data)
     }
 
-    fn get_index_with_data(&mut self, data: &[u16]) -> BufferRef<IndexMarker> {
+    fn get_index_with_data(&mut self, data: &[u16]) -> BufferRef<'_, IndexMarker> {
         self.get_with_slice_data(data)
     }
 }

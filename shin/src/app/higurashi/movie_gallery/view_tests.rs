@@ -2,11 +2,10 @@
 //! runner reexecution required. This test does not claim shader/pixel parity.
 use super::super::{Model, Task};
 use super::*;
-use crate::adv::higurashi::reconstruction_mode::overlay::DrawPacket;
+use crate::adv::higurashi::{browser_controls::Scrollbar, reconstruction_mode::overlay::DrawPacket};
 use serde::Deserialize;
 use shin_core::{
     format::{font::read_font_metrics, scenario::higurashi::HigurashiScenario},
-    time::Ticks,
 };
 use std::{
     collections::HashMap,
@@ -33,7 +32,8 @@ struct Profile {
     layout: u32,
     height: i32,
     viewer: u32,
-    volume: u32,
+    #[serde(rename = "volume")]
+    _volume: u32,
     opacity: f32,
     backdrop: f32,
     focus: Vec<(usize, f32)>,

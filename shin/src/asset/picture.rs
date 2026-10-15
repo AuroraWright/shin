@@ -242,12 +242,13 @@ impl PictureBlocks {
 
 /// Per-file metadata and native-ID shared placement/GPU block ownership.
 pub struct Picture {
-    #[expect(unused)] // labels are nice for debugging
     pub label: String,
     pub effective_width: u32,
     pub effective_height: u32,
     pub origin_x: i32,
     pub origin_y: i32,
+    // Preserve native file metadata for header validation and future flag handling.
+    #[allow(dead_code)]
     pub flags: u32,
     pub scale: f32,
     pub blocks: Arc<PictureBlocks>,

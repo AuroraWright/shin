@@ -568,14 +568,12 @@ impl LastLayer {
     pub fn take_sounds(&self) -> Vec<&'static str> {
         self.inner_ref().model.lock().unwrap().take_sounds()
     }
+    #[cfg(test)]
     pub fn advance_animation(&self, ticks: f32) {
         self.inner_ref().model.lock().unwrap().update(ticks);
     }
     pub fn result(&self) -> Option<i32> {
         self.inner_ref().model.lock().unwrap().result
-    }
-    pub fn reset(&self) {
-        *self.inner_ref().model.lock().unwrap() = LastModel::default();
     }
     pub fn restore_completed_answer(&self, answer: i32) {
         self.inner_ref()
@@ -1595,10 +1593,6 @@ impl super::InteractiveView<'_, LastLayer> {
     pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
         self.with(|layer| layer.reference_controller_state())
     }
-    #[cfg(test)]
-    pub(crate) fn reference_draw_commands(&self, commands: &[&str]) {
-        self.with(|layer| layer.reference_draw_commands(commands))
-    }
     pub fn navigate(&self, delta: i32) {
         self.with(|layer| layer.navigate(delta))
     }
@@ -1638,20 +1632,7 @@ impl super::InteractiveView<'_, LastLayer> {
     pub fn take_sounds(&self) -> Vec<&'static str> {
         self.with(|layer| layer.take_sounds())
     }
-    pub fn advance_animation(&self, ticks: f32) {
-        self.with(|layer| layer.advance_animation(ticks))
-    }
     pub fn result(&self) -> Option<i32> {
         self.with(|layer| layer.result())
-    }
-    pub fn reset(&self) {
-        self.with(|layer| layer.reset())
-    }
-    pub fn restore_completed_answer(&self, answer: i32) {
-        self.with(|layer| layer.restore_completed_answer(answer))
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_restored_tweens(&self) -> [f32; 7] {
-        self.with(|layer| layer.reference_restored_tweens())
     }
 }

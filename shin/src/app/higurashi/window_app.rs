@@ -119,6 +119,8 @@ impl HigurashiApp {
     }
 }
 impl ShinApp for HigurashiApp {
+    const FULLSCREEN_SHORTCUT: Option<winit::keyboard::KeyCode> =
+        Some(winit::keyboard::KeyCode::KeyF);
     type Parameters = Cli;
     type EventType = ();
     // raw_input owns the one canonical projection/native repeat clock.

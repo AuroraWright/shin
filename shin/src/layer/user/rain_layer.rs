@@ -1,6 +1,10 @@
+#[cfg(test)]
+use std::sync::Arc;
 use super::rain_particles::RainParticles;
+#[cfg(test)]
+use crate::asset::system::AssetServer;
 use crate::{
-    asset::{effects::EffectsAtlasBorrow, system::AssetServer},
+    asset::effects::EffectsAtlasBorrow,
     layer::{
         LayerProperties, NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
@@ -14,7 +18,6 @@ use shin_render::{
     ColorBlendType, PassKind, RenderRequestBuilder, quad_vertices::QuadVertices,
     render_pass::RenderPass, shaders::types::RenderClone,
 };
-use std::sync::Arc;
 
 #[derive(Clone, RenderClone)]
 pub struct RainLayerImpl {
@@ -46,6 +49,7 @@ impl RainLayer {
             _ => "goldsnow",
         }
     }
+    #[cfg(test)]
     pub async fn load(server: &AssetServer, mode: i32, min: i32, max: i32) -> Self {
         let textures = server
             .effects_atlas_for(Self::texture_name(mode))

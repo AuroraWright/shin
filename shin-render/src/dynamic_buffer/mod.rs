@@ -96,7 +96,7 @@ impl DynamicBuffer {
 }
 
 impl DynamicBufferBackend for DynamicBuffer {
-    fn get_with_raw_data(&mut self, alignment: BytesAddress, data: &[u8]) -> BufferRef<RawMarker> {
+    fn get_with_raw_data(&mut self, alignment: BytesAddress, data: &[u8]) -> BufferRef<'_, RawMarker> {
         let logical_size = BytesAddress::new(data.len() as _);
 
         let (staging, actual) = self.belt.allocate(logical_size, alignment, &self.device);

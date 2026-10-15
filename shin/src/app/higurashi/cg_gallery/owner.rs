@@ -1,7 +1,9 @@
 //! Concrete CGMode lifetime. Native grid, retained Viewer and First share one
 //! borrowed private scope; the caller owns audio/acquisitions/scene dispatch.
+#[cfg(test)]
+use super::ViewState;
 pub(in crate::app::higurashi) use super::viewer::owner::Seeds;
-use super::{Action, Kind, Model, Services as ModelServices, Task, ViewState, view::View, viewer};
+use super::{Action, Kind, Model, Services as ModelServices, Task, view::View, viewer};
 use crate::{
     adv::{
         character_view::CharacterTextures,
@@ -44,9 +46,6 @@ impl Composition<'_, '_> {
     }
     pub fn badges_hidden(&self) -> bool {
         self.viewer.badges_hidden()
-    }
-    pub fn old_picture_identity(&self) -> Option<u64> {
-        self.viewer.old_picture_identity()
     }
 }
 pub(in crate::app::higurashi) trait Services {
@@ -519,28 +518,6 @@ pub(in crate::app::higurashi) struct Owner {
     fault: Option<String>,
 }
 impl Owner {
-    pub fn new(
-        server: Arc<AssetServer>,
-        scenario: Arc<HigurashiScenario>,
-        font: Arc<GpuFontLazy>,
-        settings: &SaveData,
-        capture: Option<RenderTexture>,
-        seeds: Seeds,
-        extent: (u16, u16),
-        services: &mut dyn Services,
-    ) -> Result<Self> {
-        let mut capture = capture;
-        Self::new_retained(
-            server,
-            scenario,
-            font,
-            settings,
-            &mut capture,
-            seeds,
-            extent,
-            services,
-        )
-    }
     pub fn new_retained(
         server: Arc<AssetServer>,
         scenario: Arc<HigurashiScenario>,
@@ -704,6 +681,7 @@ impl Owner {
         }
         result
     }
+    #[cfg(test)]
     pub fn state(&self) -> ViewState {
         self.model.as_ref().unwrap().view_state()
     }
@@ -737,21 +715,8 @@ impl Owner {
         });
         result
     }
-    pub fn retirements(&self) -> Vec<shin_tasks::LoaderRetirement> {
-        let mut result = Vec::new();
-        if let Some(job) = &self.loader.job {
-            result.push(job.retirement.clone());
-        }
-        for item in self.scope.iter() {
-            if let Owned::Viewer(viewer) = item {
-                if let Some(retirement) = viewer.retirement() {
-                    result.push(retirement);
-                }
-            }
-        }
-        result
-    }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_viewer(&self) -> Option<&viewer::owner::Owner> {
         self.scope.iter().find_map(|item| {
             if let Owned::Viewer(viewer) = item {
@@ -762,10 +727,12 @@ impl Owner {
         })
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_model(&self) -> &Model {
         self.model.as_ref().unwrap()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_readiness(&self) -> (bool, bool, bool, Option<u64>) {
         let atlas = self.loader.current_atlas();
         (

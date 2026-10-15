@@ -1,7 +1,6 @@
 mod event;
 mod grammar;
 mod input;
-mod lang;
 mod lex;
 mod output;
 mod parser;

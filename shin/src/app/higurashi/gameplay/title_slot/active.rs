@@ -2,8 +2,7 @@
 //! Scene updates own native clamped delta/full PlayClock; these getters do not
 //! update, prepare ADV children, retire factories, or acknowledge modal requests.
 use super::*;
-use crate::adv::higurashi::host::system_menu::ChildRequest;
-use crate::app::higurashi::{main_title::TitleDestination, runtime_game_data::RuntimeGameData};
+use crate::app::higurashi::main_title::TitleDestination;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(in crate::app::higurashi) enum ActiveScene {
@@ -24,13 +23,18 @@ pub(in crate::app::higurashi) struct ActiveGlobals<'a> {
     pub data: &'a SaveData,
     pub clock: &'a PlayClock,
     pub platform_flag: bool,
+    #[cfg(test)]
     pub last_title_mode: i32,
     pub storage: Option<&'a Arc<dyn crate::app::higurashi::load_game::Storage>>,
     pub runtime_saves: Option<&'a crate::app::higurashi::runtime_saves::Slots>,
     pub server: &'a Arc<AssetServer>,
+    #[cfg(test)]
     pub manager: &'a Arc<shin_audio::AudioManager>,
+    #[cfg(test)]
     pub sounds: &'a Arc<Mutex<SystemSoundPlayer>>,
 }
+#[cfg(test)]
+#[allow(dead_code, reason = "Mutable native scene-state projection for direct save/restoration fixture access.")]
 pub(in crate::app::higurashi) struct ActiveGlobalsMut<'a> {
     pub data: &'a mut SaveData,
     pub clock: &'a mut PlayClock,
@@ -46,11 +50,14 @@ impl<'a> From<&'a Globals> for ActiveGlobals<'a> {
             data: &g.data,
             clock: &g.clock,
             platform_flag: g.platform_flag,
+            #[cfg(test)]
             last_title_mode: g.last_title_mode,
             storage: g.storage.as_ref(),
             runtime_saves: g.runtime_saves.as_ref(),
             server: &g.server,
+            #[cfg(test)]
             manager: &g.manager,
+            #[cfg(test)]
             sounds: &g.sounds,
         }
     }
@@ -62,42 +69,45 @@ impl<'a> From<&'a Metadata> for ActiveGlobals<'a> {
             data: &g.data,
             clock: &g.clock,
             platform_flag: g.platform_flag,
+            #[cfg(test)]
             last_title_mode: g.last_title_mode,
             storage: g.storage.as_ref(),
             runtime_saves: g.runtime_saves.as_ref(),
             server: &g.server,
+            #[cfg(test)]
             manager: &g.manager,
+            #[cfg(test)]
             sounds: &g.sounds,
         }
     }
 }
+#[cfg(test)]
 impl<'a> From<&'a mut Globals> for ActiveGlobalsMut<'a> {
     fn from(g: &'a mut Globals) -> Self {
         Self {
             data: &mut g.data,
             clock: &mut g.clock,
             platform_flag: &mut g.platform_flag,
+            #[cfg(test)]
             last_title_mode: &mut g.last_title_mode,
             storage: &mut g.storage,
             runtime_saves: &mut g.runtime_saves,
         }
     }
 }
+#[cfg(test)]
 impl<'a> From<&'a mut Metadata> for ActiveGlobalsMut<'a> {
     fn from(g: &'a mut Metadata) -> Self {
         Self {
             data: &mut g.data,
             clock: &mut g.clock,
             platform_flag: &mut g.platform_flag,
+            #[cfg(test)]
             last_title_mode: &mut g.last_title_mode,
             storage: &mut g.storage,
             runtime_saves: &mut g.runtime_saves,
         }
     }
-}
-pub(in crate::app::higurashi) struct ExitRequest<'a> {
-    pub destination: crate::adv::higurashi::exit::Destination,
-    pub data: &'a RuntimeGameData,
 }
 pub(in crate::app::higurashi) struct TitleDemoTransfer {
     pub request: crate::app::higurashi::startup::TitleDemoRequest,
@@ -157,6 +167,7 @@ impl TitleSlot {
                 _ => None,
             })
     }
+    #[cfg(test)]
     pub(super) fn retained_globals_mut(&mut self) -> Option<&mut Globals> {
         if let Some(o) = &mut self.title {
             return Some(&mut o.globals);
@@ -205,6 +216,7 @@ impl TitleSlot {
             .map(ActiveGlobals::from)
             .context("Scene factory has no retained global owner")
     }
+    #[cfg(test)]
     pub fn globals_mut(&mut self) -> Result<ActiveGlobalsMut<'_>> {
         if self.game.is_some() {
             return Ok((&mut self.game.as_mut().unwrap().globals).into());
@@ -216,12 +228,14 @@ impl TitleSlot {
     pub fn active_globals(&self) -> Result<ActiveGlobals<'_>> {
         self.globals()
     }
+    #[cfg(test)]
     pub fn active_globals_mut(&mut self) -> Result<ActiveGlobalsMut<'_>> {
         self.globals_mut()
     }
     /// Immutable writer snapshot only. Preserve uncommitted VM queues; merge
     /// already committed globals/full runtime rows without retiring the source.
     /// The caller owns readiness/quiescence of live SaveGame/preview writers.
+    #[cfg(test)]
     pub fn save_snapshot(&self) -> Result<SaveData> {
         let globals = self.globals()?;
         let mut data = globals.data.clone();
@@ -308,35 +322,6 @@ impl TitleSlot {
     ) -> RenderTexture {
         composed.copy_snapshot(&mut context.render_clone_ctx())
     }
-    pub fn resize_input(&mut self, extent: (u16, u16)) -> Result<()> {
-        ensure!(
-            extent.0 > 0 && extent.1 > 0,
-            "Invalid active scene input extent"
-        );
-        match self.active_scene()? {
-            ActiveScene::Title => {
-                self.title.as_mut().unwrap().resize_menu_input(extent);
-                Ok(())
-            }
-            ActiveScene::Gameplay => self.game.as_mut().unwrap().resize_input(extent),
-            ActiveScene::Kakera => {
-                self.kakera.as_mut().unwrap().resize_input(extent);
-                Ok(())
-            }
-            ActiveScene::Tips => {
-                self.tips.as_mut().unwrap().resize_input(extent);
-                Ok(())
-            }
-            ActiveScene::Quiz => self.quiz.as_mut().unwrap().resize_input(extent),
-            ActiveScene::ScenarioSelect => {
-                self.scenario_select.as_mut().unwrap().resize_input(extent)
-            }
-            ActiveScene::CgGallery => self.cg_gallery.as_mut().unwrap().resize_input(extent),
-            ActiveScene::MusicGallery => self.music_gallery.as_mut().unwrap().resize_input(extent),
-            ActiveScene::MovieGallery => self.movie_gallery.as_mut().unwrap().resize_input(extent),
-            ActiveScene::RetiredFactory => Ok(()),
-        }
-    }
     pub fn cancel_input(&mut self) -> Result<()> {
         match self.active_scene()? {
             ActiveScene::Title => self.title.as_mut().unwrap().cancel_input(),
@@ -361,39 +346,18 @@ impl TitleSlot {
                 crate::app::higurashi::scenario_select::opening::Opening::has_save_task,
             )
     }
-    pub fn pending_input_request(&self) -> Option<crate::adv::higurashi::input::Request> {
-        self.game.as_ref().and_then(Gameplay::pending_input_request)
-    }
-    pub fn pending_exit_request(&self) -> Option<ExitRequest<'_>> {
-        self.game
-            .as_ref()?
-            .pending_exit_request()
-            .map(|r| ExitRequest {
-                destination: r.destination,
-                data: &r.data,
-            })
-    }
-    pub fn pending_menu_child_requests(&self) -> &[ChildRequest] {
-        self.game
-            .as_ref()
-            .and_then(Gameplay::host)
-            .map_or(&[], |host| host.pending_menu_child_requests())
-    }
     pub fn pending_scene_factory(&self) -> bool {
         self.pending.is_some() || self.title_demo_request.is_some()
     }
-    pub fn other_scene_request(&self) -> Option<&CategorySceneRequest> {
-        self.other.front()
-    }
+    #[cfg(test)]
     pub fn title_destination(&self) -> Option<&TitleDestination> {
         self.title_destinations.front()
     }
-    pub fn take_title_destination(&mut self) -> Option<TitleDestination> {
-        self.title_destinations.pop_front()
-    }
+    #[cfg(test)]
     pub fn title_demo_request(&self) -> Option<&crate::app::higurashi::startup::TitleDemoRequest> {
         self.title_demo_request.as_ref()
     }
+    #[cfg(test)]
     pub fn pending_title_demo(&self) -> Option<&crate::app::higurashi::startup::TitleDemoRequest> {
         self.title_demo_request()
     }

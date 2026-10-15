@@ -1,5 +1,7 @@
 //! Actual738b0/71fb4 Manual lifetime with atlas-only First and caller callbacks.
-use super::{Action, Kind, Model, Services, Task, ViewState, view::View};
+#[cfg(test)]
+use super::ViewState;
+use super::{Action, Kind, Model, Services, Task, view::View};
 use crate::{
     adv::{
         character_view::CharacterTextures,
@@ -297,6 +299,7 @@ impl Owner {
         }
         result
     }
+    #[cfg(test)]
     pub fn state(&self) -> ViewState {
         let mut state = self.model.view_state();
         //72320 acquires the parent archive independently of First/job status.
@@ -313,6 +316,7 @@ impl Owner {
         self.scope.draw_ref(|_| {});
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (usize, i32, bool, u32, i32) {
         (
             self.model.count,

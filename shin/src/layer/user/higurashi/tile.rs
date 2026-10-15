@@ -83,6 +83,8 @@ impl Tile {
         .map(|position| PosColVertex { position, color })
     }
 
+
+    #[cfg(test)]
     pub fn render(
         &self,
         pass: &mut RenderPass,

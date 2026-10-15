@@ -72,7 +72,7 @@ impl PreRenderContext<'_, '_, '_, '_> {
         target: TextureTarget,
         depth_stencil: Option<DepthStencilTarget>,
         label: &str,
-    ) -> RenderPass {
+    ) -> RenderPass<'_, '_, '_, '_, '_> {
         RenderPass::new(
             self.pipeline_storage,
             self.dynamic_buffer,
@@ -86,7 +86,7 @@ impl PreRenderContext<'_, '_, '_, '_> {
         )
     }
 
-    pub fn render_clone_ctx(&mut self) -> RenderCloneCtx {
+    pub fn render_clone_ctx(&mut self) -> RenderCloneCtx<'_, '_> {
         RenderCloneCtx {
             device: self.device,
             encoder: self.encoder,
@@ -98,7 +98,7 @@ impl PreRenderContext<'_, '_, '_, '_> {
         target: TextureTarget,
         depth_stencil: DepthStencilTarget,
         label: &str,
-    ) -> RenderPass {
+    ) -> RenderPass<'_, '_, '_, '_, '_> {
         RenderPass::new_with_depth_preservation(
             self.pipeline_storage,
             self.dynamic_buffer,

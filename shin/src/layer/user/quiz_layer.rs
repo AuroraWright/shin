@@ -363,17 +363,6 @@ impl QuizLayer {
             .map(|v| v.value())
             .collect()
     }
-    pub fn reset(&self) {
-        let mut model = self.inner_ref().model.lock().unwrap();
-        model.disable_pointer();
-        model.result = None;
-        model.confirming = None;
-        for flash in &mut model.flash {
-            flash.fast_forward_to(0.0);
-        }
-        model.last_pointer = None;
-        model.sounds.clear();
-    }
     pub(crate) fn restore_completed_answer(&self, answer: i32) {
         self.inner_ref()
             .model
@@ -4849,12 +4838,6 @@ impl super::InteractiveView<'_, QuizLayer> {
     #[cfg(test)]
     pub(crate) fn reference_focus_values(&self) -> Vec<f32> {
         self.with(|layer| layer.reference_focus_values())
-    }
-    pub fn reset(&self) {
-        self.with(|layer| layer.reset())
-    }
-    pub(crate) fn restore_completed_answer(&self, answer: i32) {
-        self.with(|layer| layer.restore_completed_answer(answer))
     }
     pub fn pointer(&self, position: Vec2, clicked: bool) {
         self.with(|layer| layer.pointer(position, clicked))

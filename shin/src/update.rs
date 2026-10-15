@@ -35,6 +35,7 @@ pub struct AdvUpdateContext<'a> {
     pub asset_server: &'a Arc<AssetServer>,
     // we do not provide access to pre-render context here because there is another method for it (at least on layers)
     // you can create render resources and schedule transmissions though
+    #[allow(dead_code)] // Retained alongside queue for layer resource creation in this context.
     pub device: &'a wgpu::Device,
     pub queue: &'a wgpu::Queue,
 

@@ -100,6 +100,7 @@ impl AnyWiper {
     }
 
     /// The native factory returns no loader for unsigned values outside0..9.
+    #[cfg(test)]
     pub async fn load_raw(
         asset_server: &AssetServer,
         scenario: &Scenario,
@@ -126,6 +127,7 @@ impl AnyWiper {
             .map(Some)
     }
 
+    #[cfg(test)]
     pub async fn load(
         asset_server: &AssetServer,
         scenario: &Scenario,

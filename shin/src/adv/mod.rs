@@ -2345,7 +2345,7 @@ pub struct AdvState {
     pub back_layer_group: Option<RootLayerGroup>,
     pub audio_manager: Arc<AudioManager>,
     pub audio: GlobalAudioSlot,
-    pub(super) pending_gallery_unlocks: Vec<gallery::GalleryUnlock>,
+    pending_gallery_unlocks: Vec<gallery::GalleryUnlock>,
     voice_focus_enabled: bool,
     movie_volume_settings: crate::audio::MovieVolumeSettings,
     pub playback_modes: playback::PlaybackModes,

@@ -188,22 +188,7 @@ fn run() {
         pixels
     };
     let manager = Arc::new(shin_audio::AudioManager::new_for_tests());
-    let profiles = [
-        "atlas-short",
-        "icon-name",
-        "num-name",
-        "first-character-name",
-        "last-character-name",
-        "last-background-name",
-        "mask-short",
-        "initial-picture-short",
-        "initial-bustup-short",
-        "replace-bustup-short",
-        "replace-primary-short",
-        "replace-secondary-short",
-        "unused-dressicon",
-        "unused-sizeicon",
-    ];
+
 
     let mut cases = Vec::new();
     for profile in [

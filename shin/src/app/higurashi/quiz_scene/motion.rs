@@ -165,7 +165,7 @@ pub(in crate::app::higurashi) struct Motion {
     pub question_elapsed: f32,
     pub next_question: u32,
     pub score_request: Option<i32>,
-    pub borrowed: Vec<Kind>,
+    pub(super) borrowed: Vec<Kind>,
     tasks: ModeStack<Task>,
 }
 impl Motion {
@@ -187,13 +187,14 @@ impl Motion {
             tasks,
         }
     }
-    pub fn tasks(&self) -> impl Iterator<Item = &Task> {
+    #[cfg(test)]
+    pub(super) fn tasks(&self) -> impl Iterator<Item = &Task> {
         self.tasks.iter()
     }
-    pub fn first(&self) -> Option<&Task> {
+    pub(super) fn first(&self) -> Option<&Task> {
         self.tasks.iter().find(|t| t.kind == Kind::First)
     }
-    pub fn advance(
+    pub(super) fn advance(
         &mut self,
         worker_status: u32,
         delta: Ticks,

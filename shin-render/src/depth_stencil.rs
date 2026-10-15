@@ -35,7 +35,7 @@ impl DepthStencil {
         }
     }
 
-    pub fn get_target_view(&mut self) -> DepthStencilTarget {
+    pub fn get_target_view(&mut self) -> DepthStencilTarget<'_> {
         DepthStencilTarget {
             view: self.inner_texture.resize_and_get_view(),
         }

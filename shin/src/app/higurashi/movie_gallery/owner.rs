@@ -40,6 +40,7 @@ pub(in crate::app::higurashi) trait Services {
 }
 #[cfg(any(test, feature = "higurashi-window-probe"))]
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(dead_code, reason = "Native viewer snapshot shared by tests and optional window probes.")]
 pub(in crate::app::higurashi) struct ReferenceViewerState {
     pub id: u64,
     pub movie_id: u16,
@@ -54,6 +55,7 @@ pub(in crate::app::higurashi) struct ReferenceViewerState {
 }
 #[cfg(any(test, feature = "higurashi-window-probe"))]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[allow(dead_code, reason = "Native viewer snapshot shared by tests and optional window probes.")]
 pub(in crate::app::higurashi) struct ReferenceScopeState {
     pub tasks: usize,
     pub borrowed_tasks: usize,
@@ -981,12 +983,17 @@ impl Owner {
         }
         Ok(())
     }
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Retained native owner lifecycle inspection hook.")]
     pub fn closing(&self) -> bool {
         self.model.closing
     }
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Retained native owner lifecycle inspection hook.")]
     pub fn has_save_task(&self) -> bool {
         false
     }
+    #[cfg(test)]
     pub fn retirements(&self) -> Vec<shin_tasks::LoaderRetirement> {
         self.loader
             .job
@@ -1021,10 +1028,12 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_model(&self) -> &Model {
         &self.model
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (bool, bool, bool, bool, bool, usize) {
         let published = self.loader.published.lock();
         (
@@ -1039,6 +1048,7 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_viewer_state(&self) -> Option<ReferenceViewerState> {
         self.scope
             .iter()
@@ -1071,6 +1081,7 @@ impl Owner {
             .last()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_scope_state(&self) -> ReferenceScopeState {
         let mut state = ReferenceScopeState {
             tasks: self.scope.len(),

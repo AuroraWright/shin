@@ -25,8 +25,10 @@ use glam::{Mat4, Vec3, Vec3Swizzles as _, vec2, vec3};
 use shin_core::{
     primitives::color::{FloatColor4, UnormColor},
     time::Ticks,
-    vm::command::types::{LayerProperty, LayerbankId, MaskFlags},
+    vm::command::types::{LayerbankId, MaskFlags},
 };
+#[cfg(test)]
+use shin_core::vm::command::types::LayerProperty;
 use shin_render::{
     ColorBlendType, DepthStencilState, DrawPrimitive, LayerShaderOutputKind, PassKind,
     RenderProgramWithArguments, RenderRequestBuilder, StencilFunction, StencilMask,

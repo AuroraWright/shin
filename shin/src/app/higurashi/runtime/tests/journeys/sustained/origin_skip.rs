@@ -136,9 +136,10 @@ fn signal_after_one_callback(
     old_amount: i32,
     commands: u64,
     sync: u32,
+    temporary: bool,
 ) {
     let frames = j.runtime.frames;
-    neutral(j, viewport);
+    skip_frame(j, viewport, temporary);
     assert_eq!(j.runtime.frames, frames + 1);
     let g = game(&j.runtime).unwrap();
     let h = g.host().unwrap();
@@ -154,17 +155,45 @@ fn signal_after_one_callback(
         p.syncs, sync,
         "actual authored MSGSIGNAL ran after helper return"
     );
-    assert_eq!(modes(&j.runtime) & 2, 2);
+    assert_eq!(modes(&j.runtime) & 2, if temporary { 0 } else { 2 });
+}
+
+fn skip_frame(j: &mut Journey, viewport: InputViewport, temporary: bool) {
+    if temporary {
+        assert!(matches!(
+            j.step(&key(KeyCode::ControlLeft), viewport),
+            Frame::Advanced(_)
+        ));
+    } else {
+        neutral(j, viewport);
+    }
 }
 
 #[test]
 #[ignore = "normal Runtime/Top8/actual Origin7 Matsuribayashi10008/unmodified quote183284/actual WAIT0(42,48) helpers/canonical J skip;real assets/offscreen Metal/exact Loopback Audio;synthetic initial unlock/temp writes only"]
 fn higurashi_runtime_origin_skip_retires_both_authored_quote_pauses_on_following_poll() {
+    origin_quote_skip(false);
+}
+
+#[test]
+#[ignore = "real Runtime raw Ctrl/Origin Matsuribayashi quote WAIT0, release and unchanged latched modes; offscreen Metal/exact Loopback Audio"]
+fn higurashi_runtime_ctrl_skip_retires_authored_pauses_without_latching() {
+    origin_quote_skip(true);
+}
+
+fn origin_quote_skip(temporary: bool) {
     let saved = fixture();
     let disk = saved.encode().unwrap();
     let deadline = Instant::now() + Duration::from_secs(180);
     let viewport = viewport((1920, 1080));
-    let mut j = Journey::new("origin-authored-skip-pauses", &saved);
+    let mut j = Journey::new(
+        if temporary {
+            "origin-ctrl-skip-pauses"
+        } else {
+            "origin-authored-skip-pauses"
+        },
+        &saved,
+    );
     j.boot_title(viewport, deadline);
     let shared = identities(&j.runtime);
     let manual = manuals(&j.runtime);
@@ -329,20 +358,30 @@ fn higurashi_runtime_origin_skip_retires_both_authored_quote_pauses_on_following
         later > 0.0 && later < ordinary,
         "ordinary pause advances without an injected time"
     );
-    // Re-enable via another genuine R/J edge. This same retained WAIT0 polls
+    // Use held Ctrl or a genuine R/J edge. This same retained WAIT0 polls
     // false, then eligible native post-poll skip must clear its clock only.
     assert!(matches!(
-        j.step(&key(KeyCode::KeyJ), viewport),
+        j.step(
+            &key(if temporary {
+                KeyCode::ControlLeft
+            } else {
+                KeyCode::KeyJ
+            }),
+            viewport
+        ),
         Frame::Advanced(_)
     ));
-    assert_eq!(modes(&j.runtime) & 2, 2);
-    assert!(eligible(&j.runtime));
+    assert_eq!(modes(&j.runtime) & 2, if temporary { 0 } else { 2 });
+    assert_eq!(
+        game(&j.runtime).unwrap().reference_effective_play_modes() & 2,
+        2
+    );
     let (remaining_first, first_commands) = remaining(&j.runtime, 42, 0);
     assert_eq!(
         remaining_first, 0.0,
         "eligible skip must clear real non-interruptible700ms pause after failed poll"
     );
-    signal_after_one_callback(&mut j, viewport, 42, first_commands, 1);
+    signal_after_one_callback(&mut j, viewport, 42, first_commands, 1, temporary);
     // No full42/48-tick delay is allowed between the actual signal barriers.
     // All intervening instructions are original MSGWAIT/CALL/assignments.
     let between = j.runtime.frames;
@@ -365,16 +404,19 @@ fn higurashi_runtime_origin_skip_retires_both_authored_quote_pauses_on_following
         if ready {
             break;
         }
-        neutral(&mut j, viewport);
+        skip_frame(&mut j, viewport, temporary);
     }
     assert!(j.runtime.frames - between <= 4);
-    assert!(eligible(&j.runtime));
+    assert_eq!(
+        game(&j.runtime).unwrap().reference_effective_play_modes() & 2,
+        2
+    );
     let (remaining_second, second_commands) = remaining(&j.runtime, 48, 1);
     assert_eq!(
         remaining_second, 0.0,
         "eligible skip clears the second actual800ms WAIT0"
     );
-    signal_after_one_callback(&mut j, viewport, 48, second_commands, 2);
+    signal_after_one_callback(&mut j, viewport, 48, second_commands, 2, temporary);
     let after_signal = j.runtime.frames;
     for _ in 0..4 {
         if game(&j.runtime)
@@ -390,7 +432,7 @@ fn higurashi_runtime_origin_skip_retires_both_authored_quote_pauses_on_following
         {
             break;
         }
-        neutral(&mut j, viewport);
+        skip_frame(&mut j, viewport, temporary);
     }
     assert!(j.runtime.frames - after_signal <= 4);
     assert_eq!(
@@ -406,13 +448,22 @@ fn higurashi_runtime_origin_skip_retires_both_authored_quote_pauses_on_following
         native_message_id(QUOTE + 1),
         "actual next message after both authored @y barriers"
     );
+    if temporary {
+        neutral(&mut j, viewport);
+        assert_eq!(modes(&j.runtime), 0, "Ctrl never latches native skip");
+        assert_eq!(
+            game(&j.runtime).unwrap().reference_effective_play_modes(),
+            0,
+            "physical release stops temporary skip"
+        );
+    }
     assert_eq!(identities(&j.runtime), shared);
     assert_eq!(manuals(&j.runtime), manual);
     assert!(j.runtime.globals().unwrap().unwrap().clock.ticks() > clock);
     assert!(j.runtime.failure().is_none());
     j.no_writes(Some(&disk));
     println!(
-        "Origin7/10008 real quote183284: normal-input skip-off clock advances; canonical J re-enable clears actual WAIT0(42),following callback runsMSG SIGNAL1; WAIT0(48) clears and following callback runsMSG SIGNAL2; actual nextMSG183285;no clock/script/policy injection,all100manuals/shared owners preserved/no writes;{}Runtimeframes/{}driven callbacks",
+        "Origin7/10008 real quote183284: normal-input skip-off clock advances; J/Ctrl re-enable clears actual WAIT0(42),following callback runsMSG SIGNAL1; WAIT0(48) clears and following callback runsMSG SIGNAL2; actual nextMSG183285;no clock/script/policy injection,all100manuals/shared owners preserved/no writes;{}Runtimeframes/{}driven callbacks",
         j.runtime.frames, driver.callbacks
     );
 }

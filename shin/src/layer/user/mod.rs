@@ -364,14 +364,6 @@ impl InteractiveLayerRef<'_> {
             layer.scroll_text(delta);
         }
     }
-    pub fn reset(&self) {
-        match self {
-            Self::Quiz(layer) => layer.reset(),
-            Self::Cake(layer) => layer.reset(),
-            Self::Murderer(layer) => layer.reset(),
-            Self::Last(layer) => layer.reset(),
-        }
-    }
 }
 
 impl UserLayer {
@@ -689,9 +681,6 @@ impl AdvUpdatable for UserLayer {
 }
 
 impl DrawableLayer for UserLayer {
-    fn retains_property_owner(&self) -> bool {
-        matches!(self, Self::Murderer(_))
-    }
     fn set_properties(&mut self, properties: LayerProperties) {
         match self {
             Self::Murderer(layer) => layer.set_properties(properties),

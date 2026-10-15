@@ -71,7 +71,7 @@ impl IndexSet {
     }
 
     /// Iterate over all indices present in the [`IndexSet`]
-    pub fn iter(&self) -> IndexSetIter {
+    pub fn iter(&self) -> IndexSetIter<'_> {
         IndexSetIter {
             iter: self.bits.iter().peekable(),
             position: Position::from_bit_index(0),

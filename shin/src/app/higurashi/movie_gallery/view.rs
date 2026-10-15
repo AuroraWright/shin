@@ -5,7 +5,6 @@ use crate::{
     adv::{
         character_view::CharacterTextures,
         higurashi::{
-            browser_controls::Scrollbar,
             browser_decorations,
             browser_navigation::labels::{Glyphs, Layout},
         },
@@ -71,6 +70,8 @@ fn quad(
         flash: 0.,
     }));
 }
+#[cfg(test)]
+#[allow(dead_code, reason = "Native packet comparison helper used by the movie render corpus.")]
 fn alpha(value: f32) -> u32 {
     ((value.max(0.) * 255.) as u32).min(255) << 24
 }

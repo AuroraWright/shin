@@ -30,6 +30,7 @@ pub(super) struct Task {
 pub(super) struct ViewState {
     pub ready: bool,
     pub count: usize,
+    #[allow(dead_code, reason = "Retain selection in native view snapshots for diagnostics.")]
     pub selected: i32,
     pub progress: f32,
     pub scroll: f32,

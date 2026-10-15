@@ -80,6 +80,7 @@ pub(super) struct Model {
     pub catalog: Arc<Catalog>,
     pub nodes: Vec<Node>,
     pub available: Vec<i32>,
+    #[allow(dead_code, reason = "Preserve the native initial group separately from live navigation.")]
     pub initial_group: i32,
     pub current_group: i32,
     pub available_index: i32,

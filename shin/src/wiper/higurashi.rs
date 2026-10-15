@@ -2,6 +2,7 @@
 //! Umineko: unsigned constructor duration, no frame marker, and an update on
 //! an already completed clock leaves it unchanged (native ec994/ec9e4).
 use shin_core::time::Ticks;
+#[cfg(test)]
 use shin_render::{
     ColorBlendType, DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder,
     quad_vertices::build_quad_vertices,
@@ -51,6 +52,8 @@ impl HigurashiDefaultWiper {
     pub fn progress(&self) -> f32 {
         self.current / self.total
     }
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Retained standalone native default-wipe rendering seam for GPU comparisons.")]
     pub fn render(
         &self,
         pass: &mut RenderPass,

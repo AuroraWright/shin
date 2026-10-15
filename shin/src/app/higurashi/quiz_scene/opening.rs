@@ -53,7 +53,7 @@ impl Prepared {
 pub(in crate::app::higurashi) struct Opening {
     pub globals: Globals,
     pub motion: Motion,
-    pub resources: Loader,
+    pub(super) resources: Loader,
     voice: Voice,
     view: View,
     area: InputArea,
@@ -160,6 +160,7 @@ impl Services for FrameServices<'_, '_> {
     }
 }
 impl Opening {
+    #[cfg(test)]
     pub fn new(
         globals: Globals,
         data: RuntimeGameData,

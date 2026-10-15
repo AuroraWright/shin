@@ -56,6 +56,7 @@ impl Gain {
             local: ((raw & 4095) as f32 * f32::from_bits(0x3a83126f)).clamp(0., 1.),
         }
     }
+    #[cfg(test)]
     pub fn category_one_source(self) -> bool {
         self.category == 1
     }
@@ -79,6 +80,10 @@ pub(crate) fn percentages(data: &SaveData) -> [u8; 3] {
 pub(crate) struct Prepared {
     path: String,
     gain: Gain,
+    #[allow(
+        dead_code,
+        reason = "Retain native Movie/BGM/CG acquisition IDs until the live acquired-bit service consumes them"
+    )]
     acquisitions: Acquisitions,
 }
 impl Prepared {
@@ -109,6 +114,10 @@ impl Prepared {
             },
         }))
     }
+    #[allow(
+        dead_code,
+        reason = "Native acquisition descriptor API retained for live acquired-bit integration"
+    )]
     pub fn acquisitions(&self) -> Acquisitions {
         self.acquisitions
     }
@@ -192,30 +201,7 @@ impl Owner {
                 .map_or(0, HigurashiVideoPlayerHandle::status)
         }
     }
-    pub fn generic_complete(&self) -> bool {
-        true // Movie's6826c is distinct from931b4/MOVIEWAIT status.
-    }
-    pub fn native_copy(&self) -> Option<Self> {
-        None //931ac: no entropy, media duplication, still-copy or new owner.
-    }
-    pub fn category_one_source(&self) -> bool {
-        self.gain.category_one_source()
-    }
-    pub fn start(&mut self) {
-        self.desired_playing = true;
-        if let Some(player) = &self.player {
-            player.start();
-        }
-    }
-    pub fn pause(&mut self) {
-        self.desired_playing = false;
-        if let Some(player) = &self.player {
-            player.stop();
-        }
-    }
-    pub fn is_playing(&self) -> bool {
-        self.desired_playing // Desired flag, independently of external suspension.
-    }
+    #[cfg(test)]
     pub fn media_time_micros(&self) -> u64 {
         self.player
             .as_ref()
@@ -223,17 +209,6 @@ impl Owner {
     }
     /// Caller advances the native base first, inside its permitted visual owner
     /// tick. No game delta reaches the independent media transport clock.
-    pub fn update(
-        &mut self,
-        frame_id: FrameId,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        preferences: [u8; 3],
-    ) -> Result<()> {
-        self.update_media(frame_id, device, queue)?;
-        self.apply_preferences(preferences);
-        Ok(())
-    }
     fn update_media(
         &mut self,
         frame_id: FrameId,
@@ -535,6 +510,7 @@ impl Packet {
             blend: ColorBlendType::from_higurashi_layer(drawable.blend_type),
         }))
     }
+    #[cfg(test)]
     pub fn render(&self, pass: &mut RenderPass, source: TextureSource, stencil: u8) {
         self.render_clipped(pass, source, stencil, false);
     }
@@ -574,6 +550,28 @@ pub(crate) struct ConversionPacket {
     pub rows: [Vec4; 3],
 }
 impl ConversionPacket {
+    pub fn render(&self, pass: &mut RenderPass, luma: TextureSource, chroma: TextureSource) {
+        pass.run(
+            RenderRequestBuilder::new()
+                .color_blend_type(ColorBlendType::Opaque)
+                .build(
+                    RenderProgramWithArguments::Movie {
+                        vertices: VertexSource::VertexData {
+                            vertices: &self.vertices,
+                        },
+                        texture_luma: luma,
+                        texture_chroma: chroma,
+                        transform: HigurashiTransform::convert_clip_depth(self.matrix),
+                        color_bias: self.bias,
+                        color_transform: self.rows,
+                        color_multiplier: Vec4::ONE,
+                        alpha_mode: false,
+                        texture_size: vec4(0., 0., 0., 0.), // Dead branch when alpha_mode=false.
+                    },
+                    DrawPrimitive::TrianglesStrip,
+                ),
+        );
+    }
     pub fn new((width, height): (u32, u32)) -> Self {
         Self {
             matrix: Mat4::from_cols_array(&[
@@ -603,27 +601,5 @@ impl ConversionPacket {
             ]
             .map(|row| Vec4::from_array(row.map(f32::from_bits))),
         }
-    }
-    pub fn render(&self, pass: &mut RenderPass, luma: TextureSource, chroma: TextureSource) {
-        pass.run(
-            RenderRequestBuilder::new()
-                .color_blend_type(ColorBlendType::Opaque)
-                .build(
-                    RenderProgramWithArguments::Movie {
-                        vertices: VertexSource::VertexData {
-                            vertices: &self.vertices,
-                        },
-                        texture_luma: luma,
-                        texture_chroma: chroma,
-                        transform: HigurashiTransform::convert_clip_depth(self.matrix),
-                        color_bias: self.bias,
-                        color_transform: self.rows,
-                        color_multiplier: Vec4::ONE,
-                        alpha_mode: false,
-                        texture_size: vec4(0., 0., 0., 0.), // Dead branch when alpha_mode=false.
-                    },
-                    DrawPrimitive::TrianglesStrip,
-                ),
-        );
     }
 }

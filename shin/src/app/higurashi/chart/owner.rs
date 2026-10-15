@@ -458,6 +458,7 @@ impl Owner {
     }
     /// The caller must retain a complete queued request before deleting this
     /// owner/source or attempting a fallible actual scene factory.
+    #[cfg(test)]
     pub fn pending_request(&self) -> Option<&Request> {
         self.requests.front()
     }
@@ -486,6 +487,7 @@ impl Owner {
             }
         }
     }
+    #[cfg(test)]
     pub fn has_save_task(&self) -> bool {
         false
     }
@@ -592,6 +594,7 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (bool, bool, bool, u32, i32, i32) {
         let m = self.model();
         (
@@ -623,6 +626,7 @@ impl Owner {
         ))
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_cursor(&self) -> (u32, u32, u32) {
         let m = self.model();
         let g = &m.groups[m.current_group as usize];
@@ -633,6 +637,7 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_question(&self) -> Option<(i32, i32, i32)> {
         self.scope.iter().find_map(|v| {
             if let Owned::Question(d) = v {

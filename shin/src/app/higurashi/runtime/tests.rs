@@ -420,7 +420,7 @@ fn higurashi_runtime_runs_normal_boot_story_and_frozen_close_retry() {
         assert_eq!(runtime.globals().unwrap().unwrap().clock.ticks(), before);
     }
     {
-        let mut globals = runtime.slot.as_mut().unwrap().active_globals_mut().unwrap();
+        let globals = runtime.slot.as_mut().unwrap().active_globals_mut().unwrap();
         let slots = globals.runtime_saves.as_mut().unwrap();
         slots.manual[99].valid = true;
         slots.manual[99].data.progress.extra_word = 0xdead_beef;

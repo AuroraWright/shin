@@ -259,10 +259,12 @@ impl CatMenu {
         self.area.disable(&mut self.state);
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_phase(&self) -> i32 {
         self.state.phase
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_selection(&self) -> (u32, i32, i32) {
         (
             self.state.variant,

@@ -194,11 +194,12 @@ impl Composition<'_> {
     pub fn badges_hidden(&self) -> bool {
         !self.model.show_info
     }
+    #[cfg(test)]
     pub fn old_picture_identity(&self) -> Option<u64> {
         self.model.picture.as_ref().map(|p| p.identity)
     }
 }
-pub(in crate::app::higurashi) trait Capture {
+pub(in crate::app::higurashi::cg_gallery) trait Capture {
     fn capture_parent(&mut self, viewer: &Composition<'_>) -> Result<RenderTexture>;
     fn cue(&mut self, cue: Cue) -> Result<()>;
 }
@@ -554,7 +555,7 @@ impl Owner {
         }
         self.area.disable(&mut Cancel);
     }
-    pub fn poll(
+    pub(in crate::app::higurashi::cg_gallery) fn poll(
         &mut self,
         delta: Ticks,
         permission: bool,
@@ -616,14 +617,8 @@ impl Owner {
             .ok_or_else(|| anyhow::anyhow!("CG Viewer parent atlas retired before render"))?;
         self.composition(&atlas).render(pass)
     }
-    pub fn retirement(&self) -> Option<shin_tasks::LoaderRetirement> {
-        self.job
-            .as_ref()?
-            .job
-            .as_ref()
-            .map(|job| job.retirement.clone())
-    }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (i32, bool, bool, bool, Option<u64>, bool, usize) {
         let model = self.model.as_ref().unwrap();
         (
@@ -637,10 +632,12 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    pub fn reference_model(&self) -> &Model {
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    pub(in crate::app::higurashi::cg_gallery) fn reference_model(&self) -> &Model {
         self.model.as_ref().unwrap()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_input_ready(&self) -> bool {
         let model = self.model.as_ref().unwrap();
         model.picture.is_some()
@@ -653,6 +650,7 @@ impl Owner {
                 .any(|t| t.kind == super::Kind::Input && !t.done)
     }
     #[cfg(feature = "higurashi-window-probe")]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_window_state(
         &self,
     ) -> crate::app::higurashi::window_probe::cg_gallery::ViewerState {

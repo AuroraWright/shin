@@ -204,7 +204,7 @@ impl NewDrawableLayerState {
         }
     }
 
-    pub fn get_prerendered_tex(&self) -> Option<PrerenderedDrawable> {
+    pub fn get_prerendered_tex(&self) -> Option<PrerenderedDrawable<'_>> {
         let tex = self.render_texture_src.get()?;
 
         Some(PrerenderedDrawable {
@@ -721,9 +721,6 @@ impl<T: NewDrawableLayer + AdvUpdatable + NewDrawableLayerFastForward> Layer
 impl<T: NewDrawableLayer + AdvUpdatable + NewDrawableLayerFastForward> DrawableLayer
     for NewDrawableLayerWrapper<T>
 {
-    fn retains_property_owner(&self) -> bool {
-        self.retain_owner
-    }
     fn set_properties(&mut self, properties: LayerProperties) {
         if self.retain_owner {
             self.props.rebind(properties);

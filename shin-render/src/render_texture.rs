@@ -86,14 +86,14 @@ impl RenderTexture {
         snapshot
     }
 
-    pub fn as_texture_source(&self) -> TextureSource {
+    pub fn as_texture_source(&self) -> TextureSource<'_> {
         TextureSource {
             view: self.inner_texture.get_view(),
             sampler: self.sampler,
         }
     }
 
-    pub fn as_texture_target(&mut self) -> TextureTarget {
+    pub fn as_texture_target(&mut self) -> TextureTarget<'_> {
         TextureTarget {
             kind: TextureTargetKind::RenderTexture,
             view: self.inner_texture.resize_and_get_view(),

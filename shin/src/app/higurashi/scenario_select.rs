@@ -160,6 +160,7 @@ pub(super) struct RowState {
 #[derive(Clone, Debug)]
 pub(super) struct ViewState {
     pub ready: bool,
+    #[allow(dead_code, reason = "Preserve native view mode independently of row layout.")]
     pub kind: u32,
     pub mask: u32,
     pub selected: i32,
@@ -170,6 +171,7 @@ pub(super) struct ViewState {
 }
 pub(super) struct Model {
     pub data: RuntimeGameData,
+    #[allow(dead_code, reason = "Preserve the native append flag for scene inspection.")]
     pub append: bool,
     pub kind: u32,
     pub bgm: i32,

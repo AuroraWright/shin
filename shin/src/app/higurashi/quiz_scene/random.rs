@@ -11,6 +11,8 @@ impl Random {
             state: if state == 0 { 1 } else { state },
         }
     }
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Native randomness state inspection shared by quiz fixture modules.")]
     pub fn state(&self) -> u32 {
         self.state
     }

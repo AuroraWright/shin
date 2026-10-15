@@ -1,16 +1,15 @@
 mod prelude {
     pub use crate::{
         compile::{
-            HirBlockBody, ResolveContext,
             def_map::DefValue,
             hir,
             hir::{
                 ExprId,
                 lower::{
-                    FromHirExpr, HirDiagnosticCollectorWithBlock,
+                    FromHirExpr,
                     from_hir::{FromHirBlockCtx, FromHirCollectors},
                 },
-                },
+            },
         },
         syntax::ast,
     };

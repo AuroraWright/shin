@@ -88,7 +88,7 @@ impl StagingBelt {
         size: BytesAddress,
         alignment: BytesAddress,
         device: &wgpu::Device,
-    ) -> (BufferRef<RawMarker>, BufferRef<RawMarker>) {
+    ) -> (BufferRef<'_, RawMarker>, BufferRef<'_, RawMarker>) {
         assert!(
             alignment.get().is_power_of_two(),
             "alignment must be a power of two, not {alignment}"

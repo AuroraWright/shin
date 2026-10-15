@@ -19,7 +19,7 @@ mod hex {
 use std::{
     io::Write,
     process::{Command, Stdio},
-    time::{Duration, Instant},
+    time::Duration,
 };
 
 fn native(variable: &str, protocol: String) -> Vec<String> {

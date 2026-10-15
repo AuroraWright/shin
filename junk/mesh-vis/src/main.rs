@@ -7,11 +7,7 @@ use iced::{
     Element, Task, font, keyboard, widget,
     widget::{Column, Space, text, text_input},
 };
-use iced_core::{Length, Size, alignment::Horizontal};
-use iced_widget::{
-    // combo_box as my_combo_box,
-    row,
-};
+use iced_core::{Length, Size};
 use parse::{HexParseState, modes::MeshModeParseState};
 
 use crate::{
@@ -138,7 +134,7 @@ fn update(state: &mut MeshVisualizerState, message: Message) -> Task<Message> {
     }
 }
 
-fn view(app_state: &MeshVisualizerState) -> Element<Message> {
+fn view(app_state: &MeshVisualizerState) -> Element<'_, Message> {
     let hex_parse_state = HexParseState::parse(&app_state.main_hex_text);
 
     let col1 = Column::new();

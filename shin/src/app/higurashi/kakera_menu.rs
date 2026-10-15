@@ -1,7 +1,7 @@
 //! Updated616a0 fragment catalogs,unlock snapshot,page selection and details.
 //! Startup/resources/transition/render ownership is added around this model.
 use super::runtime_game_data::RuntimeGameData;
-use shin_core::format::save::{PersistData, higurashi::GameData};
+use shin_core::format::save::PersistData;
 
 mod catalog;
 pub(super) mod motion;

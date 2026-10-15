@@ -153,9 +153,6 @@ impl Opening {
         self.owner.as_ref().unwrap().has_save_task()
     }
 
-    pub fn pending_scene_request(&self) -> Option<&SceneRequest> {
-        self.owner.as_ref().unwrap().pending_request()
-    }
 
     pub fn take_scene_request(&mut self) -> Option<SceneRequest> {
         self.owner.as_mut().unwrap().take_request()
@@ -166,6 +163,7 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(in crate::app::higurashi) fn reference_owner(&self) -> &Owner {
         self.owner.as_ref().unwrap()
     }

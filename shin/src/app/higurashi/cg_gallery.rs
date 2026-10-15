@@ -81,6 +81,7 @@ pub(super) struct ViewState {
     pub spin: f32,
     pub cells: [CellState; 12],
     pub close_flash: f32,
+    #[allow(dead_code, reason = "Native view metadata retained for completion-caption inspection.")]
     pub completion: String,
 }
 pub(super) struct Model {

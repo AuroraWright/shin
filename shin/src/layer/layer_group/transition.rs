@@ -2,12 +2,14 @@
 use super::*;
 use crate::{
     layer::{
-        owner::{LayerOwner, LayerOwnerRead, LayerPropertyRead, LayerPropertyWrite, LayerStorage},
+        owner::{LayerOwner, LayerStorage},
         render_layers,
     },
     render::render_texture_holder::RenderTextureHolder,
     wiper::{AnyWiper, Wiper as _},
 };
+#[cfg(test)]
+use crate::layer::owner::LayerOwnerRead;
 
 pub(super) struct SlotLayer<T> {
     update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
@@ -175,6 +177,7 @@ impl<T> SlotLayer<T> {
         }
         count
     }
+    #[cfg(test)]
     pub fn new(target: T, source: Option<Self>, wiper: Option<AnyWiper>) -> Self {
         Self::new_stored(
             LayerStorage::new_shared(target),
@@ -225,45 +228,7 @@ impl<T: Layer> SlotLayer<T> {
         }
     }
 
-    pub(super) fn batch_layer(&self, source: bool) -> Option<&dyn Layer> {
-        if source && self.wiper.is_some() {
-            self.source.as_ref().map(|layer| layer as &dyn Layer)
-        } else {
-            Some(&self.target)
-        }
-    }
 
-    pub(super) fn pre_render_owned_batch_layer(
-        &mut self,
-        source: bool,
-        context: &mut PreRenderContext,
-        transform: &TransformParams,
-        lower: &[crate::layer::owner::RetainedLayer],
-    ) -> bool {
-        if source && self.wiper.is_some() {
-            self.source
-                .as_mut()
-                .is_some_and(|layer| layer.pre_render_with_owned_lower(context, transform, lower))
-        } else {
-            self.target
-                .pre_render_with_owned_lower(context, transform, lower)
-        }
-    }
-    pub(super) fn pre_render_batch_layer(
-        &mut self,
-        source: bool,
-        context: &mut PreRenderContext,
-        transform: &TransformParams,
-        lower: &[&dyn Layer],
-    ) -> bool {
-        if source && self.wiper.is_some() {
-            self.source
-                .as_mut()
-                .is_some_and(|layer| layer.pre_render_with_lower(context, transform, lower))
-        } else {
-            self.target.pre_render_with_lower(context, transform, lower)
-        }
-    }
 
     pub fn pre_render_with_lower(
         &mut self,
@@ -464,12 +429,6 @@ impl<T: DrawableLayer> SlotLayer<T> {
 impl<T: DrawableLayer> SlotLayer<T> {
     pub(super) fn render_order_key(&self) -> (f32, i32) {
         self.target.render_order_key()
-    }
-    fn properties(&self) -> LayerPropertyRead<'_, T> {
-        self.target.properties()
-    }
-    fn properties_mut(&mut self) -> LayerPropertyWrite<'_, T> {
-        self.target.properties_mut()
     }
 }
 

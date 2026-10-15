@@ -39,6 +39,7 @@ pub(super) struct Task {
     pub phase: i32,
     pub done: bool,
     pub clock: Option<OverlayClock>,
+    #[allow(dead_code, reason = "Preserve native callback identity for motion task inspection.")]
     pub callback: Option<super::Pending>,
 }
 struct Frame<'a> {
@@ -135,7 +136,7 @@ pub(in crate::app::higurashi) struct Motion {
     pub model: Model,
     pub scrollbar: Scrollbar,
     tasks: ModeStack<Task>,
-    pub borrowed: Vec<Kind>,
+    pub(super) borrowed: Vec<Kind>,
     bgm_id: Option<i32>,
     pub request: Option<SceneRequest>,
 }
@@ -172,13 +173,14 @@ impl Motion {
             request: None,
         }
     }
-    pub fn first(&self) -> Option<&Task> {
+    pub(super) fn first(&self) -> Option<&Task> {
         self.tasks.iter().find(|t| t.kind == Kind::First)
     }
-    pub fn tasks(&self) -> impl Iterator<Item = &Task> {
+    #[cfg(test)]
+    pub(super) fn tasks(&self) -> impl Iterator<Item = &Task> {
         self.tasks.iter()
     }
-    pub fn advance(
+    pub(super) fn advance(
         &mut self,
         status: u32,
         mask_present: bool,

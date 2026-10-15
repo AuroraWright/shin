@@ -23,6 +23,8 @@ pub(super) struct Controls {
     pub boundary: Boundary,
     pub requests: VecDeque<Request>,
     pub flush_input: bool,
+    pub desktop_held_skip: bool,
+    temporary_skip_active: bool,
     pub desktop_mouse_release: Option<crate::adv::input_area::MouseRelease>,
     #[cfg(test)]
     pub(super) reference_cues: Vec<Request>,
@@ -37,6 +39,8 @@ impl Default for Controls {
             boundary: Default::default(),
             requests: VecDeque::new(),
             flush_input: false,
+            desktop_held_skip: false,
+            temporary_skip_active: false,
             desktop_mouse_release: None,
             #[cfg(test)]
             reference_cues: Vec::new(),
@@ -44,6 +48,7 @@ impl Default for Controls {
     }
 }
 impl Controls {
+    #[cfg(test)]
     pub fn process(
         &mut self,
         host: &mut HigurashiHost,
@@ -64,6 +69,7 @@ impl Controls {
             move |_, _| Ok(available),
         )
     }
+    #[cfg(test)]
     pub fn process_with_scene_jump<S: ReadServices>(
         &mut self,
         host: &mut HigurashiHost,
@@ -164,9 +170,20 @@ impl Controls {
         };
         sounds.play(server, name, Volume(1.0));
     }
+    /// Desktop Ctrl borrows the native read/skip policy without changing latched modes.
+    pub fn allow_temporary_skip(&mut self, controls_allowed: bool) {
+        self.temporary_skip_active = self.desktop_held_skip
+            && controls_allowed
+            && !self.boundary.captured
+            && !self.boundary.disabled
+            && self.requests.is_empty();
+    }
+    pub fn temporary_skip_modes(&self) -> u32 {
+        if self.temporary_skip_active { 2 } else { 0 }
+    }
     pub fn read_policy(&self, read_only: bool) -> ReadPolicy {
         ReadPolicy {
-            modes: self.state.modes,
+            modes: self.state.modes | self.temporary_skip_modes(),
             forced: self.boundary.forced,
             read_only,
         }

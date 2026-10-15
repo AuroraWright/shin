@@ -36,7 +36,6 @@ pub(crate) mod gpu;
 #[derive(Clone)]
 pub(crate) struct OriginalClip {
     pub(crate) draws: Vec<gpu::Draw>,
-    pub(crate) active: bool,
     pub(crate) material_depth: [u32; 2],
     pub(crate) material_stencil: [u32; 5],
 }
@@ -170,7 +169,6 @@ pub(crate) fn original_clips(requests: &[(char, [f32; 4], bool)]) -> Vec<Origina
             );
             OriginalClip {
                 draws,
-                active,
                 material_depth,
                 material_stencil,
             }
@@ -179,6 +177,10 @@ pub(crate) fn original_clips(requests: &[(char, [f32; 4], bool)]) -> Vec<Origina
 }
 
 /// Narrow sibling seam for live Movie/animation/Blur call-site comparisons.
+#[allow(
+    dead_code,
+    reason = "Retain the native mask seam for Movie/animation/Blur sibling comparisons"
+)]
 pub(crate) fn original_masks(endpoints: &[[f32; 4]], mask: u32) -> Vec<Vec<gpu::Draw>> {
     assert!(mask <= 1);
     original_clips(

@@ -167,6 +167,7 @@ impl TitleSlot {
     pub fn pending_kakera(&self) -> bool {
         matches!(self.pending, Some(Pending::Kakera(_)))
     }
+    #[cfg(test)]
     pub fn pending_kakera_return(&self) -> bool {
         matches!(self.pending, Some(Pending::Gameplay(_)))
     }

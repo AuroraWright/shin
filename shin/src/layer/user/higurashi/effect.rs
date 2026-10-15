@@ -79,6 +79,7 @@ impl View {
     pub fn kind(&self) -> i32 {
         self.kind
     }
+    #[cfg(test)]
     pub fn phases(&self) -> [f32; 2] {
         self.phases
     }
@@ -114,6 +115,7 @@ impl View {
             viewport,
         }
     }
+    #[cfg(test)]
     pub fn blur_stage0(&self, properties: &HigurashiProperties) -> Option<Packet> {
         (self.kind == 5).then(|| blur_packet(properties, 0, self.weights))
     }

@@ -41,6 +41,7 @@ enum Phase {
 #[derive(Clone, Debug)]
 pub(super) struct Frame {
     pub background_offset: f32,
+    #[allow(dead_code, reason = "Preserve the native caption tween in frame inspection data.")]
     pub caption_alpha: f32,
     pub logo_alpha: f32,
     pub logo_offset: f32,
@@ -203,6 +204,7 @@ pub(super) struct Opening {
     chart_adv: Option<(super::runtime_game_data::RuntimeGameData, u32)>,
     manual_load: Option<(super::runtime_game_data::RuntimeGameData, u32)>,
     menu_extent: (u16, u16),
+    #[allow(dead_code, reason = "Retained native input-frame state for title input integration.")]
     input_frame: u32,
     destinations: std::collections::VecDeque<top_menu::Destination>,
     idle_gate: bool,
@@ -299,6 +301,7 @@ impl Opening {
             category_scenes: Default::default(),
         }
     }
+    #[cfg(test)]
     pub fn update(&mut self, delta: Ticks) -> Result<()> {
         self.input_frame = self.input_frame.wrapping_add(1);
         let pointer = crate::adv::input_area::PointerFrame {
@@ -873,6 +876,7 @@ impl Opening {
             overlay.render(pass);
         }
     }
+    #[cfg(test)]
     pub fn take_menu_request(&mut self) -> Option<MenuRequest> {
         self.motion.pending.take()
     }
@@ -973,6 +977,7 @@ impl Opening {
         Ok(())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_menu_state(&self) -> Option<(&'static str, i32)> {
         if self.chart_visible {
             return self
@@ -1007,6 +1012,7 @@ impl Opening {
         None
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_config(&self) -> Option<(u32, usize, bool, u8)> {
         self.config.as_ref().map(|(_, menu)| menu.reference_state())
     }
@@ -1019,10 +1025,12 @@ impl Opening {
                 .is_some_and(|(_, menu)| menu.reference_input_ready())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_manual(&self) -> Option<(usize, i32, bool, u32, i32)> {
         self.manual.as_ref().map(|(_, menu)| menu.reference_state())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_top_selection(&self) -> Option<i32> {
         self.top.as_ref().map(|top| top.reference_selection())
     }
@@ -1043,6 +1051,7 @@ impl Opening {
         self.save.as_ref().map(|(_, menu)| menu)
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_config_question(&self) -> Option<(i32, i32)> {
         self.config
             .as_ref()
@@ -1056,12 +1065,14 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_category(&self) -> Option<(u32, i32, i32)> {
         self.cat
             .as_ref()
             .map(cat_menu::CatMenu::reference_selection)
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(super) fn reference_initial_selection(&self) -> (i32, u32) {
         (self.motion.selected, self.motion.mode)
     }

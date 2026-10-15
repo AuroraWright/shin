@@ -22,7 +22,6 @@ pub(super) mod view;
 
 pub(super) const ATLAS_PATH: &str = "/moviemode.txa";
 pub(super) const MASK_PATH: &str = "/default.msk";
-pub(super) const INPUT_EXTENT: (u16, u16) = (1920, 1080);
 pub(super) const ROSTER: [usize; 12] = [9, 6, 0, 1, 7, 8, 2, 3, 4, 5, 10, 11];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -62,10 +61,12 @@ pub(super) enum Action {
     },
     PlatformByte,
     JoinFirst,
+    #[cfg_attr(not(test), expect(dead_code, reason = "Native model retirement action, exercised by model tests."))]
     ReleaseAtlas,
 }
 #[derive(Clone, Debug)]
 pub(super) struct RowState {
+    #[allow(dead_code, reason = "Preserve source roster identity in native row snapshots.")]
     pub catalog_index: usize,
     pub movie_id: u16,
     pub append: bool,
@@ -77,7 +78,9 @@ pub(super) struct RowState {
 #[derive(Clone, Debug)]
 pub(super) struct ViewState {
     pub ready: bool,
+    #[allow(dead_code, reason = "Preserve the native append flag in model and view snapshots.")]
     pub append: bool,
+    #[allow(dead_code, reason = "Preserve the native input frame in view snapshots.")]
     pub frame: u32,
     pub rows: Vec<RowState>,
     pub document_height: i32,
@@ -526,6 +529,7 @@ impl<S: Services> Mode<Poll<'_, S>> for Task {
         Ok(0)
     }
 }
+#[cfg(test)]
 pub(super) fn advance(
     scope: &mut ModeStack<Task>,
     model: &mut Model,
@@ -547,6 +551,7 @@ pub(super) fn advance(
 }
 /// Concrete owner must join workers/resources even after a desktop fault. This
 /// fallible explicit boundary does not emulate native exception rollback.
+#[cfg(test)]
 pub(super) fn retire(
     scope: &mut ModeStack<Task>,
     model: &mut Model,
@@ -567,6 +572,7 @@ pub(super) fn retire(
 
 pub(super) struct Viewer {
     pub id: u64,
+    #[allow(dead_code, reason = "Preserve source movie identity for retained viewer inspection.")]
     pub movie_id: u16,
     pub closing: bool,
     pub opacity: HigurashiTweener,
@@ -634,6 +640,7 @@ impl Viewer {
         self.close();
         Ok(())
     }
+    #[cfg(test)]
     pub fn append_pending(&mut self) {
         for task in std::mem::take(&mut self.pending) {
             self.scope.push(task);

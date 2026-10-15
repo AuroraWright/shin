@@ -151,7 +151,7 @@ pub struct LazyGlyph {
 }
 
 impl LazyGlyph {
-    fn data(&self) -> Cow<[u8]> {
+    fn data(&self) -> Cow<'_, [u8]> {
         match &self.data {
             GlyphData::Raw(data) => Cow::Borrowed(data),
             GlyphData::Compressed(data) => Cow::Owned({

@@ -145,7 +145,7 @@ pub struct IndexDirectory {
 }
 
 impl IndexDirectory {
-    pub fn iter(&self) -> IndexDirectoryIter {
+    pub fn iter(&self) -> IndexDirectoryIter<'_> {
         IndexDirectoryIter {
             inner: self.entries.iter(),
         }

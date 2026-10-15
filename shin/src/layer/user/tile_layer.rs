@@ -1924,7 +1924,7 @@ impl TileLayer {
         let view = output.create_view(&Default::default());
         for kind in [NotificationKind::Characters, NotificationKind::Tips] {
             let mut queue = NotificationQueue::default();
-            queue.load_textures(server);
+            queue.load_textures(server).unwrap();
             queue.enqueue(kind, 1);
             let mut previous = 0.0;
             for time in [0.0f32, 15.0, 30.0, 180.0, 210.0, 240.0] {

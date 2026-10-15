@@ -153,7 +153,7 @@ impl PipelineStorage {
     // it is unfortunate that we have to take a &mut self here
     // this can lead to difficulties with borrowing
     // can introduce interior mutability if we need to
-    pub fn get<S: Shader>(&mut self, key: PipelineStorageKey) -> TypedRenderPipeline<S> {
+    pub fn get<S: Shader>(&mut self, key: PipelineStorageKey) -> TypedRenderPipeline<'_, S> {
         let (context, pipeline) = self.get_untyped(key, S::NAME);
 
         TypedRenderPipeline::new(context, pipeline)

@@ -172,6 +172,7 @@ pub(crate) struct TipRow {
 pub(crate) struct TipView {
     atlas: Arc<CharacterTextures>,
     pub rows: Vec<TipRow>,
+    #[allow(dead_code, reason = "Preserve the native temporary-tip atlas selector for inspection.")]
     pub alternate: bool,
 }
 #[derive(Clone, Debug)]

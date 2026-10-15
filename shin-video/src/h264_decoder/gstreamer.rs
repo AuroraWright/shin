@@ -256,7 +256,7 @@ impl GStreamerH264Decoder {
         let buffer = sample.buffer().unwrap();
         // TODO: suboptimal: FrameTimings should already be in an absolute time unit
         let gst_time_to_mp4_time =
-            |time: gst::ClockTime| (time.useconds() * self.time_base as u64 / 1_000_000);
+            |time: gst::ClockTime| time.useconds() * self.time_base as u64 / 1_000_000;
         let start_time = gst_time_to_mp4_time(buffer.pts().unwrap());
         let duration = gst_time_to_mp4_time(buffer.duration().unwrap())
             .try_into()

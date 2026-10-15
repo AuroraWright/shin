@@ -32,9 +32,9 @@ mod active;
 mod cg_gallery;
 mod movie_gallery;
 mod music_gallery;
-pub(in crate::app::higurashi) use active::{
-    ActiveGlobals, ActiveGlobalsMut, ActiveScene, ExitRequest, TitleDemoTransfer,
-};
+pub(in crate::app::higurashi) use active::ActiveGlobals;
+#[cfg(test)]
+pub(in crate::app::higurashi) use active::ActiveScene;
 #[cfg(test)]
 mod bonus_tests;
 mod kakera;
@@ -44,7 +44,7 @@ mod menu_returns_tests;
 mod quiz;
 mod scenario_select;
 mod tips;
-use kakera::{Continuation, Return};
+use self::kakera::{Continuation, Return};
 #[cfg(test)]
 mod active_fault_tests;
 #[cfg(test)]
@@ -90,7 +90,6 @@ pub(in crate::app::higurashi) struct TitleSlot {
     pub music_gallery: Option<crate::app::higurashi::music_gallery::opening::Opening>,
     pub movie_gallery: Option<crate::app::higurashi::movie_gallery::opening::Opening>,
     pending: Option<Pending>,
-    other: std::collections::VecDeque<CategorySceneRequest>,
     title_destinations:
         std::collections::VecDeque<crate::app::higurashi::main_title::TitleDestination>,
     title_demo_request: Option<crate::app::higurashi::startup::TitleDemoRequest>,
@@ -107,6 +106,11 @@ impl TitleSlot {
     ) {
         if let Some(game) = &mut self.game {
             game.set_desktop_mouse_release(release);
+        }
+    }
+    pub fn set_temporary_skip(&mut self, held: bool) {
+        if let Some(game) = &mut self.game {
+            game.set_temporary_skip(held);
         }
     }
     pub fn set_analog_input(&mut self, input: crate::app::higurashi::input_bridge::Analog) {
@@ -132,6 +136,7 @@ impl TitleSlot {
         );
         Ok(())
     }
+    #[cfg(test)]
     pub fn from_game(game: Gameplay) -> Self {
         Self {
             title: None,
@@ -144,7 +149,6 @@ impl TitleSlot {
             music_gallery: None,
             movie_gallery: None,
             pending: None,
-            other: Default::default(),
             title_destinations: Default::default(),
             title_demo_request: None,
             continuation: None,
@@ -166,7 +170,6 @@ impl TitleSlot {
             music_gallery: None,
             movie_gallery: None,
             pending: None,
-            other: Default::default(),
             title_destinations: Default::default(),
             title_demo_request: None,
             continuation: None,
@@ -315,9 +318,11 @@ impl TitleSlot {
         }
         Ok(status)
     }
+    #[cfg(test)]
     pub fn pending_gameplay_replacement(&self) -> bool {
         matches!(self.pending, Some(Pending::Browser(_)))
     }
+    #[cfg(test)]
     pub fn pending_quiz(&self) -> Option<&super::quiz::SceneRequest> {
         match &self.pending {
             Some(Pending::Quiz(request)) => Some(request),
@@ -387,21 +392,6 @@ impl TitleSlot {
         self.game = Some(game);
         self.pending = None;
         Ok(true)
-    }
-    pub fn take_other_scene_request(&mut self) -> Option<CategorySceneRequest> {
-        self.other.pop_front()
-    }
-    /// Consume at the next scene-dispatch boundary; source Gameplay remains
-    /// owned until the concrete Kakera factory accepts its global owners.
-    pub fn take_kakera_scene_request(&mut self) -> Option<super::kakera::SceneRequest> {
-        if matches!(self.pending, Some(Pending::Kakera(_))) {
-            let Some(Pending::Kakera(request)) = self.pending.take() else {
-                unreachable!()
-            };
-            Some(request)
-        } else {
-            self.game.as_mut()?.take_kakera_scene_request()
-        }
     }
     /// Call at the next platform boundary,using its last composed frame.
     pub fn dispatch_story(

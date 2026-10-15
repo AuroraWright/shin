@@ -42,12 +42,12 @@ pub(crate) trait AcquiredBits {
     fn acquire(&mut self, id: usize) -> Result<()>;
 }
 #[derive(Debug, Clone)]
-struct TipDescriptor {
+pub(crate) struct TipDescriptor {
     id: usize,
     atlas_word: u16,
 }
 #[derive(Debug, Clone)]
-enum Content {
+pub(crate) enum Content {
     Tips {
         rows: Vec<TipDescriptor>,
         alternate: bool,
@@ -358,6 +358,7 @@ impl Owner {
             State::Notification(notification) => Arc::as_ptr(notification) as usize,
         }
     }
+    #[cfg(test)]
     pub fn native_copy(&self) -> Self {
         self.clone()
     }
@@ -386,6 +387,7 @@ impl Owner {
             v.route_navigation = value;
         }
     }
+    #[cfg(test)]
     pub fn phase(&self) -> u32 {
         match &self.state {
             State::Character(v) => v.model.lock().phase,
@@ -633,7 +635,6 @@ impl Owner {
             self.confirm();
         }
     }
-    pub fn cancel(&mut self) {}
     fn confirm(&mut self) {
         let State::Notification(n) = &mut self.state else {
             return;

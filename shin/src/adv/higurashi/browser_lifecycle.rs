@@ -449,7 +449,7 @@ impl BrowserLifecycle {
         use std::sync::atomic::{AtomicU64, Ordering};
         static NEXT_OWNER: AtomicU64 = AtomicU64::new(1);
         let owner = NEXT_OWNER
-            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
+            .try_update(Ordering::Relaxed, Ordering::Relaxed, |id| id.checked_add(1))
             .map_err(|_| anyhow::anyhow!("Browser owner IDs exhausted"))?;
         Ok(Self {
             owner,

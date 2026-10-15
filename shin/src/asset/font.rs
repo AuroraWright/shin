@@ -27,6 +27,7 @@ pub struct GpuFontLazy {
 }
 
 impl GpuFontLazy {
+    #[cfg(test)]
     pub fn new(font: FontLazy) -> anyhow::Result<Self> {
         Self::with_cache(font, Arc::new(FontGlyphCache::default()))
     }
@@ -77,6 +78,7 @@ impl GpuFontLazy {
 
                         GpuFontGlyphHandle {
                             key,
+                            #[cfg(test)]
                             id,
                             info,
                             handle,
@@ -93,6 +95,7 @@ impl GpuFontLazy {
                 let handle = need_loading.get_handle();
                 loading_list.push(GpuFontGlyphHandle {
                     key,
+                    #[cfg(test)]
                     id,
                     info,
                     handle,
@@ -199,6 +202,7 @@ impl GpuFontGlyph {
 #[derive(Debug, Clone)]
 pub struct GpuFontGlyphHandle {
     key: GlyphKey,
+    #[cfg(test)]
     id: GlyphId,
     info: GlyphInfo,
     handle: CacheHandle<GpuFontGlyph>,

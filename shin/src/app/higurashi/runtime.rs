@@ -234,6 +234,7 @@ impl Runtime {
             slot.sync_movie_suspension();
         }
     }
+    #[cfg(test)]
     pub fn failure(&self) -> Option<&str> {
         self.shutdown.failure()
     }
@@ -428,6 +429,10 @@ impl Runtime {
                     self.slot
                         .as_mut()
                         .unwrap()
+                        .set_temporary_skip(self.input.temporary_skip_held());
+                    self.slot
+                        .as_mut()
+                        .unwrap()
                         .set_desktop_mouse_release(self.pointer.mouse_release());
                     status = self
                         .slot
@@ -448,6 +453,7 @@ impl Runtime {
                 }
             } else if let Some(slot) = &mut self.slot {
                 slot.set_analog_input(analog);
+                slot.set_temporary_skip(self.input.temporary_skip_held());
                 slot.set_desktop_mouse_release(self.pointer.mouse_release());
                 status = slot
                     .update_frame(
@@ -616,6 +622,7 @@ impl Runtime {
             DrawPrimitive::TrianglesStrip,
         ));
     }
+    #[cfg(test)]
     pub fn capture_composed(&self, context: &mut PreRenderContext) -> Option<RenderTexture> {
         self.composition.as_ref().map(|frame| {
             frame
@@ -623,6 +630,7 @@ impl Runtime {
                 .copy_snapshot(&mut context.render_clone_ctx())
         })
     }
+    #[cfg(any(test, feature = "higurashi-window-probe"))]
     pub fn slot(&self) -> Option<&TitleSlot> {
         self.slot.as_deref().filter(|_| self.bootstrap.is_none())
     }

@@ -86,10 +86,12 @@ impl FullCanvas {
         })
     }
 
+    #[cfg(test)]
     pub(super) fn pass_kind(&self) -> PassKind {
         self.pass_kind
     }
 
+    #[cfg(test)]
     pub(super) fn color_blend_type(&self) -> ColorBlendType {
         self.blend
     }

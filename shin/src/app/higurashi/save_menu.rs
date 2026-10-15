@@ -82,6 +82,7 @@ impl Prepared {
             preferences: preview::globals::Snapshot::new(settings),
         })
     }
+    #[cfg(test)]
     pub fn current(&self) -> Option<&RuntimeGameData> {
         self.current.as_ref()
     }

@@ -48,6 +48,7 @@ impl Drop for Writer {
 }
 struct Failure {
     snapshot: FrozenProgress,
+    #[allow(dead_code, reason = "Retain the save failure diagnostic while its retry prompt is alive.")]
     error: String,
     loading: Option<shin_tasks::AsyncTask<Result<(Question, View)>>>,
     retirement: shin_tasks::LoaderRetirement,
@@ -180,6 +181,7 @@ impl Shutdown {
         std::mem::take(&mut self.flush_input)
     }
     #[cfg(test)]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn update(
         &mut self,
         server: &Arc<AssetServer>,
@@ -252,6 +254,7 @@ impl Shutdown {
             }
         }
     }
+    #[cfg(test)]
     pub fn failure(&self) -> Option<&str> {
         if let Phase::Failure(failure) = &self.phase {
             Some(&failure.error)

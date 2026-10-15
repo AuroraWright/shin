@@ -30,6 +30,7 @@ pub(super) struct Picture {
     pub properties: HigurashiProperties,
 }
 impl Picture {
+    #[cfg(test)]
     pub fn from_native_metadata(identity: u64, metadata: Metadata, seeds: [u32; 4]) -> Self {
         Self {
             identity,

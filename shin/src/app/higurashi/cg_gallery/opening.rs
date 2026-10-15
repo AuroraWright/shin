@@ -197,6 +197,7 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_owner(&self) -> &Owner {
         self.owner.as_ref().unwrap()
     }

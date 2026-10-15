@@ -1,5 +1,5 @@
 use super::*;
-use shin_core::format::save::higurashi::{GameDataEntry, SaveDate};
+use shin_core::format::save::higurashi::{GameData, GameDataEntry, SaveDate};
 use std::{
     fmt::Write as _,
     io::Write as _,

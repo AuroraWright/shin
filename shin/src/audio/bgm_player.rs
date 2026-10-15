@@ -459,6 +459,7 @@ impl BgmPlayer {
             .map_or(AudioWaitStatus::empty(), AudioHandle::get_wait_status)
     }
 
+    #[cfg(test)]
     pub fn position(&self) -> Ticks {
         self.current_bgm
             .as_ref()

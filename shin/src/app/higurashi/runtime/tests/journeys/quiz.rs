@@ -2,7 +2,7 @@
 //! component oracles establish question, packet and shader behavior separately.
 use super::*;
 use crate::app::higurashi::{
-    gameplay::Gameplay, runtime_game_data::RuntimeGameData, runtime_saves::Slots,
+    gameplay::Gameplay, runtime_saves::Slots,
 };
 use shin_core::{
     format::save::higurashi::{GameData, GameDataEntry, SaveDate},

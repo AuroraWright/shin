@@ -7,7 +7,9 @@ use crate::adv::higurashi::{
 use crate::app::higurashi::runtime_game_data::RuntimeGameData;
 
 pub(super) struct Request {
+    #[allow(dead_code, reason = "Native EXIT payload is retained until its owning transition retires; inspected by tests.")]
     pub destination: Destination,
+    #[allow(dead_code, reason = "Own the native EXIT snapshot for the full pending transition lifetime.")]
     pub data: RuntimeGameData,
 }
 pub(super) enum SaveDestination {

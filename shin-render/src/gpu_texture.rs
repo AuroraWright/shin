@@ -40,7 +40,7 @@ impl GpuTexture {
         format: wgpu::TextureFormat,
         kind: TextureKind,
         mip_levels: u32,
-    ) -> wgpu::TextureDescriptor {
+    ) -> wgpu::TextureDescriptor<'_> {
         wgpu::TextureDescriptor {
             label,
             size: wgpu::Extent3d {
@@ -212,7 +212,7 @@ impl GpuTexture {
         &self.texture
     }
 
-    pub fn as_source(&self) -> TextureSource {
+    pub fn as_source(&self) -> TextureSource<'_> {
         TextureSource {
             view: &self.view,
             sampler: self.sampler,

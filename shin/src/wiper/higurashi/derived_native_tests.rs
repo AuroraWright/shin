@@ -13,6 +13,7 @@ pub(crate) enum Operation {
         mask_extent: [u32; 2],
     },
     Update(u32),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Clock([u32; 2]),
     FastForward,
     Draw([u32; 2]),
@@ -21,6 +22,7 @@ pub(crate) enum Operation {
 #[derive(Clone, Debug)]
 pub(crate) enum Event {
     Resource([u32; 4]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     InitialClear([u32; 2]),
     Keep([u32; 2]),
     Drop([u32; 2]),
@@ -29,19 +31,30 @@ pub(crate) enum Event {
     Restore([u32; 4]),
     Clear([u32; 5]),
     Depth([u32; 2]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Stencil([u32; 5]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     SamplerFilter([u32; 2]),
     SamplerWrap([u32; 3]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Bind([u32; 3], Option<[u32; 5]>),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Copy([u32; 2]),
     Draw(Box<[u32; 113]>),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Constructor([u32; 6]),
     VirtualMethods([u32; 7]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     LoweredArgs([u32; 10]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Clock([u32; 2]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Update([u32; 2]),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     MaskKeep(u32),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     MaskDrop(u32),
+    #[allow(dead_code, reason = "Preserve complete native trace payload for fixture diagnostics.")]
     Output([u32; 3]),
 }
 #[derive(Clone, Debug)]
@@ -84,19 +97,24 @@ pub(crate) struct Observation {
 }
 #[derive(Debug, serde::Deserialize)]
 pub(crate) struct Profile {
+    #[allow(dead_code, reason = "Preserve serialized native corpus boundaries and report identity.")]
     pub(crate) index: usize,
     pub(crate) name: String,
     pub(crate) kind: i32,
     pub(crate) duration: i32,
     pub(crate) params: [i32; 8],
     pub(crate) mask_extent: [u32; 2],
+    #[allow(dead_code, reason = "Preserve serialized native corpus boundaries and report identity.")]
     pub(crate) first_row: usize,
+    #[allow(dead_code, reason = "Preserve serialized native corpus boundaries and report identity.")]
     pub(crate) last_row: usize,
 }
 #[derive(Debug, serde::Deserialize)]
 pub(crate) struct Manifest {
     pub(crate) action_count: usize,
+    #[allow(dead_code, reason = "Preserve serialized native corpus boundaries and report identity.")]
     pub(crate) profile_count: usize,
+    #[allow(dead_code, reason = "Preserve serialized native corpus boundaries and report identity.")]
     pub(crate) observation_count: usize,
     pub(crate) profiles: Vec<Profile>,
     pub(crate) observations: Vec<Observation>,

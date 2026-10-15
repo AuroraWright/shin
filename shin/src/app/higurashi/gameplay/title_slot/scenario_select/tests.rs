@@ -168,30 +168,6 @@ impl Frames {
         }
     }
 }
-fn captured(
-    device: &wgpu::Device,
-    queue: &wgpu::Queue,
-    size: (u32, u32),
-    source: &RenderTexture,
-) -> Vec<u8> {
-    reference_render_to_texture(device, queue, size, |context, target| {
-        let overlay = crate::adv::higurashi::runner::reconstruction_mode::Overlay {
-            snapshot: source.copy_snapshot(&mut context.render_clone_ctx()),
-            mask: None,
-            clock: crate::adv::higurashi::reconstruction_mode::OverlayClock::captured(true),
-        };
-        let mut pass = context.begin_pass(
-            shin_render::shaders::types::texture::TextureTarget {
-                view: target,
-                kind: shin_render::shaders::types::texture::TextureTargetKind::RenderTexture,
-            },
-            Some(context.depth_stencil),
-            "Picker source copy",
-        );
-        pass.clear(Some(UnormColor::BLACK), Some(0), Some(1.0));
-        overlay.render(&mut pass);
-    })
-}
 
 fn seed_source() -> (Arc<dyn Fn() -> u32 + Send + Sync>, Arc<AtomicUsize>) {
     let calls = Arc::new(AtomicUsize::new(0));

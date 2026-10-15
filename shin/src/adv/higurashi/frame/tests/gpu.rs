@@ -189,7 +189,6 @@ fn higurashi_frame_composes_message_and_screen_at_both_viewports() {
                 if variant == 2 {
                     dispatch(control(-1, 19, 0), &mut frame);
                 }
-                drop(dispatch);
                 frame.message.fast_forward(&mut voice);
                 frame.message.playback.wait = Some(WaitKind::Last);
                 frame.message.playback.ticks_since_wait = 24.0;

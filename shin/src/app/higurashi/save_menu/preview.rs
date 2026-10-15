@@ -519,6 +519,7 @@ impl Scene {
             screen: targets(&saved.screen, group_seeds[1]),
         }))
     }
+    #[cfg(test)]
     pub fn render(&self, pass: &mut shin_render::render_pass::RenderPass) -> Result<()> {
         ensure!(
             !self

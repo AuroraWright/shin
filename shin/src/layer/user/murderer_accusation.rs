@@ -337,9 +337,6 @@ impl MurdererAccusationView {
             model.accusation_focus,
         )
     }
-    pub async fn load(server: &AssetServer, hint_progress: i32) -> Self {
-        Self::prepare(server, hint_progress).await.construct(true)
-    }
     pub async fn load_menu(server: &AssetServer, hint_progress: i32) -> Self {
         Self::prepare(server, hint_progress).await.construct(false)
     }
@@ -441,6 +438,7 @@ impl MurdererAccusationView {
     pub fn navigate(&self, delta: i32) {
         self.inner_ref().model.lock().unwrap().navigate(delta);
     }
+    #[cfg(test)]
     pub fn handle_controller_input(
         &self,
         state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
@@ -469,6 +467,7 @@ impl MurdererAccusationView {
     pub fn back(&self) {
         self.inner_ref().model.lock().unwrap().back();
     }
+    #[cfg(test)]
     pub fn reset(&self) {
         self.inner_ref().model.lock().unwrap().reset();
     }
@@ -479,6 +478,7 @@ impl MurdererAccusationView {
             .unwrap()
             .pointer(position, clicked);
     }
+    #[cfg(test)]
     pub fn pointer_state(&self, position: Vec2, held: bool) {
         self.pointer_state_with_time(position, held, 0.0);
     }
@@ -500,6 +500,7 @@ impl MurdererAccusationView {
     pub fn take_sounds(&self) -> Vec<&'static str> {
         self.inner_ref().model.lock().unwrap().take_sounds()
     }
+    #[cfg(test)]
     pub fn advance_animation(&self, ticks: f32) {
         let inner = self.inner_ref();
         let mut model = inner.model.lock().unwrap();
@@ -1222,40 +1223,12 @@ mod select;
 // Owned interactive views dispatch through the same actual layer.
 impl super::InteractiveView<'_, MurdererAccusationView> {
     #[cfg(test)]
-    pub(crate) fn reference_retirement_probe(
-        &self,
-        device: &wgpu::Device,
-        resize: &shin_render::resize::SurfaceResizeSource,
-        extra: bool,
-    ) -> Box<dyn Fn() -> bool> {
-        self.with(|layer| layer.reference_retirement_probe(device, resize, extra))
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_open_menu(&self, index: usize) {
-        self.with(|layer| layer.reference_open_menu(index))
-    }
-    pub fn restore_completed_answer(&self, answer: i32) {
-        self.with(|layer| layer.restore_completed_answer(answer))
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_completed_visuals(&self) -> (usize, Vec<usize>, Option<usize>) {
-        self.with(|layer| layer.reference_completed_visuals())
-    }
-    #[cfg(test)]
     pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
         self.with(|layer| layer.reference_controller_state())
     }
     #[cfg(test)]
     pub(crate) fn reference_menu_state(&self) -> (super::murderer_model::MurdererMenu, bool) {
         self.with(|layer| layer.reference_menu_state())
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_retained_state(&self) -> (usize, f32) {
-        self.with(|layer| layer.reference_retained_state())
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_wipe_state(&self) -> Option<(u64, f32, f32)> {
-        self.with(|layer| layer.reference_wipe_state())
     }
     #[cfg(test)]
     pub(crate) fn reference_wipe_kind(&self) -> Option<super::murderer_model::MurdererWipeKind> {
@@ -1271,12 +1244,6 @@ impl super::InteractiveView<'_, MurdererAccusationView> {
     pub fn navigate(&self, delta: i32) {
         self.with(|layer| layer.navigate(delta))
     }
-    pub fn handle_controller_input(
-        &self,
-        state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
-    ) -> bool {
-        self.with(|layer| layer.handle_controller_input(state))
-    }
     pub fn handle_controller_input_with_scroll(
         &self,
         state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
@@ -1290,14 +1257,12 @@ impl super::InteractiveView<'_, MurdererAccusationView> {
     pub fn back(&self) {
         self.with(|layer| layer.back())
     }
+    #[cfg(test)]
     pub fn reset(&self) {
         self.with(|layer| layer.reset())
     }
     pub fn pointer(&self, position: Vec2, clicked: bool) {
         self.with(|layer| layer.pointer(position, clicked))
-    }
-    pub fn pointer_state(&self, position: Vec2, held: bool) {
-        self.with(|layer| layer.pointer_state(position, held))
     }
     pub fn pointer_state_with_time(&self, position: Vec2, held: bool, seconds: f64) {
         self.with(|layer| layer.pointer_state_with_time(position, held, seconds))
@@ -1308,6 +1273,7 @@ impl super::InteractiveView<'_, MurdererAccusationView> {
     pub fn take_sounds(&self) -> Vec<&'static str> {
         self.with(|layer| layer.take_sounds())
     }
+    #[cfg(test)]
     pub fn advance_animation(&self, ticks: f32) {
         self.with(|layer| layer.advance_animation(ticks))
     }

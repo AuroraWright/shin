@@ -23,6 +23,7 @@ pub(super) struct CommonAssets {
     pub system: Arc<CharacterTextures>,
     pub message: Arc<HigurashiMessageTextures>,
     // Higurashi's effects archive has no Umineko breakup texture.
+    #[allow(dead_code, reason = "Keep the startup effects archive alive for the shared native resource lifetime.")]
     pub effects: Arc<CharacterTextures>,
     pub sysse: Arc<SysSe>,
 }

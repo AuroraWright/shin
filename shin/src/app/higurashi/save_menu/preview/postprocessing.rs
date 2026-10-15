@@ -1,6 +1,7 @@
 //! Shared original6aaec framebuffer processing, including preview snapshots.
 #[cfg(test)]
 use super::*;
+#[cfg(test)]
 pub(super) use crate::adv::higurashi::framebuffer::Packet;
 pub(super) use crate::adv::higurashi::framebuffer::apply;
 #[cfg(test)]

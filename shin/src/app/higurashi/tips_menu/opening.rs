@@ -102,6 +102,7 @@ impl Services for FrameServices<'_, '_> {
     }
 }
 impl Opening {
+    #[cfg(test)]
     pub fn new(
         globals: Globals,
         data: Option<RuntimeGameData>,
@@ -178,6 +179,7 @@ impl Opening {
             seed: Box::new(|| Ok(crate::engine_random::next_seed())),
         })
     }
+    #[cfg(test)]
     pub fn set_sources(
         &mut self,
         date: impl FnMut() -> Result<SaveDate> + Send + 'static,
@@ -198,6 +200,7 @@ impl Opening {
         self.area.disable(&mut self.motion.model);
         Ok(())
     }
+    #[cfg(test)]
     pub fn update(
         &mut self,
         delta: Ticks,

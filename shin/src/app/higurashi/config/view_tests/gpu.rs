@@ -26,6 +26,8 @@ pub(crate) struct Draw {
 impl Draw {
     /// NEW native-leaf-clip-clear.c D50: six draw header words, depth2,
     /// stencil5, matrix16, fragment color4, vertexbytes1, vertices16.
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Shared GPU fixture API; individual render suites use different subsets.")]
     pub(crate) fn from_clip_packet(words: [u32; 50]) -> Self {
         assert!(words[0] <= 1);
         assert_eq!(words[5], 0); // Native cullNone.
@@ -372,6 +374,8 @@ impl Renderer {
         );
     }
 
+    #[cfg(test)]
+    #[allow(dead_code, reason = "Shared GPU fixture API; individual render suites use different subsets.")]
     pub(crate) fn draw_block(
         &mut self,
         context: &mut PreRenderContext,

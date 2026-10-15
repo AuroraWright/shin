@@ -78,6 +78,7 @@ impl Opening {
         self.chart_adv.take()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(in crate::app::higurashi) fn reference_chart(
         &self,
     ) -> Option<(bool, bool, bool, u32, i32, i32)> {
@@ -86,6 +87,7 @@ impl Opening {
             .map(|(_, owner)| owner.reference_state())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub(in crate::app::higurashi) fn reference_chart_owner(&self) -> Option<&Owner> {
         self.chart.as_ref().map(|(_, owner)| owner)
     }

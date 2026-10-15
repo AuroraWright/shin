@@ -155,6 +155,7 @@ impl CakeModel {
         self.instruction_opacity.fast_forward_to(0.0);
         self.result = Some(self.selected.map_or(-1, |row| row as i32));
     }
+    #[cfg(test)]
     pub(crate) fn visual_slice(&self) -> Option<usize> {
         if self.completed_restoration {
             self.restored_slice
@@ -312,6 +313,7 @@ impl CakeModel {
         }
         self.last_pointer = Some(position);
     }
+    #[cfg(test)]
     pub fn reset(&mut self) {
         *self = Self::default();
     }
@@ -466,6 +468,7 @@ impl CakeLayer {
                 .map_or(-1, |x| x as i32),
         )
     }
+    #[cfg(test)]
     pub fn reset(&self) {
         self.inner_ref().model.lock().unwrap().reset();
     }
@@ -1174,22 +1177,8 @@ impl CakeLayer {
 // Owned interactive views dispatch through the same actual layer.
 impl super::InteractiveView<'_, CakeLayer> {
     #[cfg(test)]
-    pub(crate) fn reference_draw_command(&self, command: &str) {
-        self.with(|layer| layer.reference_draw_command(command))
-    }
-    #[cfg(test)]
     pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
         self.with(|layer| layer.reference_controller_state())
-    }
-    pub fn reset(&self) {
-        self.with(|layer| layer.reset())
-    }
-    pub fn restore_completed_answer(&self, answer: i32) {
-        self.with(|layer| layer.restore_completed_answer(answer))
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_visual_slice(&self) -> Option<usize> {
-        self.with(|layer| layer.reference_visual_slice())
     }
     pub fn pointer(&self, position: Vec2, clicked: bool) {
         self.with(|layer| layer.pointer(position, clicked))
@@ -1225,10 +1214,6 @@ impl super::InteractiveView<'_, CakeLayer> {
         &self,
     ) -> (Vec2, Option<usize>, bool, f32, [f32; 15], [f32; 15]) {
         self.with(|layer| layer.reference_feedback())
-    }
-    #[cfg(test)]
-    pub(crate) fn reference_update(&self, ticks: f32) {
-        self.with(|layer| layer.reference_update(ticks))
     }
     pub fn result(&self) -> Option<i32> {
         self.with(|layer| layer.result())

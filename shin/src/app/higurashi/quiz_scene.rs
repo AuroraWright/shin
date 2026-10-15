@@ -24,6 +24,7 @@ pub(super) struct Question {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(super) struct QuestionId(u16);
 impl QuestionId {
+    #[cfg(test)]
     pub fn index(self) -> u16 {
         self.0
     }
@@ -60,7 +61,7 @@ pub(super) struct Model {
     pub score: i32,
     pub questions: [QuestionId; 10],
     pub marks: [i32; 11],
-    pub rng: random::Random,
+    rng: random::Random,
     pub current_question: i32,
     pub correct_answer: i32,
     pub chosen_answer: i32,

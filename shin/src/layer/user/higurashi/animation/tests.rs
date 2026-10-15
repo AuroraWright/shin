@@ -40,7 +40,6 @@ struct Base {
 }
 #[derive(Debug)]
 struct Phase {
-    id: u32,
     base: Base,
     private: Snapshot,
 }
@@ -105,7 +104,7 @@ fn parse(line: &str) -> Native {
     while let Some(t) = w.next() {
         match t {
             "B" => {
-                let id = word(&mut w);
+                let _id = word(&mut w);
                 assert_eq!(w.next(), Some("H"));
                 let base = Base {
                     values: words(&mut w),
@@ -113,7 +112,6 @@ fn parse(line: &str) -> Native {
                     busy: words(&mut w),
                 };
                 n.phases.push(Phase {
-                    id,
                     base,
                     private: state(&mut w),
                 });

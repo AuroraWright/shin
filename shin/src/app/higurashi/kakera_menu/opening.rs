@@ -19,7 +19,7 @@ use crate::{
     render::PreRenderContext,
 };
 use anyhow::{Result, bail, ensure};
-use shin_core::{format::save::higurashi::GameData, time::Ticks, vm::command::types::Volume};
+use shin_core::{time::Ticks, vm::command::types::Volume};
 use shin_render::{render_pass::RenderPass, render_texture::RenderTexture};
 use std::sync::{Arc, mpsc};
 

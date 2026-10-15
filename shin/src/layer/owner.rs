@@ -243,6 +243,7 @@ impl<T: Layer> Layer for LayerStorage<T> {
     }
 }
 pub(crate) struct LayerPropertyRead<'a, T>(LayerRead<'a, T>);
+#[cfg(test)]
 pub(crate) struct LayerPropertyWrite<'a, T>(LayerWrite<'a, T>);
 impl<T: super::DrawableLayer> std::ops::Deref for LayerPropertyRead<'_, T> {
     type Target = super::LayerProperties;
@@ -250,12 +251,14 @@ impl<T: super::DrawableLayer> std::ops::Deref for LayerPropertyRead<'_, T> {
         self.0.properties()
     }
 }
+#[cfg(test)]
 impl<T: super::DrawableLayer> std::ops::Deref for LayerPropertyWrite<'_, T> {
     type Target = super::LayerProperties;
     fn deref(&self) -> &Self::Target {
         self.0.properties()
     }
 }
+#[cfg(test)]
 impl<T: super::DrawableLayer> std::ops::DerefMut for LayerPropertyWrite<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         self.0.properties_mut()
@@ -268,6 +271,7 @@ impl<T: super::DrawableLayer> LayerStorage<T> {
     pub(crate) fn properties(&self) -> LayerPropertyRead<'_, T> {
         LayerPropertyRead(self.read())
     }
+    #[cfg(test)]
     pub(crate) fn properties_mut(&mut self) -> LayerPropertyWrite<'_, T> {
         LayerPropertyWrite(self.write())
     }

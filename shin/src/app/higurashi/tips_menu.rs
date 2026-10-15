@@ -26,9 +26,11 @@ pub(super) mod view;
 
 pub(super) struct Row {
     /// Unlock bits and GameData's acquired list use the unfiltered SNR index.
+    #[allow(dead_code, reason = "Retain the unfiltered source index for native metadata validation.")]
     pub source_index: usize,
     pub atlas_id: u16,
     pub scenario_id: u16,
+    #[allow(dead_code, reason = "Retain the resolved native row texture path for resource inspection.")]
     pub texture_path: String,
     pub current: bool,
     pub status: u32,
@@ -228,6 +230,7 @@ impl Model {
         }
         self.scroll.fast_forward_to(scroll);
     }
+    #[cfg(test)]
     pub fn advance(&mut self, delta: Ticks) {
         self.advance_with_metrics(delta, None);
     }

@@ -1,4 +1,5 @@
 //! Original a08e4 worker order: quiz atlas, mask, eleven BUPs, ten question TXAs.
+#[cfg(test)]
 use super::Model;
 use crate::{
     adv::character_view::CharacterTextures,
@@ -46,6 +47,7 @@ impl Plan {
         }
         Ok(bustups)
     }
+    #[cfg(test)]
     pub fn new(model: &Model, scenario: &HigurashiScenario) -> Result<Self> {
         let bustups = Self::bustups(scenario, model.args[1])?;
         Ok(Self {

@@ -525,9 +525,11 @@ impl Owner {
             env,
         })
     }
+    #[cfg(test)]
     pub fn data(&self) -> &RuntimeGameData {
         &self.model.as_ref().unwrap().data
     }
+    #[cfg(test)]
     pub fn pending_request(&self) -> Option<&Request> {
         self.requests.front()
     }
@@ -671,6 +673,7 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (bool, bool, bool, Option<i32>, i32) {
         let mut completed = false;
         let mut phase = None;
@@ -696,6 +699,7 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_model(&self) -> &Model {
         self.model.as_ref().unwrap()
     }

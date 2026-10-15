@@ -1,7 +1,7 @@
 use super::*;
 use crate::app::higurashi::main_title::{
     particles::Particles,
-    view::{self, Artwork, Packet},
+    view::{self},
 };
 fn native(protocol: String) -> String {
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_TITLE_PARENT").unwrap())

@@ -96,7 +96,7 @@ struct Profile {
     driver: Driver,
     protocol: String,
     expected: Vec<String>,
-    active: usize,
+    _active: usize,
     source: GameData,
     value: usize,
     scenes: usize,
@@ -115,7 +115,7 @@ impl Profile {
                 u8::from(captured)
             ),
             expected: vec![],
-            active,
+            _active: active,
             source,
             value,
             scenes: 1,

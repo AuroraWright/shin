@@ -21,7 +21,7 @@ impl BustupBlockPromisesOwner {
     pub fn bind(
         &self,
         block_ids: impl Iterator<Item = BustupBlockId>,
-    ) -> BustupBlockPromisesIssuer {
+    ) -> BustupBlockPromisesIssuer<'_> {
         let promises = (0..)
             .zip(self.counters.iter())
             .zip(block_ids)

@@ -1016,9 +1016,11 @@ impl MurdererModel {
             self.back_completion.as_mut().unwrap().staged = true;
         }
     }
+    #[cfg(test)]
     pub fn update(&mut self, delta: f32) {
         self.update_with_wipe_permission(delta, true);
     }
+    #[cfg(test)]
     pub(crate) fn update_with_wipe_permission(&mut self, delta: f32, allow_wipe: bool) {
         self.update_menu(delta, allow_wipe, None);
     }
@@ -1424,6 +1426,7 @@ impl MurdererModel {
             _ => None,
         }
     }
+    #[cfg(test)]
     pub fn purple_text(&self) -> Option<&'static str> {
         let index = self.purple_original_index()?;
         match self.menu {
@@ -1432,6 +1435,7 @@ impl MurdererModel {
             _ => None,
         }
     }
+    #[cfg(test)]
     pub fn select_purple_original_index(&mut self, index: usize) -> bool {
         if self.result.is_some() {
             return false;
@@ -1913,6 +1917,7 @@ impl MurdererModel {
         }
         true
     }
+    #[cfg(test)]
     pub fn handle_controller_input(
         &mut self,
         state: &enum_map::EnumMap<crate::app::AppAction, shin_input::ActionState>,
@@ -2422,6 +2427,7 @@ impl MurdererModel {
         }
     }
 
+    #[cfg(test)]
     pub fn reset(&mut self) {
         let serial = self.wipe_serial;
         *self = Self::new(self.hint_progress);

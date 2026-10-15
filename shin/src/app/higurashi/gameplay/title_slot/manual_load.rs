@@ -61,6 +61,7 @@ impl TitleSlot {
         }
         self.dispatch_full_menu_adv(context, composed)
     }
+    #[cfg(test)]
     pub fn pending_bonus_adv(&self) -> bool {
         matches!(self.pending, Some(Pending::BonusAdv(_)))
     }

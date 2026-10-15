@@ -118,6 +118,7 @@ fn higurashi_origin_autoskip_host_waits_preserve_native_gates_and_next_poll_orde
     ];
     let mut checked = 0;
     for case in cases {
+        eprintln!("Native WAIT policy case: {}", case.name);
         for duration in [42u8, 48] {
             for allow in [0, 1, 2, 255] {
                 // A synthetic boundary isolates the enclosing bridge. The separate

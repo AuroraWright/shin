@@ -5,7 +5,7 @@ use crate::{
     asset::system::{AssetLoadContext, LayeredAssetIo, cache::AssetCache, supplied_payload},
 };
 use shin_core::{
-    format::{save::SaveData, scenario::instruction_elements::FromNumber},
+    format::save::SaveData,
     primitives::update::FrameId,
     time::Ticks,
 };

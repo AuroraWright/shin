@@ -654,6 +654,7 @@ impl LayerProperties {
     pub(crate) fn identity(&self) -> usize {
         std::sync::Arc::as_ptr(&self.inner.cell()) as usize
     }
+    #[cfg(test)]
     pub(crate) fn initialized_identity(&self) -> Option<usize> {
         let cell = self.inner.cell();
         cell.state

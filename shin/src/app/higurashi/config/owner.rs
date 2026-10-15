@@ -1,6 +1,8 @@
 //! Concrete4dd80 Config ownership: atlas-only First, one native mixed scope,
 //! real reset Question and SaveGame, and caller-owned source return callbacks.
-use super::{Action, Kind, Model, Services, Task, ViewState, view::View};
+#[cfg(test)]
+use super::ViewState;
+use super::{Action, Kind, Model, Services, Task, view::View};
 use crate::{
     adv::{
         character_view::CharacterTextures,
@@ -553,6 +555,7 @@ impl Owner {
         }
         result
     }
+    #[cfg(test)]
     pub fn state(&self) -> ViewState {
         self.model
             .view_state(self.loader.atlas().is_some(), self.scrollbar)
@@ -608,6 +611,7 @@ impl Owner {
             })
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_state(&self) -> (u32, usize, bool, u8) {
         (
             self.model.flags,
@@ -626,6 +630,7 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
     pub fn reference_question(&self) -> Option<(i32, i32)> {
         self.scope.iter().find_map(|child| match child {
             Owned::Question(dialog) => dialog

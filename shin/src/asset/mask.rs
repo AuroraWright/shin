@@ -75,7 +75,7 @@ pub struct MaskTexture {
 
     // NB: the original engine has `total_area`, `black_area`, `white_area` and `transparent_area` fields
     // they are not very useful though, so left unimplemented
-    pub offsets: MaskTextureVertexOffsets,
+    offsets: MaskTextureVertexOffsets,
 
     pub vertex_buffer: OwnedVertexBuffer<PosColVertex>,
     pub index_buffer: OwnedIndexBuffer,

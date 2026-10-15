@@ -142,11 +142,11 @@ impl VideoFrameTexture {
         vec2(width as f32, height as f32)
     }
 
-    pub fn get_y_source(&self) -> TextureSource {
+    pub fn get_y_source(&self) -> TextureSource<'_> {
         self.tex_y.as_source()
     }
 
-    pub fn get_uv_source(&self) -> TextureSource {
+    pub fn get_uv_source(&self) -> TextureSource<'_> {
         self.tex_uv.as_source()
     }
     pub fn render_with_options(

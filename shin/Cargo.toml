@@ -85,6 +85,9 @@ higurashi-window-probe = []
 [[bin]]
 name = "higurashi-window-probe"
 path = "src/higurashi_window_probe.rs"
+# The normal application binary owns the shared engine test harness.
+test = false
+bench = false
 required-features = ["higurashi-window-probe"]
 
 [dev-dependencies]

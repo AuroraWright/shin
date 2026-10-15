@@ -11,7 +11,9 @@ use crate::adv::higurashi::{
     read_state::{Checkpoint, ReadServices},
     runner::HigurashiRunner,
 };
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
+#[cfg(test)]
+use anyhow::Context;
 use shin_core::format::save::{
     higurashi::{GameData, SaveData, SaveDate},
     index_set::IndexSet,
@@ -108,6 +110,7 @@ impl Bindings {
             autosave,
         })
     }
+    #[cfg(test)]
     pub fn game_data(&self) -> Result<GameData> {
         Ok(self.runtime_game_data()?.save_data())
     }
@@ -151,6 +154,7 @@ impl Bindings {
             )?
             .unwrap_or(false))
     }
+    #[cfg(test)]
     pub fn poll_variables(&mut self, runner: &mut HigurashiRunner) -> Result<bool> {
         let command = runner
             .pending_command()

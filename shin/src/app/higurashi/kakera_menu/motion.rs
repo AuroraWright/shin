@@ -58,7 +58,7 @@ pub(in crate::app::higurashi) struct Motion {
     tasks: Vec<Task>,
     pub borrowed: Vec<u64>,
     next_id: u64,
-    pub actions: Vec<Action>,
+    pub(super) actions: Vec<Action>,
     pub request: Option<GameplayRequest>,
 }
 fn control(clock: &mut HigurashiTweener, value: f32, ticks: f32, flags: u32) {
@@ -108,7 +108,7 @@ impl Motion {
     pub fn first_retiring(&self) -> bool {
         self.first_phase().is_some_and(|phase| phase < 0)
     }
-    pub fn tasks(&self) -> impl Iterator<Item = (u64, Kind, bool)> + '_ {
+    pub(super) fn tasks(&self) -> impl Iterator<Item = (u64, Kind, bool)> + '_ {
         self.tasks.iter().map(|t| (t.id, t.kind, t.done))
     }
     fn confirm(&mut self) {
@@ -186,7 +186,7 @@ impl Motion {
             self.actions.push(Action::Cue("move"));
         }
     }
-    pub fn advance(&mut self, status: u32, delta: Ticks, services: &mut impl Services) {
+    pub(super) fn advance(&mut self, status: u32, delta: Ticks, services: &mut impl Services) {
         self.tasks.retain(|t| !t.done);
         let mut current = std::mem::take(&mut self.tasks);
         self.borrowed = current.iter().map(|t| t.id).collect();

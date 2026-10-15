@@ -156,7 +156,7 @@ fn higurashi_runtime_save_load_and_backlog_return_preserve_complete_owners() {
             // Fixture-only, unreachable from the wire codec: prove an untouched
             // complete runtime owner survives while only its write is projected.
             // No current/target payload, owner, scene or input is injected.
-            let mut globals = journey
+            let globals = journey
                 .runtime
                 .slot
                 .as_mut()

@@ -324,7 +324,7 @@ impl Probe {
                 }
             }
             Stage::PressSmall => {
-                window.request_inner_size(PhysicalSize::new(1920, 1080));
+                let _ = window.request_inner_size(PhysicalSize::new(1920, 1080));
                 self.stage = Stage::ResizeHeld;
             }
             Stage::ResizeHeld => {
@@ -779,7 +779,7 @@ impl Probe {
                     // must change the extent to cancel the held contact.
                     ManualSource::Game => PhysicalSize::new(1280, 720),
                 };
-                window.request_inner_size(target);
+                let _ = window.request_inner_size(target);
                 self.stage = Stage::ManualResizeHeld(source);
             }
             Stage::ManualResizeHeld(source) => {
@@ -957,7 +957,7 @@ impl Probe {
                     snapshot.picker == Some((5, 9, true, 1)),
                     "Origin close pointer did not acquire the intended contact"
                 );
-                window.request_inner_size(PhysicalSize::new(1920, 1080));
+                let _ = window.request_inner_size(PhysicalSize::new(1920, 1080));
                 self.stage = Stage::OriginResizeHeld;
             }
             Stage::OriginResizeHeld => {
@@ -1374,7 +1374,7 @@ impl ShinApp for Probe {
             .winit
             .window
             .set_title("Higurashi internal automated window probe");
-        context
+        let _ = context
             .winit
             .window
             .request_inner_size(PhysicalSize::new(1280, 720));

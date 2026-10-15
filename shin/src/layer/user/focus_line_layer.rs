@@ -1,6 +1,8 @@
+#[cfg(test)]
+use std::sync::Arc;
 use super::focus_line_model::FocusLineRays;
 use crate::{
-    asset::{effects::EffectsAtlasBorrow, system::AssetServer},
+    asset::effects::EffectsAtlasBorrow,
     layer::{
         NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
@@ -13,7 +15,8 @@ use shin_render::{
     ColorBlendType, PassKind, RenderRequestBuilder, quad_vertices::QuadVertices,
     render_pass::RenderPass, shaders::types::RenderClone,
 };
-use std::sync::Arc;
+#[cfg(test)]
+use crate::asset::system::AssetServer;
 
 #[derive(Clone, RenderClone)]
 pub struct FocusLineLayerImpl {
@@ -53,6 +56,7 @@ impl FocusLineLayer {
             self.inner_ref().rays.reference_seed(),
         )
     }
+    #[cfg(test)]
     pub async fn load(server: &AssetServer, x: i32, y: i32) -> Self {
         let textures = server
             .effects_atlas_for("focusline")

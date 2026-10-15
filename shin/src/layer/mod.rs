@@ -150,17 +150,11 @@ pub trait DrawableLayer: Layer {
     fn set_properties(&mut self, properties: LayerProperties) {
         *self.properties_mut() = properties;
     }
-    fn retains_property_owner(&self) -> bool {
-        false
-    }
 }
 
 impl<T: DrawableLayer> DrawableLayer for Box<T> {
     fn render_order_key(&self) -> (f32, i32) {
         (**self).render_order_key()
-    }
-    fn retains_property_owner(&self) -> bool {
-        (**self).retains_property_owner()
     }
     fn set_properties(&mut self, properties: LayerProperties) {
         (**self).set_properties(properties);

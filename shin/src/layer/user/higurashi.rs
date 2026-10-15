@@ -423,6 +423,8 @@ impl HigurashiUserLayer {
         Ok(())
     }
 
+
+    #[cfg(test)]
     pub async fn load(
         asset_server: &AssetServer,
         scenario: &HigurashiScenario,
@@ -432,7 +434,6 @@ impl HigurashiUserLayer {
     ) -> anyhow::Result<Self> {
         Self::load_with_setting(asset_server, scenario, layer_ty, params, seeds, 0).await
     }
-
     /// Original20df0 samples settings+100 when preparing PIC/BUP factories.
     pub async fn load_with_setting(
         asset_server: &AssetServer,
@@ -646,16 +647,13 @@ impl Prepared {
                     .await?,
                 ));
             }
-            _ => bail!(
-                "Higurashi live layer type {} is not implemented yet",
-                kind.native_id()
-            ),
         };
         Ok(Self::Basic(
             HigurashiUserLayer::load_with_setting(assets, scenario, basic, params, [0; 4], setting)
                 .await?,
         ))
     }
+    #[cfg(test)]
     pub fn construct(
         self,
         old: Option<&HigurashiUserLayer>,

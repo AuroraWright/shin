@@ -224,6 +224,7 @@ impl PictureLayerImpl {
         pass.pop_debug();
     }
 
+    #[cfg(test)]
     fn placement_transforms(
         &self,
         parent: Mat4,

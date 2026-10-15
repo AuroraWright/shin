@@ -95,7 +95,7 @@ impl Cache {
                 .collect(),
         }
     }
-    pub fn source(&self, sampler: TextureSampler) -> TextureSource {
+    pub fn source(&self, sampler: TextureSampler) -> TextureSource<'_> {
         let mut source = self.colors.last().unwrap().as_texture_source();
         source.sampler = sampler;
         source

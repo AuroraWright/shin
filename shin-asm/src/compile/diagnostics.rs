@@ -221,15 +221,15 @@ impl<'db> AriadneDbCache<'db> {
 
 impl ariadne::Cache<File> for AriadneDbCache<'_> {
     type Storage = String;
-    fn fetch(&mut self, &id: &File) -> Result<&Source, Box<dyn Debug + '_>> {
-        Ok(match self.sources.entry(id) {
+    fn fetch(&mut self, &id: &File) -> Result<&Source, impl Debug> {
+        Ok::<_, std::convert::Infallible>(match self.sources.entry(id) {
             Entry::Occupied(entry) => entry.into_mut(),
             Entry::Vacant(entry) => entry.insert(Source::from(id.contents(self.db).clone())),
         })
     }
 
-    fn display<'a>(&self, &id: &'a File) -> Option<Box<dyn Display + 'a>> {
-        Some(Box::new(id.path(self.db).clone()))
+    fn display<'a>(&self, &id: &'a File) -> Option<impl Display + 'a> {
+        Some(id.path(self.db).clone())
     }
 }
 

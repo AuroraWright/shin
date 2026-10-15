@@ -183,7 +183,7 @@ impl<O: BufferOwnership, T: BufferType> Buffer<O, T> {
         staging.slice(..data.len()).copy_from_slice(data);
     }
 
-    pub fn as_buffer_ref(&self) -> BufferRef<T> {
+    pub fn as_buffer_ref(&self) -> BufferRef<'_, T> {
         BufferRef {
             buffer: self.ownership.get(),
             offset: self.offset,
@@ -198,7 +198,7 @@ impl<O: BufferOwnership, T: BufferType> Buffer<O, T> {
 }
 
 impl<O: BufferOwnership, T: ArrayBufferType> Buffer<O, T> {
-    pub fn as_sliced_buffer_ref(&self, offset: usize, size: usize) -> BufferRef<T> {
+    pub fn as_sliced_buffer_ref(&self, offset: usize, size: usize) -> BufferRef<'_, T> {
         let element_size = size_of::<T::Element>();
 
         // convert array offset and size into bytes
@@ -235,7 +235,7 @@ impl<'a, T: BufferType> BufferRef<'a, T> {
         self.buffer.slice(self.get_range())
     }
 
-    pub fn as_buffer_binding(&self) -> wgpu::BufferBinding {
+    pub fn as_buffer_binding(&self) -> wgpu::BufferBinding<'_> {
         let offset = self.offset.get();
         let size = self.size.get();
 
@@ -303,7 +303,7 @@ pub type VertexBufferRef<'a, T> = BufferRef<'a, VertexMarker<T>>;
 pub type IndexBufferRef<'a> = BufferRef<'a, IndexMarker>;
 
 impl<O: BufferOwnership> Buffer<O, RawMarker> {
-    pub fn slice_bytes(&self, start: BytesAddress, size: BytesAddress) -> BufferRef<RawMarker> {
+    pub fn slice_bytes(&self, start: BytesAddress, size: BytesAddress) -> BufferRef<'_, RawMarker> {
         let ownership = &self.ownership;
 
         let offset = self.offset + start;

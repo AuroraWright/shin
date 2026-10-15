@@ -156,9 +156,6 @@ impl HigurashiTransform {
         )
     }
 
-    pub fn compute_asset_transform(&self, origin: (i16, i16)) -> Mat4 {
-        Self::convert_clip_depth(self.compute_native_asset_transform(origin))
-    }
 
     /// Message ctor81d10/render84f6c:1920x1080 top-left geometry, zero Z.
     pub fn compute_native_message_transform(&self, offset: Vec2) -> Mat4 {

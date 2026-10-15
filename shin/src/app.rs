@@ -185,9 +185,9 @@ impl Action for AppAction {
             AppAction::PointerClick => mapped.mouse.buttons[MouseButton::Left],
             // Former desktop-only actions. K/L now use the actual right-stick
             // axis, including continuous scrolling and native contact priority.
-            AppAction::KeyboardScrollUp | AppAction::KeyboardScrollDown | AppAction::HoldSkip => {
-                false
-            }
+            AppAction::KeyboardScrollUp | AppAction::KeyboardScrollDown => false,
+            // Match the main engine: a held desktop control, never a pad R edge.
+            AppAction::HoldSkip => raw_input_state.keyboard.contains(&KeyCode::ControlLeft),
         })
     }
 }
@@ -370,6 +370,7 @@ impl ReferenceApp {
 }
 
 impl ShinApp for App {
+    const FULLSCREEN_SHORTCUT: Option<KeyCode> = Some(KeyCode::KeyF);
     type Parameters = Cli;
     type EventType = ();
     type ActionType = AppAction;
@@ -847,7 +848,7 @@ mod controller_tests {
             KeyCode::Delete,
             KeyCode::KeyS,
             KeyCode::KeyA,
-            KeyCode::ControlLeft,
+            KeyCode::ControlRight,
             KeyCode::KeyF,
             KeyCode::F11,
         ] {
@@ -859,7 +860,22 @@ mod controller_tests {
                 EnumMap::default()
             );
         }
-        assert_eq!(<App as ShinApp>::FULLSCREEN_SHORTCUT, None);
+        assert_eq!(<App as ShinApp>::FULLSCREEN_SHORTCUT, Some(KeyCode::KeyF));
+    }
+
+    #[test]
+    fn ctrl_skip_is_held_without_controller_aliases() {
+        let mut raw = RawInputState::new();
+        raw.keyboard.insert(KeyCode::ControlLeft);
+        for (action, held) in AppAction::lower(&raw) {
+            assert_eq!(held, matches!(action, AppAction::HoldSkip), "{action:?}");
+        }
+        raw.keyboard.clear();
+        assert!(!AppAction::lower(&raw)[AppAction::HoldSkip]);
+        assert_eq!(
+            <higurashi::window_app::HigurashiApp as ShinApp>::FULLSCREEN_SHORTCUT,
+            Some(KeyCode::KeyF)
+        );
     }
 
     #[test]

@@ -1,7 +1,9 @@
 //! Next-platform-frame TIPS factories and full story/title return owners.
 use super::*;
+#[cfg(test)]
+use crate::app::higurashi::tips_menu::factory::Request;
 use crate::app::higurashi::{
-    tips_menu::{SceneRequest, factory::Request, opening::Opening as TipsOpening},
+    tips_menu::{SceneRequest, opening::Opening as TipsOpening},
     title_demo::TitleRequest,
 };
 
@@ -22,6 +24,7 @@ impl TitleSlot {
     }
     /// Callers queue an owned copy exactly as275b0 does. It is accepted at the
     /// next frame boundary;the current title/ADV remains alive until preflight.
+    #[cfg(test)]
     pub fn queue_tips(&mut self, request: Request) {
         self.pending = Some(Pending::Tips(request));
     }

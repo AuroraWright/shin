@@ -42,6 +42,7 @@ pub(crate) struct Record {
 
 #[derive(Clone, Debug)]
 pub(crate) struct Catalog {
+    #[allow(dead_code, reason = "Preserve the native count word independently of decoded record length.")]
     pub declared_count: u32,
     pub records: Vec<Record>,
 }
@@ -99,6 +100,7 @@ impl Catalog {
     }
 
     /// Actual bc7bc rejects negative indices and compares against vector length.
+    #[cfg(test)]
     pub fn get(&self, index: i32) -> Option<&Record> {
         usize::try_from(index)
             .ok()

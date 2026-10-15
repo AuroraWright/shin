@@ -108,12 +108,14 @@ pub(super) struct Gameplay {
     #[cfg(test)]
     reference_overlay_cues: Vec<&'static str>,
     clock_source: Box<dyn FnMut() -> Result<shin_core::format::save::higurashi::SaveDate> + Send>,
+    #[cfg(test)]
     pub flags: u32,
     pub quick_return: bool,
     pub input_permission: bool,
     fault: Option<String>,
 }
 impl Gameplay {
+    #[cfg(test)]
     pub fn new(
         globals: Globals,
         data: impl Into<super::runtime_game_data::RuntimeGameData>,
@@ -248,6 +250,7 @@ impl Gameplay {
             #[cfg(test)]
             reference_overlay_cues: Vec::new(),
             clock_source: Box::new(|| Ok(shin_core::format::save::higurashi::SaveDate::now())),
+            #[cfg(test)]
             flags,
             quick_return: (5..13).contains(&init),
             input_permission: false,
@@ -260,6 +263,10 @@ impl Gameplay {
     #[cfg(test)]
     pub(super) fn reference_play_modes(&self) -> u32 {
         self.controls.state.modes
+    }
+    #[cfg(test)]
+    pub(super) fn reference_effective_play_modes(&self) -> u32 {
+        self.controls.read_policy(false).modes
     }
     #[cfg(test)]
     pub(super) fn reference_story_choice(&self) -> Option<(u32, i32, Vec<(usize, String)>)> {
@@ -333,9 +340,11 @@ impl Gameplay {
     pub fn host_mut(&mut self) -> Option<&mut HigurashiHost> {
         self.host.as_mut()
     }
+    #[cfg(test)]
     pub fn game_data(&self) -> Result<GameData> {
         self.bindings.game_data()
     }
+    #[cfg(test)]
     pub fn runtime_game_data(&self) -> Result<super::runtime_game_data::RuntimeGameData> {
         self.bindings.runtime_game_data()
     }
@@ -359,7 +368,7 @@ impl Gameplay {
     pub fn take_kakera_scene_request(&mut self) -> Option<kakera::SceneRequest> {
         self.kakera_request.take()
     }
-    pub fn take_bonus_scene_request(&mut self) -> Option<bonus::SceneRequest> {
+    fn take_bonus_scene_request(&mut self) -> Option<bonus::SceneRequest> {
         self.bonus_request.take()
     }
     pub fn take_tips_scene_request(&mut self) -> Option<super::tips_menu::factory::Request> {
@@ -387,14 +396,11 @@ impl Gameplay {
     ) {
         self.controls.desktop_mouse_release = release;
     }
+    pub(super) fn set_temporary_skip(&mut self, held: bool) {
+        self.controls.desktop_held_skip = held;
+    }
     pub(super) fn set_analog_input(&mut self, input: super::input_bridge::Analog) {
         self.chart_input = Some(input);
-    }
-    #[cfg(any(test, feature = "higurashi-window-probe"))]
-    pub(super) fn reference_chart(&self) -> Option<(bool, bool, bool, u32, i32, i32)> {
-        self.chart_menu
-            .as_ref()
-            .map(|menu| menu.owner.reference_state())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
     pub(super) fn reference_chart_owner(
@@ -427,6 +433,8 @@ impl Gameplay {
     }
     pub fn cancel_input(&mut self) -> Result<()> {
         self.controls.desktop_mouse_release = None;
+        self.controls.desktop_held_skip = false;
+        self.controls.allow_temporary_skip(false);
         if let Some(host) = &mut self.host {
             host.cancel_input();
         }
@@ -456,19 +464,19 @@ impl Gameplay {
                 .as_ref()
                 .is_some_and(|menu| menu.owner.has_save_task())
     }
-    #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[cfg(feature = "higurashi-window-probe")]
     pub(super) fn reference_config(&self) -> Option<(u32, usize, bool, u8)> {
         self.config_menu
             .as_ref()
             .map(|menu| menu.owner.reference_state())
     }
-    #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[cfg(feature = "higurashi-window-probe")]
     pub(super) fn reference_config_question(&self) -> Option<(i32, i32)> {
         self.config_menu
             .as_ref()
             .and_then(|menu| menu.owner.reference_question())
     }
-    #[cfg(any(test, feature = "higurashi-window-probe"))]
+    #[cfg(feature = "higurashi-window-probe")]
     pub(super) fn reference_manual(&self) -> Option<(usize, i32, bool, u32, i32)> {
         self.help_menu
             .as_ref()
@@ -501,26 +509,31 @@ impl Gameplay {
         }
         Ok(())
     }
-    pub fn pending_exit_request(&self) -> Option<&exit::Request> {
+    #[cfg(test)]
+    fn pending_exit_request(&self) -> Option<&exit::Request> {
         self.exit_request.as_ref()
     }
     pub fn take_title_scene_request(&mut self) -> Option<super::title_demo::TitleRequest> {
         self.title_request.take()
     }
+    #[cfg(test)]
     pub fn set_clock_source(
         &mut self,
         clock: impl FnMut() -> Result<shin_core::format::save::higurashi::SaveDate> + Send + 'static,
     ) {
         self.clock_source = Box::new(clock);
     }
+    #[cfg(test)]
     pub fn notification_busy(&self) -> bool {
         self.host
             .as_ref()
             .is_some_and(|host| host.ui.indicator.transition.is_waiting())
     }
-    pub fn set_input_boundary(&mut self, boundary: controls::Boundary) {
+    #[cfg(test)]
+    fn set_input_boundary(&mut self, boundary: controls::Boundary) {
         self.controls.boundary = boundary;
     }
+    #[cfg(test)]
     pub fn pending_input_request(&self) -> Option<crate::adv::higurashi::input::Request> {
         self.controls.requests.front().copied()
     }
@@ -536,6 +549,7 @@ impl Gameplay {
         mut policy: Policy,
         audio_policy: AudioFramePolicy,
     ) -> Result<Status> {
+        self.controls.allow_temporary_skip(false);
         let delta = crate::adv::higurashi::host::frame_delta(elapsed)?;
         ensure!(
             !self.kakera_queued,
@@ -919,6 +933,13 @@ impl Gameplay {
         if host.has_modes() {
             self.input_permission = false;
         }
+        self.controls.allow_temporary_skip(
+            self.input_permission
+                && !self.quick_return
+                && !policy.paused
+                && !self.navigation.pending(),
+        );
+        let temporary_skip_modes = self.controls.temporary_skip_modes();
         let read_policy = self.controls.read_policy(settings.v11_disallowskipunread);
         let mut audio_policy = audio_policy;
         audio_policy.voice_focus_enabled = settings.v4_voicefocus;
@@ -1032,7 +1053,7 @@ impl Gameplay {
                         input_state.temporary_indicator = 0;
                     }
                     let mut current = read_policy;
-                    current.modes = input_state.modes;
+                    current.modes = input_state.modes | temporary_skip_modes;
                     controls::post_poll(runner, audio, ui, current)
                 },
             )
@@ -1151,7 +1172,7 @@ impl Gameplay {
                 let touch = host.touch_state();
                 crate::adv::higurashi::root_ui::render(
                     crate::adv::higurashi::root_ui::State {
-                        modes: self.controls.state.modes,
+                        modes: self.controls.read_policy(false).modes,
                         vm: host.runner.native_read_state(),
                         forced: self.controls.boundary.forced,
                         read_only: self.globals.data.settings.common.v11_disallowskipunread,
@@ -1198,6 +1219,7 @@ impl Gameplay {
         }
         Ok(())
     }
+    #[cfg(test)]
     pub fn into_globals(self) -> Globals {
         self.into_globals_and_histories().0
     }
