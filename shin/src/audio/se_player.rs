@@ -1,7 +1,8 @@
 use super::SettingsGain;
 use std::{collections::BTreeMap, sync::Arc};
 
-use kira::track::{TrackBuilder, TrackHandle, TrackId, TrackRoutes};
+use kira::track::TrackBuilder;
+use shin_audio::AudioTrack as TrackHandle;
 use shin_audio::{AudioData, AudioFile, AudioHandle, AudioManager, AudioSettings, AudioTweens};
 use shin_core::{
     format::scenario::info::SeId,
@@ -67,13 +68,15 @@ impl SePlayer {
 
         let se_tracks = [(); SE_SLOT_COUNT].map(|_| {
             manager
-                .add_sub_track(TrackBuilder::new().routes(TrackRoutes::parent(TrackId::Main)))
+                .add_sub_track(TrackBuilder::new())
                 .expect("Failed to create se track")
+                .into()
         });
 
         let once_track = manager
             .add_sub_track(TrackBuilder::new())
-            .expect("Failed to create one-shot SE track");
+            .expect("Failed to create one-shot SE track")
+            .into();
 
         drop(manager);
 
@@ -424,21 +427,31 @@ impl SePlayer {
             Tween::IMMEDIATE,
         );
         let loop_start = repeat.then_some(se.info().loop_start);
-        let kira_data = AudioData::from_audio_file(
+        let kira_data = match AudioData::from_audio_file(
             se,
             AudioSettings {
                 paused: self.paused,
                 playback_rate: native_se_play_speed(play_speed),
-                track: self.se_tracks[slot].id(),
+
                 fade_in,
                 loop_start,
                 loop_count: 0,
                 volume,
                 pan,
             },
-        );
+        ) {
+            Ok(data) => data,
+            Err(error) => {
+                warn!(%error, slot, "Failed to prepare sound effect");
+                self.effect_ids[slot] = None;
+                self.repeating[slot] = false;
+                return;
+            }
+        };
 
-        let handle = self.audio_manager.play(kira_data);
+        let handle = self
+            .audio_manager
+            .play_on_track(&mut self.se_tracks[slot], kira_data);
 
         self.se_slots[slot] = Some(handle);
         self.repeating[slot] = repeat;
@@ -467,8 +480,7 @@ impl SePlayer {
     #[cfg(test)]
     pub(crate) fn reference_source(
         &self,
-        slot: usize,
-    ) -> (Option<SeId>, u32, kira::track::TrackId) {
+        slot: usize) -> (Option<SeId>, u32, u64) {
         (
             self.effect_ids[slot],
             self.se_slots[slot]
@@ -598,15 +610,10 @@ impl SePlayer {
                 }
             };
             let loop_start = pending.repeat.then_some(se.info().loop_start);
-            let data = AudioData::from_audio_file(
+            let data = match AudioData::from_audio_file(
                 se,
                 AudioSettings {
                     paused: false,
-                    track: if slot >= 0 {
-                        self.se_tracks[slot as usize].id()
-                    } else {
-                        self.once_track.id()
-                    },
                     fade_in: Tween::IMMEDIATE,
                     loop_start,
                     loop_count: 0,
@@ -614,9 +621,23 @@ impl SePlayer {
                     pan: Pan(pending.tweens.panning.value()),
                     playback_rate: pending.tweens.playback_rate.value(),
                 },
-            )
-            .with_tweens(pending.tweens);
-            let handle = self.audio_manager.play(data);
+            ) {
+                Ok(data) => data.with_tweens(pending.tweens),
+                Err(error) => {
+                    warn!(%error, slot, "Failed to prepare sound effect");
+                    if slot >= 0 {
+                        self.effect_ids[slot as usize] = None;
+                        self.repeating[slot as usize] = false;
+                    }
+                    continue;
+                }
+            };
+            let track = if slot >= 0 {
+                &mut self.se_tracks[slot as usize]
+            } else {
+                &mut self.once_track
+            };
+            let handle = self.audio_manager.play_on_track(track, data);
             if slot >= 0 {
                 self.se_slots[slot as usize] = Some(handle);
             } else {
@@ -750,10 +771,9 @@ fn se_wait_status(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kira::manager::{
-        AudioManager as KiraManager, AudioManagerSettings,
-        backend::mock::{MockBackend, MockBackendSettings},
-    };
+    use kira::{
+        AudioManager as KiraManager, AudioManagerSettings};
+    use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use shin_core::format::{
         audio::{AudioBuffer, AudioFrameSource},
         scenario::instruction_elements::FromNumber,
@@ -800,7 +820,7 @@ mod tests {
             settings: AudioSettings {
                 paused: false,
                 playback_rate: 1.0,
-                track: TrackId::Main,
+
                 fade_in: Tween::IMMEDIATE,
                 loop_start: repeat.then_some(0),
                 loop_count: 0,
@@ -833,6 +853,7 @@ mod tests {
             .enqueue(-1.0, Tween::linear(Ticks::from_f32(6.0)));
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -872,6 +893,7 @@ mod tests {
     fn restore_shortens_owned_inactive_tail_to_four_ticks_without_cutting_it() {
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -946,6 +968,7 @@ mod tests {
     fn matching_repeat_retargets_live_pcm_without_restarting_the_source() {
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -1043,6 +1066,7 @@ mod tests {
     fn zero_duration_replacement_retains_the_native_four_tick_tail() {
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -1199,6 +1223,7 @@ mod tests {
     fn wait_all_includes_one_shots_and_excludes_repeating_tracks() {
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();

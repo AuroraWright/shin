@@ -1,4 +1,4 @@
-use kira::{Volume, track::TrackHandle, tween::Tween};
+use kira::{Tween, track::TrackHandle};
 
 /// Native category gain multiplies the script-controlled sound volume.
 /// See 0xc278c, 0xfef30 and 0x11a2fc; the shared constant is 0.01f.
@@ -13,7 +13,7 @@ impl SettingsGain {
             return;
         }
         track.set_volume(
-            Volume::Amplitude(f64::from(f32::from(percent) * 0.01)),
+            shin_audio::amplitude_to_decibels(f32::from(percent) * 0.01),
             Tween {
                 duration: std::time::Duration::ZERO,
                 ..Default::default()
@@ -26,15 +26,61 @@ impl SettingsGain {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kira::{
-        Frame,
-        manager::{
-            AudioManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        },
-        sound::static_sound::{StaticSoundData, StaticSoundSettings},
-        track::TrackBuilder,
+    use kira::{AudioManager, AudioManagerSettings, Frame, track::TrackBuilder};
+    use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
+
+    use shin_core::{
+        format::audio::{AudioBuffer, AudioFrameSource},
+        vm::command::types::{Pan, Volume},
     };
+
+    struct ConstantPcm {
+        frame: Frame,
+        position: u32,
+    }
+    impl AudioFrameSource for ConstantPcm {
+        fn max_frame_size(&self) -> usize {
+            64
+        }
+        fn sample_rate(&self) -> u32 {
+            1000
+        }
+        fn pre_skip(&self) -> u32 {
+            0
+        }
+        fn pre_roll(&self) -> u32 {
+            0
+        }
+        fn current_sample_position(&self) -> u32 {
+            self.position
+        }
+        fn samples_seek(&mut self, position: u32) -> anyhow::Result<u32> {
+            self.position = position;
+            Ok(0)
+        }
+        fn read_frame(&mut self, buffer: &mut AudioBuffer) -> bool {
+            let count = 64.min(2000 - self.position);
+            for _ in 0..count {
+                buffer.push((self.frame.left, self.frame.right));
+            }
+            self.position += count;
+            count != 0
+        }
+    }
+    fn data(frame: Frame, volume: Volume) -> shin_audio::AudioData<ConstantPcm> {
+        shin_audio::AudioData {
+            source: ConstantPcm { frame, position: 0 },
+            settings: shin_audio::AudioSettings {
+                paused: false,
+                fade_in: shin_core::time::Tween::IMMEDIATE,
+                loop_start: None,
+                loop_count: 0,
+                volume,
+                pan: Pan::default(),
+                playback_rate: 1.0,
+            },
+        }
+    }
 
     fn advance(manager: &mut AudioManager<MockBackend>, samples: usize) -> Frame {
         let backend = manager.backend_mut();
@@ -50,33 +96,25 @@ mod tests {
     fn category_gain_multiplies_sound_volume_and_keeps_muted_sounds_running() {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
         let mut track = manager.add_sub_track(TrackBuilder::new()).unwrap();
         let mut gain = SettingsGain::default();
         gain.apply(&mut track, 100);
-        let data = StaticSoundData {
-            sample_rate: 1000,
-            frames: vec![Frame::new(0.25, 0.25); 2000].into(),
-            settings: StaticSoundSettings::new()
-                .output_destination(track.id())
-                .volume(Volume::Amplitude(0.5)),
-            slice: None,
-        };
-        let mut sound = manager.play(data).unwrap();
+        let mut sound = track
+            .play(data(Frame::new(0.25, 0.25), Volume(0.5))).unwrap();
         let reference = advance(&mut manager, 20);
         assert!(reference.left > 0.0);
         gain.apply(&mut track, 70);
         let scaled = advance(&mut manager, 20);
         assert!((scaled.left / reference.left - 0.7).abs() < 0.0001);
         sound.set_volume(
-            Volume::Amplitude(0.25),
-            Tween {
-                duration: std::time::Duration::from_millis(100),
-                ..Default::default()
-            },
-        );
+            Volume(0.25),
+                shin_core::time::Tween::linear(shin_core::time::Ticks::from_millis(100.0)),
+            )
+            .unwrap();
         let halfway = advance(&mut manager, 50);
         assert!((halfway.left / reference.left - 0.525).abs() < 0.02);
         let scaled = advance(&mut manager, 70);
@@ -84,7 +122,7 @@ mod tests {
         gain.apply(&mut track, 0);
         let silence = advance(&mut manager, 20);
         assert_eq!(silence, Frame::ZERO);
-        assert!(sound.position() > 0.05);
+        assert!(sound.position_millis() > 50);
         gain.apply(&mut track, 100);
         let resumed = advance(&mut manager, 20);
         assert!((resumed.left / reference.left - 0.5).abs() < 0.0001);
@@ -94,6 +132,7 @@ mod tests {
     fn independent_category_tracks_do_not_change_each_others_gain() {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -103,17 +142,11 @@ mod tests {
         let mut second_gain = SettingsGain::default();
         first_gain.apply(&mut first, 70);
         second_gain.apply(&mut second, 55);
-        let data = |track, frame| StaticSoundData {
-            sample_rate: 1000,
-            frames: vec![frame; 2000].into(),
-            settings: StaticSoundSettings::new().output_destination(track),
-            slice: None,
-        };
-        let _first_sound = manager
-            .play(data(first.id(), Frame::new(0.25, 0.0)))
+        let _first_sound = first
+            .play(data(Frame::new(0.25, 0.0), Volume(1.0)))
             .unwrap();
-        let _second_sound = manager
-            .play(data(second.id(), Frame::new(0.0, 0.25)))
+        let _second_sound = second
+            .play(data(Frame::new(0.0, 0.25), Volume(1.0)))
             .unwrap();
         let reference = advance(&mut manager, 20);
         first_gain.apply(&mut first, 0);

@@ -21,8 +21,8 @@ impl VoiceFocus {
     ) {
         if self.update(delta, enabled, voice_active) {
             track.set_volume(
-                kira::Volume::Amplitude(f64::from(self.gain)),
-                kira::tween::Tween {
+                shin_audio::amplitude_to_decibels(self.gain),
+                kira::Tween {
                     duration: std::time::Duration::ZERO,
                     ..Default::default()
                 },
@@ -81,32 +81,27 @@ mod tests {
     #[test]
     fn mixer_focus_multiplies_saved_gain_and_script_volume_then_recovers() {
         use kira::{
-            Frame,
-            manager::{
-                AudioManager, AudioManagerSettings,
-                backend::mock::{MockBackend, MockBackendSettings},
-            },
+            AudioManager, AudioManagerSettings, Frame,
             sound::static_sound::{StaticSoundData, StaticSoundSettings},
-            track::{TrackBuilder, TrackRoutes},
+            track::TrackBuilder,
         };
+        use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
         let mut category = manager.add_sub_track(TrackBuilder::new()).unwrap();
-        let mut track = manager
-            .add_sub_track(TrackBuilder::new().routes(TrackRoutes::parent(category.id())))
-            .unwrap();
+        let mut track = category.add_sub_track(TrackBuilder::new()).unwrap();
         let mut settings = crate::audio::SettingsGain::default();
         settings.apply(&mut category, 70);
-        let _sound = manager
+        let _sound = track
             .play(StaticSoundData {
                 sample_rate: 1000,
                 frames: vec![Frame::new(0.25, 0.25); 2000].into(),
                 settings: StaticSoundSettings::new()
-                    .output_destination(track.id())
-                    .volume(kira::Volume::Amplitude(0.5)),
+                    .volume(shin_audio::amplitude_to_decibels(0.5)),
                 slice: None,
             })
             .unwrap();

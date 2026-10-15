@@ -2,7 +2,8 @@ use super::{SettingsGain, voice_focus::VoiceFocus};
 use std::sync::Arc;
 
 use crate::asset::system::AssetServer;
-use kira::track::{TrackBuilder, TrackHandle, TrackId, TrackRoutes};
+use kira::track::TrackBuilder;
+use shin_audio::AudioTrack as TrackHandle;
 use shin_audio::{AudioData, AudioFile, AudioHandle, AudioManager, AudioSettings, AudioTweens};
 use shin_core::{
     format::scenario::info::BgmId,
@@ -22,6 +23,7 @@ pub struct BgmPlayer {
     current_bgm: Option<AudioHandle>,
     current_id: Option<BgmId>,
     stopping: Vec<AudioHandle>,
+    paused: bool,
 }
 
 struct PendingBgm {
@@ -46,6 +48,10 @@ fn pending_status(volume: &Tweener) -> AudioWaitStatus {
 
 impl BgmPlayer {
     #[cfg(test)]
+    pub(crate) fn reference_focus_gain(&self) -> f32 {
+        self.voice_focus.gain
+    }
+    #[cfg(test)]
     pub(crate) fn reference_loading_repeat(&self) -> Option<bool> {
         self.pending.as_ref().map(|pending| pending.loop_count == 0)
     }
@@ -56,13 +62,15 @@ impl BgmPlayer {
     pub fn new(audio_manager: Arc<AudioManager>) -> Self {
         let mut manager = audio_manager.kira_manager().lock();
 
-        let bgm_track = manager
-            .add_sub_track(TrackBuilder::new().routes(TrackRoutes::parent(TrackId::Main)))
-            .expect("Failed to create bgm track");
+        let mut bgm_track: TrackHandle = manager
+            .add_sub_track(TrackBuilder::new())
+            .expect("Failed to create bgm track")
+            .into();
 
-        let focus_track = manager
-            .add_sub_track(TrackBuilder::new().routes(TrackRoutes::parent(bgm_track.id())))
-            .expect("Failed to create voice focus track");
+        let focus_track = bgm_track
+            .add_sub_track(TrackBuilder::new())
+            .expect("Failed to create voice focus track")
+            .into();
 
         drop(manager);
 
@@ -76,6 +84,7 @@ impl BgmPlayer {
             pending: None,
             current_id: None,
             stopping: Vec::new(),
+            paused: false,
         }
     }
 
@@ -299,21 +308,30 @@ impl BgmPlayer {
         }
         stop_bgm(&mut self.current_bgm, &mut self.stopping, fade_in);
         let loop_start = repeat.then_some(bgm.info().loop_start);
-        let kira_data = AudioData::from_audio_file(
+        let kira_data = match AudioData::from_audio_file(
             bgm,
             AudioSettings {
-                paused: false,
+                paused: self.paused,
                 playback_rate: 1.0,
-                track: self.focus_track.id(),
+
                 fade_in,
                 loop_start,
                 loop_count: 0,
                 volume,
                 pan: Pan::default(),
             },
-        );
+        ) {
+            Ok(data) => data,
+            Err(error) => {
+                warn!(%error, "Failed to prepare BGM");
+                self.current_id = None;
+                return false;
+            }
+        };
 
-        let handle = self.audio_manager.play(kira_data);
+        let handle = self
+            .audio_manager
+            .play_on_track(&mut self.focus_track, kira_data);
 
         self.current_bgm = Some(handle);
         self.current_id = Some(bgm_id);
@@ -329,7 +347,7 @@ impl BgmPlayer {
     }
 
     #[cfg(test)]
-    pub(crate) fn reference_source(&self) -> (Option<BgmId>, u32, TrackId) {
+    pub(crate) fn reference_source(&self) -> (Option<BgmId>, u32, u64) {
         (
             self.current_id,
             self.current_bgm
@@ -355,6 +373,30 @@ impl BgmPlayer {
         }
     }
 
+    /// Older native32d28 appends to the active/loading volume trajectory.
+    /// Keep the existing Umineko setter's replacement behavior separate.
+    pub(crate) fn enqueue_volume(&mut self, volume: Volume, tween: Tween) -> anyhow::Result<()> {
+        if let Some(pending) = &mut self.pending {
+            pending.volume.enqueue(volume.0, tween);
+        } else if let Some(handle) = self.current_bgm.as_mut() {
+            handle.enqueue_volume(volume, tween)?;
+        }
+        Ok(())
+    }
+
+    pub(crate) fn set_paused(&mut self, paused: bool) {
+        self.paused = paused;
+        for handle in self.current_bgm.iter().chain(&self.stopping) {
+            handle.set_paused(paused);
+        }
+    }
+
+    pub(crate) fn sample_clock(&self) -> Option<(u64, u32)> {
+        self.current_bgm
+            .as_ref()
+            .map(|h| (u64::from(h.position_samples()), h.sample_rate()))
+    }
+
     pub fn stop(&mut self, fade_out: Tween) {
         self.current_id = None;
         let was_pending = self.pending.take().is_some();
@@ -370,31 +412,36 @@ impl BgmPlayer {
             .and_then(|pending| pending.task.poll_naive())
         {
             let pending = self.pending.take().unwrap();
+            let result = result.and_then(|bgm| {
+                let loop_start = Some(bgm.info().loop_start);
+                AudioData::from_audio_file(
+                    bgm,
+                    AudioSettings {
+                        paused: self.paused,
+                        playback_rate: 1.0,
+
+                        fade_in: Tween::IMMEDIATE,
+                        loop_start,
+                        loop_count: pending.loop_count,
+                        volume: Volume(pending.volume.value()),
+                        pan: Pan::default(),
+                    },
+                )
+            });
             match result {
-                Ok(bgm) => {
-                    let loop_start = Some(bgm.info().loop_start);
-                    let data = AudioData::from_audio_file(
-                        bgm,
-                        AudioSettings {
-                            paused: false,
-                            playback_rate: 1.0,
-                            track: self.focus_track.id(),
-                            fade_in: Tween::IMMEDIATE,
-                            loop_start,
-                            loop_count: pending.loop_count,
-                            volume: Volume(pending.volume.value()),
-                            pan: Pan::default(),
-                        },
-                    )
-                    .with_tweens(AudioTweens {
+                Ok(data) => {
+                    let data = data.with_tweens(AudioTweens {
                         volume: pending.volume,
                         panning: Tweener::new(0.0),
                         playback_rate: Tweener::new(1.0),
                     });
-                    self.current_bgm = Some(self.audio_manager.play(data));
+                    self.current_bgm = Some(
+                        self.audio_manager
+                            .play_on_track(&mut self.focus_track, data),
+                    );
                 }
                 Err(error) => {
-                    warn!(%error, "Failed to load BGM");
+                    warn!(%error, "Failed to prepare BGM");
                     self.current_id = None;
                 }
             }
@@ -469,10 +516,8 @@ fn stop_bgm(handle: &mut Option<AudioHandle>, tails: &mut Vec<AudioHandle>, twee
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kira::manager::{
-        AudioManager as KiraManager, AudioManagerSettings,
-        backend::mock::{MockBackend, MockBackendSettings},
-    };
+    use kira::{AudioManager as KiraManager, AudioManagerSettings};
+    use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use shin_core::format::{
         audio::{AudioBuffer, AudioFrameSource},
         scenario::instruction_elements::FromNumber,
@@ -526,6 +571,7 @@ mod tests {
         assert_eq!(volume.value(), 0.0);
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -536,7 +582,6 @@ mod tests {
                     settings: AudioSettings {
                         paused: false,
                         playback_rate: 1.0,
-                        track: TrackId::Main,
                         fade_in: Tween::IMMEDIATE,
                         loop_start: Some(0),
                         loop_count: 0,
@@ -563,6 +608,7 @@ mod tests {
     fn native_bgm_reuse_preserves_position_and_stop_releases_active_entry() {
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -573,7 +619,6 @@ mod tests {
                     settings: AudioSettings {
                         paused: false,
                         playback_rate: 1.0,
-                        track: TrackId::Main,
                         fade_in: Tween::IMMEDIATE,
                         loop_start: Some(0),
                         loop_count: 0,

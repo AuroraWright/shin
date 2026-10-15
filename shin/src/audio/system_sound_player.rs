@@ -8,14 +8,14 @@ pub struct SystemSoundPlayer {
     audio_manager: Arc<AudioManager>,
     pub(crate) sounds: Vec<AudioHandle>,
     pub(crate) bank: Option<Arc<shin_core::format::sysse::SysSe>>,
-    pub(crate) track: kira::track::TrackHandle,
+    pub(crate) track: shin_audio::AudioTrack,
     pub(crate) volume_percent: u8,
     pub(crate) retired: Vec<SystemSoundTail>,
 }
 /// The global native system player outlives ADV scene reconstruction. Keep
 /// each retired bus owned until its existing cues finish; no new bus is needed.
 pub(crate) struct SystemSoundTail {
-    pub(crate) _track: kira::track::TrackHandle,
+    pub(crate) _track: shin_audio::AudioTrack,
     pub(crate) sounds: Vec<AudioHandle>,
 }
 impl Drop for SystemSoundTail {
@@ -40,7 +40,8 @@ impl SystemSoundPlayer {
             .kira_manager()
             .lock()
             .add_sub_track(kira::track::TrackBuilder::new())
-            .expect("Failed to create system sound track");
+            .expect("Failed to create system sound track")
+            .into();
         Self {
             audio_manager,
             sounds: Vec::new(),
@@ -64,28 +65,37 @@ impl SystemSoundPlayer {
     }
 
     pub fn play(&mut self, server: &AssetServer, name: &str, volume: Volume) {
-        let bank = self.bank.get_or_insert_with(|| {
-            server
-                .load_sync::<shin_core::format::sysse::SysSe>("/sysse.bin")
-                .expect("Failed to load system sound bank")
-        });
-        let sound = bank
-            .sounds
-            .get(name)
-            .unwrap_or_else(|| panic!("Missing system sound {name}"));
-        let handle = self.audio_manager.play(shin_audio::AudioData {
+        // A failed menu cue must not abort its input callback. Keep the bank
+        // unpublished on failure so the next cue can retry loading it.
+        if self.bank.is_none() {
+            match server.load_sync::<shin_core::format::sysse::SysSe>("/sysse.bin") {
+                Ok(bank) => self.bank = Some(bank),
+                Err(error) => {
+                    tracing::warn!(error = ?error, cue = name, "System sound bank could not load");
+                    return;
+                }
+            }
+        }
+        let Some(sound) = self.bank.as_ref().and_then(|bank| bank.sounds.get(name)) else {
+            tracing::warn!(cue = name, "System sound cue is missing");
+            return;
+        };
+        let handle = self.audio_manager.play_on_track(
+            &mut self.track,
+            shin_audio::AudioData {
             source: sound.decode(),
             settings: shin_audio::AudioSettings {
                 paused: false,
                 playback_rate: 1.0,
-                track: self.track.id(),
-                fade_in: shin_core::time::Tween::IMMEDIATE,
+
+                    fade_in: shin_core::time::Tween::IMMEDIATE,
                 loop_start: None,
                 loop_count: 0,
                 volume: system_cue_volume(volume, self.volume_percent),
                 pan: Default::default(),
             },
-        });
+        },
+        );
         self.sounds.push(handle);
     }
     /// Resume keeps its active bus and all in-flight cue identities.

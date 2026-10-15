@@ -2,7 +2,8 @@ use super::SettingsGain;
 use std::sync::Arc;
 
 use bitflags::bitflags;
-use kira::track::{TrackBuilder, TrackHandle};
+use kira::track::TrackBuilder;
+use shin_audio::AudioTrack as TrackHandle;
 use shin_audio::{AudioData, AudioFile, AudioHandle, AudioManager, AudioSegment, AudioSettings};
 use shin_core::{
     format::audio::{AudioDecoder, AudioFrameSource, AudioSource},
@@ -118,7 +119,7 @@ fn character_lipsync(voices: &[PlayingVoice], id: i32) -> Option<u8> {
         })
 }
 
-fn voice_speakers(
+pub(crate) fn voice_speakers(
     mappings: &shin_core::format::scenario::info::VoiceMappingInfo,
     name: &str,
     flags: VoicePlayFlags,
@@ -150,7 +151,8 @@ impl VoicePlayer {
             .kira_manager()
             .lock()
             .add_sub_track(TrackBuilder::new())
-            .expect("Failed to create voice track");
+            .expect("Failed to create voice track")
+            .into();
         Self {
             settings_gain: SettingsGain::default(),
             audio_manager,
@@ -205,6 +207,26 @@ impl VoicePlayer {
         flags: VoicePlayFlags,
         volume: Volume,
     ) -> bool {
+        self.play_mapped(
+            &scenario.info_tables().voice_mapping_info,
+            voicefiles_spec,
+            segment_start,
+            segment_duration,
+            flags,
+            volume,
+        )
+    }
+
+    /// Shared transport; callers supply their game's decoded speaker mappings.
+    pub(crate) fn play_mapped(
+        &mut self,
+        mappings: &shin_core::format::scenario::info::VoiceMappingInfo,
+        voicefiles_spec: &str,
+        segment_start: u32,
+        segment_duration: u32,
+        flags: VoicePlayFlags,
+        volume: Volume,
+    ) -> bool {
         self.stop();
         // VoicePlayer::play at 0x119830 splits on '|'. These files are played
         // together, not concatenated. MessageLayer's caller at 0xb1f50 passes
@@ -214,17 +236,13 @@ impl VoicePlayer {
             .filter(|path| {
                 !flags.contains(VoicePlayFlags::ENABLE_CHARACTER_MUTING)
                     || character_voice_enabled(
-                        &scenario.info_tables().voice_mapping_info,
+                        mappings,
                         &path[7..path.len() - 4],
                         self.character_voice_mask,
                     )
             })
             .map(|path| {
-                let speakers = voice_speakers(
-                    &scenario.info_tables().voice_mapping_info,
-                    &path[7..path.len() - 4],
-                    flags,
-                );
+                let speakers = voice_speakers(mappings, &path[7..path.len() - 4], flags);
                 (path, speakers)
             })
             .collect();
@@ -291,19 +309,22 @@ impl VoicePlayer {
                     volume: pending.volume.0,
                     stopping: false,
                     pan: Pan::default(),
-                    handle: self.audio_manager.play(AudioData {
+                    handle: self.audio_manager.play_on_track(
+                        &mut self.track,
+                        AudioData {
                         source,
                         settings: AudioSettings {
                             paused: self.paused,
                             playback_rate: 1.0,
-                            track: self.track.id(),
-                            fade_in: Tween::IMMEDIATE,
+
+                                fade_in: Tween::IMMEDIATE,
                             loop_start: None,
                             loop_count: 0,
                             volume: pending.volume,
                             pan: Pan::default(),
                         },
-                    }),
+                    },
+                    ),
                 }),
                 Err(error) => warn!(%error, "Failed to decode voice"),
             }
@@ -385,11 +406,39 @@ impl VoicePlayer {
                 u64::from(self.segment_start_millis) + u64::from(voice.handle.position_millis())
             })
     }
+
+    /// Older Higurashi2b28c converts samples with double precision, thenec318
+    /// adds the request origin in microseconds. Keep Umineko's millis API.
+    pub(crate) fn position_micros(&self) -> u64 {
+        if self.pending.is_some() {
+            return u64::from(self.segment_start_millis) * 1000;
+        }
+        self.voices
+            .iter()
+            .find(|voice| {
+                !voice.stopping
+                    && voice
+                        .handle
+                        .get_wait_status()
+                        .contains(AudioWaitStatus::PLAYING)
+            })
+            .map_or(0, |voice| {
+                u64::from(self.segment_start_millis) * 1000
+                    + native_voice_clock(
+                        u64::from(voice.handle.position_samples()),
+                        voice.handle.sample_rate(),
+                    )
+            })
+    }
+}
+
+pub(crate) fn native_voice_clock(samples: u64, sample_rate: u32) -> u64 {
+    (samples as f64 / (f64::from(sample_rate) * 0.000001)) as u64
 }
 
 /// Native0xea400 uses the first case-insensitive wildcard match;0xea690
 /// accepts an unknown speaker or any enabled character in a matched group.
-fn character_voice_enabled(
+pub(crate) fn character_voice_enabled(
     mappings: &shin_core::format::scenario::info::VoiceMappingInfo,
     name: &str,
     mask: u32,
@@ -406,7 +455,7 @@ fn character_voice_enabled(
         })
 }
 
-fn voice_pattern_matches(pattern: &str, name: &str) -> bool {
+pub(crate) fn voice_pattern_matches(pattern: &str, name: &str) -> bool {
     let pattern: Vec<_> = pattern.chars().map(|c| c.to_ascii_uppercase()).collect();
     let mut previous = vec![false; pattern.len() + 1];
     previous[0] = true;
@@ -775,12 +824,12 @@ mod tests {
 
     #[test]
     fn matched_voice_panning_changes_pcm_and_setting_centers_only_matches() {
-        use kira::manager::{
-            AudioManager as KiraManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        };
+        use kira::{
+            AudioManager as KiraManager, AudioManagerSettings};
+        use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -793,7 +842,6 @@ mod tests {
                 settings: AudioSettings {
                     paused: false,
                     playback_rate: 1.0,
-                    track: kira::track::TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,
@@ -881,12 +929,12 @@ mod tests {
 
     #[test]
     fn stopping_voice_fades_absolute_request_volume_while_new_voice_remains_active() {
-        use kira::manager::{
-            AudioManager as KiraManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        };
+        use kira::{
+            AudioManager as KiraManager, AudioManagerSettings};
+        use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -901,7 +949,6 @@ mod tests {
                     settings: AudioSettings {
                         paused: false,
                         playback_rate: 1.0,
-                        track: kira::track::TrackId::Main,
                         fade_in: Tween::IMMEDIATE,
                         loop_start: None,
                         loop_count: 0,
@@ -984,12 +1031,12 @@ mod tests {
 
     #[test]
     fn lipsync_uses_first_matching_playing_voice_and_integer_window_positions() {
-        use kira::manager::{
-            AudioManager as KiraManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        };
+        use kira::{
+            AudioManager as KiraManager, AudioManagerSettings};
+        use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -1008,7 +1055,6 @@ mod tests {
                     settings: AudioSettings {
                         paused: false,
                         playback_rate: 1.0,
-                        track: kira::track::TrackId::Main,
                         fade_in: Tween::IMMEDIATE,
                         loop_start: None,
                         loop_count: 0,
@@ -1088,7 +1134,7 @@ mod tests {
             let settings = AudioSettings {
                 paused: false,
                 playback_rate: 1.0,
-                track: kira::track::TrackId::Main,
+
                 fade_in: Tween::IMMEDIATE,
                 loop_start: None,
                 loop_count: 0,
@@ -1097,8 +1143,11 @@ mod tests {
             };
             // BGM and SE share this public playback factory. Voice segments
             // use a separate factory, so compare both against the signed API.
-            let mut playback =
-                AudioSource::new(AudioData::from_audio_file(file.clone(), settings).source);
+            let mut playback = AudioSource::new(
+                AudioData::from_audio_file(file.clone(), settings)
+                    .unwrap()
+                    .source,
+            );
             let mut voice = AudioSource::new(voice_segment(file.clone(), 0, 0).unwrap());
             let mut expected = AudioSource::new(AudioDecoder::new_pcm16(file.clone()).unwrap());
             let mut floating = AudioSource::new(AudioDecoder::new(file.clone()).unwrap());
@@ -1155,10 +1204,9 @@ mod tests {
     #[test]
     #[ignore = "requires the supplied Umineko ROM (SHIN_REFERENCE_ROM)"]
     fn reference_voice_segments_decode_and_finish_playback() {
-        use kira::manager::{
-            AudioManager as KiraManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        };
+        use kira::{
+            AudioManager as KiraManager, AudioManagerSettings};
+        use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         use shin_core::{
             format::{
                 audio::{AudioSource, read_audio},
@@ -1206,6 +1254,7 @@ mod tests {
         // without opening an audio device or constructing a GPU asset server.
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: rate },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -1215,7 +1264,6 @@ mod tests {
                 settings: AudioSettings {
                     paused: false,
                     playback_rate: 1.0,
-                    track: kira::track::TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,
