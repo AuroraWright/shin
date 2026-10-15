@@ -9,10 +9,7 @@ pub(crate) fn reference_live_movie_gallery_roundtrip<'a>(
     target: &wgpu::Texture,
     view: &wgpu::TextureView,
 ) {
-    use crate::{
-        adv::character_view::CharacterTextures, asset::effects::EffectTextures,
-        layer::message_layer::MessageboxTextures,
-    };
+    use crate::{adv::character_view::CharacterTextures, layer::message_layer::MessageboxTextures};
     use shin_core::format::{save::SaveData, scenario::Scenario, sysse::SysSe};
     let scenario: Arc<Scenario> = server.load_sync("/main.snr").unwrap();
     let common = Arc::new(CommonAssets {
@@ -28,7 +25,7 @@ pub(crate) fn reference_live_movie_gallery_roundtrip<'a>(
         _system: server
             .load_sync::<CharacterTextures>("/systex.txa")
             .unwrap(),
-        effects: server.load_sync::<EffectTextures>("/effects.txa").unwrap(),
+        effects: shin_tasks::block_on(server.effects_atlas()).unwrap(),
         _sysse: server.load_sync::<SysSe>("/sysse.bin").unwrap(),
     });
     let mut save = SaveData::default();

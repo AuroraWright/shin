@@ -32,28 +32,30 @@ impl<T: TextureArchive> Asset for T {
         data: AssetDataAccessor,
     ) -> Result<Self> {
         let label = format!("TXA[{}]", name);
-        let data = data.read_all().await;
+        let data = data.read_all().await?;
         let context = context.clone();
 
         shin_tasks::compute::spawn(move || {
-            let archive = shin_core::format::texture_archive::read_texture_archive(&data)?;
+            crate::asset::system::catch_asset_preparation_panic("TXA", || {
+                let archive = shin_core::format::texture_archive::read_texture_archive(&data)?;
 
-            let mut builder = T::Builder::new();
+                let mut builder = T::Builder::new();
 
-            for (tex_name, index) in archive.name_to_index {
-                let texture = &archive.textures[index];
+                for (tex_name, index) in archive.name_to_index {
+                    let texture = &archive.textures[index];
 
-                let texture = GpuTexture::new_static_from_rgba_image(
-                    &context.wgpu_device,
-                    &context.wgpu_queue,
-                    Some(&format!("{}/{}", label, tex_name)),
-                    texture,
-                );
+                    let texture = GpuTexture::new_static_from_rgba_image(
+                        &context.wgpu_device,
+                        &context.wgpu_queue,
+                        Some(&format!("{}/{}", label, tex_name)),
+                        texture,
+                    );
 
-                builder.add_texture_with_index(index, &tex_name, texture);
-            }
+                    builder.add_texture_with_index(index, &tex_name, texture);
+                }
 
-            Ok(builder.build())
+                Ok(builder.build())
+            })
         })
         .await
     }

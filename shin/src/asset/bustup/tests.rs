@@ -123,11 +123,13 @@ fn reference_original_bustup_asset_ranges_cache_identity_and_argument_separation
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let path = std::env::var("SHIN_REFERENCE_ROM").unwrap();
     let mut io = LayeredAssetIo::new();
@@ -135,6 +137,8 @@ fn reference_original_bustup_asset_ranges_cache_identity_and_argument_separation
     let server = AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device,
             wgpu_queue: queue,
             bustup_cache: AssetCache::new(),

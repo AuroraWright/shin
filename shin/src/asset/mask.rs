@@ -215,30 +215,109 @@ impl Asset for MaskTexture {
         data: AssetDataAccessor,
     ) -> anyhow::Result<Self> {
         let label = format!("Mask[{}]", name);
-        let data = data.read_all().await;
+        let data = data.read_all().await?;
         let context = context.clone();
 
         shin_tasks::compute::spawn(move || {
-            let mask = shin_core::format::mask::read_mask(&data)?;
+            crate::asset::system::catch_asset_preparation_panic("Mask", || {
+                let mask = match context.game {
+                    crate::cli::Game::Umineko => shin_core::format::mask::read_mask(&data)?,
+                    crate::cli::Game::Higurashi => {
+                        let texels = shin_core::format::mask::read_higurashi_mask(&data)?;
+                        // MSK3 has no optimized white/black regions. A conservative
+                        // full mixed region permits shared mask texture ownership;
+                        // reconstruction uses its R8 texture directly.
+                        let region = shin_core::format::mask::MaskRect {
+                            from_x: 0,
+                            from_y: 0,
+                            to_x: (texels.width() - 1) as u16,
+                            to_y: (texels.height() - 1) as u16,
+                        };
+                        let empty = shin_core::format::mask::MaskRegionInfo {
+                            rect_count: 0,
+                            region_area: 0,
+                        };
+                        shin_core::format::mask::MaskTexture {
+                            id: 0,
+                            texels,
+                            regions: shin_core::format::mask::RegionData {
+                                black_regions: empty,
+                                white_regions: empty,
+                                transparent_regions: shin_core::format::mask::MaskRegionInfo {
+                                    rect_count: 1,
+                                    region_area: 0,
+                                },
+                                rects: vec![region],
+                            },
+                        }
+                    }
+                };
 
-            let (vertex_buffer, index_buffer, offsets) =
-                load_vertices(&context, &mask.regions, &label);
+                let (vertex_buffer, index_buffer, offsets) =
+                    load_vertices(&context, &mask.regions, &label);
 
-            let texture = GpuTexture::new_static_from_gray_image(
-                &context.wgpu_device,
-                &context.wgpu_queue,
-                Some(&format!("{}/texture", label)),
-                &mask.texels,
-            );
+                let texture = GpuTexture::new_static_from_gray_image(
+                    &context.wgpu_device,
+                    &context.wgpu_queue,
+                    Some(&format!("{}/texture", label)),
+                    &mask.texels,
+                );
 
-            Ok(MaskTexture {
-                label,
-                offsets,
-                vertex_buffer,
-                index_buffer,
-                texture,
+                Ok(MaskTexture {
+                    label,
+                    offsets,
+                    vertex_buffer,
+                    index_buffer,
+                    texture,
+                })
             })
         })
         .await
+    }
+}
+
+#[cfg(test)]
+mod higurashi_tests;
+
+#[cfg(test)]
+pub(crate) fn reference_wipe_texture(
+    context: &AssetLoadContext,
+    size: [u32; 2],
+    pixels: Vec<u8>,
+) -> MaskTexture {
+    assert_eq!(pixels.len(), size[0] as usize * size[1] as usize);
+    let empty = shin_core::format::mask::MaskRegionInfo {
+        rect_count: 0,
+        region_area: 0,
+    };
+    let regions = RegionData {
+        black_regions: empty,
+        white_regions: empty,
+        transparent_regions: shin_core::format::mask::MaskRegionInfo {
+            rect_count: 1,
+            region_area: 0,
+        },
+        rects: vec![MaskRect {
+            from_x: 0,
+            from_y: 0,
+            to_x: (size[0] - 1) as u16,
+            to_y: (size[1] - 1) as u16,
+        }],
+    };
+    let (vertex_buffer, index_buffer, offsets) =
+        load_vertices(context, &regions, "Explicit original wipe Mask image");
+    MaskTexture {
+        label: "Explicit original wipe Mask image".into(),
+        offsets,
+        vertex_buffer,
+        index_buffer,
+        texture: GpuTexture::new_static_with_data(
+            &context.wgpu_device,
+            &context.wgpu_queue,
+            None,
+            winit::dpi::PhysicalSize::new(size[0], size[1]),
+            wgpu::TextureFormat::R8Unorm,
+            &pixels,
+        ),
     }
 }

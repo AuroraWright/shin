@@ -55,9 +55,11 @@ fn context() -> Arc<AssetLoadContext> {
         shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
             .unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+        shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
             .unwrap();
     Arc::new(AssetLoadContext {
+        game: crate::cli::Game::Umineko,
+        higurashi_bustup_cache: Default::default(),
         wgpu_device: device,
         wgpu_queue: queue,
         bustup_cache: AssetCache::new(),

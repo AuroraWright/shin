@@ -1,7 +1,8 @@
 use std::{marker::PhantomData, sync::Arc};
 
+pub mod higurashi;
+
 use anyhow::{Context, Result};
-use bevy_utils::HashMap;
 use glam::{Vec2, vec2};
 use indexmap::IndexMap;
 use parking_lot::Mutex;
@@ -12,6 +13,7 @@ use shin_core::format::{
     },
     picture::PicBlock,
 };
+use std::collections::HashMap;
 
 use crate::asset::{
     picture::{GpuPictureBlock, GpuTextureBuilderContext},
@@ -329,7 +331,7 @@ impl Asset for Bustup {
         data: AssetDataAccessor,
     ) -> Result<Self> {
         let label = format!("{}[{}]", name, args.expression);
-        let data = data.read_all().await;
+        let data = data.read_all().await?;
         let context = context.clone();
 
         shin_tasks::compute::spawn(move || {

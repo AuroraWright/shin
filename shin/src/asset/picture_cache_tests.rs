@@ -12,6 +12,8 @@ use std::{
 
 fn context(device: &wgpu::Device, queue: &wgpu::Queue) -> AssetLoadContext {
     AssetLoadContext {
+        game: crate::cli::Game::Umineko,
+        higurashi_bustup_cache: Default::default(),
         wgpu_device: device.clone(),
         wgpu_queue: queue.clone(),
         bustup_cache: crate::asset::system::cache::AssetCache::new(),
@@ -193,8 +195,7 @@ fn reference_native_picture_aliases_and_production_gpu_cache() {
         shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
             .unwrap();
     let (device, queue) =
-        shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
-            .unwrap();
+        shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).unwrap();
     let mut io = LayeredAssetIo::new();
     io.try_with_rom(&rom_path).unwrap();
     let server = AssetServer::new(io.into(), context(&device, &queue));
@@ -237,7 +238,9 @@ fn reference_native_picture_aliases_and_production_gpu_cache() {
             drop(reload);
         }
     });
-    device.poll(wgpu::Maintain::Wait);
+    device
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("GPU work must complete before readback or retirement");
 
     // Real production fixtures distinguish header-only cache hits from body
     // decoding, per-file metadata from shared placement data, and failure retry.
@@ -316,7 +319,7 @@ fn reference_native_picture_aliases_and_production_gpu_cache() {
         assert!(Arc::ptr_eq(&retry.blocks, &hit.blocks));
 
         let (other_device, other_queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default(), None)
+            .request_device(&wgpu::DeviceDescriptor::default())
             .await
             .unwrap();
         let mut io = LayeredAssetIo::new();
@@ -327,9 +330,13 @@ fn reference_native_picture_aliases_and_production_gpu_cache() {
             !Arc::ptr_eq(&retry.blocks, &separate.blocks),
             "GPU resource crossed device/context boundary"
         );
-        other_device.poll(wgpu::Maintain::Wait);
+        other_device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("GPU work must complete before readback or retirement");
     });
-    device.poll(wgpu::Maintain::Wait);
+    device
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("GPU work must complete before readback or retirement");
     let stats = format!(
         r#"{{"groups":32,"alias_files":76,"extra_aliases":44,
         "raw_alias_bytes_compared":{compared_bytes},"native_profiles":4,"native_cold_and_reload_jobs":{native_jobs},

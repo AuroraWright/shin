@@ -47,22 +47,35 @@ struct AdvPreparation {
     fresh: bool,
     globals: GlobalData,
     audio: GlobalAudio,
+    source: Option<shin_render::render_texture::RenderTexture>,
 }
 
+#[cfg(all(test, target_os = "macos"))]
+mod asset_failure_reference;
+#[cfg(test)]
+mod bustup_failure_reference;
 #[cfg(test)]
 mod bustup_reference;
 #[cfg(test)]
 mod cg_reference;
+#[cfg(all(test, target_os = "macos"))]
+mod gallery_child_failure_reference;
+#[cfg(all(test, target_os = "macos"))]
+mod gallery_failure_reference;
 #[cfg(test)]
 mod gallery_return_reference;
 #[cfg(test)]
 mod movie_reference;
 #[cfg(test)]
 pub(crate) mod music_reference;
+#[cfg(all(test, unix))]
+mod notice_failure_reference;
 #[cfg(test)]
 mod scenario_unlock_reference;
 #[cfg(all(test, unix))]
 mod shutdown_reference;
+#[cfg(test)]
+mod start_failure_reference;
 #[cfg(test)]
 mod startup_reference;
 #[cfg(all(test, unix))]
@@ -241,7 +254,7 @@ impl SceneHost {
             -state.gamepads.unified.axes[shin_input::inputs::GamepadAxis::LeftStickY],
         );
     }
-    pub fn effect_textures(&self) -> Option<&Arc<crate::asset::effects::EffectTextures>> {
+    pub fn effect_textures(&self) -> Option<&crate::asset::effects::EffectsAtlasBorrow> {
         self.common.as_ref().map(|common| &common.effects)
     }
     #[cfg(test)]
@@ -287,6 +300,7 @@ impl SceneHost {
         audio: GlobalAudio,
         entry: GameData,
         fresh: bool,
+        source: Option<shin_render::render_texture::RenderTexture>,
     ) -> anyhow::Result<()> {
         let Some(assets) = &self.assets else {
             let common = self
@@ -301,6 +315,7 @@ impl SceneHost {
                 audio,
                 entry,
                 fresh,
+                source,
             }));
             return Ok(());
         };
@@ -320,12 +335,36 @@ impl SceneHost {
         if let Err(error) = adv.load_game_data(&saved, &entry, self.server.clone()) {
             adv.show_scene_load_error(&error, &self.server)?;
         }
+        if let Some(source) = source {
+            adv.set_saved_load_source(source);
+        }
         self.scene = Some(Scene::Adv(Box::new(adv)));
         self.restoring_from_title = true;
         Ok(())
     }
     // Keep gallery handoffs in separate frames: global save data is large,
     // and the common destination dispatcher already moves several scene owners.
+    fn restore_title_after_gallery_error(
+        &mut self,
+        error: anyhow::Error,
+        item: TitleItem,
+        globals: GlobalData,
+        audio: GlobalAudio,
+        extent: (u16, u16),
+    ) {
+        tracing::warn!(%error, ?item, "Constructing gallery failed; returning to title");
+        let mut scene = TitleScene::new(
+            self.server.clone(),
+            TitleSetup::from_save(globals.save(), item as i32),
+        );
+        scene.resize(extent);
+        self.scene = Some(Scene::Title(TitleRuntime {
+            scene,
+            globals,
+            audio,
+            extent,
+        }));
+    }
     fn enter_music(
         &mut self,
         context: &mut crate::render::PreRenderContext,
@@ -359,10 +398,33 @@ impl SceneHost {
                 .assets
                 .as_ref()
                 .ok_or_else(|| anyhow::anyhow!("MusicMode requires common resources"))?;
+            let system = match self.server.load_sync("/systex.txa") {
+                Ok(system) => system,
+                Err(error) => {
+                    let Some(Scene::Title(title)) = self.scene.take() else {
+                        unreachable!()
+                    };
+                    let TitleRuntime {
+                        scene,
+                        globals,
+                        audio,
+                        ..
+                    } = title;
+                    drop(scene);
+                    self.restore_title_after_gallery_error(
+                        error,
+                        TitleItem::Bgm,
+                        globals,
+                        audio,
+                        extent,
+                    );
+                    return Ok(());
+                }
+            };
             (
                 assets.scenario.clone(),
                 assets.fonts.system_font.clone(),
-                self.server.load_sync("/systex.txa")?,
+                system,
             )
         };
         let Some(Scene::Title(title)) = self.scene.take() else {
@@ -375,7 +437,7 @@ impl SceneHost {
             ..
         } = title;
         drop(scene);
-        let scene = MusicGalleryScene::new(
+        let scene = match MusicGalleryScene::new(
             self.server.clone(),
             scenario,
             font,
@@ -383,7 +445,19 @@ impl SceneHost {
             &globals,
             previous,
             extent,
-        )?;
+        ) {
+            Ok(scene) => scene,
+            Err(error) => {
+                self.restore_title_after_gallery_error(
+                    error,
+                    TitleItem::Bgm,
+                    globals,
+                    audio,
+                    extent,
+                );
+                return Ok(());
+            }
+        };
         self.scene = Some(Scene::Music(Box::new(MusicRuntime {
             scene,
             globals,
@@ -482,14 +556,26 @@ impl SceneHost {
             ..
         } = title;
         drop(scene);
-        let scene = MovieGalleryScene::new(
+        let scene = match MovieGalleryScene::new(
             self.server.clone(),
             scenario,
             font,
             &globals,
             previous,
             extent,
-        )?;
+        ) {
+            Ok(scene) => scene,
+            Err(error) => {
+                self.restore_title_after_gallery_error(
+                    error,
+                    TitleItem::Movie,
+                    globals,
+                    audio,
+                    extent,
+                );
+                return Ok(());
+            }
+        };
         self.scene = Some(Scene::Movie(Box::new(MovieRuntime {
             scene,
             globals,
@@ -568,14 +654,26 @@ impl SceneHost {
             ..
         } = title;
         drop(scene);
-        let scene = CgGalleryScene::new(
+        let scene = match CgGalleryScene::new(
             self.server.clone(),
             scenario,
             font,
             &globals,
             previous,
             extent,
-        )?;
+        ) {
+            Ok(scene) => scene,
+            Err(error) => {
+                self.restore_title_after_gallery_error(
+                    error,
+                    TitleItem::Cg,
+                    globals,
+                    audio,
+                    extent,
+                );
+                return Ok(());
+            }
+        };
         self.scene = Some(Scene::Cg(Box::new(CgRuntime {
             scene,
             globals,
@@ -654,7 +752,19 @@ impl SceneHost {
             ..
         } = title;
         drop(scene);
-        let scene = BustupScene::new(self.server.clone(), scenario, previous, extent)?;
+        let scene = match BustupScene::new(self.server.clone(), scenario, previous, extent) {
+            Ok(scene) => scene,
+            Err(error) => {
+                self.restore_title_after_gallery_error(
+                    error,
+                    TitleItem::Bustup,
+                    globals,
+                    audio,
+                    extent,
+                );
+                return Ok(());
+            }
+        };
         self.scene = Some(Scene::Bustup(Box::new(BustupRuntime {
             scene,
             globals,
@@ -929,9 +1039,10 @@ impl SceneHost {
                     audio,
                 } = episode;
                 drop(scene);
-                self.enter_adv(globals, audio, GameData::from_entry(entry), true)?;
+                self.enter_adv(globals, audio, GameData::from_entry(entry), true, None)?;
             }
             Destination::Load(entry) => {
+                let source = self.capture_title_return(context);
                 let Some(Scene::Title(title)) = self.scene.take() else {
                     anyhow::bail!("Manual Load requires Title");
                 };
@@ -942,7 +1053,7 @@ impl SceneHost {
                     ..
                 } = title;
                 drop(scene);
-                self.enter_adv(globals, audio, entry, false)?;
+                self.enter_adv(globals, audio, entry, false, Some(source))?;
             }
             Destination::Action(TitleItem::Continue) => {
                 let Some(Scene::Title(title)) = &self.scene else {
@@ -964,7 +1075,7 @@ impl SceneHost {
                     ..
                 } = title;
                 drop(scene);
-                self.enter_adv(globals, audio, entry, false)?;
+                self.enter_adv(globals, audio, entry, false, None)?;
             }
             Destination::Action(item) => {
                 // Keep requests for factories still being recovered; don't turn
@@ -1023,9 +1134,10 @@ impl SceneHost {
                     audio,
                     entry,
                     fresh,
+                    source,
                     ..
                 } = preparation;
-                self.enter_adv(globals, audio, entry, fresh)?;
+                self.enter_adv(globals, audio, entry, fresh, source)?;
             }
         }
         let scenario = self
@@ -1327,7 +1439,11 @@ impl SceneHost {
             Some(Scene::Episode(episode)) => episode.scene.render(pass),
             Some(Scene::Demo(demo)) => demo.scene.render(pass),
             Some(Scene::Boot(boot)) => boot.scene.render(pass),
-            Some(Scene::PreparingAdv(_)) => {}
+            Some(Scene::PreparingAdv(preparation)) => {
+                if let Some(source) = &preparation.source {
+                    crate::adv::scene_load_fade::render_snapshot(source, pass);
+                }
+            }
             None => {}
         }
     }
@@ -1338,7 +1454,7 @@ impl SceneHost {
         audio: GlobalAudio,
         game: GameData,
     ) -> anyhow::Result<()> {
-        self.enter_adv(globals, audio, game, false)
+        self.enter_adv(globals, audio, game, false, None)
     }
     #[cfg(test)]
     pub fn reference_save(&self) -> shin_core::format::save::SaveData {

@@ -1,7 +1,17 @@
 mod accessor;
+#[cfg(all(test, target_os = "macos"))]
+pub(crate) mod accessor_io_reference_tests;
+#[cfg(all(test, target_os = "macos"))]
+mod adpcm_failure_reference_tests;
 mod context;
+#[cfg(all(test, target_os = "macos"))]
+mod nxa_failure_reference_tests;
+#[cfg(all(test, target_os = "macos"))]
+mod producer_failure_reference_tests;
 #[cfg(test)]
 mod registry_reference_tests;
+#[cfg(all(test, target_os = "macos"))]
+mod system_sound_failure_reference_tests;
 
 use std::{
     borrow::Cow,
@@ -63,11 +73,19 @@ pub struct AssetServer {
     io: AssetIo,
     context: Arc<AssetLoadContext>,
     loaded_assets: RwLock<anymap3::Map<dyn core::any::Any + Send + Sync>>,
+    effects_atlas: crate::asset::effects::EffectsAtlas,
+    effects_atlas_loading: futures::lock::Mutex<()>,
     #[cfg(test)]
     requested_paths: std::sync::Mutex<Vec<String>>,
+    #[cfg(test)]
+    uncached_paths: std::sync::Mutex<Vec<String>>,
 }
 
 impl AssetServer {
+    /// Query the mounted asset backend without decoding or caching its content.
+    pub fn contains(&self, path: &str) -> bool {
+        self.io.read_file(path).is_ok()
+    }
     pub fn context(&self) -> &AssetLoadContext {
         &self.context
     }
@@ -76,9 +94,76 @@ impl AssetServer {
             io,
             context: Arc::new(context),
             loaded_assets: RwLock::new(anymap3::Map::new()),
+            effects_atlas: Default::default(),
+            effects_atlas_loading: Default::default(),
             #[cfg(test)]
             requested_paths: std::sync::Mutex::new(Vec::new()),
+            #[cfg(test)]
+            uncached_paths: std::sync::Mutex::new(Vec::new()),
         }
+    }
+
+    /// Publish once per engine resource context, including concurrent worker
+    /// requests. Native startup retains this atlas across scene/layer retirement.
+    pub(crate) async fn effects_atlas(&self) -> Result<crate::asset::effects::EffectsAtlasBorrow> {
+        if self.effects_atlas.is_loaded() {
+            return Ok(self.effects_atlas.borrower());
+        }
+        let _loading = self.effects_atlas_loading.lock().await;
+        if !self.effects_atlas.is_loaded() {
+            let textures: Arc<crate::asset::effects::EffectTextures> =
+                self.load("/effects.txa").await?;
+            textures.validate_for_frame()?;
+            self.effects_atlas.try_publish(textures)?;
+        }
+        Ok(self.effects_atlas.borrower())
+    }
+
+    /// Register the concrete layer's required name. A previously published
+    /// atlas may legitimately omit unused names; reload from the source on
+    /// failure so command acknowledgement can retry after the file is repaired.
+    pub(crate) async fn effects_atlas_for(
+        &self,
+        name: &'static str,
+    ) -> Result<crate::asset::effects::EffectsAtlasBorrow> {
+        self.effects_atlas().await?;
+        if let Ok(borrower) = self.effects_atlas.borrower_for(name) {
+            return Ok(borrower);
+        }
+        let _loading = self.effects_atlas_loading.lock().await;
+        if let Ok(borrower) = self.effects_atlas.borrower_for(name) {
+            return Ok(borrower);
+        }
+        let textures: Arc<crate::asset::effects::EffectTextures> =
+            self.load_uncached("/effects.txa", ()).await?;
+        textures.validate_for_frame()?;
+        textures.require_texture(name)?;
+        self.effects_atlas.try_publish(textures)?;
+        self.effects_atlas.borrower_for(name)
+    }
+
+    /// Native startup's atlas factory always publishes a newly constructed
+    /// manager, including on resource-worker retry. Existing layers borrow the
+    /// replacement; they do not retain or keep rendering the previous atlas.
+    pub(crate) async fn initialize_effects_atlas(
+        &self,
+    ) -> Result<crate::asset::effects::EffectsAtlasBorrow> {
+        let _loading = self.effects_atlas_loading.lock().await;
+        #[cfg(test)]
+        self.requested_paths
+            .lock()
+            .unwrap()
+            .push("/effects.txa".to_owned());
+        let textures: Arc<crate::asset::effects::EffectTextures> =
+            self.load_uncached("/effects.txa", ()).await?;
+        textures.validate_for_frame()?;
+        self.effects_atlas.try_publish(textures)?;
+        Ok(self.effects_atlas.borrower())
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_effects_atlas(&self) -> &crate::asset::effects::EffectsAtlas {
+        &self.effects_atlas
     }
 
     pub async fn load<T: Asset, P: AsRef<str>>(&self, path: P) -> Result<Arc<T>>
@@ -108,7 +193,14 @@ impl AssetServer {
             }
         }
 
+        self.load_uncached(path, args).await
+    }
+
+    async fn load_uncached<T: Asset>(&self, path: &str, args: T::Args) -> Result<Arc<T>> {
+        #[cfg(test)]
+        self.uncached_paths.lock().unwrap().push(path.to_owned());
         debug!("Loading asset: {}", path);
+        let asset_map_key = (path.to_string(), args.clone());
 
         // could not find the asset in the cache, load it
         let data = self
@@ -134,9 +226,47 @@ impl AssetServer {
         Ok(asset)
     }
 
+    /// Construct a fresh owner without consulting or extending the asset cache.
+    /// The asset's decoder still uses the usual shared load context and its
+    /// format-specific block caches.
+    pub async fn load_uncached_with_args<T: Asset, P: AsRef<str>>(
+        &self,
+        path: P,
+        args: T::Args,
+    ) -> Result<T> {
+        let path = path.as_ref();
+        #[cfg(test)]
+        self.requested_paths.lock().unwrap().push(path.to_string());
+        debug!("Loading uncached asset: {}", path);
+        let data = self
+            .io
+            .read_file(path)
+            .with_context(|| format!("Reading asset {:?}", path))?;
+        T::load(&self.context, args, path, data)
+            .await
+            .with_context(|| format!("Loading asset {:?}", path))
+    }
+
     #[cfg(test)]
     pub(crate) fn reference_requested_paths(&self) -> Vec<String> {
         self.requested_paths.lock().unwrap().clone()
+    }
+
+    #[cfg(test)]
+    pub(crate) fn reference_uncached_paths(&self) -> Vec<String> {
+        self.uncached_paths.lock().unwrap().clone()
+    }
+
+    /// Force a fresh production load in a fault fixture without retiring any
+    /// existing asset owner. This is not a runtime cache invalidation policy.
+    #[cfg(test)]
+    pub(crate) fn reference_forget_cached_asset<T: Asset>(&self, path: &str)
+    where
+        T::Args: Default,
+    {
+        if let Some(assets) = self.loaded_assets.write().unwrap().get_mut::<AssetMap<T>>() {
+            assets.shift_remove(&(path.to_owned(), T::Args::default()));
+        }
     }
 
     /// Load an asset synchronously. This is useful for assets not requiring much CPU time to load.
@@ -148,6 +278,12 @@ impl AssetServer {
         T::Args: Default,
     {
         shin_tasks::block_on(self.load(path))
+    }
+}
+
+impl Drop for AssetServer {
+    fn drop(&mut self) {
+        self.effects_atlas.clear();
     }
 }
 
@@ -286,7 +422,7 @@ impl LayeredAssetIo {
         Ok(())
     }
 
-    fn read_file(&self, path: &str) -> Result<AssetDataAccessor> {
+    pub(crate) fn read_file(&self, path: &str) -> Result<AssetDataAccessor> {
         let mut errors = Vec::new();
 
         for io in &self.io {
@@ -339,7 +475,7 @@ mod update_reference_tests {
                 .read_to_end(&mut bytes)
                 .unwrap();
             assert_eq!(
-                layered.read_file(&path).unwrap().read_all_sync(),
+                layered.read_file(&path).unwrap().read_all_sync().unwrap(),
                 bytes,
                 "Patch precedence {path}"
             );
@@ -394,7 +530,14 @@ mod update_reference_tests {
             .unwrap()
             .read_to_end(&mut bytes)
             .unwrap();
-        assert_eq!(layered.read_file(fallback).unwrap().read_all_sync(), bytes);
+        assert_eq!(
+            layered
+                .read_file(fallback)
+                .unwrap()
+                .read_all_sync()
+                .unwrap(),
+            bytes
+        );
         println!("1.03 patch precedence and base BGM fallback pass; no audio device opened");
     }
 }

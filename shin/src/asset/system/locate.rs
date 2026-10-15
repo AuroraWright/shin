@@ -3,7 +3,7 @@ use std::path::{Path, PathBuf};
 use anyhow::bail;
 use tracing::{debug, instrument, trace};
 
-use crate::asset::system::LayeredAssetIo;
+use crate::{asset::system::LayeredAssetIo, cli::Game};
 
 #[instrument]
 pub(super) fn try_assets_directory(path: &Path) -> anyhow::Result<Option<LayeredAssetIo>> {
@@ -107,4 +107,140 @@ pub fn locate_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo
     }
 
     bail!("Failed to locate assets directory, tried: {:#?}", try_list);
+}
+
+/// Preserve Umineko's existing search policy. Higurashi uses its own named
+/// directories so it cannot silently pick up an unrelated Umineko install.
+pub fn locate_assets_for_game(
+    game: Game,
+    cli_assets: Option<&Path>,
+) -> anyhow::Result<LayeredAssetIo> {
+    if game == Game::Umineko {
+        return locate_assets(cli_assets);
+    }
+    if let Some(path) = cli_assets {
+        return higurashi_directory(path);
+    }
+    if let Some(path) = std::env::var_os("SHIN_HIGURASHI_ASSETS") {
+        return higurashi_directory(Path::new(&path));
+    }
+    let mut paths = vec![std::env::current_dir()?.join("higurashi")];
+    if let Some(parent) = std::env::current_exe()?.parent() {
+        paths.push(parent.join("higurashi"));
+    }
+    for path in &paths {
+        if path.is_dir() {
+            return higurashi_directory(path);
+        }
+    }
+    bail!(
+        "Failed to locate Higurashi assets, tried {paths:?}. Use --assets-dir or SHIN_HIGURASHI_ASSETS."
+    );
+}
+
+fn higurashi_directory(path: &Path) -> anyhow::Result<LayeredAssetIo> {
+    use anyhow::{Context, ensure};
+    ensure!(
+        path.is_dir(),
+        "Higurashi asset directory does not exist: {}",
+        path.display()
+    );
+    let mut result = LayeredAssetIo::new();
+    // Mod overrides, updated scenario/art, append content, then base content.
+    // This is a desktop overlay policy; native mount priority remains to trace.
+    for name in [
+        "patch",
+        "patch.rom",
+        "data",
+        "append",
+        "append.rom",
+        "data.rom",
+    ] {
+        let source = path.join(name);
+        if source.exists() {
+            if name.ends_with(".rom") {
+                result.try_with_rom(&source)
+            } else {
+                result.try_with_dir(&source)
+            }
+            .with_context(|| format!("Opening Higurashi asset layer {}", source.display()))?;
+        }
+    }
+    ensure!(
+        !result.is_empty(),
+        "No Higurashi asset layers in {}",
+        path.display()
+    );
+    Ok(result)
+}
+
+#[cfg(test)]
+mod higurashi_tests {
+    use super::*;
+
+    #[test]
+    fn explicit_missing_higurashi_directory_does_not_fall_back() {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("missing-higurashi-assets");
+        assert!(locate_assets_for_game(Game::Higurashi, Some(&path)).is_err());
+    }
+
+    #[test]
+    #[ignore = "requires supplied Higurashi archives (SHIN_HIGURASHI_ASSETS)"]
+    fn supplied_higurashi_patch_and_append_overlay() {
+        use shin_core::{
+            format::{
+                rom::{IndexEntry, RomReader},
+                scenario::higurashi::{HigurashiScenario, HigurashiVariant},
+            },
+            primitives::stateless_reader::StatelessFile,
+        };
+        use std::{collections::BTreeSet, io::Read};
+        let root = PathBuf::from(std::env::var_os("SHIN_HIGURASHI_ASSETS").unwrap());
+        let io = locate_assets_for_game(Game::Higurashi, Some(&root)).unwrap();
+        let mut patched = BTreeSet::new();
+        for archive in ["patch.rom", "append.rom"] {
+            let mut rom = RomReader::new(
+                StatelessFile::new(std::fs::File::open(root.join(archive)).unwrap()).unwrap(),
+            )
+            .unwrap();
+            let files: Vec<_> = rom
+                .traverse()
+                .filter_map(|(path, entry)| match entry {
+                    IndexEntry::File(file) => Some((path, *file)),
+                    _ => None,
+                })
+                .collect();
+            for (path, file) in &files {
+                // Every append path is visible, and all patch bytes win over
+                // later layers. Sample append bytes without reading 1.3 GB.
+                let accessor = io.read_file(path).unwrap();
+                if archive == "patch.rom" || (path.ends_with(".pic") && !patched.contains(path)) {
+                    let mut expected = Vec::new();
+                    rom.open_file(*file)
+                        .unwrap()
+                        .read_to_end(&mut expected)
+                        .unwrap();
+                    let mut actual = Vec::new();
+                    accessor.cursor().unwrap().read_to_end(&mut actual).unwrap();
+                    assert_eq!(actual, expected, "{archive}: {path}");
+                }
+                if archive == "patch.rom" {
+                    patched.insert(path.clone());
+                }
+            }
+            println!("{archive}: {} overlaid paths checked", files.len());
+        }
+        let mut data = Vec::new();
+        io.read_file("/main.snr")
+            .unwrap()
+            .cursor()
+            .unwrap()
+            .read_to_end(&mut data)
+            .unwrap();
+        assert_eq!(
+            HigurashiScenario::new(data.into()).unwrap().variant,
+            HigurashiVariant::Updated
+        );
+        assert!(io.read_file("/newrodin.fnt").is_ok());
+    }
 }

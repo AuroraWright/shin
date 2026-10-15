@@ -2,10 +2,11 @@
 #[ignore = "requires supplied ROM and Metal; no audio is opened"]
 fn reference_touch_effect_native_art_and_mouse_render() {
     use crate::{
-        asset::system::{cache::AssetCache, AssetLoadContext, AssetServer, LayeredAssetIo},
+        asset::system::{AssetLoadContext, AssetServer, LayeredAssetIo, cache::AssetCache},
         render::PreRenderContext,
     };
     use shin_core::primitives::color::UnormColor;
+    use shin_render::quad_vertices::QuadVertices;
     use shin_render::{
         dynamic_buffer::DynamicBuffer,
         pipelines::PipelineStorage,
@@ -15,7 +16,6 @@ fn reference_touch_effect_native_art_and_mouse_render() {
             texture::{DepthStencilTarget, TextureSamplerStore, TextureTarget, TextureTargetKind},
         },
     };
-    use shin_render::quad_vertices::QuadVertices;
     let rom = std::env::var("SHIN_REFERENCE_ROM").unwrap();
     let parent = std::path::Path::new(&rom).parent().unwrap();
     let original = std::fs::read(parent.join("uncompressed_executable")).unwrap();
@@ -40,11 +40,13 @@ fn reference_touch_effect_native_art_and_mouse_render() {
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
@@ -54,6 +56,8 @@ fn reference_touch_effect_native_art_and_mouse_render() {
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),

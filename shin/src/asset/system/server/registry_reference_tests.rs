@@ -55,7 +55,7 @@ fn reference_native_resource_registry_selection_and_paths() {
                     .unwrap()
                     .unwrap_or_else(|err| panic!("{name}: missing asset {query}: {err:#}"));
                 let length: u64 = native[4].parse().unwrap();
-                let mut cursor = data.cursor();
+                let mut cursor = data.cursor().unwrap();
                 assert_eq!(
                     cursor.seek(SeekFrom::End(0)).unwrap(),
                     length,

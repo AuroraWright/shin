@@ -27,11 +27,18 @@ pub struct GpuFontLazy {
 }
 
 impl GpuFontLazy {
-    pub fn new(font: FontLazy) -> Self {
-        Self {
-            font,
-            glyph_cache: Arc::new(FontGlyphCache::default()),
-        }
+    pub fn new(font: FontLazy) -> anyhow::Result<Self> {
+        Self::with_cache(font, Arc::new(FontGlyphCache::default()))
+    }
+
+    fn with_cache(font: FontLazy, glyph_cache: Arc<FontGlyphCache>) -> anyhow::Result<Self> {
+        // Layout divides by this height. Reject it before a UI callback can
+        // enter an endless soft-wrap loop with infinite character widths.
+        anyhow::ensure!(
+            u32::from(font.get_ascent()) + u32::from(font.get_descent()) != 0,
+            "Font line height must be nonzero"
+        );
+        Ok(Self { font, glyph_cache })
     }
 
     /// Returns handles to an array of glyphs in bulk.
@@ -220,11 +227,8 @@ impl Asset for GpuFontLazy {
         data: AssetDataAccessor,
     ) -> anyhow::Result<Self> {
         let lazy_font =
-            read_lazy_font(&mut Cursor::new(data.read_all().await)).context("Reading font")?;
+            read_lazy_font(&mut Cursor::new(data.read_all().await?)).context("Reading font")?;
 
-        Ok(Self {
-            font: lazy_font,
-            glyph_cache: context.font_cache.clone(),
-        })
+        Self::with_cache(lazy_font, context.font_cache.clone())
     }
 }

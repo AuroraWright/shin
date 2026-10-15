@@ -24,19 +24,26 @@ use std::{
 #[test]
 #[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves only"]
 fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
+    run_startup_storage_failure(false);
+}
+
+pub(super) fn run_startup_storage_failure(bad_notice: bool) {
     crate::init_test_task_pools();
     let adapter =
         shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
             .unwrap();
-    let (device, queue) = shin_tasks::block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+    let (device, queue) = shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+        ..Default::default()
+    }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
+    let _notice_fixture =
+        bad_notice.then(|| super::notice_failure_reference::override_notice(&mut io));
     if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
         io.try_with_rom(patch).unwrap();
     }
@@ -45,6 +52,8 @@ fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
     let server = Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -210,6 +219,11 @@ fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
         }
         assert!(host.error.is_none() && host.pending.is_none());
         assert!(host.common.is_some());
+        if bad_notice {
+            assert!(
+                matches!(&host.scene, Some(Scene::Boot(boot)) if boot.scene.reference_uses_plain_notice())
+            );
+        }
         let view = target.create_view(&Default::default());
         {
             let mut pass = context.begin_pass(
@@ -223,6 +237,12 @@ fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
             host.render(&mut pass);
         }
         let pixels = crate::layer::user::readback_test_texture(&mut context, &target);
+        if bad_notice {
+            super::notice_failure_reference::assert_notice_pixels(
+                &pixels,
+                &format!("startup-read-{mouse}"),
+            );
+        }
         assert!(
             pixels
                 .chunks_exact(4)
@@ -456,6 +476,11 @@ fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
             extent,
         );
         assert!(host.pending.is_none() && host.error.is_none());
+        if bad_notice {
+            assert!(
+                matches!(&host.scene, Some(Scene::Boot(boot)) if boot.scene.reference_uses_plain_notice())
+            );
+        }
         assert_eq!(fs::read(&path).unwrap(), original);
         assert_eq!(fs::read_dir(&directory).unwrap().count(), before.len());
         let view = target.create_view(&Default::default());
@@ -471,6 +496,12 @@ fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
             host.render(&mut pass);
         }
         let pixels = crate::layer::user::readback_test_texture(&mut context, &target);
+        if bad_notice {
+            super::notice_failure_reference::assert_notice_pixels(
+                &pixels,
+                &format!("startup-recovery-{mode}"),
+            );
+        }
         assert!(
             pixels
                 .chunks_exact(4)
@@ -573,6 +604,10 @@ fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
                 None,
                 "Backup failure must retain a storage retry instead of resetting"
             );
+            if bad_notice {
+                assert!(boot.scene.reference_uses_plain_notice());
+                println!("Malformed notice: backup failure retains retry and original bytes");
+            }
             assert_eq!(fs::read(&path).unwrap(), original);
             assert_eq!(fs::read_dir(&directory).unwrap().count(), before.len());
             fs::set_permissions(&directory, fs::Permissions::from_mode(0o700)).unwrap();

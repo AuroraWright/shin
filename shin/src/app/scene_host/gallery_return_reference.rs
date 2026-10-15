@@ -18,7 +18,7 @@ pub(super) fn check<'a>(
         },
         messagebox: server.load_sync("/msgtex.txa").unwrap(),
         _system: server.load_sync("/systex.txa").unwrap(),
-        effects: server.load_sync("/effects.txa").unwrap(),
+        effects: shin_tasks::block_on(server.effects_atlas()).unwrap(),
         _sysse: server.load_sync("/sysse.bin").unwrap(),
     });
     fn step<'a>(

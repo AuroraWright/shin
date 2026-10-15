@@ -2,7 +2,7 @@
 use crate::{
     adv::{
         character_view::CharacterTextures,
-        input_area::{InputArea, InputAreaTarget, PointerSampler},
+        input_area::{InputArea, InputAreaTarget, PointerFrame, PointerSampler},
     },
     engine_random::EngineRandom,
 };
@@ -54,7 +54,7 @@ impl Default for TouchEffect {
 }
 
 impl TouchEffect {
-    fn with_seed(seed: u32) -> Self {
+    pub(super) fn with_seed(seed: u32) -> Self {
         Self {
             random: EngineRandom::from_seed(seed),
             stars: Vec::new(),
@@ -84,22 +84,8 @@ impl TouchEffect {
         pointer: Vec2,
         extent: (u16, u16),
     ) {
+        self.advance_particles(delta);
         let ticks = delta.as_f32();
-        self.clock = self.clock.wrapping_add(1);
-        for ripple in &mut self.ripples {
-            ripple.age += ticks * (1.0 / 30.0);
-        }
-        self.ripples.retain(|ripple| ripple.age <= 1.0);
-        let damping = 0.8f32.powf(ticks);
-        for star in &mut self.stars {
-            star.age += ticks * (1.0 / 60.0);
-            // Native1155e8 advances position and spin once per update, while
-            // damping and lifetime use the supplied tick delta.
-            star.position += star.velocity;
-            star.velocity *= damping;
-            star.angle += star.spin;
-        }
-        self.stars.retain(|star| star.age <= 1.0);
         if !enabled
             || !pointer.is_finite()
             || !(0.0..1920.0).contains(&pointer.x)
@@ -125,6 +111,49 @@ impl TouchEffect {
         input.update(self, &sampler.frame());
         self.input = Some(input);
         self.sampler = sampler;
+    }
+    /// Use the application's admitted contact stream. A held mouse must not
+    /// become a new visual Down after a modal, focus change or letterbox entry.
+    pub(super) fn update_with_pointer_frame(
+        &mut self,
+        delta: Ticks,
+        enabled: bool,
+        frame: &PointerFrame<'_>,
+        extent: (u16, u16),
+    ) {
+        self.advance_particles(delta);
+        if !enabled {
+            self.cancel_contact();
+            return;
+        }
+        if extent != self.extent {
+            self.cancel_contact();
+            self.extent = extent;
+        }
+        let mut input = self
+            .input
+            .take()
+            .unwrap_or_else(|| InputArea::new(extent.0.max(1), extent.1.max(1)));
+        input.update(self, frame);
+        self.input = Some(input);
+    }
+    fn advance_particles(&mut self, delta: Ticks) {
+        let ticks = delta.as_f32();
+        self.clock = self.clock.wrapping_add(1);
+        for ripple in &mut self.ripples {
+            ripple.age += ticks * (1.0 / 30.0);
+        }
+        self.ripples.retain(|ripple| ripple.age <= 1.0);
+        let damping = 0.8f32.powf(ticks);
+        for star in &mut self.stars {
+            star.age += ticks * (1.0 / 60.0);
+            // Native1155e8 advances position and spin once per update, while
+            // damping and lifetime use the supplied tick delta.
+            star.position += star.velocity;
+            star.velocity *= damping;
+            star.angle += star.spin;
+        }
+        self.stars.retain(|star| star.age <= 1.0);
     }
     fn emit_drag(&mut self, previous: Vec2, pointer: Vec2) {
         //115d40 is called only by InputArea's drag callback. A held tap must
@@ -157,6 +186,9 @@ impl TouchEffect {
         self.ripples
             .iter()
             .any(|ripple| ripple.age > 0.0 && ripple.age < 1.0)
+    }
+    pub fn has_stars(&self) -> bool {
+        !self.stars.is_empty()
     }
     pub fn render_ripples(&self, pass: &mut RenderPass, background: TextureSource) {
         let builder =
@@ -264,6 +296,7 @@ impl InputAreaTarget for TouchEffect {
 mod tests {
     use super::*;
     include!("touch_effect_render_tests.rs");
+    include!("touch_effect_higurashi_tests.rs");
     include!("touch_effect_native_tests.rs");
 
     #[test]

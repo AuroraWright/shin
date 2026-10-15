@@ -55,13 +55,14 @@ fn reference_startup_movie_owner_and_host_handoff() {
     let adapter =
         shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
             .unwrap();
-    let (device, queue) = shin_tasks::block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+    let (device, queue) = shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+        ..Default::default()
+    }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
@@ -69,6 +70,8 @@ fn reference_startup_movie_owner_and_host_handoff() {
     let server = Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -194,6 +197,8 @@ fn reference_startup_movie_owner_and_host_handoff() {
             Arc::new(AssetServer::new(
                 io.into(),
                 AssetLoadContext {
+                    game: crate::cli::Game::Umineko,
+                    higurashi_bustup_cache: Default::default(),
                     wgpu_device: device.clone(),
                     wgpu_queue: queue.clone(),
                     bustup_cache: AssetCache::new(),
@@ -1587,23 +1592,26 @@ fn reference_title_load_thumbnail_size_and_mouse_confirmation() {
     let adapter =
         shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
             .unwrap();
-    let (device, queue) = shin_tasks::block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+    let (device, queue) = shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+        ..Default::default()
+    }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
-    io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
-        .unwrap();
     if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
         io.try_with_rom(patch).unwrap();
     }
+    io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
+        .unwrap();
     let server = Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -1701,6 +1709,53 @@ fn reference_title_load_thumbnail_size_and_mouse_confirmation() {
             1.0 / 60.0,
         )
         .unwrap();
+        // Match App's per-frame submission while asynchronous visual workers
+        // run. Keeping every prepared frame in one encoder can exhaust Metal's
+        // command-buffer pool and fail a later thumbnail readback.
+        let encoder = std::mem::replace(
+            ctx.encoder,
+            ctx.device.create_command_encoder(&Default::default()),
+        );
+        let mut upload = ctx.device.create_command_encoder(&Default::default());
+        ctx.dynamic_buffer.finish(&mut upload);
+        ctx.queue.submit([upload.finish(), encoder.finish()]);
+        ctx.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .unwrap();
+    }
+    fn capture_pixels(
+        host: &SceneHost,
+        ctx: &mut PreRenderContext,
+        target: &wgpu::Texture,
+    ) -> Vec<u8> {
+        let view = target.create_view(&Default::default());
+        {
+            let mut pass = ctx.begin_pass(
+                shin_render::shaders::types::texture::TextureTarget {
+                    kind: shin_render::shaders::types::texture::TextureTargetKind::Screen,
+                    view: &view,
+                },
+                Some(ctx.depth_stencil),
+                "Title saved-load outgoing frame",
+            );
+            host.render(&mut pass);
+        }
+        crate::layer::user::readback_test_texture(ctx, target)
+    }
+    fn assert_same_pixels(actual: &[u8], expected: &[u8], stage: &str) {
+        if let Some((index, (a, b))) = actual
+            .iter()
+            .zip(expected)
+            .enumerate()
+            .find(|(_, (a, b))| a.abs_diff(**b) > 1)
+        {
+            panic!(
+                "{stage}: pixel({},{}), channel{}: actual{a}, expected{b}",
+                index / 4 % 1920,
+                index / 4 / 1920,
+                index % 4
+            );
+        }
     }
     for extent in [(1280, 720), (3840, 2160)] {
         let mut save = SaveData::default();
@@ -1872,8 +1927,110 @@ fn reference_title_load_thumbnail_size_and_mouse_confirmation() {
                 );
             }
         }
+        // The actual outgoing main menu must survive both cold ADV preparation
+        // and saved-scene hydration, then supply the masked wipe's old pixels.
+        let outgoing = capture_pixels(&host, &mut ctx, &target);
+        assert!(
+            outgoing
+                .chunks_exact(4)
+                .filter(|p| p[..3] != [0, 0, 0])
+                .count()
+                > 100_000
+        );
+        let cold = extent == (3840, 2160);
+        if cold {
+            host.common = Some(Arc::new(CommonAssets {
+                scenario: assets.scenario.clone(),
+                fonts: assets.fonts.clone(),
+                messagebox: assets.messagebox_textures.clone(),
+                _system: shin_tasks::block_on(server.load("/systex.txa")).unwrap(),
+                effects: shin_tasks::block_on(server.initialize_effects_atlas()).unwrap(),
+                _sysse: shin_tasks::block_on(server.load("/sysse.bin")).unwrap(),
+            }));
+            host.assets = None;
+        }
+        host.apply_pending(&mut ctx, extent).unwrap();
+        assert_eq!(matches!(host.scene, Some(Scene::PreparingAdv(_))), cold);
+        assert_same_pixels(
+            &capture_pixels(&host, &mut ctx, &target),
+            &outgoing,
+            "Outgoing menu lost at handoff",
+        );
+        while host
+            .reference_adv()
+            .is_none_or(|adv| adv.reference_load_transition_masked().is_none())
+        {
+            step(
+                &mut host, &mut ctx, &server, &mut frame, 0.0, None, outside, false, extent,
+            );
+            assert_same_pixels(
+                &capture_pixels(&host, &mut ctx, &target),
+                &outgoing,
+                "Outgoing menu lost before wipe",
+            );
+            assert!(
+                std::time::Instant::now() < deadline,
+                "Title Load never installed its fade"
+            );
+            std::thread::yield_now();
+        }
+        assert_eq!(
+            host.reference_adv()
+                .unwrap()
+                .reference_load_transition_masked(),
+            Some(true)
+        );
+        // A real .app cold draw can spend more than the wipe's duration in
+        // setup. The first following delta must retain elapsed0/outgoing RGB.
+        step(
+            &mut host, &mut ctx, &server, &mut frame, 43.0, None, outside, false, extent,
+        );
+        assert_eq!(
+            host.reference_adv()
+                .unwrap()
+                .reference_load_transition_elapsed(),
+            Some(0.0)
+        );
+        assert_same_pixels(
+            &capture_pixels(&host, &mut ctx, &target),
+            &outgoing,
+            "Load setup time consumed the visible wipe",
+        );
+        step(
+            &mut host, &mut ctx, &server, &mut frame, 15.0, None, outside, false, extent,
+        );
+        let halfway = capture_pixels(&host, &mut ctx, &target);
+        step(
+            &mut host, &mut ctx, &server, &mut frame, 15.0, None, outside, false, extent,
+        );
+        let incoming = capture_pixels(&host, &mut ctx, &target);
+        assert_ne!(incoming, outgoing);
+        for y in 0..1080 {
+            for (x, expected) in [(100, &incoming), (1820, &outgoing)] {
+                let at = (y * 1920 + x) * 4;
+                for c in 0..3 {
+                    assert!(
+                        halfway[at + c].abs_diff(expected[at + c]) <= 1,
+                        "Main-menu wipe direction mismatch at ({x},{y}), channel{c}"
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            host.reference_adv()
+                .unwrap()
+                .reference_load_transition_masked(),
+            None
+        );
+        assert!(!host.reference_adv().unwrap().is_loading_saved_scene());
+        assert!(
+            host.reference_adv()
+                .unwrap()
+                .saved_scene_load_error()
+                .is_none()
+        );
         eprintln!(
-            "Main menu load: extent{extent:?}, 288x162 thumbnail, mouse No/Yes and final load handoff passed"
+            "Main menu load: extent{extent:?}, cold={cold}, actual outgoing menu retained through preparation/hydration; masked30tick left-to-right wipe and completion passed"
         );
     }
 }

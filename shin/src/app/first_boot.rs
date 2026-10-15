@@ -7,7 +7,7 @@ use crate::{
         character_view::CharacterTextures,
         storage_retry_dialog::StorageRetryDialog,
     },
-    asset::{effects::EffectTextures, system::AssetServer},
+    asset::{effects::EffectsAtlasBorrow, system::AssetServer},
     audio::GlobalAudio,
     layer::message_layer::MessageboxTextures,
 };
@@ -24,7 +24,7 @@ pub(super) struct CommonAssets {
     pub fonts: AdvFonts,
     pub messagebox: Arc<MessageboxTextures>,
     pub _system: Arc<CharacterTextures>,
-    pub effects: Arc<EffectTextures>,
+    pub effects: EffectsAtlasBorrow,
     pub _sysse: Arc<SysSe>,
 }
 impl CommonAssets {
@@ -36,7 +36,7 @@ impl CommonAssets {
         let bold_font = server.load("/newrodin-bold.fnt").await?;
         let system = server.load("/systex.txa").await?;
         let messagebox = server.load("/msgtex.txa").await?;
-        let effects = server.load("/effects.txa").await?;
+        let effects = server.initialize_effects_atlas().await?;
         let scenario = server.load("/main.snr").await?;
         Ok(Self {
             scenario,
@@ -58,6 +58,7 @@ impl CommonAssets {
             fonts: self.fonts.clone(),
             messagebox_textures: self.messagebox.clone(),
             menu_textures: server.load("/adv.txa").await?,
+            scene_load_mask: server.load("/default.msk").await?,
         })
     }
 }
@@ -230,6 +231,15 @@ impl FirstBoot {
     pub fn render(&self, pass: &mut shin_render::render_pass::RenderPass) {
         if let Phase::ReadFailure(dialog) | Phase::RecoveryNotice { dialog, .. } = &self.phase {
             dialog.render(pass);
+        }
+    }
+    #[cfg(test)]
+    pub(super) fn reference_uses_plain_notice(&self) -> bool {
+        match &self.phase {
+            Phase::ReadFailure(dialog) | Phase::RecoveryNotice { dialog, .. } => {
+                dialog.reference_uses_plain_frame()
+            }
+            _ => false,
         }
     }
     #[cfg(test)]

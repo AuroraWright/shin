@@ -7,7 +7,7 @@ use std::{
 use anyhow::Result;
 use glam::{Vec2, vec2};
 use shin_core::format::picture::{
-    PicBlock, PicBlockRect, PictureBuilder, read_picture_header_prefix,
+    PicBlock, PicBlockRect, PictureBuilder, PictureFormat, read_picture_header_prefix_with_format,
 };
 use shin_render::{
     gpu_texture::GpuTexture,
@@ -19,7 +19,13 @@ use shin_render::{
 
 use crate::asset::system::{Asset, AssetDataAccessor, AssetLoadContext};
 
+#[cfg(test)]
+use shin_core::format::picture::read_picture_header_prefix;
+
 pub struct GpuPictureBlock {
+    pub native_format: u16,
+    /// Original block+8/+a/+c/+e: signed origins, unsigned texture extents.
+    pub native_bounds: [u16; 4],
     pub vertex_buffer: OwnedVertexBuffer<PosTexVertex>,
     pub index_buffer: OwnedIndexBuffer,
     pub opaque_rect_count: usize,
@@ -53,6 +59,13 @@ impl GpuPictureBlock {
         );
 
         GpuPictureBlock {
+            native_format: block.native_format,
+            native_bounds: [
+                block.offset_x as u16,
+                block.offset_y as u16,
+                block.data.width() as u16,
+                block.data.height() as u16,
+            ],
             vertex_buffer,
             index_buffer,
             opaque_rect_count: block.opaque_rects.len(),
@@ -250,12 +263,23 @@ impl Asset for Picture {
         data: AssetDataAccessor,
     ) -> Result<Self> {
         let label = format!("Pic[{}]", name);
-        let mut cursor = data.cursor();
+        let format = match context.game {
+            crate::cli::Game::Umineko => PictureFormat::Umineko,
+            crate::cli::Game::Higurashi => PictureFormat::HigurashiV2,
+        };
+        let mut cursor = data.cursor()?;
         let size = cursor.seek(SeekFrom::End(0))?;
         cursor.seek(SeekFrom::Start(0))?;
-        let mut prefix = [0; 36];
+        let mut prefix = vec![
+            0;
+            if format == PictureFormat::HigurashiV2 {
+                32
+            } else {
+                36
+            }
+        ];
         cursor.read_exact(&mut prefix)?;
-        let header = read_picture_header_prefix(&prefix, size)?;
+        let header = read_picture_header_prefix_with_format(&prefix, size, format)?;
         let load_label = label.clone();
         let load_context = context.clone();
         let blocks = context
@@ -264,18 +288,21 @@ impl Asset for Picture {
                 // Cache hits need only the fixed header, as in the native loader.
                 // Decode/upload runs on compute workers without blocking awaiters.
                 shin_tasks::compute::spawn(move || {
-                    let mut data = prefix.to_vec();
-                    cursor.read_to_end(&mut data)?;
-                    shin_core::format::picture::read_picture::<GpuPictureBuilder>(
-                        &data,
-                        (
-                            GpuTextureBuilderContext {
-                                wgpu_device: &load_context.wgpu_device,
-                                wgpu_queue: &load_context.wgpu_queue,
-                            },
-                            load_label,
-                        ),
-                    )
+                    crate::asset::system::catch_asset_preparation_panic("Picture", || {
+                        let mut data = prefix.to_vec();
+                        cursor.read_to_end(&mut data)?;
+                        shin_core::format::picture::read_picture_with_format::<GpuPictureBuilder>(
+                            &data,
+                            (
+                                GpuTextureBuilderContext {
+                                    wgpu_device: &load_context.wgpu_device,
+                                    wgpu_queue: &load_context.wgpu_queue,
+                                },
+                                load_label,
+                            ),
+                            format,
+                        )
+                    })
                 })
                 .await
             })

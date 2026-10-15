@@ -29,19 +29,26 @@ use std::{
 #[test]
 #[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves only"]
 fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
+    run_shutdown_failure(false);
+}
+
+pub(super) fn run_shutdown_failure(bad_notice: bool) {
     crate::init_test_task_pools();
     let adapter =
         shin_tasks::block_on(wgpu::Instance::default().request_adapter(&Default::default()))
             .unwrap();
-    let (device, queue) = shin_tasks::block_on(adapter.request_device(
-        &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+    let (device, queue) = shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
+        required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+        ..Default::default()
+    }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
+    let _notice_fixture =
+        bad_notice.then(|| super::notice_failure_reference::override_notice(&mut io));
     if let Ok(patch) = std::env::var("SHIN_REFERENCE_PATCH_ROM") {
         io.try_with_rom(patch).unwrap();
     }
@@ -50,6 +57,8 @@ fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
     let server = Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -169,7 +178,9 @@ fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
         let mut upload = ctx.device.create_command_encoder(&Default::default());
         ctx.dynamic_buffer.finish(&mut upload);
         ctx.queue.submit([upload.finish(), encoder.finish()]);
-        ctx.device.poll(wgpu::Maintain::Wait);
+        ctx.device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("GPU work must complete before readback or retirement");
         result
     }
     fn pixels(
@@ -274,6 +285,11 @@ fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
         (true, true, false),
         (true, true, true),
     ] {
+        // Explicit SaveGame retains its strict updating atlas and is already
+        // covered by the preparation/callback tests. Select shutdown-only owners.
+        if bad_notice && pending {
+            continue;
+        }
         let directory = std::env::temp_dir().join(format!(
             "shin-shutdown-{}-{title}-{pending}-{fail_pending}",
             std::process::id()
@@ -380,7 +396,11 @@ fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
             }
             // The message's automatic save is durable. Make a newer global
             // progress change so shutdown really needs to write again.
-            let (vm, _) = app.scenes.reference_adv_mut().unwrap().reference_msgset_states();
+            let (vm, _) = app
+                .scenes
+                .reference_adv_mut()
+                .unwrap()
+                .reference_msgset_states();
             vm.persist.set(28, 124);
             vm.save_revision += 1;
         }
@@ -501,7 +521,16 @@ fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
             );
             assert!(manager.suspension().is_suspended());
             open(&mut app, &server, &mut context, extent, true);
+            if bad_notice {
+                assert!(app.shutdown.reference_uses_plain_notice());
+            }
             let error_pixels = pixels(&app, &mut context, &target, &view, true);
+            if bad_notice {
+                super::notice_failure_reference::assert_notice_pixels(
+                    &error_pixels,
+                    &format!("shutdown-{title}"),
+                );
+            }
             let scene_pixels = pixels(&app, &mut context, &target, &view, false);
             assert!(
                 error_pixels

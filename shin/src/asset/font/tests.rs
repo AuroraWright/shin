@@ -4,6 +4,13 @@ use std::{sync::mpsc, time::Duration};
 mod native;
 
 pub(crate) fn fixture(corrupt_a: bool) -> Arc<GpuFontLazy> {
+    Arc::new(
+        GpuFontLazy::new(read_lazy_font(&mut Cursor::new(fixture_bytes(corrupt_a))).unwrap())
+            .unwrap(),
+    )
+}
+
+fn fixture_bytes(corrupt_a: bool) -> Vec<u8> {
     // Every BMP entry aliases B except A, which has the same metrics and a
     // separate bitmap. A is either transparent or deliberately malformed.
     let table_end = 16 + 65536 * 4;
@@ -30,9 +37,24 @@ pub(crate) fn fixture(corrupt_a: bool) -> Arc<GpuFontLazy> {
     }
     let length = bytes.len() as u32;
     bytes[8..12].copy_from_slice(&length.to_le_bytes());
-    Arc::new(GpuFontLazy::new(
-        read_lazy_font(&mut Cursor::new(bytes)).unwrap(),
-    ))
+    bytes
+}
+
+#[test]
+fn gpu_font_rejects_zero_line_height_and_preserves_positive_metrics() {
+    for (ascent, descent) in [(0u16, 0u16), (1, 0), (0, 1), (65535, 65535)] {
+        let mut bytes = fixture_bytes(false);
+        bytes[12..14].copy_from_slice(&ascent.to_le_bytes());
+        bytes[14..16].copy_from_slice(&descent.to_le_bytes());
+        let font = GpuFontLazy::new(read_lazy_font(&mut Cursor::new(bytes)).unwrap());
+        if ascent == 0 && descent == 0 {
+            assert!(font.err().unwrap().to_string().contains("line height"));
+        } else {
+            let font = font.unwrap();
+            assert_eq!(font.get_ascent(), u32::from(ascent));
+            assert_eq!(font.get_descent(), u32::from(descent));
+        }
+    }
 }
 fn gpu() -> (wgpu::Device, wgpu::Queue) {
     crate::init_test_task_pools();
@@ -40,7 +62,7 @@ fn gpu() -> (wgpu::Device, wgpu::Queue) {
     let adapter =
         shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
             .unwrap();
-    shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None)).unwrap()
+    shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default())).unwrap()
 }
 
 #[test]

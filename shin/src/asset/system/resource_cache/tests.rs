@@ -85,7 +85,7 @@ fn failed_load_wakes_alias_waiters_and_allows_retry() {
 }
 
 #[test]
-fn cancelled_producer_unblocks_waiters_without_retiring_a_replacement() {
+fn cancelled_producer_waiter_reuses_a_replacement_without_duplicate_loading() {
     block_on(async {
         let cache = ResourceCache::<usize>::default();
         let mut producer = Box::pin(cache.get_or_load(1, || futures::future::pending()));
@@ -94,7 +94,7 @@ fn cancelled_producer_unblocks_waiters_without_retiring_a_replacement() {
         assert!(futures::poll!(&mut waiter).is_pending());
         drop(producer);
         let retry = cache.get_or_load(1, || async { Ok(10) }).await.unwrap();
-        assert!(waiter.await.unwrap_err().to_string().contains("cancelled"));
+        assert!(Arc::ptr_eq(&waiter.await.unwrap(), &retry));
         let retained = cache
             .get_or_load(1, || async { panic!("retry was evicted") })
             .await
@@ -107,6 +107,46 @@ fn cancelled_producer_unblocks_waiters_without_retiring_a_replacement() {
                 .await
                 .unwrap(),
             20
+        );
+    });
+}
+
+#[test]
+fn surviving_alias_takes_over_after_two_producer_cancellations() {
+    block_on(async {
+        let cache = ResourceCache::<usize>::default();
+        let calls = AtomicUsize::new(0);
+        let mut producer = Box::pin(cache.get_or_load(1, || futures::future::pending()));
+        assert!(futures::poll!(&mut producer).is_pending());
+        let mut first = Box::pin(cache.get_or_load(1, || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            futures::future::pending().await
+        }));
+        let mut second = Box::pin(cache.get_or_load(1, || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Ok(55)
+        }));
+        assert!(futures::poll!(&mut first).is_pending());
+        assert!(futures::poll!(&mut second).is_pending());
+        drop(producer);
+        assert!(futures::poll!(&mut first).is_pending());
+        assert!(futures::poll!(&mut second).is_pending());
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        drop(first);
+        let value = second.await.unwrap();
+        assert_eq!(*value, 55);
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        let hit = cache
+            .get_or_load(1, || async { panic!("Duplicate replacement") })
+            .await
+            .unwrap();
+        assert!(Arc::ptr_eq(&hit, &value));
+        let weak = Arc::downgrade(&value);
+        drop(value);
+        drop(hit);
+        assert!(
+            weak.upgrade().is_none(),
+            "Cache retains only weak completed owners"
         );
     });
 }

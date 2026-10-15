@@ -113,6 +113,10 @@ impl Shutdown {
         }
     }
     #[cfg(test)]
+    pub(super) fn reference_uses_plain_notice(&self) -> bool {
+        matches!(&self.phase, Phase::Failure(dialog) if dialog.reference_uses_plain_frame())
+    }
+    #[cfg(test)]
     pub fn reference_failure_is_open(&self) -> bool {
         matches!(&self.phase, Phase::Failure(dialog) if dialog.reference_is_open())
     }

@@ -11,6 +11,10 @@ fn reference_native_touch_particle_records() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
+    let images = std::env::var_os("SHIN_REFERENCE_ROM")
+        .map(std::path::PathBuf::from)
+        .and_then(|path| path.parent().map(std::path::Path::to_path_buf))
+        .unwrap_or_else(|| root.join("umineko_switch_files"));
     let binary = std::env::temp_dir().join(format!(
         "shin-native-touch-particles-{}",
         std::process::id()
@@ -114,7 +118,7 @@ fn reference_native_touch_particle_records() {
         }
         for version in ["uncompressed_executable", "uncompressed_executable_update"] {
             let mut child = Command::new(&binary)
-                .arg(root.join("umineko_switch_files").join(version))
+                .arg(images.join(version))
                 .arg(seed.to_string())
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())

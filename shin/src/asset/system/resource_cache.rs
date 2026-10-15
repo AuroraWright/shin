@@ -1,5 +1,5 @@
 //! Weak resource ownership with asynchronous sharing of pending ID loads.
-//! A failed or cancelled producer wakes its waiters and permits a later retry.
+//! Failed producers wake waiters; surviving consumers take over cancelled loads.
 use std::{
     collections::BTreeMap,
     future::Future,
@@ -14,7 +14,12 @@ use futures::{
 };
 use parking_lot::Mutex;
 
-type SharedResult<V> = std::result::Result<Arc<V>, Arc<anyhow::Error>>;
+#[derive(Clone)]
+enum LoadFailure {
+    Cancelled,
+    Failed(Arc<anyhow::Error>),
+}
+type SharedResult<V> = std::result::Result<Arc<V>, LoadFailure>;
 type Pending<V> = Shared<BoxFuture<'static, SharedResult<V>>>;
 enum Entry<V> {
     Loaded(Weak<V>),
@@ -72,7 +77,7 @@ impl<V: Send + Sync + 'static> Producer<V> {
 }
 impl<V: Send + Sync + 'static> Drop for Producer<V> {
     fn drop(&mut self) {
-        self.finish(Err(Arc::new(anyhow!("Resource load cancelled"))));
+        self.finish(Err(LoadFailure::Cancelled));
     }
 }
 impl<V: Send + Sync + 'static> ResourceCache<V> {
@@ -102,13 +107,9 @@ impl<V: Send + Sync + 'static> ResourceCache<V> {
             None => {}
         }
         let (sender, receiver) = oneshot::channel::<SharedResult<V>>();
-        let result = async move {
-            receiver
-                .await
-                .unwrap_or_else(|_| Err(Arc::new(anyhow!("Resource producer retired"))))
-        }
-        .boxed()
-        .shared();
+        let result = async move { receiver.await.unwrap_or(Err(LoadFailure::Cancelled)) }
+            .boxed()
+            .shared();
         let generation = Arc::new(());
         entries.insert(
             id,
@@ -130,16 +131,26 @@ impl<V: Send + Sync + 'static> ResourceCache<V> {
         F: FnOnce() -> Fut,
         Fut: Future<Output = Result<V>>,
     {
-        let result = match self.request(id) {
-            Request::Ready(value) => return Ok(value),
-            Request::Waiting(result) => result.await,
-            Request::Produce(mut producer) => {
-                let result = load().await.map(Arc::new).map_err(Arc::new);
-                producer.finish(result.clone());
-                result
+        loop {
+            let result = match self.request(id) {
+                Request::Ready(value) => return Ok(value),
+                Request::Waiting(result) => result.await,
+                Request::Produce(mut producer) => {
+                    let result = load().await.map(Arc::new).map_err(Arc::new);
+                    producer.finish(result.clone().map_err(LoadFailure::Failed));
+                    return result.map_err(|error| anyhow!("{error:#}"));
+                }
+            };
+            match result {
+                Ok(value) => return Ok(value),
+                Err(LoadFailure::Failed(error)) => return Err(anyhow!("{error:#}")),
+                // This caller's FnOnce remains unused while it waits. If a
+                // thumbnail/retired scene owned the cancelled producer, look
+                // up its replacement or become the new producer ourselves.
+                // A genuine asset failure is never retried automatically.
+                Err(LoadFailure::Cancelled) => {}
             }
-        };
-        result.map_err(|error| anyhow!("{error:#}"))
+        }
     }
 }
 

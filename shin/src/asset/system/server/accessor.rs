@@ -33,10 +33,10 @@ impl AssetDataAccessor {
 }
 
 impl AssetDataAccessor {
-    pub fn cursor(&self) -> AssetDataCursor {
-        match &self.inner {
+    pub fn cursor(&self) -> io::Result<AssetDataCursor> {
+        Ok(match &self.inner {
             AssetDataAccessorInner::File(file) => {
-                let file = std::fs::File::open(file).expect("Opening file");
+                let file = std::fs::File::open(file)?;
                 AssetDataCursor {
                     inner: AssetDataCursorInner::File(file),
                 }
@@ -47,25 +47,22 @@ impl AssetDataAccessor {
                     inner: AssetDataCursorInner::RomFile(reader),
                 }
             }
-        }
+        })
     }
 
     // TODO: would it be beneficial to return bytes::Bytes here? Do we need the Arc sharing?
-    pub fn read_all_sync(&self) -> Vec<u8> {
+    pub fn read_all_sync(&self) -> io::Result<Vec<u8>> {
         match &self.inner {
-            AssetDataAccessorInner::File(path) => std::fs::read(path).expect("Reading file"),
+            AssetDataAccessorInner::File(path) => std::fs::read(path),
             AssetDataAccessorInner::RomFile(reader) => {
                 let mut result = Vec::new();
-                reader
-                    .clone()
-                    .read_to_end(&mut result)
-                    .expect("Reading rom file");
-                result
+                reader.clone().read_to_end(&mut result)?;
+                Ok(result)
             }
         }
     }
 
-    pub async fn read_all(&self) -> Vec<u8> {
+    pub async fn read_all(&self) -> io::Result<Vec<u8>> {
         // TODO: these should actually do async io :/
         // also, the sync (and file-based) impl won't work on web at all!
         self.read_all_sync()
