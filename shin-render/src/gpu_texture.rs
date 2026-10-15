@@ -167,9 +167,39 @@ impl GpuTexture {
         label: Option<&str>,
         mip_levels: &[&image::GrayImage],
     ) -> Self {
-        // NB: no sRGB, because that's how the original code did it
-        let format = wgpu::TextureFormat::R8Unorm;
+        Self::new_static_from_gray_mipped_image_with_format(
+            device,
+            queue,
+            label,
+            mip_levels,
+            wgpu::TextureFormat::R8Unorm,
+        )
+    }
 
+    /// FNT6 uses signed normalized R8. Preserve the original bytes and let
+    /// sampling interpolate signed values, including the negative padding.
+    pub fn new_static_from_signed_gray_mipped_image(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        label: Option<&str>,
+        mip_levels: &[&image::GrayImage],
+    ) -> Self {
+        Self::new_static_from_gray_mipped_image_with_format(
+            device,
+            queue,
+            label,
+            mip_levels,
+            wgpu::TextureFormat::R8Snorm,
+        )
+    }
+
+    fn new_static_from_gray_mipped_image_with_format(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        label: Option<&str>,
+        mip_levels: &[&image::GrayImage],
+        format: wgpu::TextureFormat,
+    ) -> Self {
         let size = mip_levels[0].dimensions().into();
 
         let data = mip_levels

@@ -18,11 +18,11 @@ use quote::{TokenStreamExt, quote};
 use shin_render_shader_types::{
     uniforms::{
         BlendUniformParams, BlurUniformParams, ButtonUniformParams, CharacterPortraitUniformParams,
-        ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontUniformParams,
-        HigurashiBlurUniformParams, HigurashiRasterUniformParams, LayerUniformParams,
-        MaskUniformParams, MosaicUniformParams, MovieUniformParams, RasterUniformParams,
-        RippleUniformParams, SpriteUniformParams, TapRippleUniformParams, UniformType,
-        WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
+        ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontSdfUniformParams,
+        FontUniformParams, HigurashiBlurUniformParams, HigurashiRasterUniformParams,
+        LayerUniformParams, MaskUniformParams, MosaicUniformParams, MovieUniformParams,
+        RasterUniformParams, RippleUniformParams, SpriteUniformParams, TapRippleUniformParams,
+        UniformType, WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
         WiperRippleUniformParams, WiperWaveUniformParams, WiperWhirlUniformParams,
         ZoomBlurUniformParams,
         metadata::{ArraySchema, PrimitiveType, StructSchema, TypeSchema},
@@ -311,6 +311,7 @@ fn generate_wgsl_types() -> WgslSchema {
     ctx.gen_uniform::<CharacterPortraitUniformParams>();
     ctx.gen_uniform::<WiperGlassUniformParams>();
     ctx.gen_uniform::<FontUniformParams>();
+    ctx.gen_uniform::<FontSdfUniformParams>();
     ctx.gen_uniform::<FontBorderUniformParams>();
     ctx.gen_uniform::<LayerUniformParams>();
     ctx.gen_uniform::<MaskUniformParams>();
@@ -1001,6 +1002,7 @@ fn codegen_shaders_file(shaders: &[ShaderWithDescriptor]) -> String {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=wgsl/font_sdf.wgsl");
     println!("cargo:rerun-if-changed=wgsl/dissolve.wgsl");
     println!("cargo:rerun-if-changed=wgsl/mosaic.wgsl");
     println!("cargo:rerun-if-changed=wgsl/raster.wgsl");

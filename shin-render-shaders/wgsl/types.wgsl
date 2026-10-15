@@ -153,6 +153,13 @@ struct FontUniformParams {
     color2_: vec4<f32>,
 }
 
+struct FontSdfUniformParams {
+    transform: mat4x4<f32>,
+    color1_: vec4<f32>,
+    color2_: vec4<f32>,
+    thresholds: vec2<f32>,
+}
+
 struct FontBorderUniformParams {
     transform: mat4x4<f32>,
     dist: array<vec4<f32>, 4>,

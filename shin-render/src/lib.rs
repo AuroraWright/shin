@@ -156,6 +156,14 @@ pub enum RenderProgramWithArguments<'a> {
         color1: FloatColor4,
         color2: FloatColor4,
     },
+    FontSdf {
+        vertices: VertexSource<'a, TextVertex>,
+        glyph: TextureSource<'a>,
+        transform: Mat4,
+        color1: FloatColor4,
+        color2: FloatColor4,
+        thresholds: Vec2,
+    },
     FontBorder {
         vertices: VertexSource<'a, TextVertex>,
         glyph: TextureSource<'a>,
@@ -388,6 +396,7 @@ impl RenderProgramWithArguments<'_> {
             RenderProgramWithArguments::Button { .. } => ShaderName::Button,
             RenderProgramWithArguments::Blend { .. } => ShaderName::Blend,
             RenderProgramWithArguments::Font { .. } => ShaderName::Font,
+            RenderProgramWithArguments::FontSdf { .. } => ShaderName::FontSdf,
             RenderProgramWithArguments::FontBorder { .. } => ShaderName::FontBorder,
             RenderProgramWithArguments::Layer { .. } => ShaderName::Layer,
             RenderProgramWithArguments::Mask { .. } => ShaderName::Mask,
