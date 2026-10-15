@@ -20,6 +20,10 @@ use shin_input::ActionState;
 use shin_render::{render_pass::RenderPass, shaders::types::texture::TextureSource};
 use std::sync::Arc;
 
+#[cfg(all(test, target_os = "macos"))]
+#[path = "episode_chooser_scene/failure_reference.rs"]
+mod failure_reference;
+
 pub(super) enum ParentRequest {
     Dim(f32),
     RestoreRows,
@@ -244,6 +248,59 @@ enum Viewer {
     },
 }
 impl Viewer {
+    fn update(
+        &mut self,
+        delta: Ticks,
+        server: &Arc<AssetServer>,
+        scenario: &Arc<Scenario>,
+        sounds: &mut Vec<&'static str>,
+    ) -> anyhow::Result<()> {
+        match self {
+            Self::Tips { screen, finished } => {
+                *finished = screen.update(delta)? == Some(1);
+                sounds.extend(screen.take_sounds());
+            }
+            Self::Characters {
+                loading,
+                screen,
+                episode,
+                finished,
+            } => {
+                if let Some(task) = loading {
+                    if let Some(result) = task.poll_naive() {
+                        *loading = None;
+                        *screen = Some(CharacterScreen::with_atlas(
+                            server,
+                            scenario,
+                            *episode as i32,
+                            0,
+                            result?,
+                        )?);
+                    }
+                } else if let Some(screen) = screen {
+                    screen.update(delta, server);
+                    sounds.extend(screen.model.take_sounds());
+                    *finished = screen.model.is_closed();
+                }
+            }
+        }
+        Ok(())
+    }
+    fn cancel_failed(&mut self) {
+        match self {
+            Self::Characters {
+                loading,
+                screen,
+                finished,
+                ..
+            } => {
+                *loading = None;
+                *screen = None;
+                *finished = true;
+            }
+            Self::Tips { finished, .. } => *finished = true,
+        }
+    }
     fn finished(&self) -> bool {
         match self {
             Self::Characters { finished, .. } | Self::Tips { finished, .. } => *finished,
@@ -360,34 +417,10 @@ impl EpisodeChooserScene {
                     }
                 }
             }
-            match viewer {
-                Viewer::Tips { screen, finished } => {
-                    *finished = screen.update(delta)? == Some(1);
-                    self.sounds.extend(screen.take_sounds());
-                }
-                Viewer::Characters {
-                    loading,
-                    screen,
-                    episode,
-                    finished,
-                } => {
-                    if let Some(task) = loading {
-                        if let Some(result) = task.poll_naive() {
-                            *screen = Some(CharacterScreen::with_atlas(
-                                &self.server,
-                                &self.scenario,
-                                *episode as i32,
-                                0,
-                                result?,
-                            ));
-                            *loading = None;
-                        }
-                    } else if let Some(screen) = screen {
-                        screen.update(delta, &self.server);
-                        self.sounds.extend(screen.model.take_sounds());
-                        *finished = screen.model.is_closed();
-                    }
-                }
+            if let Err(error) = viewer.update(delta, &self.server, &self.scenario, &mut self.sounds)
+            {
+                tracing::warn!(%error, "Loading title viewer failed");
+                viewer.cancel_failed();
             }
             if viewer.finished() {
                 self.parent.push(ParentRequest::Dim(0.0));
@@ -419,12 +452,20 @@ impl EpisodeChooserScene {
                     self.parent.push(ParentRequest::Dim(0.5));
                     let viewer = match item {
                         TitleItem::Tips => {
-                            let mut screen = TipsScreen::new(
+                            let mut screen = match TipsScreen::new(
                                 self.server.clone(),
                                 &self.scenario,
                                 episode as i32,
                                 None,
-                            )?;
+                            ) {
+                                Ok(screen) => screen,
+                                Err(error) => {
+                                    tracing::warn!(%error, "Creating title Tips viewer failed");
+                                    self.parent.push(ParentRequest::Dim(0.0));
+                                    self.area.disable(&mut self.model);
+                                    continue;
+                                }
+                            };
                             screen.set_pointer_extent(self.extent);
                             Viewer::Tips {
                                 screen,

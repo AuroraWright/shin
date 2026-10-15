@@ -47,6 +47,8 @@ pub(crate) struct CgGalleryScene {
     extent: (u16, u16),
     destination: Option<i32>,
     input_enabled: bool,
+    #[cfg(test)]
+    resource_failures: Vec<String>,
 }
 impl CgGalleryScene {
     pub fn new(
@@ -59,12 +61,45 @@ impl CgGalleryScene {
     ) -> anyhow::Result<Self> {
         let mut list =
             CgGalleryList::new(&scenario.info_tables().picture_box_info, globals.save())?;
+        let system: Arc<CharacterTextures> = server.load_sync("/systex.txa")?;
+        if list.content_height() > 726.0 {
+            system.require_names("/systex.txa", &["scroll"])?;
+        }
         //116930(30) is the platform mutex-only gallery notification.
         let completion = CgCompletionText::new(&server, &font, &list);
         let (send, atlas_received) = mpsc::channel();
         let assets = server.clone();
+        let thumbnails: Vec<_> = list
+            .rows()
+            .iter()
+            .map(|row| row.thumbnail.clone())
+            .collect();
+        let needs_logo = list.rows().iter().any(|row| row.unlocked_count() == 0);
+        let needs_num = list
+            .rows()
+            .iter()
+            .any(|row| row.unlocked_count() > 0 && row.unlocked_count() < row.pictures.len());
+        // Locked rows cannot open a viewer; require indicators only for rows
+        // the current progress can actually open.
+        let needs_check = list
+            .rows()
+            .iter()
+            .any(|row| row.pictures.len() >= 2 && row.unlocked_count() > 0);
         let loading = shin_tasks::async_io::spawn(async move {
-            let atlas = assets.load("/cgmode.txa").await?;
+            let atlas: Arc<CharacterTextures> = assets.load("/cgmode.txa").await?;
+            atlas.require_names("/cgmode.txa", &["bg", "close", "help_cgmode", "key"])?;
+            if needs_check {
+                atlas.require_names("/cgmode.txa", &["check"])?;
+            }
+            if needs_logo {
+                atlas.require_names("/cgmode.txa", &["logo"])?;
+            }
+            if needs_num {
+                atlas.require_names("/cgmode.txa", &["num"])?;
+            }
+            for name in thumbnails {
+                atlas.require_names("/cgmode.txa", &[&name])?;
+            }
             let _ = send.send(atlas); //4d3b4 publishes atlas before mask loading.
             assets.load("/default.msk").await
         });
@@ -74,7 +109,7 @@ impl CgGalleryScene {
             list,
             input,
             atlas: None,
-            system: server.load_sync("/systex.txa")?,
+            system,
             _mask: None,
             loading: Some(loading),
             atlas_received,
@@ -88,6 +123,8 @@ impl CgGalleryScene {
             extent,
             destination: None,
             input_enabled: false,
+            #[cfg(test)]
+            resource_failures: Vec::new(),
         })
     }
     pub fn resize(&mut self, extent: (u16, u16)) {
@@ -124,7 +161,14 @@ impl CgGalleryScene {
         }
         if let Some(result) = self.loading.as_mut().and_then(|task| task.poll_naive()) {
             self.loading = None;
-            let mask = result?;
+            let mask = match result {
+                Ok(mask) => mask,
+                Err(error) => {
+                    tracing::warn!(%error, "Loading CG gallery artwork failed");
+                    self.destination = Some(6);
+                    return Ok(());
+                }
+            };
             if self.atlas.is_none() {
                 self.atlas = self.atlas_received.try_recv().ok();
             }
@@ -150,10 +194,13 @@ impl CgGalleryScene {
             self.previous.retire();
             self._mask = None;
         }
+        // Failed children retire locally; input eligibility stays at this frame
+        // snapshot so the completion action cannot reach a parent or sibling.
         //Newest child owns input even while loading/fading. Older children and
         //parent clocks continue to run while deferred play tasks gate input.
         if let Some(atlas) = &self.atlas {
             let row = &self.list.rows()[self.list.selected()];
+            let newest_index = self.children.len().checked_sub(1);
             for index in (0..self.children.len()).rev() {
                 let (older, rest) = self.children.split_at_mut(index);
                 let (child, newer) = rest.split_first_mut().unwrap();
@@ -165,7 +212,7 @@ impl CgGalleryScene {
                     Phase::Opening | Phase::InstallingInput => 1.0 - self.capture_elapsed / 60.0,
                     Phase::Active => 0.0,
                 };
-                child.update(
+                let result = child.update(
                     ctx,
                     row,
                     frame,
@@ -174,7 +221,7 @@ impl CgGalleryScene {
                     self.extent,
                     globals,
                     audio,
-                    newer.is_empty(),
+                    Some(index) == newest_index,
                     |pass| {
                         cg_gallery_view::render_artwork(list, atlas, &self.system, pass);
                         completion.render(pass);
@@ -188,18 +235,31 @@ impl CgGalleryScene {
                         }
                         previous.render(pass, opacity);
                     },
-                )?;
+                );
+                if let Err(error) = result {
+                    tracing::warn!(%error, "CG viewer failed; returning to the gallery");
+                    #[cfg(test)]
+                    self.resource_failures.push(format!("{error:#}"));
+                    self.children.remove(index);
+                }
             }
         }
         self.list.prepare_frame();
         for request in self.list.take_requests() {
             match request {
-                CgRequest::OpenRow(index) => self.children.push(CgViewerScene::new(
+                CgRequest::OpenRow(index) => match CgViewerScene::new(
                     self.server.clone(),
                     self.scenario.clone(),
                     &self.list.rows()[index],
                     self.extent,
-                )?),
+                ) {
+                    Ok(child) => self.children.push(child),
+                    Err(error) => {
+                        tracing::warn!(%error, "Creating CG viewer failed; retaining the gallery");
+                        #[cfg(test)]
+                        self.resource_failures.push(format!("{error:#}"));
+                    }
+                },
                 CgRequest::ReturnTitle {
                     argument,
                     music_stop_ticks,
@@ -245,6 +305,10 @@ impl CgGalleryScene {
 
     pub fn take_destination(&mut self) -> Option<i32> {
         self.destination.take()
+    }
+    #[cfg(test)]
+    pub fn reference_resource_failures(&self) -> &[String] {
+        &self.resource_failures
     }
     #[cfg(test)]
     pub fn reference_capture_owned(&self) -> bool {

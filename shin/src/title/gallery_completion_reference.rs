@@ -40,7 +40,7 @@ impl Asset for FontBytes {
         _: &str,
         data: AssetDataAccessor,
     ) -> anyhow::Result<Self> {
-        Ok(Self(data.read_all().await))
+        Ok(Self(data.read_all().await?))
     }
 }
 struct Packet {
@@ -119,11 +119,13 @@ fn reference_native_gallery_completion_geometry_and_pixels() {
     let adapter = shin_tasks::block_on(instance.request_adapter(&Default::default())).unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let rom = std::path::PathBuf::from(std::env::var("SHIN_REFERENCE_ROM").unwrap());
     let mut io = LayeredAssetIo::new();
@@ -134,6 +136,8 @@ fn reference_native_gallery_completion_geometry_and_pixels() {
     let server = AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),

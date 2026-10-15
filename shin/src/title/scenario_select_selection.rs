@@ -564,6 +564,68 @@ mod tests {
     }
 
     #[test]
+    fn start_controller_shoulders_switch_tabs_and_directions_do_not() {
+        use shin_input::{Action, RawInputState, inputs::GamepadButton};
+        let mut m = model();
+        for (button, expected) in [
+            (GamepadButton::Right, (0, 0)),
+            (GamepadButton::R, (1, 0)),
+            (GamepadButton::Down, (1, 1)),
+            (GamepadButton::L, (0, 0)),
+            (GamepadButton::Left, (0, 0)),
+        ] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.buttons[button] = true;
+            let state = AppAction::lower(&raw).map(|_, held| ActionState {
+                is_clicked: held,
+                is_clicked_or_repeated: held,
+                ..Default::default()
+            });
+            m.controller_input(&state);
+            assert_eq!(m.selected(), expected, "{button:?}");
+            advance(&mut m, 100.0);
+        }
+    }
+
+    #[test]
+    fn start_controller_shoulders_change_tabs_and_dpad_stick_horizontal_do_not() {
+        use shin_input::{
+            Action, RawInputState,
+            inputs::{GamepadButton, VirtualGamepadButton},
+        };
+        let mut model = model();
+        let dispatch = |model: &mut ScenarioSelection, raw: &RawInputState| {
+            model.controller_input(&AppAction::lower(raw).map(|_, held| ActionState {
+                is_clicked: held,
+                is_clicked_or_repeated: held,
+                ..Default::default()
+            }));
+            advance(model, 100.0);
+        };
+        for button in [GamepadButton::Left, GamepadButton::Right] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.buttons[button] = true;
+            dispatch(&mut model, &raw);
+            assert_eq!(model.selected(), (0, 0));
+        }
+        for direction in [
+            VirtualGamepadButton::StickLLeft,
+            VirtualGamepadButton::StickLRight,
+        ] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.virtual_keys[direction] = true;
+            dispatch(&mut model, &raw);
+            assert_eq!(model.selected(), (0, 0));
+        }
+        for (button, tab) in [(GamepadButton::R, 1), (GamepadButton::L, 0)] {
+            let mut raw = RawInputState::new();
+            raw.gamepads.unified.buttons[button] = true;
+            dispatch(&mut model, &raw);
+            assert_eq!(model.selected(), (tab, 0));
+        }
+    }
+
+    #[test]
     fn movement_priorities_and_bounds_preserve_native_action_fallthrough() {
         let mut m = model();
         m.controller_input(&input(&[

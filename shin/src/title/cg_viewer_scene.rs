@@ -139,6 +139,12 @@ impl CgViewerScene {
         if ready.is_some() {
             self.loading = None;
         }
+        if let Some(picture) = &ready {
+            anyhow::ensure!(
+                picture.effective_width > 0 && picture.effective_height > 0,
+                "CG picture has zero effective extent"
+            );
+        }
         let old_opacity = self.motion.capture_opacity();
         self.motion.prepare_frame(ready.is_some(), eligible);
         for event in self.motion.take_events() {

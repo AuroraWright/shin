@@ -62,9 +62,10 @@ impl ScenarioSelectScene {
         ctx: &PreRenderContext,
         extent: (u16, u16),
     ) -> Self {
+        let setup = ScenarioSelectSetup::from_save(save);
         let mut scene = Self {
-            opening: ScenarioSelectOpening::new(server),
-            selection: ScenarioSelection::new_active(ScenarioSelectSetup::from_save(save)),
+            opening: ScenarioSelectOpening::new_for_setup(server, &setup),
+            selection: ScenarioSelection::new_active(setup),
             input: ScenarioSelectInput::new(),
             details: ScenarioDetails::new(
                 ctx,
@@ -100,6 +101,10 @@ impl ScenarioSelectScene {
     pub(crate) fn reference_dialog_origin(&self) -> glam::Vec2 {
         self.dialog.as_ref().unwrap().reference_origin()
     }
+    #[cfg(test)]
+    pub(crate) fn reference_has_dialog(&self) -> bool {
+        self.dialog.is_some()
+    }
     pub fn resize(&mut self, extent: (u16, u16), held: bool) {
         self.input.resize(&mut self.selection, extent);
         self.extent = extent;
@@ -117,7 +122,11 @@ impl ScenarioSelectScene {
         server: &AssetServer,
         ctx: &mut PreRenderContext,
     ) -> anyhow::Result<()> {
-        self.opening.update_frame(delta)?;
+        if let Err(error) = self.opening.update_frame(delta) {
+            tracing::warn!(%error, "Returning to title after Start menu load failed");
+            self.destination = Some(ScenarioDestination::Title);
+            return Ok(());
+        }
         // The updated picker atlas has five 48px help rows; the original has
         // four. Keep original artwork/input behavior when using the base assets.
         let updated = self
@@ -172,23 +181,47 @@ impl ScenarioSelectScene {
                 SelectionEvent::BackSound => self.sounds.push("cancel"),
                 SelectionEvent::BeginBack => self.back_pending = true,
                 SelectionEvent::ConfirmDialog => {
-                    let mut dialog = SaveMenuDialog::load_prompt(
+                    let dialog = SaveMenuDialog::load_prompt(
                         server,
                         "このシナリオを開始します。@rよろしいですか？",
                         state[AppAction::PointerClick].is_held,
-                    )?;
-                    dialog.set_pointer_extent(self.extent, state[AppAction::PointerClick].is_held);
-                    self.dialog = Some(dialog);
+                    );
+                    match dialog {
+                        Ok(mut dialog) => {
+                            dialog.set_pointer_extent(
+                                self.extent,
+                                state[AppAction::PointerClick].is_held,
+                            );
+                            self.dialog = Some(dialog);
+                        }
+                        Err(error) => {
+                            tracing::warn!(%error, "Keeping Start menu after scenario confirmation load failed");
+                            self.selection.answer_dialog(false);
+                            self.input.resize(&mut self.selection, self.extent);
+                        }
+                    }
                 }
                 SelectionEvent::UnlockDialog => {
-                    let mut dialog = SaveMenuDialog::load_prompt(
+                    let dialog = SaveMenuDialog::load_prompt(
                         server,
                         SCENARIO_UNLOCK_PROMPT,
                         state[AppAction::PointerClick].is_held,
-                    )?;
-                    dialog.set_pointer_extent(self.extent, state[AppAction::PointerClick].is_held);
-                    self.unlock_dialog = true;
-                    self.dialog = Some(dialog);
+                    );
+                    match dialog {
+                        Ok(mut dialog) => {
+                            dialog.set_pointer_extent(
+                                self.extent,
+                                state[AppAction::PointerClick].is_held,
+                            );
+                            self.unlock_dialog = true;
+                            self.dialog = Some(dialog);
+                        }
+                        Err(error) => {
+                            tracing::warn!(%error, "Keeping Start menu after unlock confirmation load failed");
+                            self.selection.answer_unlock_dialog(false);
+                            self.input.resize(&mut self.selection, self.extent);
+                        }
+                    }
                 }
                 SelectionEvent::UnlockScenarios => {
                     self.destination = Some(ScenarioDestination::UnlockScenarios);

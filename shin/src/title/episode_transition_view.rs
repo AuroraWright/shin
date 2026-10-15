@@ -10,7 +10,8 @@ use shin_render::{
 pub(super) fn door_transforms(frame: EpisodeFrame) -> [Mat4; 2] {
     // Native row matrices compose in reverse order after conversion to glam.
     // e45d8: GL perspective, e45ec: Y inversion, e4634: camera Z=-1000.
-    let camera = Mat4::perspective_rh_gl(f32::from_bits(0x3f7d821c), 1920.0 / 1080.0, 1.0, 10000.0)
+    let camera = glam::camera::rh::proj::opengl::perspective(f32::from_bits(0x3f7d821c), 1920.0 / 1080.0, 1.0, 10000.0,
+    )
         * Mat4::from_scale(vec3(1.0, -1.0, 1.0))
         * Mat4::from_translation(vec3(0.0, 0.0, -1000.0))
         * Mat4::from_translation(vec3(0.0, 0.0, frame.door_offset));

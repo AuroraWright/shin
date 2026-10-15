@@ -110,7 +110,7 @@ fn scaled_held_arrow_selects_on_release_and_keeps_pointer_priority() {
         true
     ));
     assert_eq!(m.selection().indices(), (0, 1, 0, 0));
-    assert_eq!(m.take_sounds(), ["select"]);
+    assert_eq!(m.take_sounds(), ["move"]);
     assert_eq!(
         m.take_requests(),
         [super::super::bustup_menu::Request::LoadBustup(

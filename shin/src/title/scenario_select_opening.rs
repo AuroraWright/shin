@@ -75,11 +75,55 @@ pub(super) struct ScenarioSelectOpening {
     mask: Option<Arc<MaskTexture>>,
 }
 impl ScenarioSelectOpening {
+    #[cfg(test)]
     pub fn new(server: Arc<AssetServer>) -> Self {
+        Self::new_for_setup(
+            server,
+            &super::scenario_select::ScenarioSelectSetup::from_save(&Default::default()),
+        )
+    }
+    pub fn new_for_setup(
+        server: Arc<AssetServer>,
+        setup: &super::scenario_select::ScenarioSelectSetup,
+    ) -> Self {
+        let mut names = vec![
+            "bg".to_owned(),
+            "menu".to_owned(),
+            "close".to_owned(),
+            "help_snrsel".to_owned(),
+            "key".to_owned(),
+        ];
+        if setup.groups.len() > 1 {
+            names.extend(["tab_off".to_owned(), "tab_on".to_owned()]);
+            if setup.groups.iter().any(|group| group.has_new) {
+                names.push("new".to_owned());
+            }
+        }
+        for entry in setup.groups.iter().flat_map(|group| &group.entries) {
+            names.push(entry.details_name());
+            if let Some(badge) = match entry.state {
+                0 => Some("lock"),
+                1 => Some("new"),
+                3 => Some("star"),
+                _ => None,
+            } {
+                names.push(badge.to_owned());
+            }
+        }
+        names.sort();
+        names.dedup();
+        let needs_scroll = setup.groups.iter().any(|group| group.content_height > 670);
         let (send, received) = mpsc::channel();
         let loading = shin_tasks::async_io::spawn(async move {
             let atlas = server.load::<CharacterTextures, _>("/snrsel.txa").await?;
             let system = server.load::<CharacterTextures, _>("/systex.txa").await?;
+            atlas.require_names(
+                "/snrsel.txa",
+                &names.iter().map(String::as_str).collect::<Vec<_>>(),
+            )?;
+            if needs_scroll {
+                system.require_names("/systex.txa", &["scroll"])?;
+            }
             let _ = send.send((atlas, system));
             server.load::<MaskTexture, _>("/curtain.msk").await
         });

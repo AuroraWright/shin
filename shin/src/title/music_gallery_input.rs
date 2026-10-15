@@ -127,6 +127,36 @@ mod tests {
         m.take_requests();
         m
     }
+    #[test]
+    fn trackpad_wheel_scrolls_music_gallery_through_live_input_dispatch() {
+        let mut gallery = gallery();
+        let mut input = MusicGalleryInput::new();
+        for (number, (amount, expected)) in [
+            (-3.25, 104.0),
+            (-0.125, 108.0),
+            (3.25, 4.0),
+            (0.0, 4.0),
+            (100.0, 0.0),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let (actions, scroll) = crate::app::wheel_scroll_test_input(amount);
+            input.input_frame(
+                &mut gallery,
+                &PointerFrame {
+                    number: number as u32,
+                    time_seconds: number as f64 / 60.0,
+                    events: &[],
+                },
+                &actions,
+                scroll,
+            );
+            assert_eq!(gallery.list().scroll(), expected);
+            assert!(gallery.take_sounds().is_empty());
+            assert!(gallery.take_music_requests().is_empty());
+        }
+    }
     fn event(kind: PointerKind, x: i32, y: i32) -> PointerEvent {
         PointerEvent {
             kind,

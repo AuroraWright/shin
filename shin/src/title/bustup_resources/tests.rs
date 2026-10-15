@@ -17,7 +17,7 @@ fn publication_installs_inherited_target_and_retains_native_replacement_wiper() 
     drop(clock);
     replacement(10, UserLayer::Null(NullLayer::new())).install(&mut group);
     assert!(group.has_wiper_for_layerbank(slot));
-    let layer = group.get_layer_mut(slot).unwrap();
+    let mut layer = group.get_layer_mut(slot).unwrap();
     assert_eq!(
         layer.properties().get_value(LayerProperty::TranslateX),
         50.0
@@ -104,11 +104,13 @@ fn reference_original_async_resource_publication_barriers_and_inheritance() {
             .unwrap();
     let (device, queue) = shin_tasks::block_on(adapter.request_device(
         &wgpu::DeviceDescriptor {
-            required_features: adapter.features() & wgpu::Features::SPIRV_SHADER_PASSTHROUGH,
-            ..Default::default()
+            required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
+            adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
+        } else {
+            wgpu::Features::empty()
         },
-        None,
-    ))
+            ..Default::default()
+        }))
     .unwrap();
     let mut io = LayeredAssetIo::new();
     io.try_with_rom(std::env::var("SHIN_REFERENCE_ROM").unwrap())
@@ -116,6 +118,8 @@ fn reference_original_async_resource_publication_barriers_and_inheritance() {
     let server = std::sync::Arc::new(AssetServer::new(
         io.into(),
         AssetLoadContext {
+            game: crate::cli::Game::Umineko,
+            higurashi_bustup_cache: Default::default(),
             wgpu_device: device.clone(),
             wgpu_queue: queue.clone(),
             bustup_cache: AssetCache::new(),
@@ -174,6 +178,9 @@ fn reference_original_async_resource_publication_barriers_and_inheritance() {
                     p.install(&mut layers);
                 }
                 Publication::InitialComplete => order.push(5),
+                Publication::InitialFailed(error) | Publication::ReplacementFailed(error) => {
+                    panic!("Unexpected supplied resource failure: {error:#}")
+                }
             }
         }
         std::thread::sleep(std::time::Duration::from_millis(1));
@@ -191,7 +198,7 @@ fn reference_original_async_resource_publication_barriers_and_inheritance() {
         *layers.get_layer(LayerbankId::new(10)).unwrap(),
         UserLayer::Bustup(_)
     ));
-    if let UserLayer::Bustup(layer) = layers.get_layer(LayerbankId::new(10)).unwrap() {
+    if let UserLayer::Bustup(layer) = &*layers.get_layer(LayerbankId::new(10)).unwrap() {
         let (mouths, eyes) = layer.reference_frame_counts();
         assert!(
             mouths <= 1 && eyes <= 1,

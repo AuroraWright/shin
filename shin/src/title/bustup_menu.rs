@@ -167,12 +167,12 @@ impl BustupMenu {
         } else if controls.up {
             if self.focus > 0 {
                 self.focus -= 1;
-                self.sounds.push("select");
+                self.sounds.push("move");
             }
         } else if controls.down {
             if self.focus < 4 {
                 self.focus += 1;
-                self.sounds.push("select");
+                self.sounds.push("move");
             }
         } else {
             let delta = if controls.left {
@@ -246,7 +246,7 @@ impl BustupMenu {
                 self.selection.select_background(catalog, next);
             }
         }
-        self.sounds.push("select");
+        self.sounds.push("move");
         self.requests.push(if self.row() == Row::Background {
             let bg = self.selection.background(catalog);
             Request::LoadBackground {

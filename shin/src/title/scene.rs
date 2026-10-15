@@ -28,6 +28,13 @@ use shin_input::ActionState;
 use shin_render::{render_pass::RenderPass, render_texture::RenderTexture};
 use std::sync::{Arc, mpsc};
 
+#[cfg(all(test, target_os = "macos"))]
+#[path = "scene/failure_reference.rs"]
+mod failure_reference;
+#[cfg(all(test, target_os = "macos"))]
+#[path = "scene/root_failure_reference.rs"]
+mod root_failure_reference;
+
 struct BackgroundAssets {
     mask: Arc<MaskTexture>,
     picture: Arc<Picture>,
@@ -72,11 +79,16 @@ impl TitleScene {
     pub fn new(server: Arc<AssetServer>, setup: TitleSetup) -> Self {
         let (send, receive) = mpsc::channel();
         let path = setup.background_path();
+        let items = setup.items.clone();
         // Publish atlas before the worker completes mask/picture loading,
         // matching113380. The native renderer can show UI during loading.
         let assets = server.clone();
         let loading = shin_tasks::async_io::spawn(async move {
             let atlas = assets.load::<CharacterTextures, _>("/title.txa").await?;
+            atlas.require_names("/title.txa", &["logo", "copyright", "plate", "menu"])?;
+            for item in items {
+                atlas.require_names("/title.txa", &[item.caption()])?;
+            }
             let _ = send.send(atlas);
             let mask = assets.load::<MaskTexture, _>("/default.msk").await?;
             let picture = assets.load::<Picture, _>(&path).await?;
@@ -115,6 +127,10 @@ impl TitleScene {
     }
     pub fn is_loaded(&self) -> bool {
         self.background.is_some()
+    }
+    #[cfg(test)]
+    pub(crate) fn reference_active(&self) -> bool {
+        self.is_loaded() && self.motion.phase() == super::motion::Phase::Active
     }
     pub(crate) fn has_save_task(&self) -> bool {
         self.children
@@ -231,13 +247,26 @@ impl TitleScene {
         self.children.retain(|manual| !manual.is_finished());
         let had_child = !self.children.is_empty();
         let mut finished = false;
+        let mut failed_child = false;
         let mut child_input = true;
         for index in (0..self.children.len()).rev() {
             let child = &mut self.children[index];
             if child_input {
                 child.input(frame, state, pointer, held, elapsed, axis, self.extent);
             }
-            if child.update(delta, globals)? {
+            let updated = match child.update(delta, globals) {
+                Ok(updated) => updated,
+                Err(error) => {
+                    tracing::warn!(%error, "Updating title child failed");
+                    self.children.remove(index);
+                    finished = true;
+                    failed_child = true;
+                    self.motion.child_finished(false);
+                    child_input = false;
+                    continue;
+                }
+            };
+            if updated {
                 finished = true;
                 self.motion.child_finished(false);
             }
@@ -261,17 +290,29 @@ impl TitleScene {
         }
         self.motion.prepare_frame();
         for item in self.motion.take_child_requests() {
-            let mut child = TitleChild::new(
+            let mut child = match TitleChild::new(
                 item,
                 self.server.clone(),
                 globals,
                 self.load_resources.as_ref(),
                 self.setup.completed_episodes,
-            )?;
+            ) {
+                Ok(child) => child,
+                Err(error) => {
+                    tracing::warn!(%error, "Creating title child failed");
+                    failed_child = true;
+                    self.motion
+                        .child_finished(self.children.iter().all(TitleChild::is_finished));
+                    if matches!(item, TitleItem::Characters | TitleItem::Tips) {
+                        self.motion.open_rows(true);
+                    }
+                    continue;
+                }
+            };
             child.resize(self.extent);
             self.children.push(child);
         }
-        if !had_child && self.children.is_empty() {
+        if !had_child && !failed_child && self.children.is_empty() {
             self.input.input_frame(&mut self.motion, frame, state);
         } else {
             self.input.suspend(&mut self.motion);

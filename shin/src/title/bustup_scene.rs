@@ -52,6 +52,8 @@ pub(crate) struct BustupScene {
     extent: (u16, u16),
     destination: Option<i32>,
     input_enabled: bool,
+    #[cfg(test)]
+    resource_failures: usize,
 }
 impl BustupScene {
     pub fn new(
@@ -92,6 +94,8 @@ impl BustupScene {
             extent,
             destination: None,
             input_enabled: false,
+            #[cfg(test)]
+            resource_failures: 0,
         })
     }
     pub fn resize(&mut self, extent: (u16, u16)) {
@@ -134,6 +138,18 @@ impl BustupScene {
                 Publication::InitialComplete => {
                     self.phase = Phase::Opening;
                     audio.bgm_player.stop(Tween::linear(Ticks::from_f32(60.0)));
+                }
+                Publication::InitialFailed(error) => {
+                    tracing::warn!(%error, "Returning to title after character sprite gallery load failed");
+                    self.destination = Some(super::TitleItem::Bustup as i32);
+                    return Ok(());
+                }
+                Publication::ReplacementFailed(error) => {
+                    tracing::warn!(%error, "Keeping previous character sprite gallery layers after replacement failed");
+                    #[cfg(test)]
+                    {
+                        self.resource_failures += 1;
+                    }
                 }
             }
         }
@@ -277,6 +293,51 @@ impl BustupScene {
             self.viewer.is_some(),
             self.previous.is_owned() || self.mask.is_some(),
             self.menu.controls_visibility(),
+        )
+    }
+    #[cfg(test)]
+    pub fn reference_catalog_paths(
+        scenario: &Scenario,
+    ) -> (Vec<(String, Option<String>)>, Vec<String>, usize) {
+        let catalog = BustupCatalog::new(&scenario.info_tables().character_box_info).unwrap();
+        let pictures = &scenario.info_tables().picture_info;
+        let bustups = &scenario.info_tables().bustup_info;
+        (
+            catalog
+                .backgrounds
+                .iter()
+                .map(|bg| {
+                    (
+                        pictures[bg.primary.into_i32() as usize].path(),
+                        bg.secondary
+                            .map(|id| pictures[id.into_i32() as usize].path()),
+                    )
+                })
+                .collect(),
+            catalog
+                .characters
+                .iter()
+                .map(|c| bustups[c.outfits[0].poses[0].expressions[0].into_i32() as usize].path())
+                .collect(),
+            catalog.backgrounds.len(),
+        )
+    }
+    #[cfg(test)]
+    pub fn reference_resource_state(&self) -> (usize, [usize; 3]) {
+        use crate::layer::user::UserLayer;
+        use shin_core::vm::command::types::LayerbankId;
+        let group = self.screen.page_layer().get_plane(PlaneId::new(0));
+        (
+            self.resource_failures,
+            [0, 1, 10].map(|slot| {
+                group
+                    .get_layer(LayerbankId::new(slot))
+                    .map_or(0, |layer| match &*layer {
+                        UserLayer::Picture(p) => p.reference_resource_identity(),
+                        UserLayer::Bustup(b) => b.reference_resource_identity(),
+                        _ => 0,
+                    })
+            }),
         )
     }
 }

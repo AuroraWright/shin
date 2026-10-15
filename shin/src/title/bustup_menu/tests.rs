@@ -67,7 +67,7 @@ fn authored_pointer_rows_labels_arrows_and_top_boundaries() {
         assert_eq!(m.pointer_selector, row as i32 * 3 + 1);
         m.pointer_release(&c);
         assert_eq!(m.take_requests().len(), 1);
-        assert_eq!(m.take_sounds(), ["select"]);
+        assert_eq!(m.take_sounds(), ["move"]);
         assert_eq!(m.selector_hit(&c, glam::vec2(left, y)), row as i32 * 3);
         assert_eq!(m.selector_hit(&c, glam::vec2(right + 80.0, y)), -1);
         assert_eq!(m.selector_hit(&c, glam::vec2(right + 1.0, y + 80.0)), -1);
@@ -212,7 +212,7 @@ fn every_selector_clamps_pages_and_preserves_parent_choices() {
         let (a, b, d, e) = m.selection.indices();
         let index = [a, b, d, e, m.selection.background_index()][row];
         assert_eq!(index, [2, 1, 2, 10, 10][row]);
-        assert_eq!(m.take_sounds(), ["select"]);
+        assert_eq!(m.take_sounds(), ["move"]);
         assert_eq!(m.take_requests().len(), 1);
         m.update(Ticks::from_f32(1.0));
         assert!((m.arrow_values()[row * 2 + 1] - 0.2).abs() < 1e-6);
@@ -788,5 +788,73 @@ fn reference_original_pointer_hit_eligibility_and_native_callbacks() {
             expected,
             "Native Bustup hit geometry {a:x}"
         );
+    }
+}
+
+#[test]
+#[ignore = "requires supplied executable next to SHIN_REFERENCE_ROM"]
+fn reference_sprite_gallery_navigation_uses_move_in_both_executables() {
+    let dir = std::path::PathBuf::from(std::env::var("SHIN_REFERENCE_ROM").unwrap());
+    for (name, global, loads) in [
+        (
+            "uncompressed_executable",
+            0x224780usize,
+            [0x39f64usize, 0x3a4e8, 0x3a588],
+        ),
+        (
+            "uncompressed_executable_update",
+            0x2267e0usize,
+            [0x39ec4usize, 0x3a448, 0x3a4e8],
+        ),
+    ] {
+        let file = std::fs::read(dir.parent().unwrap().join(name)).unwrap();
+        let exe = &file[256..];
+        let u64_at = |at: usize| u64::from_le_bytes(exe[at..at + 8].try_into().unwrap());
+        let relocate = |address: usize| {
+            (0..exe.len() - 24)
+                .step_by(8)
+                .find(|&at| u64_at(at) == address as u64 && u64_at(at + 8) == 0x403)
+                .map(|at| u64_at(at + 16) as usize)
+                .unwrap()
+        };
+        let cue = relocate(relocate(global));
+        assert_eq!(&exe[cue..cue + 5], b"move\0", "{name}");
+        for at in loads {
+            let instruction = u32::from_le_bytes(exe[at..at + 4].try_into().unwrap());
+            assert_eq!(
+                instruction,
+                0xf9400108 | (((global & 0xfff) / 8) as u32) << 10,
+                "{name} at {at:x}"
+            );
+        }
+        let c = catalog();
+        let mut m = BustupMenu::new(&c);
+        input(
+            &mut m,
+            &c,
+            Controls {
+                down: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(m.take_sounds(), ["move"]);
+        input(
+            &mut m,
+            &c,
+            Controls {
+                right: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(m.take_sounds(), ["move"]);
+        input(
+            &mut m,
+            &c,
+            Controls {
+                up: true,
+                ..Default::default()
+            },
+        );
+        assert_eq!(m.take_sounds(), ["move"]);
     }
 }

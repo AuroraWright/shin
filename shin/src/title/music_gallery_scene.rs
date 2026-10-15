@@ -49,12 +49,32 @@ impl MusicGalleryScene {
         extent: (u16, u16),
     ) -> anyhow::Result<Self> {
         let mut model = MusicGallery::new(&scenario.info_tables().music_box_info, globals.save())?;
+        if model.list().content_height() > 730.0 {
+            system.require_names("/systex.txa", &["scroll"])?;
+        }
         // Constructor116930(31) only locks/unlocks a platform mutex in this
         // executable, so full completion records no additional save bit.
         let completion = MusicCompletionText::new(&server, &font, model.list());
         let assets = server.clone();
+        let titles: Vec<_> = model
+            .list()
+            .rows()
+            .iter()
+            .map(|row| format!("title{}", row.name_index / 32))
+            .collect();
+        let needs_menu_on = model.list().rows().iter().any(|row| row.unlocked);
         let loading = shin_tasks::async_io::spawn(async move {
-            let atlas = assets.load("/bgmmode.txa").await?;
+            let atlas: Arc<CharacterTextures> = assets.load("/bgmmode.txa").await?;
+            atlas.require_names(
+                "/bgmmode.txa",
+                &["bg", "menu_off", "close", "help_bgmmode", "key"],
+            )?;
+            if needs_menu_on {
+                atlas.require_names("/bgmmode.txa", &["menu_on"])?;
+            }
+            for title in titles {
+                atlas.require_names("/bgmmode.txa", &[&title])?;
+            }
             let mask = assets.load("/default.msk").await?;
             Ok((atlas, mask))
         });
@@ -92,7 +112,14 @@ impl MusicGalleryScene {
     ) -> anyhow::Result<()> {
         if let Some(result) = self.loading.as_mut().and_then(|task| task.poll_naive()) {
             self.loading = None;
-            let (atlas, mask) = result?;
+            let (atlas, mask) = match result {
+                Ok(assets) => assets,
+                Err(error) => {
+                    tracing::warn!(%error, "Loading Music gallery artwork failed");
+                    self.destination = Some(7);
+                    return Ok(());
+                }
+            };
             self.atlas = Some(atlas);
             self.mask = Some(mask);
             self.model.publish_resources();

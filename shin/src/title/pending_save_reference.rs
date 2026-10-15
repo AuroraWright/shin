@@ -83,7 +83,7 @@ pub(crate) fn reference_pending_config_save<'a>(
             let mut upload = context.device.create_command_encoder(&Default::default());
             context.dynamic_buffer.finish(&mut upload);
             context.queue.submit([upload.finish(), encoder.finish()]);
-            context.device.poll(wgpu::Maintain::Wait);
+            context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
             finished
         };
         let deadline = Instant::now() + Duration::from_secs(10);

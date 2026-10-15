@@ -183,15 +183,25 @@ impl TitleChild {
                         *save = None;
                     }
                 }
-                let response = screen.update(delta)?;
+                let response = screen.update(delta);
                 let edits = screen.take_edits();
                 if !edits.is_empty() {
                     globals.apply_config_settings(screen.settings());
                 }
+                let response = response?;
                 if screen.take_save_request() {
-                    let task = SaveGameTask::load(server)?;
-                    globals.prepare_config_save()?;
-                    *save = Some(task);
+                    match SaveGameTask::load(server).and_then(|task| {
+                        globals.prepare_config_save()?;
+                        Ok(task)
+                    }) {
+                        Ok(task) => *save = Some(task),
+                        Err(error) => {
+                            tracing::warn!(%error, "Preparing Title Config save failed");
+                            // Keep the dirty initial-settings baseline and the
+                            // same editable child; a later close retries saving.
+                            screen.save_failed();
+                        }
+                    }
                 }
                 *finished = response == Some(1);
                 Ok(*finished)

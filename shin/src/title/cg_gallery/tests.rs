@@ -386,6 +386,37 @@ fn fractional_analog_scroll_moves_focus_silently_and_keeps_column() {
     assert_eq!(g.scroll(), 484.0);
 }
 #[test]
+fn trackpad_wheel_scrolls_picture_gallery_through_live_input_dispatch() {
+    let mut gallery = list(17);
+    let mut input = super::super::cg_gallery_input::CgGalleryInput::new();
+    for (number, (amount, expected)) in [
+        (-3.25, 104.0),
+        (-0.125, 108.0),
+        (3.25, 4.0),
+        (0.0, 4.0),
+        (100.0, 0.0),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let (actions, scroll) = crate::app::wheel_scroll_test_input(amount);
+        input.input_frame(
+            &mut gallery,
+            true,
+            &crate::adv::input_area::PointerFrame {
+                number: number as u32,
+                time_seconds: number as f64 / 60.0,
+                events: &[],
+            },
+            &actions,
+            scroll,
+        );
+        assert_eq!(gallery.scroll(), expected);
+        assert!(gallery.take_sounds().is_empty());
+        assert!(!gallery.closing());
+    }
+}
+#[test]
 fn confirm_preempts_cancel_and_navigation_while_locked_rows_still_flash() {
     let mut g = list(4);
     g.controller(

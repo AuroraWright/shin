@@ -1,7 +1,10 @@
 //! Native initial worker3f1e0 and blocking replacement tasks3e240/3ebb0.
 //! Publication records retain the native slot/property/transition requirements;
 //! the scene must install them before updating or drawing its layer group.
-use super::{bustup_catalog::Background, bustup_menu::Request};
+use super::{
+    bustup_catalog::{Background, BustupCatalog},
+    bustup_menu::Request,
+};
 use crate::{
     adv::character_view::CharacterTextures,
     asset::{
@@ -36,7 +39,7 @@ impl LayerPublication {
     pub fn install(mut self, group: &mut LayerGroup) {
         let slot = shin_core::vm::command::types::LayerbankId::new(self.slot);
         if let Some(previous) = group.get_layer(slot) {
-            self.inherit_from(previous);
+            self.inherit_from(&previous);
         }
         let wiper = (self.transition_ticks != Ticks::ZERO).then(|| {
             crate::wiper::AnyWiper::Default(crate::wiper::DefaultWiper::new(self.transition_ticks))
@@ -57,6 +60,8 @@ pub(super) enum Publication {
     Mask(Arc<MaskTexture>),
     Layer(LayerPublication),
     InitialComplete,
+    InitialFailed(anyhow::Error),
+    ReplacementFailed(anyhow::Error),
 }
 type Load = shin_tasks::AsyncTask<anyhow::Result<Vec<LayerPublication>>>;
 pub(super) struct BustupResources {
@@ -162,6 +167,28 @@ impl BustupResources {
             let atlas = worker_server
                 .load::<CharacterTextures, _>("/bupmode.txa")
                 .await?;
+            // Validate every catalog selection before publishing an atlas that
+            // the scene may render while the remaining assets are still loading.
+            atlas.require_names(
+                "/bupmode.txa",
+                &[
+                    "icon",
+                    "num",
+                    "text",
+                    "arrow",
+                    "close",
+                    "hidden",
+                    "help_bupmode",
+                    "key",
+                ],
+            )?;
+            let catalog = BustupCatalog::new(&worker_scenario.info_tables().character_box_info)?;
+            for index in 1..=catalog.characters.len() {
+                atlas.require_names("/bupmode.txa", &[&format!("char{index:02}")])?;
+            }
+            for index in 1..=catalog.backgrounds.len() {
+                atlas.require_names("/bupmode.txa", &[&format!("bg{index:03}")])?;
+            }
             if send.send(Publication::Atlas(atlas)).is_err() {
                 return Ok(());
             }
@@ -223,13 +250,18 @@ impl BustupResources {
         let mut events = self.initial_events.try_iter().collect::<Vec<_>>();
         if let Some(result) = finished {
             self.initial = None;
-            result?;
-            events.push(Publication::InitialComplete);
+            events.push(match result {
+                Ok(()) => Publication::InitialComplete,
+                Err(error) => Publication::InitialFailed(error),
+            });
         }
         for i in (0..self.pending.len()).rev() {
             if let Some(result) = self.pending[i].poll_naive() {
                 self.pending.remove(i);
-                events.extend(result?.into_iter().map(Publication::Layer));
+                match result {
+                    Ok(layers) => events.extend(layers.into_iter().map(Publication::Layer)),
+                    Err(error) => events.push(Publication::ReplacementFailed(error)),
+                }
             }
         }
         Ok(events)

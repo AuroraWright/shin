@@ -16,7 +16,7 @@ use crate::{
 };
 use enum_map::EnumMap;
 use shin_core::{
-    format::scenario::Scenario,
+    format::scenario::{Scenario, instruction_elements::FromNumber},
     time::{Ticks, Tween},
 };
 use shin_input::ActionState;
@@ -46,6 +46,8 @@ pub(crate) struct MovieGalleryScene {
     extent: (u16, u16),
     destination: Option<i32>,
     input_enabled: bool,
+    #[cfg(test)]
+    resource_failures: Vec<String>,
 }
 impl MovieGalleryScene {
     pub fn new(
@@ -60,8 +62,21 @@ impl MovieGalleryScene {
         //116930(32) is the same platform mutex-only stub as MusicMode(31).
         let completion = MovieCompletionText::new(&server, &font, &list);
         let assets = server.clone();
+        let thumbnails: Vec<_> = list
+            .rows()
+            .iter()
+            .map(|row| format!("mv{:02}", row.movie.into_i32() + 1))
+            .collect();
+        let needs_logo = list.rows().iter().any(|row| !row.unlocked);
         let loading = shin_tasks::async_io::spawn(async move {
-            let atlas = assets.load("/moviemode.txa").await?;
+            let atlas: Arc<CharacterTextures> = assets.load("/moviemode.txa").await?;
+            atlas.require_names("/moviemode.txa", &["bg", "close", "help_moviemode", "key"])?;
+            if needs_logo {
+                atlas.require_names("/moviemode.txa", &["logo"])?;
+            }
+            for name in thumbnails {
+                atlas.require_names("/moviemode.txa", &[&name])?;
+            }
             let mask = assets.load("/default.msk").await?;
             Ok((atlas, mask))
         });
@@ -83,6 +98,8 @@ impl MovieGalleryScene {
             extent,
             destination: None,
             input_enabled: false,
+            #[cfg(test)]
+            resource_failures: Vec::new(),
         })
     }
     pub fn resize(&mut self, extent: (u16, u16)) {
@@ -113,7 +130,14 @@ impl MovieGalleryScene {
         self.input_enabled = enabled;
         if let Some(result) = self.loading.as_mut().and_then(|task| task.poll_naive()) {
             self.loading = None;
-            let (atlas, mask) = result?;
+            let (atlas, mask) = match result {
+                Ok(assets) => assets,
+                Err(error) => {
+                    tracing::warn!(%error, "Loading Movie gallery artwork failed");
+                    self.destination = Some(8);
+                    return Ok(());
+                }
+            };
             self.atlas = Some(atlas);
             self._mask = Some(mask);
             self.phase = Phase::Opening;
@@ -127,24 +151,46 @@ impl MovieGalleryScene {
             self.previous.retire();
             self._mask = None;
         }
+        // Failed children retire locally; input eligibility stays at this frame
+        // snapshot so the completion action cannot reach a parent or sibling.
         //Newest child owns input even while loading/fading. Older children and
         //parent clocks continue to run, preserving repeated deferred play tasks.
-        let mut newest = true;
-        for child in self.children.iter_mut().rev() {
-            child.update_with_input(ctx, frame, state, self.extent, globals, audio, newest)?;
-            newest = false;
+        let newest_index = self.children.len().checked_sub(1);
+        for index in (0..self.children.len()).rev() {
+            let result = self.children[index].update_with_input(
+                ctx,
+                frame,
+                state,
+                self.extent,
+                globals,
+                audio,
+                Some(index) == newest_index,
+            );
+            if let Err(error) = result {
+                tracing::warn!(%error, "Movie viewer failed; returning to the gallery");
+                #[cfg(test)]
+                self.resource_failures.push(format!("{error:#}"));
+                self.children.remove(index);
+            }
         }
         self.list.prepare_frame();
         for request in self.list.take_requests() {
             match request {
-                MovieRequest::OpenMovie(movie) => self.children.push(MoviePlaybackScene::new(
+                MovieRequest::OpenMovie(movie) => match MoviePlaybackScene::new(
                     self.server.clone(),
                     &self.scenario,
                     movie,
                     globals,
                     audio,
                     self.extent,
-                )?),
+                ) {
+                    Ok(child) => self.children.push(child),
+                    Err(error) => {
+                        tracing::warn!(%error, "Creating Movie viewer failed; retaining the gallery");
+                        #[cfg(test)]
+                        self.resource_failures.push(format!("{error:#}"));
+                    }
+                },
                 MovieRequest::ReturnTitle {
                     argument,
                     music_stop_ticks,
@@ -188,6 +234,10 @@ impl MovieGalleryScene {
 
     pub fn take_destination(&mut self) -> Option<i32> {
         self.destination.take()
+    }
+    #[cfg(test)]
+    pub fn reference_resource_failures(&self) -> &[String] {
+        &self.resource_failures
     }
     #[cfg(test)]
     pub fn reference_capture_owned(&self) -> bool {
