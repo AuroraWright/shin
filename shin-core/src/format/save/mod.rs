@@ -8,6 +8,7 @@ use shin_primitives::bit_utils::{BitBuffer, BitReadError, bit_read, bit_write};
 
 use crate::{crc32, format::save::index_set::IndexSet};
 
+pub mod gerokasu2;
 pub mod higurashi;
 pub mod index_set;
 #[cfg(test)]

@@ -3,11 +3,14 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use binrw::{BinRead, BinWrite};
+use binrw::{BinRead, BinWrite, NullString};
 use image::RgbaImage;
 use rayon::prelude::*;
 
-use crate::format::text::ZeroString;
+use crate::format::text::TextEncoding;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(BinRead, BinWrite, Debug)]
 #[brw(little, magic = b"TXA4")]
@@ -36,7 +39,7 @@ struct TxaIndexEntry {
     data_compressed_size: u32,
     data_decompressed_size: u32,
 
-    name: ZeroString,
+    name: NullString,
 }
 
 pub struct TextureArchive {
@@ -78,6 +81,14 @@ fn decode_texture(
 ///
 /// NOTE: this will spawn rayon tasks and block waiting for them. If you don't want blocking wrap it with [`shin_tasks::compute::spawn`].
 pub fn read_texture_archive(source: &[u8]) -> Result<TextureArchive> {
+    read_texture_archive_with_encoding(source, TextEncoding::ShiftJis)
+}
+
+/// Gerokasu2 stores atlas names as UTF-8. Existing callers retain Shift-JIS.
+pub fn read_texture_archive_with_encoding(
+    source: &[u8],
+    encoding: TextEncoding,
+) -> Result<TextureArchive> {
     let mut source = std::io::Cursor::new(source);
     let source = &mut source;
 
@@ -97,7 +108,9 @@ pub fn read_texture_archive(source: &[u8]) -> Result<TextureArchive> {
             decode_texture(
                 &source.get_ref()[entry.data_offset as usize..][..size],
                 entry,
-                header.use_dict_encoding != 0,
+                // Native Gerokasu2 e3c20/e3f18 and Umineko 117bd0/117e38
+                // carry the header word and test only bit 0 for this branch.
+                header.use_dict_encoding & 1 != 0,
             )
         })
         .collect::<Result<Vec<_>>>()?;
@@ -106,8 +119,8 @@ pub fn read_texture_archive(source: &[u8]) -> Result<TextureArchive> {
         .index
         .iter()
         .enumerate()
-        .map(|(i, v)| (v.name.0.clone(), i))
-        .collect();
+        .map(|(i, v)| encoding.decode(&v.name.0).map(|name| (name, i)))
+        .collect::<std::io::Result<_>>()?;
     let vindex_to_index = header
         .index
         .iter()

@@ -1,5 +1,8 @@
 //! Support for FNT format, storing bitmap fonts with 4 mip-map levels.
 
+/// Later FNT6 format; its Unicode mapping and fractional metrics differ from FNT4.
+pub mod gerokasu2;
+
 use std::{
     borrow::Cow,
     collections::{HashMap, hash_map::Entry},

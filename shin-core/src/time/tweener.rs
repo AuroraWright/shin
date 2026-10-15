@@ -28,6 +28,7 @@ pub struct Tweener {
     tween_queue: VecDeque<(Value, Tween, TweenOptions)>,
     state: State,
     value: Value,
+    gerokasu2: Option<Box<super::gerokasu2::GerTweener>>,
 }
 
 impl Tweener {
@@ -36,14 +37,53 @@ impl Tweener {
             tween_queue: VecDeque::new(),
             state: State::Idle,
             value,
+            gerokasu2: None,
         }
+    }
+    /// Select the later engine's raw queued controls and fused interpolation.
+    /// `new` keeps the existing Umineko policy.
+    pub fn new_gerokasu2(value: Value) -> Self {
+        let mut result = Self::new(value);
+        result.gerokasu2 = Some(Box::new(super::gerokasu2::GerTweener::new(value)));
+        result
+    }
+    /// Queue an already evaluated Gerokasu2 control. The command consumer must
+    /// decode the easing index and bit-16 ignore-wait word before calling this.
+    /// Higher flag bits are ignored, as in native helper a810.
+    ///
+    /// # Panics
+    /// Panics if this tweener was created with the default engine policy.
+    pub fn gerokasu2_control(
+        &mut self,
+        value: f32,
+        duration: Ticks,
+        flags: u32,
+        easing: super::Easing,
+        ignore_wait: bool,
+    ) {
+        self.gerokasu2
+            .as_mut()
+            .expect("Ger control requires Ger property policy")
+            .control(super::gerokasu2::Control {
+                value,
+                duration: duration.as_f32(),
+                flags: flags & 0xffff,
+                easing,
+                ignore_wait,
+            });
     }
 
     pub fn value(&self) -> Value {
+        if let Some(ger) = &self.gerokasu2 {
+            return ger.value();
+        }
         self.value
     }
 
     pub fn target_value(&self) -> Value {
+        if let Some(ger) = &self.gerokasu2 {
+            return ger.target_value();
+        }
         match self.state {
             State::Idle => self.value,
             State::Tweening {
@@ -56,6 +96,9 @@ impl Tweener {
     }
 
     pub fn is_idle(&self) -> bool {
+        if let Some(ger) = &self.gerokasu2 {
+            return !ger.running();
+        }
         matches!(self.state, State::Idle)
     }
 
@@ -65,6 +108,10 @@ impl Tweener {
     }
 
     pub fn enqueue_with_options(&mut self, value: Value, tween: Tween, options: TweenOptions) {
+        if let Some(ger) = &mut self.gerokasu2 {
+            ger.enqueue(value, tween, options);
+            return;
+        }
         match self.state {
             State::Idle if tween.duration <= Ticks::ZERO => self.value = value,
             State::Idle => {
@@ -80,11 +127,18 @@ impl Tweener {
     }
 
     pub fn is_waiting(&self) -> bool {
+        if let Some(ger) = &self.gerokasu2 {
+            return ger.waiting();
+        }
         matches!(self.state, State::Tweening { options, .. } if !options.ignore_wait)
     }
 
     /// Skip unprotected transitions, stopping at the first protected one.
     pub fn fast_forward_unless_prohibited(&mut self) {
+        if let Some(ger) = &mut self.gerokasu2 {
+            ger.forward_unless_prohibited();
+            return;
+        }
         while let State::Tweening {
             values, options, ..
         } = self.state
@@ -124,6 +178,10 @@ impl Tweener {
     }
 
     pub fn update(&mut self, delta_time: Ticks) {
+        if let Some(ger) = &mut self.gerokasu2 {
+            ger.advance(delta_time.as_f32());
+            return;
+        }
         // Native bba50 leaves the active tween and its queue unchanged when
         // elapsed time is nonpositive or unordered. Oscillators have separate rules.
         let ticks = delta_time.as_f32();
@@ -154,6 +212,10 @@ impl Tweener {
 
     /// Fast-forwards the tweener to the last enqueue value.
     pub fn fast_forward(&mut self) {
+        if let Some(ger) = &mut self.gerokasu2 {
+            ger.forward();
+            return;
+        }
         let last_queue_value = self.tween_queue.pop_back();
         self.tween_queue.clear();
 
@@ -171,6 +233,10 @@ impl Tweener {
 
     /// Fast-forwards the tweener to the specified value.
     pub fn fast_forward_to(&mut self, value: Value) {
+        if let Some(ger) = &mut self.gerokasu2 {
+            ger.reset(value);
+            return;
+        }
         self.tween_queue.clear();
         self.state = State::Idle;
         self.value = value;
@@ -178,7 +244,7 @@ impl Tweener {
 
     /// Enqueue a transition from the current value to the specified value, ignoring the previous queue (it's cleared).
     pub fn enqueue_now(&mut self, value: Value, tween: Tween) {
-        self.fast_forward_to(self.value);
+        self.fast_forward_to(self.value());
         self.enqueue(value, tween);
     }
 }

@@ -1,3 +1,4 @@
+pub mod gerokasu2;
 mod message_text_layouter;
 mod parser;
 mod text_layouter;

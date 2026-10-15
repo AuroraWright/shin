@@ -45,6 +45,66 @@ use std::io;
 
 use bytes::Buf;
 
+/// Decode a complete stream into an explicitly bounded output.
+///
+/// Unlike the legacy append API, malformed references, truncated tokens and
+/// decoded lengths that differ from `expected_size` return errors. This is used
+/// by the FNT6 reader without changing the legacy formats' error behavior.
+pub fn decompress_checked<const OFFSET_BITS: u32>(
+    input: &[u8],
+    expected_size: usize,
+) -> io::Result<Vec<u8>> {
+    if !(1..16).contains(&OFFSET_BITS) {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Invalid LZ offset bits",
+        ));
+    }
+    let invalid = |message| io::Error::new(io::ErrorKind::InvalidData, message);
+    let mut output = Vec::new();
+    output
+        .try_reserve_exact(expected_size)
+        .map_err(io::Error::other)?;
+    let mut position = 0;
+    while position < input.len() {
+        let map = input[position];
+        position += 1;
+        for bit in 0..8 {
+            if position == input.len() {
+                break;
+            }
+            if map & (1 << bit) == 0 {
+                if output.len() == expected_size {
+                    return Err(invalid("LZ output exceeds expected size"));
+                }
+                output.push(input[position]);
+                position += 1;
+            } else {
+                let token = input
+                    .get(position..position + 2)
+                    .ok_or_else(|| invalid("Truncated LZ reference"))?;
+                position += 2;
+                let word = u16::from_be_bytes(token.try_into().unwrap());
+                let distance = usize::from(word & ((1 << OFFSET_BITS) - 1)) + 1;
+                let length = usize::from(word >> OFFSET_BITS) + 3;
+                if distance > output.len() {
+                    return Err(invalid("LZ reference precedes output"));
+                }
+                if length > expected_size - output.len() {
+                    return Err(invalid("LZ output exceeds expected size"));
+                }
+                for _ in 0..length {
+                    output.push(output[output.len() - distance]);
+                }
+            }
+        }
+    }
+    if output.len() != expected_size {
+        return Err(invalid("LZ decoded size differs from expected size"));
+    }
+    Ok(output)
+}
+
 #[cfg(test)]
 #[path = "lz77_reference.rs"]
 pub(crate) mod reference;

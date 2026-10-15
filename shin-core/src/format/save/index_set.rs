@@ -20,6 +20,14 @@ impl IndexSet {
     pub fn new() -> Self {
         Self { bits: Vec::new() }
     }
+    /// Import physical words from a game-specific codec. Legacy read/write
+    /// retain their allocation-width checks; Ger readers permit any length.
+    pub fn from_raw_words(bits: Vec<u32>) -> Self {
+        Self { bits }
+    }
+    pub fn raw_words(&self) -> &[u32] {
+        &self.bits
+    }
 
     /// Preserve the physical word vector when importing the older save format.
     pub fn from_words(bits: Vec<WordType>) -> Self {

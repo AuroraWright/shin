@@ -6,9 +6,29 @@ use once_cell::sync::Lazy;
 
 pub mod string;
 mod string_array;
+pub mod utf8;
 
-pub use string::{SJisString, U16FixupString, U16String, U8FixupString, U8String, ZeroString};
+pub use string::{SJisString, U8FixupString, U8String, U16FixupString, U16String, ZeroString};
 pub use string_array::StringArray;
+
+/// File strings changed from engine Shift-JIS to UTF-8 in later games.
+/// Choose the encoding from the game dialect, independently of pixel flags.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TextEncoding {
+    #[default]
+    ShiftJis,
+    Utf8,
+}
+
+impl TextEncoding {
+    pub fn decode(self, bytes: &[u8]) -> io::Result<String> {
+        match self {
+            Self::ShiftJis => read_sjis_string(&mut io::Cursor::new(bytes), Some(bytes.len())),
+            Self::Utf8 => String::from_utf8(bytes.to_vec())
+                .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error)),
+        }
+    }
+}
 
 include!("decode_tables.rs");
 include!("encode_tables.rs");

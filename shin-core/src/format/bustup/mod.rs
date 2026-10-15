@@ -17,10 +17,12 @@ mod builder;
 pub mod default_builder;
 pub mod higurashi;
 #[cfg(test)]
+mod gerokasu2_tests;
+#[cfg(test)]
 mod reference;
 
 use anyhow::{Result, bail};
-use binrw::{BinRead, BinWrite};
+use binrw::{BinRead, BinWrite, NullString};
 use indexmap::IndexMap;
 use rayon::prelude::*;
 
@@ -29,7 +31,7 @@ pub use self::builder::{
     BustupSkeleton,
 };
 use crate::format::{
-    bustup::builder::BustupBlockPromisesOwner, picture::read_picture_block, text::ZeroString,
+    bustup::builder::BustupBlockPromisesOwner, picture::read_picture_block, text::TextEncoding,
 };
 
 #[derive(Copy, Clone, Hash, PartialEq, Eq, BinRead, BinWrite)]
@@ -164,7 +166,7 @@ struct BustupExpressionDesc {
     mouth_block_count: u16,
     eye_block_count: u16,
 
-    expression_name: ZeroString,
+    expression_name: NullString,
 
     #[brw(align_before = 0x4)]
     #[br(count = mouth_block_count)]
@@ -226,7 +228,7 @@ pub fn dump_expression_descriptors<R: std::io::Read + std::io::Seek>(
             descriptor.face2.block_id,
             descriptor.mouth_block_count,
             descriptor.mouth_block_count,
-            descriptor.expression_name.0
+            TextEncoding::ShiftJis.decode(&descriptor.expression_name.0)?
         ));
     }
 
@@ -285,14 +287,28 @@ fn with_offset_and_size<
 ///
 /// NOTE: this will spawn rayon tasks and block waiting for them. If you don't want blocking wrap it with [`shin_tasks::compute::spawn`].
 pub fn read_bustup<B: BustupBuilder>(source: &[u8], builder_args: B::Args) -> Result<B::Output> {
-    let result = read_bustup_impl::<B>(source, &builder_args);
+    read_bustup_with_encoding::<B>(source, builder_args, TextEncoding::ShiftJis)
+}
+
+/// Decode expression names in the selected game dialect. Pixel formats and
+/// block promises are shared; encoding is independent of image flags.
+pub fn read_bustup_with_encoding<B: BustupBuilder>(
+    source: &[u8],
+    builder_args: B::Args,
+    encoding: TextEncoding,
+) -> Result<B::Output> {
+    let result = read_bustup_impl::<B>(source, &builder_args, encoding);
     if let Err(error) = &result {
         B::on_error(&builder_args, error);
     }
     result
 }
 
-fn read_bustup_impl<B: BustupBuilder>(source: &[u8], builder_args: &B::Args) -> Result<B::Output> {
+fn read_bustup_impl<B: BustupBuilder>(
+    source: &[u8],
+    builder_args: &B::Args,
+    encoding: TextEncoding,
+) -> Result<B::Output> {
     let mut source = std::io::Cursor::new(source);
     let source = &mut source;
 
@@ -356,7 +372,7 @@ fn read_bustup_impl<B: BustupBuilder>(source: &[u8], builder_args: &B::Args) -> 
                 .collect();
 
             expressions.insert(
-                expression.expression_name.0.clone(),
+                encoding.decode(&expression.expression_name.0)?,
                 BustupExpressionSkeleton {
                     face1,
                     face2,

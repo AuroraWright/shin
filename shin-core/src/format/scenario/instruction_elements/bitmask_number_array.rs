@@ -70,6 +70,23 @@ pub struct BitmaskNumberArray<
     NumberSpec<T8>,
 );
 
+impl<T1, T2, T3, T4, T5, T6, T7, T8> BitmaskNumberArray<T1, T2, T3, T4, T5, T6, T7, T8> {
+    /// Preserve the numeric words for game dialects whose parameter domains
+    /// differ, without applying this array's legacy enum/unit conversions.
+    pub fn into_untyped(self) -> BitmaskNumberArray {
+        BitmaskNumberArray(
+            NumberSpec::new(self.0.into_untyped()),
+            NumberSpec::new(self.1.into_untyped()),
+            NumberSpec::new(self.2.into_untyped()),
+            NumberSpec::new(self.3.into_untyped()),
+            NumberSpec::new(self.4.into_untyped()),
+            NumberSpec::new(self.5.into_untyped()),
+            NumberSpec::new(self.6.into_untyped()),
+            NumberSpec::new(self.7.into_untyped()),
+        )
+    }
+}
+
 impl<T1, T2, T3, T4, T5, T6, T7, T8> BinRead
     for BitmaskNumberArray<T1, T2, T3, T4, T5, T6, T7, T8>
 {

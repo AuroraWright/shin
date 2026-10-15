@@ -1,6 +1,6 @@
 use crate::{
     layout::message_text_layouter::{
-        commands::Command, font::FontMetrics, MessageTextLayouterImpl, MessageTextLayouterMixin,
+        MessageTextLayouterImpl, MessageTextLayouterMixin, commands::Command, font::TextFontMetrics,
     },
     vm::command::types::MessageboxType,
 };
@@ -27,7 +27,7 @@ impl BacklogTextLayouterMixin {
     }
 }
 
-impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for BacklogTextLayouterMixin {
+impl<Font: TextFontMetrics> MessageTextLayouterMixin<Font> for BacklogTextLayouterMixin {
     fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char) {
         if self.in_name {
             if self.name_chars == 0 {
@@ -67,7 +67,7 @@ impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for BacklogTextLayouterMi
     }
 }
 
-impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for NoMixin {
+impl<Font: TextFontMetrics> MessageTextLayouterMixin<Font> for NoMixin {
     fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char) {
         layouter.on_char(codepoint);
     }
@@ -101,6 +101,7 @@ pub enum QuotationState {
 
 pub struct MessageLayerLayouterMixin {
     pub messagebox_type: MessageboxType,
+    hide_character_name: bool,
     pub line_index: u32,
     pub quotation_state: QuotationState,
     pub quotation_opener: char,
@@ -115,6 +116,7 @@ impl MessageLayerLayouterMixin {
     pub fn new(messagebox_type: MessageboxType) -> Self {
         Self {
             messagebox_type,
+            hide_character_name: false,
             line_index: 0,
             quotation_state: QuotationState::Uninit,
             quotation_opener: '\0',
@@ -122,13 +124,20 @@ impl MessageLayerLayouterMixin {
             quotation_indent: 0.0,
         }
     }
+
+    /// Later engines suppress the nameplate in additional window modes.
+    pub fn with_name_visibility(hide_character_name: bool) -> Self {
+        let mut mixin = Self::new(MessageboxType::Neutral);
+        mixin.hide_character_name = hide_character_name;
+        mixin
+    }
 }
 
-impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for MessageLayerLayouterMixin {
+impl<Font: TextFontMetrics> MessageTextLayouterMixin<Font> for MessageLayerLayouterMixin {
     fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char) {
         if self.line_index == 0 {
             // the first line if special: it's used for character names
-            if self.messagebox_type == MessageboxType::Novel {
+            if self.hide_character_name || self.messagebox_type == MessageboxType::Novel {
                 // don't render the character name in novel mode
                 return;
             }
@@ -143,7 +152,7 @@ impl<Font: FontMetrics> MessageTextLayouterMixin<Font> for MessageLayerLayouterM
 
     fn on_newline(&mut self, layouter: &mut MessageTextLayouterImpl<Font>) {
         if self.line_index == 0 {
-            if self.messagebox_type != MessageboxType::Novel {
+            if !self.hide_character_name && self.messagebox_type != MessageboxType::Novel {
                 let old_leave_space_for_rubi = layouter.params.always_leave_space_for_rubi;
                 layouter.params.always_leave_space_for_rubi = true;
                 layouter.font_scale = super::parse_font_scale(Self::CHARACTER_NAME_FONT_SIZE);

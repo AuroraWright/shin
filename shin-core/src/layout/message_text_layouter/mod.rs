@@ -5,7 +5,7 @@ pub mod mixins;
 
 use commands::{Char, Command, Section, Voice, VoiceSync, VoiceWait, Wait};
 use float_ord::FloatOrd;
-use font::FontMetrics;
+use font::TextFontMetrics;
 use glam::{Vec2, vec2};
 use itertools::Itertools;
 use shin_primitives::{char_set::CharSet, color::UnormColor};
@@ -135,6 +135,7 @@ fn parse_voice_volume(volume: i32) -> f32 {
 
 pub struct MessageTextLayouterImpl<Font> {
     color_encoding: ColorEncoding,
+    gerokasu2_rules: bool,
     pub commands: Vec<Command>,
     pub lines: Vec<LineInfo>,
     pub font_normal: Font,
@@ -202,6 +203,7 @@ impl<Font> MessageTextLayouterImpl<Font> {
     ) -> Self {
         Self {
             color_encoding,
+            gerokasu2_rules: false,
             commands: vec![],
             lines: vec![],
             font_normal,
@@ -244,7 +246,7 @@ impl<Font> MessageTextLayouterImpl<Font> {
     }
 }
 
-impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
+impl<Font: TextFontMetrics> MessageTextLayouterImpl<Font> {
     fn get_block_end_time(&self) -> f32 {
         self.current_time.max(self.block_max_time)
     }
@@ -302,8 +304,15 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
             ")>]―’”‥…─♪、。々〉》」』】〕〟ぁぃぅぇぉっゃゅょゎんゝゞァィゥェォッャュョヮヵヶ・ーヽヾ！）：；？｝～",
         );
         const SHOULD_NOT_END_A_LINE: CharSet<14> = CharSet::new("(<[‘“〈《「『【〔〝（｛");
+        const GEROKASU2_NO_LINE_START: CharSet<53> = CharSet::new(
+            ")>]’”♪、。々〉》」』】〕〟ぁぃぅぇぉっゃゅょゎんゝゞァィゥェォッャュョヮンヵヶ・ーヽヾ！）：；？｝～",
+        );
 
-        let mut cant_be_at_line_start = SHOULD_NOT_START_A_LINE.contains(codepoint);
+        let mut cant_be_at_line_start = if self.gerokasu2_rules {
+            GEROKASU2_NO_LINE_START.contains(codepoint)
+        } else {
+            SHOULD_NOT_START_A_LINE.contains(codepoint)
+        };
         let mut cant_be_at_line_end = SHOULD_NOT_END_A_LINE.contains(codepoint);
 
         let (font, font_type) = if self.is_bold {
@@ -314,12 +323,11 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
 
         // TODO: what to do when a nonexistent codepoint is encountered?
         // The original impl seems to ignore it and use uninitialized values (bad)
-        let glyph_info = font.get_glyph_info(codepoint).unwrap();
+        let advance = font.glyph_advance(codepoint).unwrap();
 
-        let scale = self.params.text_size / (font.get_ascent() + font.get_descent()) as f32
-            * self.font_scale;
+        let scale = self.params.text_size / font.line_height() * self.font_scale;
         let horizontal_scale = scale * self.params.base_font_horizontal_scale;
-        let width = horizontal_scale * glyph_info.advance_width as f32;
+        let width = horizontal_scale * advance;
         let height = self.params.text_size * self.font_scale;
 
         if self.rubi_open {
@@ -355,7 +363,11 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
         if self.is_inside_instant_text {
             cmd.fade = 0.0;
         } else {
-            self.current_time += cmd.width * self.draw_speed;
+            if self.gerokasu2_rules {
+                self.current_time = cmd.width.mul_add(self.draw_speed, self.current_time);
+            } else {
+                self.current_time += cmd.width * self.draw_speed;
+            }
 
             let punct_delay = if codepoint == '。' {
                 // U+3002 IDEOGRAPHIC FULL STOP
@@ -368,7 +380,14 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
             };
 
             // NB: IEEE floats are a bitch. Previously I have written (cmd.width + self.params.text_size * punct_delay) * self.draw_speed, but this is not the same thing
-            self.current_time += (self.params.text_size * punct_delay) * self.draw_speed;
+            if self.gerokasu2_rules {
+                if punct_delay != 0.0 {
+                    self.current_time = (self.params.text_size * punct_delay)
+                        .mul_add(self.draw_speed, self.current_time);
+                }
+            } else {
+                self.current_time += (self.params.text_size * punct_delay) * self.draw_speed;
+            }
         }
         self.position.x += cmd.width;
 
@@ -395,6 +414,28 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
                     continue;
                 }
                 new_char_indices.push(i);
+            }
+        }
+
+        if self.gerokasu2_rules {
+            // Native9219c..921f8 marks these four as non-final; repeated
+            // equal pairs also prohibit a break before the second glyph.
+            for (i, &index) in new_char_indices.iter().enumerate() {
+                let previous = i.checked_sub(1).map(|p| {
+                    let Command::Char(c) = &self.commands[new_char_indices[p]] else {
+                        unreachable!()
+                    };
+                    c.codepoint
+                });
+                let Command::Char(c) = &mut self.commands[index] else {
+                    unreachable!()
+                };
+                if matches!(c.codepoint, '―' | '‥' | '…' | '─') {
+                    c.cant_be_at_line_end = true;
+                    if previous == Some(c.codepoint) {
+                        c.cant_be_at_line_start = true;
+                    }
+                }
             }
         }
 
@@ -443,8 +484,14 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
                     // NB: the layout width can change during `finalize_up_to` calls due to mixins
                     // need to specifically take the current value
                     let layout_width = self.params.layout_width;
-                    if char.position.x >= layout_width
-                        || char.right_border() > layout_width + layout_width * 0.05
+                    let overflow = if self.gerokasu2_rules {
+                        let beyond = char.position.x - layout_width;
+                        beyond > 0.0 || beyond + char.width > char.width * 0.5
+                    } else {
+                        char.position.x >= layout_width
+                            || char.right_border() > layout_width + layout_width * 0.05
+                    };
+                    if overflow
                     // NB: x * 1.05 != x + x * 0.05, blame IEEE floats
                     {
                         // need to insert a soft line break
@@ -453,6 +500,16 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
                         } else {
                             index_idx
                         };
+                        if self.gerokasu2_rules && index_idx != 0 {
+                            let Command::Char(previous) =
+                                &self.commands[new_char_indices[index_idx - 1]]
+                            else {
+                                unreachable!()
+                            };
+                            if previous.cant_be_at_line_end && !char.cant_be_at_line_end {
+                                char_it = index_idx + 1;
+                            }
+                        }
                         break;
                     }
 
@@ -533,7 +590,12 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
     }
 
     pub fn on_wait(&mut self, delay: i32) {
-        self.current_time += delay as f32 * 0.001;
+        if self.gerokasu2_rules {
+            // Native92894 also fuses inline wait accumulation.
+            self.current_time = (delay as f32).mul_add(0.001, self.current_time);
+        } else {
+            self.current_time += delay as f32 * 0.001;
+        }
     }
 
     pub fn on_start_parallel(&mut self) {
@@ -711,15 +773,15 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
         let (font, font_type) = (&self.font_normal, CharFontType::Regular);
 
         // first, lay out rubi commands "normally"
-        let scale = self.params.rubi_size / (font.get_ascent() + font.get_descent()) as f32;
+        let scale = self.params.rubi_size / font.line_height();
         let horizontal_scale = scale * self.params.base_font_horizontal_scale;
         let mut rubi_pos_x = 0.0;
         let mut rubi_time = 0.0;
 
         for codepoint in self.rubi_text.chars() {
-            let glyph_info = font.get_glyph_info(codepoint).unwrap();
+            let advance = font.glyph_advance(codepoint).unwrap();
 
-            let width = horizontal_scale * glyph_info.advance_width as f32;
+            let width = horizontal_scale * advance;
 
             let cmd = Char {
                 time: self.rubi_start_time + rubi_time,
@@ -743,7 +805,13 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
             rubi_commands.push(cmd);
 
             if !self.is_inside_instant_text {
-                rubi_time += width * self.draw_speed;
+                // Later native935f0 fuses the same width/speed clock step
+                // used for ordinary glyphs. Preserve the older arithmetic.
+                if self.gerokasu2_rules {
+                    rubi_time = width.mul_add(self.draw_speed, rubi_time);
+                } else {
+                    rubi_time += width * self.draw_speed;
+                }
             }
             rubi_pos_x += width;
         }
@@ -865,18 +933,14 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
         let rubi_height = rubi_height;
         let char_count = char_count;
 
-        let ascent = self.font_normal.get_ascent() as f32;
-        let descent = self.font_normal.get_descent() as f32;
-
-        let ascent_scaled = if char_count == 0 {
-            // baseline calculation seems wrong if there are no characters
-            // weird...
+        let baseline_height = if char_count == 0 {
+            // Native empty lines use the base text size, without font scale.
             self.params.text_size
         } else {
             line_height
-        } / (ascent + descent)
-            * ascent;
-        let rubi_ascent_scaled = rubi_height / (ascent + descent) * ascent;
+        };
+        let ascent_scaled = self.font_normal.baseline(baseline_height);
+        let rubi_ascent_scaled = self.font_normal.baseline(rubi_height);
 
         if char_count > 0 {
             if max_width >= layout_width {
@@ -899,7 +963,12 @@ impl<Font: FontMetrics> MessageTextLayouterImpl<Font> {
                 line_width = layout_width;
             } else if !is_hard_break
                 && self.params.text_alignment == MessageTextLayout::Justify
-                && layout_width - max_width < layout_width * 0.05
+                && if self.gerokasu2_rules {
+                    layout_width - max_width
+                        <= self.params.text_size * self.params.base_font_horizontal_scale
+                } else {
+                    layout_width - max_width < layout_width * 0.05
+                }
             {
                 // eprintln!("Justifying line to fit: {} -> {}", max_width, layout_width);
                 // justify the non-last line characters if requested
@@ -1003,7 +1072,14 @@ pub struct MessageTextLayouterWithMixin<Font, M> {
     mixin: M,
 }
 
-impl<Font: FontMetrics, M: MessageTextLayouterMixin<Font>> MessageTextLayouterWithMixin<Font, M> {
+impl<Font: TextFontMetrics, M: MessageTextLayouterMixin<Font>>
+    MessageTextLayouterWithMixin<Font, M>
+{
+    pub(super) fn with_gerokasu2_rules(mut self) -> Self {
+        self.layouter.gerokasu2_rules = true;
+        self
+    }
+
     pub fn parse(mut self, message: &str) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
         MessageTextParser::new(message).parse_into(&mut self);
 
@@ -1019,7 +1095,7 @@ impl<Font: FontMetrics, M: MessageTextLayouterMixin<Font>> MessageTextLayouterWi
     }
 }
 
-impl<Font: FontMetrics, M: MessageTextLayouterMixin<Font>> TextLayouter
+impl<Font: TextFontMetrics, M: MessageTextLayouterMixin<Font>> TextLayouter
     for MessageTextLayouterWithMixin<Font, M>
 {
     fn on_message_start(&mut self) {
@@ -1168,6 +1244,19 @@ impl<Font> BacklogTextLayouter<Font> {
 }
 
 impl<Font> MessageLayerLayouter<Font> {
+    pub fn with_name_visibility(
+        font_normal: Font,
+        font_bold: Font,
+        hide_character_name: bool,
+        layout_params: LayoutParams,
+        defaults: MessageTextLayouterDefaults,
+    ) -> Self {
+        Self {
+            layouter: MessageTextLayouterImpl::new(font_normal, font_bold, layout_params, defaults),
+            mixin: mixins::MessageLayerLayouterMixin::with_name_visibility(hide_character_name),
+        }
+    }
+
     pub fn new(
         font_normal: Font,
         font_bold: Font,

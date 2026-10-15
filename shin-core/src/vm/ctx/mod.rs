@@ -100,15 +100,16 @@ impl VmCtx {
         self.prng_state
     }
 
-    /// Native Higurashi checkpoints rewind the instruction's PRNG advance,
-    /// while retaining all registers and both complete active stacks.
+    /// Native replay checkpoints rewind the yielded instruction's PRNG advance,
+    /// retaining all registers and both complete active stacks. Kept within the
+    /// VM module: callers must validate the command boundary before using it.
     pub(super) fn clone_with_prng(&self, state: u32) -> Self {
         let mut copy = self.clone();
         copy.prng_state = state;
         copy
     }
 
-    /// Native older-engine stack capacity checks, used before mutating a frame.
+    /// Native game-specific stack capacity checks, used before mutating a frame.
     pub(super) fn stack_sizes(&self) -> (usize, usize, usize) {
         (
             self.call_stack.len(),

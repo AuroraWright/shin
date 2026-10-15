@@ -26,7 +26,7 @@ pub enum Easing {
 const HALF_PI: f32 = PI / 2.0;
 
 impl Easing {
-    fn apply(&self, x: f32) -> f32 {
+    pub(super) fn apply(&self, x: f32) -> f32 {
         match *self {
             Easing::Linear => x,
             Easing::SineIn => 1.0 - (x * HALF_PI).cos(),

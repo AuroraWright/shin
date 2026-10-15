@@ -21,8 +21,9 @@
 
 pub mod breakpoint;
 pub mod command;
-pub mod higurashi;
 mod ctx;
+pub mod gerokasu2;
+pub mod higurashi;
 
 use anyhow::Result;
 pub use ctx::*;

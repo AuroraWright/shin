@@ -2,6 +2,7 @@
 //!
 //! See also [crate::vm] for the VM that runs the scenario.
 
+pub mod gerokasu2;
 pub mod higurashi;
 pub mod info;
 pub mod instruction_elements;

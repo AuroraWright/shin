@@ -31,6 +31,7 @@ bytes = { workspace = true }
 glam = { workspace = true }
 float-ord = "0.3.2"
 image = { workspace = true, default-features = false }
+flate2 = { version = "1.0.35", default-features = false, features = ["rust_backend"] }
 itertools = { workspace = true }
 smallvec = { workspace = true }
 tracing = { workspace = true }
