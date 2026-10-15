@@ -1,6 +1,8 @@
 mod dissolve;
 mod effect_passes;
 mod effect_phases;
+#[cfg(test)]
+pub(crate) use effect_phases::EffectPhases;
 
 use glam::Vec4;
 use shin_core::{
@@ -52,6 +54,9 @@ pub enum DrawablePropertyPolicy {
 }
 
 pub trait NewDrawableLayer: NewDrawableLayerNeedsSeparatePass {
+    fn stencil_bump(&self) -> u8 {
+        1
+    }
     fn property_policy(&self) -> DrawablePropertyPolicy {
         DrawablePropertyPolicy::Full
     }
@@ -214,14 +219,18 @@ impl NewDrawableLayerState {
     }
 
     pub fn update(&mut self, context: &AdvUpdateContext, props: &LayerProperties) {
-        self.effect_phases.advance(
-            context.delta_ticks.as_f32(),
-            [
-                props.get_value(LayerProperty::RasterHorizontalTPeriod),
-                props.get_value(LayerProperty::RasterVerticalTPeriod),
-                props.get_value(LayerProperty::RippleTPeriod),
-            ],
-        );
+        let periods = [
+            props.get_value(LayerProperty::RasterHorizontalTPeriod),
+            props.get_value(LayerProperty::RasterVerticalTPeriod),
+            props.get_value(LayerProperty::RippleTPeriod),
+        ];
+        if props.policy() == super::PropertyPolicy::Gerokasu2 {
+            self.effect_phases
+                .advance_gerokasu2(context.delta_ticks.as_f32(), periods);
+        } else {
+            self.effect_phases
+                .advance(context.delta_ticks.as_f32(), periods);
+        }
     }
 
     pub fn is_rendered_opaquely<T: NewDrawableLayerNeedsSeparatePass>(
@@ -594,6 +603,16 @@ impl<T: NewDrawableLayer> NewDrawableLayerWrapper<T> {
         }
     }
 
+    /// Copy handlers that return the same native drawable retain clocks,
+    /// property pointer replacement and prepared render state together.
+    pub(crate) fn from_retained_inner_constructor(make_inner: impl FnOnce() -> T) -> Self {
+        let mut layer = Self::from_inner_constructor(make_inner);
+        layer.update_tracker = crate::layer::update_tracker::LayerUpdateTracker::retained();
+        layer.state = layer.state.retain();
+        layer.retain_owner = true;
+        layer
+    }
+
     pub(crate) fn from_plain_layer_constructor(make_inner: impl FnOnce() -> T) -> Self {
         // Native InteractiveLayer constructors call75940 (DrawableLayer), not
         // NewDrawableLayer75e50. The rendering adapter needs scratch state,
@@ -644,6 +663,9 @@ impl<T: NewDrawableLayer + AdvUpdatable> AdvUpdatable for NewDrawableLayerWrappe
 impl<T: NewDrawableLayer + AdvUpdatable + NewDrawableLayerFastForward> Layer
     for NewDrawableLayerWrapper<T>
 {
+    fn get_stencil_bump(&self) -> u8 {
+        self.inner_layer.stencil_bump()
+    }
     fn fast_forward(&mut self) {
         if self.inner_layer.property_policy() == DrawablePropertyPolicy::Full
             && self.inner_layer.fast_forward_properties()

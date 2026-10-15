@@ -478,9 +478,7 @@ impl SePlayer {
     }
 
     #[cfg(test)]
-    pub(crate) fn reference_source(
-        &self,
-        slot: usize) -> (Option<SeId>, u32, u64) {
+    pub(crate) fn reference_source(&self, slot: usize) -> (Option<SeId>, u32, u64) {
         (
             self.effect_ids[slot],
             self.se_slots[slot]
@@ -510,6 +508,12 @@ impl SePlayer {
             pending.tweens.volume.enqueue_now(volume.0, tween);
             return;
         }
+        if slot < 0 {
+            if let Some(handle) = self.one_shots.get_mut(&slot) {
+                handle.set_volume(volume, tween).unwrap();
+            }
+            return;
+        }
         let slot = slot as usize;
 
         if let Some(handle) = self.se_slots[slot].as_mut() {
@@ -527,6 +531,12 @@ impl SePlayer {
             pending.tweens.panning.enqueue(pan.0, tween);
             return;
         }
+        if slot < 0 {
+            if let Some(handle) = self.one_shots.get_mut(&slot) {
+                handle.enqueue_panning(pan, tween).unwrap();
+            }
+            return;
+        }
         let slot = slot as usize;
 
         if let Some(handle) = self.se_slots[slot].as_mut() {
@@ -541,6 +551,14 @@ impl SePlayer {
 
     pub fn stop(&mut self, slot: i32, fade_out: Tween) {
         let was_pending = self.pending.remove(&slot).is_some();
+        if slot < 0 {
+            stop_effect(
+                &mut self.one_shots.remove(&slot),
+                &mut self.stopping,
+                fade_out,
+            );
+            return;
+        }
         let slot = slot as usize;
 
         self.repeating[slot] = false;
@@ -771,8 +789,7 @@ fn se_wait_status(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kira::{
-        AudioManager as KiraManager, AudioManagerSettings};
+    use kira::{AudioManager as KiraManager, AudioManagerSettings};
     use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use shin_core::format::{
         audio::{AudioBuffer, AudioFrameSource},

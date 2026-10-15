@@ -5,6 +5,7 @@ pub(crate) use higurashi::window_app::{
 };
 #[cfg(feature = "higurashi-window-probe")]
 pub(crate) use higurashi::window_probe::run as run_higurashi_window_probe;
+pub mod gerokasu2;
 mod scene_host;
 mod shutdown;
 mod touch_effect;

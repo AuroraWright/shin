@@ -17,7 +17,7 @@ use shin_render::{
 
 use crate::{
     layer::{
-        DrawableLayer, Layer, LayerGroup, NewDrawableLayer,
+        DrawableLayer, Layer, LayerGroup, NewDrawableLayer, UserLayer,
         new_drawable_layer::{NewDrawableLayerNeedsSeparatePass, NewDrawableLayerState},
         properties::LayerProperties,
         render_params::{DrawableClipMode, DrawableClipParams, DrawableParams, TransformParams},
@@ -32,9 +32,9 @@ struct LayerRenderItem {
     pub stencil_ref_relative: u8,
 }
 
-pub struct PageLayer {
+pub struct PageLayer<T = UserLayer> {
     update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
-    planes: Vec<LayerGroup>,
+    planes: Vec<LayerGroup<T>>,
 
     stencil_bump: u8,
     needs_force_blending: bool,
@@ -44,7 +44,7 @@ pub struct PageLayer {
     props: LayerProperties,
 }
 
-impl RenderClone for PageLayer {
+impl<T: DrawableLayer + RenderClone> RenderClone for PageLayer<T> {
     fn render_clone(&self, context: &mut RenderCloneCtx) -> Self {
         // Native9ed38 copies the drawable base before any plane groups.
         let props = self.props.clone();
@@ -63,7 +63,7 @@ impl RenderClone for PageLayer {
     }
 }
 
-impl PageLayer {
+impl<T> PageLayer<T> {
     #[cfg(test)]
     pub(crate) fn reference_prepared_plane_state(&self) -> (usize, u8) {
         (self.layers_to_render.len(), self.stencil_bump)
@@ -77,7 +77,13 @@ impl PageLayer {
         self.new_drawable_state.reference_effect_phases()
     }
 
-    pub fn new(plane_count: usize) -> Self {
+    pub fn new_typed(plane_count: usize) -> Self {
+        Self::with_property_policy(plane_count, super::properties::PropertyPolicy::Legacy)
+    }
+    pub fn with_property_policy(
+        plane_count: usize,
+        policy: super::properties::PropertyPolicy,
+    ) -> Self {
         // can't support more, the `PlaneId` type is specialized to 4 planes
         // ideally I would like to only support 4 planes, but `BustupMode` at least uses 1
         assert!(plane_count <= PLANES_COUNT);
@@ -88,14 +94,36 @@ impl PageLayer {
         Self {
             update_tracker: Default::default(),
             planes: (0..plane_count)
-                .map(|i| LayerGroup::new(Some(format!("PageLayer/Plane{}", i))))
+                .map(|i| {
+                    LayerGroup::with_property_policy(Some(format!("PageLayer/Plane{}", i)), policy)
+                })
                 .collect(),
             stencil_bump: 1,
             needs_force_blending: false,
             layers_to_render: vec![],
             new_drawable_state,
-            props: LayerProperties::new(),
+            props: LayerProperties::with_policy(policy),
         }
+    }
+
+    pub fn get_plane(&self, index: PlaneId) -> &LayerGroup<T> {
+        &self.planes[index.raw() as usize]
+    }
+
+    pub fn get_plane_mut(&mut self, index: PlaneId) -> &mut LayerGroup<T> {
+        &mut self.planes[index.raw() as usize]
+    }
+    pub(crate) fn planes(&self) -> &[LayerGroup<T>] {
+        &self.planes
+    }
+    pub(crate) fn planes_mut(&mut self) -> &mut [LayerGroup<T>] {
+        &mut self.planes
+    }
+}
+
+impl PageLayer {
+    pub fn new(plane_count: usize) -> Self {
+        Self::new_typed(plane_count)
     }
 
     #[cfg(test)]
@@ -118,14 +146,6 @@ impl PageLayer {
             }
         }
     }
-
-    pub fn get_plane(&self, index: PlaneId) -> &LayerGroup {
-        &self.planes[index.raw() as usize]
-    }
-
-    pub fn get_plane_mut(&mut self, index: PlaneId) -> &mut LayerGroup {
-        &mut self.planes[index.raw() as usize]
-    }
 }
 struct PageLayerNewDrawableSeparatePassDelegate;
 
@@ -137,18 +157,20 @@ impl NewDrawableLayerNeedsSeparatePass for PageLayerNewDrawableSeparatePassDeleg
     }
 }
 
-struct PageLayerNewDrawableDelegate<'a> {
-    planes: &'a [LayerGroup],
+struct PageLayerNewDrawableDelegate<'a, T> {
+    planes: &'a [LayerGroup<T>],
     layers_to_render: Vec<LayerRenderItem>,
 }
 
-impl NewDrawableLayerNeedsSeparatePass for PageLayerNewDrawableDelegate<'_> {
+impl<T> NewDrawableLayerNeedsSeparatePass for PageLayerNewDrawableDelegate<'_, T> {
     fn needs_separate_pass(&self, properties: &LayerProperties) -> bool {
         PageLayerNewDrawableSeparatePassDelegate.needs_separate_pass(properties)
     }
 }
 
-impl NewDrawableLayer for PageLayerNewDrawableDelegate<'_> {
+impl<T: DrawableLayer + Send + Sync + 'static> NewDrawableLayer
+    for PageLayerNewDrawableDelegate<'_, T>
+{
     #[tracing::instrument(skip_all)]
     fn render_drawable_indirect(
         &mut self,
@@ -203,7 +225,7 @@ impl NewDrawableLayer for PageLayerNewDrawableDelegate<'_> {
     }
 }
 
-impl AdvUpdatable for PageLayer {
+impl<T: AdvUpdatable> AdvUpdatable for PageLayer<T> {
     fn update(&mut self, context: &AdvUpdateContext) {
         if !self.update_tracker.update(context.frame_id) {
             return;
@@ -217,7 +239,7 @@ impl AdvUpdatable for PageLayer {
     }
 }
 
-impl Layer for PageLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> Layer for PageLayer<T> {
     fn fast_forward(&mut self) {
         self.props.fast_forward();
 
@@ -387,7 +409,7 @@ impl Layer for PageLayer {
     }
 }
 
-impl DrawableLayer for PageLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> DrawableLayer for PageLayer<T> {
     fn properties(&self) -> &LayerProperties {
         &self.props
     }

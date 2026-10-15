@@ -133,6 +133,7 @@ pub struct BustupLayerImpl {
     mouth_state: u32,
     eyes_state: u32,
     blink: super::bustup_blink::BustupBlink,
+    ordered_origin: bool,
 }
 
 impl BustupLayerImpl {
@@ -184,11 +185,53 @@ impl BustupLayerImpl {
             label: bustup_name.unwrap_or_else(|| "unnamed".to_string()),
             mouth_state: 0,
             eyes_state: 0,
+            ordered_origin: false,
         }
     }
 
     pub fn character_id(&self) -> i32 {
         self.bustup.character_id()
+    }
+
+    pub(crate) fn new_gerokasu2(bustup: Arc<Bustup>, name: String, seed: u32) -> Self {
+        Self {
+            blink: super::bustup_blink::BustupBlink::new_gerokasu2(bustup.eye_blocks.len(), seed),
+            bustup: BustupResource::Umineko(bustup),
+            label: name,
+            mouth_state: 0,
+            eyes_state: 0,
+            ordered_origin: true,
+        }
+    }
+
+    /// MSGFACE installs neutral property27, so its animation permission is
+    /// independent of the root's animation flag (native3b0a0/3b16c).
+    pub(crate) fn update_portrait(&mut self, ticks: f32, level: Option<u8>) {
+        let count = self.bustup.mouth_count();
+        self.mouth_state = if count == 0 {
+            0
+        } else {
+            (usize::from(level.unwrap_or(0)) * count / 3).min(count - 1) as u32
+        };
+        self.eyes_state = self.blink.update(ticks, true);
+    }
+
+    #[cfg(test)]
+    pub(crate) fn portrait_animation_state(&self) -> (u32, u32) {
+        (self.mouth_state, self.eyes_state)
+    }
+
+    pub(crate) fn render_gerokasu2(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        params: PictureBlockParams,
+        transform: Mat4,
+    ) {
+        let (origin_x, origin_y) = self.bustup.origin();
+        let translation = Mat4::from_translation(vec3(-origin_x as f32, -origin_y as f32, 0.0));
+        let transform = crate::layer::render_params::multiply_transforms(transform, translation);
+        self.render_blocks_with_asset_transform(pass, builder, params, transform);
     }
 
     #[tracing::instrument(skip_all)]
@@ -199,6 +242,10 @@ impl BustupLayerImpl {
         params: PictureBlockParams,
         transform: Mat4,
     ) {
+        if self.ordered_origin {
+            self.render_gerokasu2(pass, builder, params, transform);
+            return;
+        }
         let (origin_x, origin_y) = self.bustup.origin();
         let translation = Mat4::from_translation(vec3(-origin_x as f32, -origin_y as f32, 0.0));
         // NOTE: this scale is a ¿device-specific? scale (which is 1.0 on switch)
@@ -354,6 +401,11 @@ impl BustupLayer {
 
     pub fn new(picture: Arc<Bustup>, picture_name: Option<String>) -> Self {
         Self::from_inner_constructor(|| BustupLayerImpl::new(picture, picture_name))
+    }
+    pub(crate) fn new_gerokasu2(bustup: Arc<Bustup>, name: String) -> Self {
+        Self::from_inner_constructor(|| {
+            BustupLayerImpl::new_gerokasu2(bustup, name, crate::engine_random::next_seed())
+        })
     }
 }
 

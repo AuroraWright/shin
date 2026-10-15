@@ -2,11 +2,12 @@
 use shin_render::shaders::types::RenderClone;
 
 #[derive(Clone, Debug, RenderClone)]
-pub(super) struct BustupBlink {
+pub(crate) struct BustupBlink {
     seed: u32,
     elapsed: f32,
     wait: f32,
     sequence: Vec<u32>,
+    fused_wait: bool,
 }
 
 impl BustupBlink {
@@ -20,6 +21,14 @@ impl BustupBlink {
         )
     }
     pub fn new(count: usize, seed: u32) -> Self {
+        Self::with_policy(count, seed, false)
+    }
+
+    pub(crate) fn new_gerokasu2(count: usize, seed: u32) -> Self {
+        Self::with_policy(count, seed, true)
+    }
+
+    fn with_policy(count: usize, seed: u32, fused_wait: bool) -> Self {
         // Native constructor builds0..N-1 followed byN-2..0.
         let sequence = (0..count)
             .chain((0..count.saturating_sub(1)).rev())
@@ -30,6 +39,7 @@ impl BustupBlink {
             elapsed: 0.0,
             wait: 0.0,
             sequence,
+            fused_wait,
         };
         blink.next_wait();
         blink
@@ -45,7 +55,13 @@ impl BustupBlink {
             value as u32
         };
         let unit = (self.seed - 1) as f32 * f32::from_bits(0x30000000);
-        self.wait = (1.0 - unit * unit) * 240.0 + 80.0;
+        let complement = 1.0 - unit * unit;
+        self.wait = if self.fused_wait {
+            // Gerokasu2 constructor3a304 and updater3b29c use FMADD.
+            complement.mul_add(240.0, 80.0)
+        } else {
+            complement * 240.0 + 80.0
+        };
     }
 
     pub fn update(&mut self, ticks: f32, enabled: bool) -> u32 {

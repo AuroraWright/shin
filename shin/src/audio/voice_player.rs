@@ -35,6 +35,7 @@ pub struct VoicePlayer {
     character_panning_enabled: bool,
     paused: bool,
     character_voice_mask: u32,
+    fused_stop_fade: bool,
 }
 
 struct PlayingVoice {
@@ -47,14 +48,14 @@ struct PlayingVoice {
 }
 
 impl PlayingVoice {
-    fn update_stop(&mut self, ticks: Ticks) -> bool {
+    fn update_stop(&mut self, ticks: Ticks, fused: bool) -> bool {
         if !self.stopping {
             return false;
         }
         // Native0x11a300/0x11a31c subtract0.2 per tick from the
         // request volume,then multiply by the saved category gain.
         let previous = self.volume;
-        self.volume = (self.volume - ticks.as_f32() * f32::from_bits(0x3e4ccccd)).max(0.0);
+        self.volume = voice_stop_volume(self.volume, ticks.as_f32(), fused);
         if self.volume != previous {
             if let Err(error) = self
                 .handle
@@ -63,7 +64,11 @@ impl PlayingVoice {
                 warn!(%error, "Failed to fade voice");
             }
         }
-        if self.volume == 0.0 {
+        if if fused {
+            !(self.volume > 0.0)
+        } else {
+            self.volume == 0.0
+        } {
             if let Err(error) = self.handle.stop(Tween::IMMEDIATE) {
                 warn!(%error,"Failed to stop faded voice");
             }
@@ -164,6 +169,7 @@ impl VoicePlayer {
             character_voice_mask: u32::MAX,
             character_panning_enabled: true,
             paused: false,
+            fused_stop_fade: false,
         }
     }
 
@@ -186,6 +192,10 @@ impl VoicePlayer {
 
     pub fn set_character_panning_enabled(&mut self, enabled: bool) {
         self.character_panning_enabled = enabled;
+    }
+
+    pub(crate) fn set_fused_stop_fade(&mut self, enabled: bool) {
+        self.fused_stop_fade = enabled;
     }
 
     pub fn pan_for_character(&mut self, id: i32, pan: f32) {
@@ -285,7 +295,7 @@ impl VoicePlayer {
 
     pub fn update(&mut self, ticks: Ticks) {
         self.voices.retain_mut(|voice| {
-            if voice.update_stop(ticks) {
+            if voice.update_stop(ticks, self.fused_stop_fade) {
                 return false;
             }
             voice
@@ -312,18 +322,18 @@ impl VoicePlayer {
                     handle: self.audio_manager.play_on_track(
                         &mut self.track,
                         AudioData {
-                        source,
-                        settings: AudioSettings {
-                            paused: self.paused,
-                            playback_rate: 1.0,
+                            source,
+                            settings: AudioSettings {
+                                paused: self.paused,
+                                playback_rate: 1.0,
 
                                 fade_in: Tween::IMMEDIATE,
-                            loop_start: None,
-                            loop_count: 0,
-                            volume: pending.volume,
-                            pan: Pan::default(),
+                                loop_start: None,
+                                loop_count: 0,
+                                volume: pending.volume,
+                                pan: Pan::default(),
+                            },
                         },
-                    },
                     ),
                 }),
                 Err(error) => warn!(%error, "Failed to decode voice"),
@@ -407,11 +417,13 @@ impl VoicePlayer {
             })
     }
 
-    /// Older Higurashi2b28c converts samples with double precision, thenec318
-    /// adds the request origin in microseconds. Keep Umineko's millis API.
+    /// Gerokasu2 native2ad34/c6dc8/e59f0 (also used by older Higurashi).
+    /// Keep the native sample fraction and double-precision rounding while
+    /// retaining Umineko's existing millisecond API and behavior.
     pub(crate) fn position_micros(&self) -> u64 {
+        let origin = u64::from(self.segment_start_millis) * 1000;
         if self.pending.is_some() {
-            return u64::from(self.segment_start_millis) * 1000;
+            return origin;
         }
         self.voices
             .iter()
@@ -423,17 +435,25 @@ impl VoicePlayer {
                         .contains(AudioWaitStatus::PLAYING)
             })
             .map_or(0, |voice| {
-                u64::from(self.segment_start_millis) * 1000
-                    + native_voice_clock(
-                        u64::from(voice.handle.position_samples()),
-                        voice.handle.sample_rate(),
-                    )
+                origin.wrapping_add(native_voice_clock(
+                    u64::from(voice.handle.position_samples()),
+                    voice.handle.sample_rate(),
+                ))
             })
     }
 }
 
 pub(crate) fn native_voice_clock(samples: u64, sample_rate: u32) -> u64 {
     (samples as f64 / (f64::from(sample_rate) * 0.000001)) as u64
+}
+
+pub(crate) fn voice_stop_volume(volume: f32, ticks: f32, fused: bool) -> f32 {
+    if fused {
+        let volume = ticks.mul_add(f32::from_bits(0xbe4ccccd), volume);
+        if volume < 0.0 { 0.0 } else { volume }
+    } else {
+        (volume - ticks * f32::from_bits(0x3e4ccccd)).max(0.0)
+    }
 }
 
 /// Native0xea400 uses the first case-insensitive wildcard match;0xea690
@@ -824,8 +844,7 @@ mod tests {
 
     #[test]
     fn matched_voice_panning_changes_pcm_and_setting_centers_only_matches() {
-        use kira::{
-            AudioManager as KiraManager, AudioManagerSettings};
+        use kira::{AudioManager as KiraManager, AudioManagerSettings};
         use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
@@ -929,8 +948,7 @@ mod tests {
 
     #[test]
     fn stopping_voice_fades_absolute_request_volume_while_new_voice_remains_active() {
-        use kira::{
-            AudioManager as KiraManager, AudioManagerSettings};
+        use kira::{AudioManager as KiraManager, AudioManagerSettings};
         use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
@@ -977,9 +995,12 @@ mod tests {
             (0.5, 0.3, false),
             (2.0, 0.0, true),
         ] {
-            assert_eq!(voices[0].update_stop(Ticks::from_f32(ticks)), finished);
+            assert_eq!(
+                voices[0].update_stop(Ticks::from_f32(ticks), false),
+                finished
+            );
             assert!((voices[0].volume - expected).abs() < 0.000001);
-            assert!(!voices[1].update_stop(Ticks::from_f32(ticks)));
+            assert!(!voices[1].update_stop(Ticks::from_f32(ticks), false));
             assert_eq!(voices[1].volume, 0.5);
             let backend = manager.backend_mut();
             let mut frame = kira::Frame::ZERO;
@@ -1031,8 +1052,7 @@ mod tests {
 
     #[test]
     fn lipsync_uses_first_matching_playing_voice_and_integer_window_positions() {
-        use kira::{
-            AudioManager as KiraManager, AudioManagerSettings};
+        use kira::{AudioManager as KiraManager, AudioManagerSettings};
         use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         let mut manager = KiraManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
@@ -1204,8 +1224,7 @@ mod tests {
     #[test]
     #[ignore = "requires the supplied Umineko ROM (SHIN_REFERENCE_ROM)"]
     fn reference_voice_segments_decode_and_finish_playback() {
-        use kira::{
-            AudioManager as KiraManager, AudioManagerSettings};
+        use kira::{AudioManager as KiraManager, AudioManagerSettings};
         use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
         use shin_core::{
             format::{

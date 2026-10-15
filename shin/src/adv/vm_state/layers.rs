@@ -295,6 +295,39 @@ impl LayerbankAllocator {
 
         self.range_cache.invalidate();
     }
+
+    /// Allocator words in the reviewed native layout, used by CPU comparisons
+    /// for games that share this allocator. Includes inactive cache entries.
+    #[cfg(test)]
+    pub(crate) fn reference_bytes(&self) -> [u8; 0x5c4] {
+        let mut bytes = [0; 0x5c4];
+        for (index, bank) in self.free_layerbank_ids.iter().enumerate() {
+            bytes[index] = bank.raw();
+        }
+        bytes[0x30..0x34].copy_from_slice(&self.allocated_layerbanks.to_le_bytes());
+        for (full_id, bank) in &self.layer_id_to_layerbank {
+            bytes[0x34 + full_id.into_usize()] = bank.raw();
+        }
+        for (bank, full_id) in &self.layerbank_id_to_layer_id {
+            let offset = 0x434 + usize::from(bank.raw()) * 4;
+            bytes[offset..offset + 2].copy_from_slice(&u16::from(full_id.plane.raw()).to_le_bytes());
+            bytes[offset + 2..offset + 4].copy_from_slice(&full_id.layer.raw().to_le_bytes());
+        }
+        for (offset, value) in [
+            (0x4f4, u32::from(self.range_cache.plane.raw())),
+            (0x4f8, u32::from(self.range_cache.from.raw())),
+            (0x4fc, u32::from(self.range_cache.to.raw())),
+            (0x5c0, self.range_cache.affected_layerbank_count),
+        ] {
+            bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+        }
+        for (index, (layer, bank)) in self.range_cache.affected_layerbanks.iter().enumerate() {
+            let offset = 0x500 + index * 4;
+            bytes[offset..offset + 2].copy_from_slice(&layer.raw().to_le_bytes());
+            bytes[offset + 2] = bank.raw();
+        }
+        bytes
+    }
 }
 
 #[derive(Debug, Copy, Clone)]

@@ -1,4 +1,4 @@
-use super::sakura_particles::SakuraParticles;
+use super::sakura_particles::{SakuraArithmetic, SakuraParticles};
 use crate::{
     asset::{effects::EffectsAtlasBorrow, system::AssetServer},
     layer::{
@@ -41,16 +41,27 @@ pub type SakuraLayer = NewDrawableLayerWrapper<SakuraLayerImpl>;
 pub(crate) struct PreparedSakuraLayer {
     textures: EffectsAtlasBorrow,
     mode: i32,
+    arithmetic: SakuraArithmetic,
 }
 
 impl PreparedSakuraLayer {
     pub(crate) fn construct(&self) -> SakuraLayer {
-        let layer = SakuraLayer::from_inner_constructor(|| SakuraLayerImpl {
+        let mut layer = SakuraLayer::from_inner_constructor(|| SakuraLayerImpl {
             textures: self.textures.clone(),
             particles: Mutex::new(
-                SakuraParticles::new(self.mode, crate::engine_random::next_seed()).unwrap(),
+                SakuraParticles::new_with_arithmetic(
+                    self.mode,
+                    crate::engine_random::next_seed(),
+                    self.arithmetic,
+                )
+                .unwrap(),
             ),
         });
+        if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+            layer.set_properties(crate::layer::LayerProperties::with_policy(
+                crate::layer::PropertyPolicy::Gerokasu2,
+            ));
+        }
         // Native25550 calls the derived update500 times during warm-up. Its
         // first base effect update78820 materializes the property owner and
         // consumes seven RNG draws. Default effect periods are zero, so the
@@ -79,7 +90,22 @@ impl SakuraLayer {
             return Ok(None);
         }
         let textures = server.effects_atlas_for("Sakura").await?;
-        Ok(Some(PreparedSakuraLayer { textures, mode }))
+        Ok(Some(PreparedSakuraLayer {
+            textures,
+            mode,
+            arithmetic: SakuraArithmetic::Legacy,
+        }))
+    }
+    pub(crate) async fn prepare_checked_gerokasu2(
+        server: &AssetServer,
+        mode: i32,
+    ) -> anyhow::Result<Option<PreparedSakuraLayer>> {
+        Ok(Self::prepare_checked(server, mode)
+            .await?
+            .map(|mut prepared| {
+                prepared.arithmetic = SakuraArithmetic::Gerokasu2;
+                prepared
+            }))
     }
     // Conditional owner/geometry references construct the native factory even
     // when supplied art lacks Sakura. Production preparation validates it above.
@@ -101,7 +127,11 @@ impl SakuraLayer {
             .effects_atlas()
             .await
             .expect("Failed to load animation atlas");
-        Some(PreparedSakuraLayer { textures, mode })
+        Some(PreparedSakuraLayer {
+            textures,
+            mode,
+            arithmetic: SakuraArithmetic::Legacy,
+        })
     }
 }
 impl AdvUpdatable for SakuraLayerImpl {

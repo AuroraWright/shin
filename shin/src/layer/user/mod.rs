@@ -22,10 +22,7 @@ use crate::{
         picture::Picture,
         system::AssetServer,
     },
-    layer::{
-        DrawableLayer, Layer, LayerProperties, render_params::TransformParams,
-        user::movie_layer::MovieArgs,
-    },
+    layer::{DrawableLayer, Layer, LayerProperties, render_params::TransformParams},
     render::PreRenderContext,
     update::{AdvUpdatable, AdvUpdateContext},
 };
@@ -40,6 +37,7 @@ pub mod higurashi;
 pub mod last_layer;
 #[expect(unused)]
 mod movie_layer;
+pub(crate) use movie_layer::MovieArgs;
 #[cfg(test)]
 mod movie_owner_tests;
 #[cfg(test)]
@@ -60,9 +58,11 @@ mod murderer_parent_tests;
 pub(crate) use murderer_parent_tests::reference_parent_properties_and_capture;
 mod null_layer;
 mod picture_layer;
+#[cfg(test)]
+pub(crate) use bustup_blink::BustupBlink;
+pub(crate) use bustup_layer::BustupLayerImpl;
 pub(crate) use picture_layer::{PictureBlockParams, PictureBlockPassKind, render_block};
 mod effect_layer;
-#[cfg(test)]
 pub(crate) use effect_layer::EffectLayer;
 mod focus_line_layer;
 pub(crate) mod focus_line_model;
@@ -83,6 +83,13 @@ mod rain_owner_tests;
 pub(crate) mod rain_particles;
 mod sakura_layer;
 pub(crate) mod sakura_particles;
+pub(crate) use focus_line_layer::FocusLineLayer;
+pub(crate) use focus_line_model::Ray as FocusRay;
+pub(crate) use rain_layer::RainLayer;
+pub(crate) use rain_particles::Particle as RainParticle;
+pub(crate) use sakura_layer::{PreparedSakuraLayer, SakuraLayer};
+#[cfg(test)]
+pub(crate) use sakura_particles::{SakuraArithmetic, SakuraParticles};
 mod tile_layer;
 
 pub use self::{

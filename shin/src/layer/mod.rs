@@ -2,6 +2,8 @@ mod either;
 mod layer_group;
 pub mod message_layer;
 mod new_drawable_layer;
+#[cfg(test)]
+pub(crate) use new_drawable_layer::EffectPhases;
 pub(crate) mod owner;
 mod page_layer;
 mod properties;
@@ -17,9 +19,12 @@ mod wobbler;
 use derive_more::From;
 use glam::vec3;
 pub use layer_group::LayerGroup;
-pub use new_drawable_layer::{NewDrawableLayer, NewDrawableLayerWrapper};
+pub use new_drawable_layer::{
+    DrawablePropertyPolicy, NewDrawableLayer, NewDrawableLayerFastForward,
+    NewDrawableLayerNeedsSeparatePass, NewDrawableLayerWrapper,
+};
 pub use page_layer::PageLayer;
-pub use properties::{LayerProperties, LayerPropertiesState};
+pub use properties::{LayerProperties, LayerPropertiesState, PropertyPolicy};
 pub use root_layer_group::RootLayerGroup;
 pub use screen_layer::ScreenLayer;
 use shin_core::primitives::color::FloatColor4;

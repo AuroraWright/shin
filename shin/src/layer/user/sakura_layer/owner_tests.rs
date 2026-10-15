@@ -65,6 +65,7 @@ fn animation_mut(l: &mut UserLayer) -> &mut SakuraLayer {
 }
 fn make_animation(textures: &EffectsAtlasBorrow, mode: i32, populated: bool) -> UserLayer {
     let mut l: UserLayer = PreparedSakuraLayer {
+        arithmetic: super::SakuraArithmetic::Legacy,
         textures: textures.clone(),
         mode,
     }
@@ -346,7 +347,9 @@ fn reference_native_animation_clone_group_slot_and_final_retirement() {
         );
         drop(server);
         assert_eq!(weak.strong_count(), 0, "Engine atlas owner retired");
-        device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
+        device
+            .poll(wgpu::PollType::wait_indefinitely())
+            .expect("GPU work must complete before readback or retirement");
     }
     println!(
         "Animation ownership:{total} cases;populated particles/queued properties/Group/Slot copies independent;two final desktop atlas fixtures retired"

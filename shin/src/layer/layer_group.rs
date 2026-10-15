@@ -12,9 +12,9 @@ mod prepared_batch_owner_tests;
 mod transition;
 use prepared_batch::{PreparedPair, PreparedSlotBatch};
 #[cfg(test)]
-mod update_tests;
-#[cfg(test)]
 mod debug_group_tests;
+#[cfg(test)]
+mod update_tests;
 use crate::wiper::AnyWiper;
 use std::sync::Arc;
 #[cfg(test)]
@@ -319,6 +319,12 @@ impl<T> LayerGroup<T> {
             .count()
     }
     pub fn new(label: Option<String>) -> Self {
+        Self::with_property_policy(label, super::properties::PropertyPolicy::Legacy)
+    }
+    pub fn with_property_policy(
+        label: Option<String>,
+        policy: super::properties::PropertyPolicy,
+    ) -> Self {
         Self {
             update_tracker: Default::default(),
             layers: vec![],
@@ -328,7 +334,7 @@ impl<T> LayerGroup<T> {
             new_drawable_state: NewDrawableLayerState::new(),
             mask_texture: None,
             mask_flags: MaskFlags::empty(),
-            props: LayerProperties::new(),
+            props: LayerProperties::with_policy(policy),
             label: label.unwrap_or_else(|| "unnamed".to_string()),
         }
     }
@@ -336,7 +342,13 @@ impl<T> LayerGroup<T> {
     /// The private root container has only Screen/Message targets and exposes
     /// no replacement or Effect capture API; its borrowed accessors stay direct.
     pub(crate) fn new_direct(label: Option<String>) -> Self {
-        let mut group = Self::new(label);
+        Self::new_direct_with_policy(label, super::properties::PropertyPolicy::Legacy)
+    }
+    pub(crate) fn new_direct_with_policy(
+        label: Option<String>,
+        policy: super::properties::PropertyPolicy,
+    ) -> Self {
+        let mut group = Self::with_property_policy(label, policy);
         group.shared_targets = false;
         group
     }
@@ -525,6 +537,13 @@ impl<T> LayerGroup<T> {
         self.layers
             .binary_search_by_key(&Some(layerbank_id), |item| item.layerbank_id)
             .is_ok_and(|index| self.layers[index].layer.read().is_transition_active())
+    }
+    /// Native6f030 unwraps every bank replacement to its actual target without
+    /// advancing or fast-forwarding target properties. Used by Ger PAGEBACK.
+    pub(crate) fn stop_transitions(&mut self) {
+        for entry in &mut self.layers {
+            entry.layer.write().stop_transition();
+        }
     }
 
     pub fn set_mask_texture(&mut self, mask_texture: Arc<MaskTexture>, flags: MaskFlags) {

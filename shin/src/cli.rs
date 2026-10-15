@@ -8,6 +8,7 @@ pub enum Game {
     #[default]
     Umineko,
     Higurashi,
+    Gerokasu2,
 }
 
 #[derive(Parser, Debug)]
@@ -31,7 +32,7 @@ pub struct Cli {
     /// Higurashi otherwise uses the desktop data directory's shin/higurashi/progress.dat.
     #[clap(long)]
     pub save_file: Option<PathBuf>,
-    /// Load an engine-format save file when starting Umineko.
+    /// Load an engine-format save file when starting Umineko or Gerokasu2.
     #[clap(long, conflicts_with_all = ["unsafe_entry_point", "fast_forward_to"])]
     pub load_save: Option<PathBuf>,
     /// Load slot 0 (autosave) or a manual slot from 1 to 100.
@@ -57,6 +58,23 @@ pub struct Cli {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn gerokasu2_selection_preserves_umineko_defaults_and_save_isolation() {
+        assert_eq!(Cli::try_parse_from(["shin"]).unwrap().game, Game::Umineko);
+        let cli = Cli::try_parse_from(["shin", "--game", "gerokasu2", "--inspect-assets"]).unwrap();
+        assert_eq!(cli.game, Game::Gerokasu2);
+        assert!(cli.inspect_assets);
+        assert!(Cli::try_parse_from(["shin", "--game", "unknown"]).is_err());
+        for option in [
+            "--save-file",
+            "--load-save",
+            "--unsafe-entry-point",
+            "--fast-forward-to",
+        ] {
+            assert!(Cli::try_parse_from(["shin", "--inspect-assets", option, "1"]).is_err());
+        }
+        assert!(Cli::try_parse_from(["shin", "--inspect-assets", "--loopback-audio"]).is_err());
+    }
     #[test]
     fn selects_game_and_keeps_inspection_separate_from_save_launches() {
         assert_eq!(Cli::try_parse_from(["shin"]).unwrap().game, Game::Umineko);

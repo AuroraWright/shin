@@ -74,6 +74,12 @@ pub(crate) struct SakuraParticles {
     seed: u32,
     emission: f32,
     pub particles: Vec<Particle>,
+    arithmetic: SakuraArithmetic,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum SakuraArithmetic {
+    Legacy,
+    Gerokasu2,
 }
 
 impl SakuraParticles {
@@ -94,6 +100,13 @@ impl SakuraParticles {
     }
     // Native unsigned mode<6 check returns no layer for all other values.
     pub fn new(mode: i32, seed: u32) -> Option<Self> {
+        Self::new_with_arithmetic(mode, seed, SakuraArithmetic::Legacy)
+    }
+    pub(crate) fn new_with_arithmetic(
+        mode: i32,
+        seed: u32,
+        arithmetic: SakuraArithmetic,
+    ) -> Option<Self> {
         if !(0..6).contains(&mode) {
             return None;
         }
@@ -103,6 +116,7 @@ impl SakuraParticles {
             seed: (seed % 2_147_483_647).max(1),
             emission: 0.0,
             particles: Vec::new(),
+            arithmetic,
         };
         model.emission = model.period();
         // Derived body is invoked directly500 times, with permissiontrue.
@@ -130,20 +144,40 @@ impl SakuraParticles {
 
     fn period(&mut self) -> f32 {
         let [low, high] = PERIODS[self.mode].map(|v| v * 0.6);
-        low + (high - low) * self.random()
+        let random = self.random();
+        if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+            (high - low).mul_add(random, low)
+        } else {
+            low + (high - low) * random
+        }
     }
 
     fn spawn(&mut self) {
         let p = PARAMETERS[self.mode];
         let variant = (self.next_seed() & 1) as usize;
-        let x = self.random() * 1480.0 - 200.0;
+        let random = self.random();
+        let x = if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+            random.mul_add(1480.0, -200.0)
+        } else {
+            random * 1480.0 - 200.0
+        };
         // Native consumes a random number even though the Y range is zero.
-        let y = self.random() * 0.0 - 10.0;
-        let travel_speed = p[2] + (p[3] - p[2]) * self.random();
-        let travel_angle = ((p[4] + (p[5] - p[4]) * self.random()) * PI) / 180.0;
-        let scale = p[0] + (p[1] - p[0]) * self.random();
-        let spin_angle = self.random() * (PI * 2.0) - PI;
-        let spin_speed = ((p[6] + (p[7] - p[6]) * self.random()) * PI) / 180.0;
+        let random = self.random();
+        let y = if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+            random.mul_add(0.0, -10.0)
+        } else {
+            random * 0.0 - 10.0
+        };
+        let travel_speed = self.parameter(p[2], p[3]);
+        let travel_angle = (self.parameter(p[4], p[5]) * PI) / 180.0;
+        let scale = self.parameter(p[0], p[1]);
+        let random = self.random();
+        let spin_angle = if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+            random.mul_add(PI * 2.0, -PI)
+        } else {
+            random * (PI * 2.0) - PI
+        };
+        let spin_speed = (self.parameter(p[6], p[7]) * PI) / 180.0;
         self.particles.push(Particle {
             alive: true,
             variant,
@@ -156,6 +190,14 @@ impl SakuraParticles {
             spin_speed,
             age: 0.0,
         });
+    }
+    fn parameter(&mut self, low: f32, high: f32) -> f32 {
+        let random = self.random();
+        if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+            (high - low).mul_add(random, low)
+        } else {
+            low + (high - low) * random
+        }
     }
 
     pub fn update(&mut self, delta: f32, animations_allowed: bool) {
@@ -171,8 +213,13 @@ impl SakuraParticles {
         // No age offset for births: all particles advance by the full delta.
         // The stored spawn origin stays fixed; +18 is radius, not Y position.
         for particle in &mut self.particles {
-            particle.radius += particle.travel_speed * delta;
-            particle.spin_angle += particle.spin_speed * delta;
+            if self.arithmetic == SakuraArithmetic::Gerokasu2 {
+                particle.radius = particle.travel_speed.mul_add(delta, particle.radius);
+                particle.spin_angle = particle.spin_speed.mul_add(delta, particle.spin_angle);
+            } else {
+                particle.radius += particle.travel_speed * delta;
+                particle.spin_angle += particle.spin_speed * delta;
+            }
             particle.age += delta;
         }
     }

@@ -24,7 +24,7 @@ impl FocusLineLayer {
         *self = Self::from_inner(FocusLineLayerImpl {
             textures,
             offset: Vec2::new(-200.0, 100.0),
-            rays: FocusLineRays::new(1),
+            rays: FocusModel::Legacy(FocusLineRays::new(1)),
         });
         let target = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("Native focus line"),
@@ -96,7 +96,14 @@ impl FocusLineLayer {
             movie_volume_settings: Default::default(),
         };
         self.update(&update);
-        assert!(self.inner_ref().rays.rays.iter().all(|r| r.alpha.is_idle()));
+        assert!(
+            self.inner_ref()
+                .rays
+                .legacy()
+                .rays
+                .iter()
+                .all(|r| r.alpha.is_idle())
+        );
         assert_eq!(
             visible(&draw(self, context)),
             0,
@@ -105,16 +112,22 @@ impl FocusLineLayer {
         update.delta_ticks = Ticks::ZERO;
         self.update(&update);
         assert!(
-            self.inner_ref().rays.rays.iter().all(|r| r.alpha.is_idle()),
+            self.inner_ref()
+                .rays
+                .legacy()
+                .rays
+                .iter()
+                .all(|r| r.alpha.is_idle()),
             "Duplicate frame cannot refill"
         );
         frame.advance();
         update.frame_id = frame;
         self.update(&update);
-        assert_eq!(self.inner_ref().rays.rays.len(), 40);
+        assert_eq!(self.inner_ref().rays.legacy().rays.len(), 40);
         assert!(
             self.inner_ref()
                 .rays
+                .legacy()
                 .rays
                 .iter()
                 .all(|r| r.alpha.value() == 1.0)
@@ -123,6 +136,7 @@ impl FocusLineLayer {
         let before: Vec<_> = self
             .inner_ref()
             .rays
+            .legacy()
             .rays
             .iter()
             .map(|r| (r.angle, r.alpha.value()))
@@ -132,13 +146,14 @@ impl FocusLineLayer {
             before,
             self.inner_ref()
                 .rays
+                .legacy()
                 .rays
                 .iter()
                 .map(|r| (r.angle, r.alpha.value()))
                 .collect::<Vec<_>>()
         );
         // A single radial ray isolates the native quad and parameter offset.
-        self.inner_mut().rays.rays = vec![super::super::focus_line_model::Ray {
+        self.inner_mut().rays.legacy_mut().rays = vec![super::super::focus_line_model::Ray {
             angle: 0.0,
             alpha: Tweener::new(1.0),
         }];

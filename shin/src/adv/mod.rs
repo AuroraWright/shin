@@ -57,6 +57,7 @@ mod event_skip;
 mod story_touch;
 pub(crate) use dialog_view::DialogText;
 mod gallery;
+pub mod gerokasu2;
 pub mod higurashi;
 pub mod information;
 pub mod input_area;

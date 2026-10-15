@@ -22,7 +22,47 @@ use crate::asset::system::AssetServer;
 pub struct FocusLineLayerImpl {
     textures: EffectsAtlasBorrow,
     offset: Vec2,
-    rays: FocusLineRays,
+    rays: FocusModel,
+}
+#[derive(Clone, Debug)]
+enum FocusModel {
+    Legacy(FocusLineRays),
+    Ger(crate::adv::gerokasu2::procedural_particles::GerFocusRays),
+}
+impl FocusModel {
+    fn rays(&self) -> &[super::FocusRay] {
+        match self {
+            Self::Legacy(m) => &m.rays,
+            Self::Ger(m) => &m.rays,
+        }
+    }
+    fn update(&mut self, delta: shin_core::time::Ticks) {
+        match self {
+            Self::Legacy(m) => m.update(delta),
+            Self::Ger(m) => m.update(delta),
+        }
+    }
+    #[cfg(test)]
+    fn reference_seed(&self) -> u32 {
+        match self {
+            Self::Legacy(m) => m.reference_seed(),
+            Self::Ger(m) => m.reference_seed(),
+        }
+    }
+    #[cfg(test)]
+    fn legacy(&self) -> &FocusLineRays {
+        let Self::Legacy(m) = self else {
+            panic!("Legacy focus fixture")
+        };
+        m
+    }
+    #[cfg(test)]
+    fn legacy_mut(&mut self) -> &mut FocusLineRays {
+        let Self::Legacy(m) = self else {
+            panic!("Legacy focus fixture")
+        };
+        m
+    }
 }
 
 impl std::fmt::Debug for FocusLineLayerImpl {
@@ -38,11 +78,11 @@ pub type FocusLineLayer = NewDrawableLayerWrapper<FocusLineLayerImpl>;
 impl FocusLineLayer {
     #[cfg(test)]
     pub(super) fn reference_owner_rays(&self) -> &FocusLineRays {
-        &self.inner_ref().rays
+        self.inner_ref().rays.legacy()
     }
     #[cfg(test)]
     pub(super) fn reference_owner_rays_mut(&mut self) -> &mut FocusLineRays {
-        &mut self.inner_mut().rays
+        self.inner_mut().rays.legacy_mut()
     }
     #[cfg(test)]
     pub(super) fn reference_owner_offset(&self) -> Vec2 {
@@ -69,7 +109,18 @@ impl FocusLineLayer {
         Self::from_inner_constructor(|| FocusLineLayerImpl {
             textures,
             offset: Vec2::new(x as f32, y as f32),
-            rays: FocusLineRays::new(crate::engine_random::next_seed()),
+            rays: FocusModel::Legacy(FocusLineRays::new(crate::engine_random::next_seed())),
+        })
+    }
+    pub(crate) fn new_gerokasu2(textures: EffectsAtlasBorrow, offset: Vec2) -> Self {
+        Self::from_inner_constructor(|| FocusLineLayerImpl {
+            textures,
+            offset,
+            rays: FocusModel::Ger(
+                crate::adv::gerokasu2::procedural_particles::GerFocusRays::new(
+                    crate::engine_random::next_seed(),
+                ),
+            ),
         })
     }
 }
@@ -105,10 +156,18 @@ impl NewDrawableLayer for FocusLineLayerImpl {
         let builder = RenderRequestBuilder::new()
             .depth_stencil_shorthand(stencil_ref, false, false)
             .color_blend_type(ColorBlendType::from_regular_layer(drawable.blend_type));
-        let matrix =
-            transform.compute_final_transform() * Mat4::from_translation(self.offset.extend(0.0));
+        let translation = Mat4::from_translation(self.offset.extend(0.0));
+        let ger = matches!(self.rays, FocusModel::Ger(_));
+        let matrix = if ger {
+            crate::layer::render_params::multiply_transforms(
+                transform.compute_final_transform(),
+                translation,
+            )
+        } else {
+            transform.compute_final_transform() * translation
+        };
         let textures = self.textures.read();
-        for ray in &self.rays.rays {
+        for ray in self.rays.rays() {
             let color = drawable
                 .color_multiplier
                 .with_alpha(drawable.color_multiplier.a * ray.alpha.value());
@@ -126,7 +185,14 @@ impl NewDrawableLayer for FocusLineLayerImpl {
                     pass,
                     builder,
                     textures.required("focusline").as_source(),
-                    matrix * Mat4::from_rotation_z(ray.angle),
+                    if ger {
+                        crate::layer::render_params::multiply_transforms(
+                            matrix,
+                            Mat4::from_rotation_z(ray.angle),
+                        )
+                    } else {
+                        matrix * Mat4::from_rotation_z(ray.angle)
+                    },
                 );
         }
     }

@@ -1,10 +1,10 @@
 use glam::Vec2;
 use shin_core::time::{Easing, Ticks, Tween, Tweener};
 
-pub(super) const WIDTH: f32 = 1200.0;
-pub(super) const GAP: f32 = 32.0;
+pub(crate) const WIDTH: f32 = 1200.0;
+pub(crate) const GAP: f32 = 32.0;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(super) enum Phase {
+pub(crate) enum Phase {
     Initial,
     Opening,
     Waiting,
@@ -13,19 +13,24 @@ pub(super) enum Phase {
     Done,
 }
 #[derive(Debug)]
-pub(super) struct RowMotion {
+pub(crate) struct RowMotion {
     pub x: Tweener,
     pub alpha: Tweener,
     pub focus: Tweener,
     pub flash: Tweener,
 }
 impl RowMotion {
-    fn new(focused: bool) -> Self {
+    fn new(focused: bool, gerokasu2: bool) -> Self {
+        let tween = if gerokasu2 {
+            Tweener::new_gerokasu2
+        } else {
+            Tweener::new
+        };
         Self {
-            x: Tweener::new(-300.0),
-            alpha: Tweener::new(0.0),
-            focus: Tweener::new(if focused { 1.0 } else { 0.0 }),
-            flash: Tweener::new(0.0),
+            x: tween(-300.0),
+            alpha: tween(0.0),
+            focus: tween(if focused { 1.0 } else { 0.0 }),
+            flash: tween(0.0),
         }
     }
     fn idle(&self) -> bool {
@@ -44,10 +49,12 @@ pub struct ChoiceModel {
     pub indices: Vec<usize>,
     pub selected: Option<usize>,
     pub result: Option<i32>,
-    pub(super) phase: Phase,
-    pub(super) rows: Vec<RowMotion>,
-    pub(super) heights: Vec<f32>,
+    pub(crate) phase: Phase,
+    pub(crate) rows: Vec<RowMotion>,
+    pub(crate) heights: Vec<f32>,
     silent_open: bool,
+    gerokasu2: bool,
+    original_display_indices: Vec<usize>,
     sounds: Vec<&'static str>,
     pointer_held: bool,
     pointer_row: Option<usize>,
@@ -59,16 +66,28 @@ impl ChoiceModel {
     }
 
     fn with_shuffle_seed(count: usize, mask: i32, seed: Option<u32>) -> Self {
+        Self::with_profile(count, mask, seed, false)
+    }
+    pub(crate) fn gerokasu2(count: usize, mask: i32, seed: Option<u32>) -> Self {
+        Self::with_profile(count, mask, seed, true)
+    }
+    fn with_profile(count: usize, mask: i32, seed: Option<u32>, gerokasu2: bool) -> Self {
         let mut indices: Vec<_> = (0..count.min(12))
             .filter(|&i| mask as u32 & (1 << i) != 0)
             .collect();
         if let Some(seed) = seed {
             shuffle(&mut indices, seed);
         }
+        // Ger c2174 assigns row88 before c23d0 shuffles the pointer vector.
+        // Its closing animation still compares that index with selected6c.
+        let original_display_indices = indices
+            .iter()
+            .map(|index| indices.iter().filter(|other| *other < index).count())
+            .collect();
         let silent_open = mask as u32 & 0x8000 != 0;
         let selected = (silent_open && !indices.is_empty()).then_some(0);
         let rows = (0..indices.len())
-            .map(|i| RowMotion::new(selected == Some(i)))
+            .map(|i| RowMotion::new(selected == Some(i), gerokasu2))
             .collect();
         let heights = vec![70.0; indices.len()];
         Self {
@@ -79,12 +98,14 @@ impl ChoiceModel {
             rows,
             heights,
             silent_open,
+            gerokasu2,
+            original_display_indices,
             sounds: Vec::new(),
             pointer_held: false,
             pointer_row: None,
         }
     }
-    pub(super) fn select(&mut self, selected: Option<usize>) {
+    pub(crate) fn select(&mut self, selected: Option<usize>) {
         self.select_with_sound(selected, true);
     }
 
@@ -136,7 +157,7 @@ impl ChoiceModel {
         self.phase = Phase::Flash;
         self.sounds.push("seldecide");
     }
-    pub(super) fn input(
+    pub(crate) fn input(
         &mut self,
         up: bool,
         down: bool,
@@ -172,7 +193,7 @@ impl ChoiceModel {
         }
     }
 
-    pub(super) fn pointer_state(&mut self, position: Vec2, held: bool) {
+    pub(crate) fn pointer_state(&mut self, position: Vec2, held: bool) {
         if self.phase != Phase::Waiting {
             self.pointer_held = held;
             self.pointer_row = None;
@@ -210,19 +231,19 @@ impl ChoiceModel {
         let flash = &mut self.rows[row].flash;
         flash.enqueue_now(0.0, Tween::linear(Ticks::from_f32(flash.value() / 0.2)));
     }
-    pub(super) fn cancel_pointer(&mut self) {
+    pub(crate) fn cancel_pointer(&mut self) {
         if let Some(row) = self.pointer_row.take() {
             self.cancel_pointer_flash(row);
         }
         self.pointer_held = false;
     }
-    pub(super) fn ignore_pointer_state(&mut self, held: bool) {
+    pub(crate) fn ignore_pointer_state(&mut self, held: bool) {
         self.cancel_pointer();
         // Preserve the physical edge while a modal/fade consumes input, so a
         // still-held restore click cannot become a fresh press afterward.
         self.pointer_held = held;
     }
-    pub(super) fn take_sounds(&mut self) -> Vec<&'static str> {
+    pub(crate) fn take_sounds(&mut self) -> Vec<&'static str> {
         std::mem::take(&mut self.sounds)
     }
     pub(crate) fn update(&mut self, delta: Ticks) {
@@ -255,7 +276,12 @@ impl ChoiceModel {
             Phase::Flash if self.rows[self.selected.unwrap()].flash.is_idle() => {
                 let selected = self.selected.unwrap();
                 for (i, row) in self.rows.iter_mut().enumerate() {
-                    if i == selected {
+                    let display_index = if self.gerokasu2 {
+                        self.original_display_indices[i]
+                    } else {
+                        i
+                    };
+                    if display_index == selected {
                         continue;
                     }
                     let delay = Tween::linear(Ticks::from_f32(i as f32 * 4.0));
@@ -272,7 +298,12 @@ impl ChoiceModel {
                 }
                 let delay = Tween::linear(Ticks::from_f32(self.rows.len() as f32 * 4.0 + 20.0));
                 let row = &mut self.rows[selected];
-                row.alpha.enqueue(1.0, delay);
+                let held_alpha = if self.gerokasu2 {
+                    row.alpha.target_value()
+                } else {
+                    1.0
+                };
+                row.alpha.enqueue(held_alpha, delay);
                 row.alpha.enqueue(0.0, Tween::linear(Ticks::from_f32(30.0)));
                 self.phase = Phase::Closing;
             }
@@ -286,22 +317,31 @@ impl ChoiceModel {
             row.update(delta);
         }
     }
-    pub(super) fn row_at(&self, position: Vec2) -> Option<usize> {
+    pub(crate) fn row_at(&self, position: Vec2) -> Option<usize> {
         if position.x < 460.0 || position.x >= 1460.0 {
             return None;
         }
         let mut y = self.top();
         for (i, &height) in self.heights.iter().enumerate() {
             if position.y >= y && position.y < y + height {
-                return Some(i);
+                return Some(if self.gerokasu2 {
+                    self.original_display_indices[i]
+                } else {
+                    i
+                });
             }
             y += height + GAP;
         }
         None
     }
-    pub(super) fn top(&self) -> f32 {
-        let height =
-            self.heights.iter().sum::<f32>() + GAP * self.heights.len().saturating_sub(1) as f32;
+    pub(crate) fn top(&self) -> f32 {
+        let height = self.heights.iter().sum::<f32>()
+            + GAP
+                * if self.gerokasu2 {
+                    self.heights.len() as f32 - 1.0
+                } else {
+                    self.heights.len().saturating_sub(1) as f32
+                };
         (1080.0 - height) * 0.35
     }
 }

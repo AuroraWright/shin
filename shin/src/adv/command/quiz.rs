@@ -271,6 +271,9 @@ mod tests {
                             }
                             Model::Cake(model) => {
                                 model.pointer(glam::Vec2::new(850.0, 700.0), true);
+                                assert_eq!(model.result, None);
+                                model.update(shin_core::time::Ticks::from_f32(7.0));
+                                model.update(shin_core::time::Ticks::ZERO);
                                 assert_eq!(model.result, Some(0));
                                 cakes += 1;
                                 0

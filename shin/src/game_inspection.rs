@@ -2,7 +2,10 @@
 use std::{collections::BTreeSet, io::Read};
 
 use anyhow::{Context, Result};
-use shin_core::format::scenario::{Scenario, higurashi::HigurashiScenario};
+use shin_core::format::{
+    font::gerokasu2::Gerokasu2Font,
+    scenario::{Scenario, gerokasu2::Gerokasu2Scenario, higurashi::HigurashiScenario},
+};
 
 use crate::{
     asset::system::locate_assets_for_game,
@@ -92,6 +95,48 @@ pub(crate) fn inspect(cli: &Cli) -> Result<()> {
                 "Higurashi normal launch is available with --game higurashi; this inspection does not open a window or read/write progress."
             );
         }
+        Game::Gerokasu2 => {
+            let scenario = Gerokasu2Scenario::new(data.into())?;
+            println!(
+                "Scenario: {} bytes, entry 0x{:x}, {} dialogue IDs, UTF-8",
+                scenario.header.size,
+                scenario.header.code_offset,
+                scenario.header.dialogue_line_count
+            );
+            println!(
+                "Tables: masks={}, pictures={}, bustups={}, BGM={}, SE={}, movies={}, voice mappings={}, CG gallery={}, music gallery={}, character gallery segments={}",
+                scenario.mask_info.len(),
+                scenario.picture_info.len(),
+                scenario.bustup_info.len(),
+                scenario.bgm_info.len(),
+                scenario.se_info.len(),
+                scenario.movie_info.len(),
+                scenario.voice_mapping_info.len(),
+                scenario.picture_box_info.len(),
+                scenario.music_box_info.len(),
+                scenario.character_box_info.len()
+            );
+            paths.extend(scenario.asset_paths());
+            for path in ["/newrodin-medium.fnt", "/system.fnt"] {
+                paths.insert(path.into());
+                if let Ok(file) = io.read_file(path) {
+                    let font = Gerokasu2Font::new(file.read_all_sync()?.into())
+                        .with_context(|| format!("Inspecting FNT6 font {path}"))?;
+                    let header = font.header();
+                    println!(
+                        "Font: {path}, FNT6 v{}, {} Unicode pages, {} glyphs, {} mapped codepoints, flags={}",
+                        header.version,
+                        header.page_count,
+                        header.glyph_count,
+                        font.codepoints().count(),
+                        header.flags
+                    );
+                }
+            }
+            println!(
+                "Gerokasu2 uses its scoped gameplay adapter;title/menu/persistent restoration and remaining owners are still under implementation."
+            );
+        }
         Game::Umineko => {
             let scenario = Scenario::new(data.into())?;
             let info = scenario.info_tables();
@@ -138,4 +183,26 @@ pub(crate) fn inspect(cli: &Cli) -> Result<()> {
         "Inspection checks metadata and literal path lookup. Native name substitutions, authored reachability, asset decoding and gameplay are not validated."
     );
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use clap::Parser;
+
+    #[test]
+    #[ignore = "requires supplied archives; CPU only (SHIN_GEROKASU2_ASSETS)"]
+    fn gerokasu2_inspects_supplied_assets_without_task_pools_or_audio() {
+        let root = std::env::var("SHIN_GEROKASU2_ASSETS").expect("SHIN_GEROKASU2_ASSETS");
+        let cli = Cli::try_parse_from([
+            "shin",
+            "--game",
+            "gerokasu2",
+            "--inspect-assets",
+            "--assets-dir",
+            &root,
+        ])
+        .unwrap();
+        inspect(&cli).unwrap();
+    }
 }

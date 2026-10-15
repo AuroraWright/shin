@@ -203,6 +203,12 @@ impl<T> SlotLayer<T> {
     pub fn is_transition_active(&self) -> bool {
         self.wiper.is_some()
     }
+    pub(super) fn stop_transition(&mut self) {
+        self.source = None;
+        self.wiper = None;
+        self.source_texture.clear();
+        self.target_texture.clear();
+    }
 }
 
 impl<T: Layer> SlotLayer<T> {
@@ -694,8 +700,8 @@ mod tests {
         let adapter =
             shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .unwrap();
-        let (device, queue) = shin_tasks::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
+        let (device, queue) =
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
                 required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
                     adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
                 } else {
@@ -703,7 +709,7 @@ mod tests {
                 },
                 ..Default::default()
             }))
-        .unwrap();
+            .unwrap();
         let io = LayeredAssetIo::new();
 
         let server = std::sync::Arc::new(AssetServer::new(
@@ -830,7 +836,9 @@ mod tests {
             )
             .finish();
             queue.submit([finished]);
-            device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
+            device
+                .poll(wgpu::PollType::wait_indefinitely())
+                .expect("GPU work must complete before readback or retirement");
             context.dynamic_buffer.recall();
             eprintln!(
                 "Owned replacement source/target: invisible pending children, empty copied lists, source detach, empty recapture/destruction and four final owner retirements passed"

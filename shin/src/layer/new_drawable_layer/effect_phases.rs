@@ -10,6 +10,13 @@ impl EffectPhases {
             }
         }
     }
+    pub(crate) fn advance_gerokasu2(&mut self, delta: f32, periods: [f32; 3]) {
+        for (phase, period) in self.0.iter_mut().zip(periods) {
+            if period != 0.0 {
+                *phase = (1.0 / period).mul_add(delta, *phase);
+            }
+        }
+    }
 }
 #[cfg(test)]
 mod tests {

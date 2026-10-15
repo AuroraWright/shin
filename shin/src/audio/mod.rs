@@ -7,7 +7,9 @@ pub use se_player::{SE_SLOT_COUNT, SePlayer};
 pub(crate) use voice_player::native_voice_clock;
 pub use voice_player::{VoicePlayFlags, VoicePlayer};
 #[cfg(test)]
-pub(crate) use voice_player::{character_voice_enabled, voice_pattern_matches, voice_speakers};
+pub(crate) use voice_player::{
+    character_voice_enabled, voice_pattern_matches, voice_speakers, voice_stop_volume,
+};
 
 mod settings_gain;
 pub use settings_gain::SettingsGain;

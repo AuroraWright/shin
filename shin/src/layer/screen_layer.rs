@@ -12,7 +12,7 @@ use tracing::debug;
 
 use crate::{
     layer::{
-        DrawableLayer, Layer, NewDrawableLayer,
+        DrawableLayer, Layer, NewDrawableLayer, UserLayer,
         either::EitherLayer,
         new_drawable_layer::{NewDrawableLayerNeedsSeparatePass, NewDrawableLayerState},
         page_layer::PageLayer,
@@ -25,17 +25,17 @@ use crate::{
     wiper::{AnyWiper, Wiper as _},
 };
 
-struct TransitionLayer {
+struct TransitionLayer<T = UserLayer> {
     update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
-    source_layer: Option<EitherLayer<Box<PageLayer>, Box<TransitionLayer>>>,
-    target_layer: Option<PageLayer>,
+    source_layer: Option<EitherLayer<Box<PageLayer<T>>, Box<TransitionLayer<T>>>>,
+    target_layer: Option<PageLayer<T>>,
     wiper: Option<AnyWiper>,
 
     source_render_texture: RenderTextureHolder,
     target_render_texture: RenderTextureHolder,
 }
 
-impl RenderClone for TransitionLayer {
+impl<T: DrawableLayer + RenderClone> RenderClone for TransitionLayer<T> {
     fn render_clone(&self, context: &mut RenderCloneCtx) -> Self {
         // Native e71f0 copies source, target and wipe, but e725c/e7260 leave
         // both scratch capture handles empty for the copy's next pre-render.
@@ -54,10 +54,10 @@ impl RenderClone for TransitionLayer {
     }
 }
 
-impl TransitionLayer {
+impl<T> TransitionLayer<T> {
     pub fn new(
-        source: Option<Box<TransitionLayer>>,
-        target: PageLayer,
+        source: Option<Box<TransitionLayer<T>>>,
+        target: PageLayer<T>,
         wiper: Option<AnyWiper>,
     ) -> Self {
         Self {
@@ -94,40 +94,24 @@ impl TransitionLayer {
         }
     }
 
-    #[cfg(test)]
-    fn collect_voice_positions(&self, parent: &TransformParams, positions: &mut Vec<(i32, f32)>) {
-        if self.wiper.is_some() {
-            if let Some(source) = &self.source_layer {
-                match source {
-                    EitherLayer::Left(page) => page.collect_voice_positions(parent, positions),
-                    EitherLayer::Right(transition) => {
-                        transition.collect_voice_positions(parent, positions)
-                    }
-                }
-            }
-        }
-        self.get_target_layer()
-            .collect_voice_positions(parent, positions);
-    }
-
     pub fn is_transition_active(&self) -> bool {
         self.wiper.is_some()
     }
 
-    pub fn get_target_layer(&self) -> &PageLayer {
+    pub fn get_target_layer(&self) -> &PageLayer<T> {
         self.target_layer.as_ref().unwrap()
     }
 
-    pub fn get_target_layer_mut(&mut self) -> &mut PageLayer {
+    pub fn get_target_layer_mut(&mut self) -> &mut PageLayer<T> {
         self.target_layer.as_mut().unwrap()
     }
 
-    pub fn into_target_layer(self) -> PageLayer {
+    pub fn into_target_layer(self) -> PageLayer<T> {
         self.target_layer.unwrap()
     }
 }
 
-impl AdvUpdatable for TransitionLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> AdvUpdatable for TransitionLayer<T> {
     fn update(&mut self, context: &AdvUpdateContext) {
         if !self.update_tracker.update(context.frame_id) {
             return;
@@ -167,7 +151,7 @@ impl AdvUpdatable for TransitionLayer {
     }
 }
 
-impl Layer for TransitionLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> Layer for TransitionLayer<T> {
     fn fast_forward(&mut self) {
         // Native 0xe6c20 forwards source, target, then wiper; update retires them.
         if let Some(source_layer) = &mut self.source_layer {
@@ -274,18 +258,19 @@ impl Layer for TransitionLayer {
     }
 }
 
-pub struct ScreenLayer {
+pub struct ScreenLayer<T = UserLayer> {
     update_tracker: crate::layer::update_tracker::LayerUpdateTracker,
-    active_layer: TransitionLayer,
-    pending_layer: Option<PageLayer>,
+    active_layer: TransitionLayer<T>,
+    pending_layer: Option<PageLayer<T>>,
 
     plane_count: usize,
+    property_policy: super::properties::PropertyPolicy,
 
     new_drawable_state: NewDrawableLayerState,
     props: LayerProperties,
 }
 
-impl RenderClone for ScreenLayer {
+impl<T: DrawableLayer + RenderClone> RenderClone for ScreenLayer<T> {
     fn render_clone(&self, context: &mut RenderCloneCtx) -> Self {
         // Nativee50c0 copies the drawable base before active and pending pages.
         let props = self.props.clone();
@@ -297,13 +282,14 @@ impl RenderClone for ScreenLayer {
             active_layer,
             pending_layer,
             plane_count: self.plane_count,
+            property_policy: self.property_policy,
             new_drawable_state,
             props,
         }
     }
 }
 
-impl ScreenLayer {
+impl<T: DrawableLayer + RenderClone + Send + Sync + 'static> ScreenLayer<T> {
     pub(crate) fn preserve_drawable_state_from(&mut self, source: &mut Self) {
         std::mem::swap(&mut self.update_tracker, &mut source.update_tracker);
         std::mem::swap(&mut self.new_drawable_state, &mut source.new_drawable_state);
@@ -323,8 +309,8 @@ impl ScreenLayer {
     }
 
     #[cfg(test)]
-    pub(crate) fn reference_pages(&self) -> impl Iterator<Item = &PageLayer> {
-        fn collect<'a>(transition: &'a TransitionLayer, pages: &mut Vec<&'a PageLayer>) {
+    pub(crate) fn reference_pages(&self) -> impl Iterator<Item = &PageLayer<T>> {
+        fn collect<'a, T>(transition: &'a TransitionLayer<T>, pages: &mut Vec<&'a PageLayer<T>>) {
             if let Some(source) = &transition.source_layer {
                 match source {
                     EitherLayer::Left(page) => pages.push(page),
@@ -340,7 +326,7 @@ impl ScreenLayer {
     }
     #[cfg(test)]
     pub(crate) fn reference_transition_words(&self) -> Vec<[u32; 7]> {
-        fn collect(transition: &TransitionLayer, words: &mut Vec<[u32; 7]>) {
+        fn collect<T>(transition: &TransitionLayer<T>, words: &mut Vec<[u32; 7]>) {
             let Some(crate::wiper::AnyWiper::Default(wipe)) = &transition.wiper else {
                 assert!(transition.wiper.is_none());
                 return;
@@ -380,8 +366,8 @@ impl ScreenLayer {
         device: &wgpu::Device,
         resize: &shin_render::resize::SurfaceResizeSource,
     ) -> usize {
-        fn prepare(
-            transition: &mut TransitionLayer,
+        fn prepare<T>(
+            transition: &mut TransitionLayer<T>,
             device: &wgpu::Device,
             resize: &shin_render::resize::SurfaceResizeSource,
         ) -> usize {
@@ -409,7 +395,7 @@ impl ScreenLayer {
     }
     #[cfg(test)]
     pub(crate) fn reference_advance_transition_clocks(&mut self, delta: f32) {
-        fn advance(transition: &mut TransitionLayer, delta: f32) {
+        fn advance<T>(transition: &mut TransitionLayer<T>, delta: f32) {
             if let Some(crate::wiper::AnyWiper::Default(wipe)) = &mut transition.wiper {
                 wipe.advance_ticks(delta);
             } else {
@@ -429,18 +415,13 @@ impl ScreenLayer {
     pub(crate) fn reference_effect_phases(&self) -> [f32; 3] {
         self.new_drawable_state.reference_effect_phases()
     }
-    #[cfg(test)]
-    pub(crate) fn collect_voice_positions(
-        &self,
-        parent: &TransformParams,
-        positions: &mut Vec<(i32, f32)>,
-    ) {
-        let transform = self.props.get_composed_transform_params(parent);
-        self.active_layer
-            .collect_voice_positions(&transform, positions);
+    pub fn new_typed(plane_count: usize) -> Self {
+        Self::with_property_policy(plane_count, super::properties::PropertyPolicy::Legacy)
     }
-
-    pub fn new(plane_count: usize) -> Self {
+    pub fn with_property_policy(
+        plane_count: usize,
+        policy: super::properties::PropertyPolicy,
+    ) -> Self {
         // Nativee4f1c consumes the screen seed before9e860 builds its page.
         let new_drawable_state = NewDrawableLayerState::new();
         Self {
@@ -448,15 +429,20 @@ impl ScreenLayer {
             // NB: the original game stores __either__ a `TransitionLayer` or `PageLayer` here
             // however, after the first transition, the `TransitionLayer` stays
             // I just decided to take a shorter route and always store `TransitionLayer` :)
-            active_layer: TransitionLayer::new(None, PageLayer::new(plane_count), None),
+            active_layer: TransitionLayer::new(
+                None,
+                PageLayer::with_property_policy(plane_count, policy),
+                None,
+            ),
             pending_layer: None,
             plane_count,
+            property_policy: policy,
             new_drawable_state,
-            props: LayerProperties::new(),
+            props: LayerProperties::with_policy(policy),
         }
     }
 
-    pub fn page_layer(&self) -> &PageLayer {
+    pub fn page_layer(&self) -> &PageLayer<T> {
         if let Some(pending_layer) = &self.pending_layer {
             pending_layer
         } else {
@@ -464,7 +450,7 @@ impl ScreenLayer {
         }
     }
 
-    pub fn page_layer_mut(&mut self) -> &mut PageLayer {
+    pub fn page_layer_mut(&mut self) -> &mut PageLayer<T> {
         if let Some(pending_layer) = &mut self.pending_layer {
             pending_layer
         } else {
@@ -475,7 +461,7 @@ impl ScreenLayer {
     pub fn pageback(&mut self, ctx: &mut RenderCloneCtx, start_anew: bool) {
         self.pending_layer = Some(if start_anew {
             // Native 0xe5718..0xe5738 constructs a fresh page with plane_count.
-            PageLayer::new(self.plane_count)
+            PageLayer::with_property_policy(self.plane_count, self.property_policy)
         } else {
             self.active_layer.get_target_layer().render_clone(ctx)
         });
@@ -500,13 +486,71 @@ impl ScreenLayer {
     pub fn is_transition_active(&self) -> bool {
         self.active_layer.is_transition_active()
     }
+    pub fn has_pending_page(&self) -> bool {
+        self.pending_layer.is_some()
+    }
+
+    /// Discard PAGEBACK edits without promoting them (native B96A0).
+    pub fn discard_pending_page(&mut self) {
+        self.pending_layer = None;
+    }
+
+    /// Reconstruction visits the active target, independently of PAGEBACK.
+    pub fn active_page_layer(&self) -> &PageLayer<T> {
+        self.active_layer.get_target_layer()
+    }
+
+    /// Rebuild the page while retaining the Screen's property/drawable owner.
+    pub fn reset_page_for_reconstruction(&mut self) {
+        self.pending_layer = None;
+        self.active_layer = TransitionLayer::new(
+            None,
+            PageLayer::with_property_policy(self.plane_count, self.property_policy),
+            None,
+        );
+    }
 }
 
-struct ScreenLayerNewDrawableDelegate<'a> {
-    active_layer: &'a TransitionLayer,
+impl ScreenLayer {
+    pub fn new(plane_count: usize) -> Self {
+        Self::new_typed(plane_count)
+    }
+
+    #[cfg(test)]
+    pub(crate) fn collect_voice_positions(
+        &self,
+        parent: &TransformParams,
+        positions: &mut Vec<(i32, f32)>,
+    ) {
+        let transform = self.props.get_composed_transform_params(parent);
+        self.active_layer
+            .collect_voice_positions(&transform, positions);
+    }
 }
 
-impl NewDrawableLayerNeedsSeparatePass for ScreenLayerNewDrawableDelegate<'_> {
+#[cfg(test)]
+impl TransitionLayer {
+    fn collect_voice_positions(&self, parent: &TransformParams, positions: &mut Vec<(i32, f32)>) {
+        if self.wiper.is_some() {
+            if let Some(source) = &self.source_layer {
+                match source {
+                    EitherLayer::Left(page) => page.collect_voice_positions(parent, positions),
+                    EitherLayer::Right(transition) => {
+                        transition.collect_voice_positions(parent, positions)
+                    }
+                }
+            }
+        }
+        self.get_target_layer()
+            .collect_voice_positions(parent, positions);
+    }
+}
+
+struct ScreenLayerNewDrawableDelegate<'a, T> {
+    active_layer: &'a TransitionLayer<T>,
+}
+
+impl<T> NewDrawableLayerNeedsSeparatePass for ScreenLayerNewDrawableDelegate<'_, T> {
     fn needs_separate_pass(&self, props: &LayerProperties) -> bool {
         props.get_clip_mode() != DrawableClipMode::None
             || props.is_fragment_shader_nontrivial()
@@ -514,7 +558,9 @@ impl NewDrawableLayerNeedsSeparatePass for ScreenLayerNewDrawableDelegate<'_> {
     }
 }
 
-impl NewDrawableLayer for ScreenLayerNewDrawableDelegate<'_> {
+impl<T: DrawableLayer + Send + Sync + 'static> NewDrawableLayer
+    for ScreenLayerNewDrawableDelegate<'_, T>
+{
     #[tracing::instrument(skip_all)]
     fn render_drawable_indirect(
         &mut self,
@@ -561,7 +607,7 @@ impl NewDrawableLayer for ScreenLayerNewDrawableDelegate<'_> {
     }
 }
 
-impl AdvUpdatable for ScreenLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> AdvUpdatable for ScreenLayer<T> {
     fn update(&mut self, context: &AdvUpdateContext) {
         if !self.update_tracker.update(context.frame_id) {
             return;
@@ -576,7 +622,7 @@ impl AdvUpdatable for ScreenLayer {
     }
 }
 
-impl Layer for ScreenLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> Layer for ScreenLayer<T> {
     fn fast_forward(&mut self) {
         self.props.fast_forward();
         self.active_layer.fast_forward();
@@ -633,7 +679,7 @@ impl Layer for ScreenLayer {
     }
 }
 
-impl DrawableLayer for ScreenLayer {
+impl<T: DrawableLayer + Send + Sync + 'static> DrawableLayer for ScreenLayer<T> {
     fn properties(&self) -> &LayerProperties {
         &self.props
     }

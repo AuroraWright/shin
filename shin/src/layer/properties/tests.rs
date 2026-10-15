@@ -1,6 +1,64 @@
 use super::*;
 
 #[test]
+fn gerokasu2_property_policy_survives_lazy_copy_sharing_init_and_restore() {
+    let lazy = LayerProperties::with_policy(PropertyPolicy::Gerokasu2);
+    let mut copy = lazy.clone();
+    assert!(lazy.initialized_identity().is_none());
+    assert!(copy.initialized_identity().is_none());
+    let control = |props: &mut LayerProperties, value: f32, duration: f32, flags: u32| {
+        props
+            .property_tweener_mut(LayerProperty::TranslateX)
+            .gerokasu2_control(
+                value,
+                Ticks::from_f32(duration),
+                flags,
+                shin_core::time::Easing::Linear,
+                false,
+            );
+    };
+    control(&mut copy, 100.0, 10.0, 0);
+    control(&mut copy, 50.0, 10.0, 128);
+    let mut independent = copy.clone();
+    let alias = copy.share();
+    independent
+        .property_tweener_mut(LayerProperty::TranslateX)
+        .update(Ticks::from_f32(15.0));
+    assert_eq!(independent.get_value(LayerProperty::TranslateX), 125.0);
+    assert_eq!(alias.get_value(LayerProperty::TranslateX), 0.0);
+    copy.property_tweener_mut(LayerProperty::TranslateX)
+        .update(Ticks::from_f32(5.0));
+    assert_eq!(alias.get_value(LayerProperty::TranslateX), 50.0);
+    independent.init();
+    let mut state = LayerPropertiesState::new();
+    state.properties[LayerProperty::TranslateX] = i32::MAX;
+    independent.restore_values(&state);
+    control(&mut independent, 1.0, 0.0, 0);
+    assert_eq!(independent.get_value(LayerProperty::TranslateX), 0.0);
+    let mut legacy = LayerProperties::new();
+    legacy.restore_values(&state);
+    legacy
+        .property_tweener_mut(LayerProperty::TranslateX)
+        .enqueue(1.0, shin_core::time::Tween::IMMEDIATE);
+    assert_eq!(legacy.get_value(LayerProperty::TranslateX), 1.0);
+}
+
+#[test]
+fn property_arithmetic_policy_query_preserves_lazy_owner_and_rng() {
+    for policy in [PropertyPolicy::Legacy, PropertyPolicy::Gerokasu2] {
+        let mut props = LayerProperties::with_policy(policy);
+        let calls = crate::engine_random::seed_call_count();
+        assert_eq!(props.policy(), policy);
+        assert!(props.initialized_identity().is_none());
+        assert_eq!(crate::engine_random::seed_call_count(), calls);
+        let alias = props.clone();
+        props.init();
+        assert_eq!(alias.policy(), policy);
+        assert!(alias.initialized_identity().is_none());
+    }
+}
+
+#[test]
 fn retained_scene_restore_preserves_property_owner_and_oscillators() {
     let mut properties = LayerProperties::new();
     properties

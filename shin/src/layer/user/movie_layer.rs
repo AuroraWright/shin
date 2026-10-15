@@ -183,6 +183,19 @@ struct MovieBackendArgs {
 
 #[cfg(test)]
 impl MovieLayer {
+    pub(crate) fn reference_gerokasu2_state(&self) -> [u32; 7] {
+        let inner = self.inner_ref();
+        let status = self.gerokasu2_wait_status();
+        [
+            u32::from(inner.transparency == MovieTransparencyMode::Transparent),
+            inner.repeat as u32,
+            inner.shared.is_some() as u32,
+            inner.still_picture.is_some() as u32,
+            status & 1,
+            (status >> 1) & 1,
+            u32::from(inner.shared.is_none() && inner.still_picture.is_some()),
+        ]
+    }
     pub(super) fn reference_composed_owner_flags(&self) -> (u8, bool, bool, usize) {
         let inner = self.inner_ref();
         (
@@ -361,6 +374,17 @@ impl MovieLayer {
         )
     }
 
+    /// Ger a00d0/a01b0 expose playing and nonterminal predicates separately.
+    pub(crate) fn gerokasu2_wait_status(&self) -> u32 {
+        self.inner_ref().shared.as_ref().map_or(0, |shared| {
+            let shared = shared.lock();
+            if shared.is_finished() {
+                0
+            } else {
+                2 | u32::from(!shared.video_player.is_paused())
+            }
+        })
+    }
     pub fn is_finished(&self) -> bool {
         self.inner_ref()
             .shared
@@ -1644,9 +1668,14 @@ pub(crate) fn readback_test_texture(
         .map_async(wgpu::MapMode::Read, move |result| {
             send.send(result).unwrap()
         });
-    context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
+    context
+        .device
+        .poll(wgpu::PollType::wait_indefinitely())
+        .expect("GPU work must complete before readback or retirement");
     receive.recv().unwrap().unwrap();
-    let mapped = readback.slice(..).get_mapped_range()
+    let mapped = readback
+        .slice(..)
+        .get_mapped_range()
         .expect("Readback mapping must be ready");
     if padded_row_bytes == row_bytes {
         return mapped.to_vec();

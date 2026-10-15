@@ -24,8 +24,24 @@ fn initial_values() -> EnumMap<LayerProperty, i32> {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum PropertyPolicy {
+    #[default]
+    Legacy,
+    Gerokasu2,
+}
+impl PropertyPolicy {
+    fn tweener(self, value: f32) -> Tweener {
+        match self {
+            Self::Legacy => Tweener::new(value),
+            Self::Gerokasu2 => Tweener::new_gerokasu2(value),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 struct LayerPropertiesData {
+    policy: PropertyPolicy,
     #[allow(unused)] // it's probably unused by the game too, but let's keep it
     layer_load_counter1: u32,
     updated_frame: shin_core::primitives::update::FrameId,
@@ -51,6 +67,9 @@ impl LayerPropertiesData {
     }
 
     pub fn new() -> Self {
+        Self::with_policy(PropertyPolicy::Legacy)
+    }
+    fn with_policy(policy: PropertyPolicy) -> Self {
         // Native73858..738a8 constructs in X,Y,rotation,scaleX,scaleY,alpha order.
         let wobbler_x = Wobbler::new();
         let wobbler_y = Wobbler::new();
@@ -61,10 +80,11 @@ impl LayerPropertiesData {
         // Native738b0 consumes one more random value after the six oscillators.
         let _ = crate::engine_random::next_seed();
         Self {
+            policy,
             layer_load_counter1: 0,
             updated_frame: Default::default(),
             layer_id: LayerId::new(0),
-            properties: initial_values().map(|_, v| Tweener::new(v as f32)),
+            properties: initial_values().map(|_, v| policy.tweener(v as f32)),
             wobbler_x,
             wobbler_y,
             wobbler_alpha,
@@ -485,18 +505,22 @@ impl LayerPropertiesData {
 /// Copies preserve that absence; update/fast-forward do not allocate it.
 #[derive(Debug, Default)]
 struct PropertyCell {
+    policy: PropertyPolicy,
     state: std::sync::OnceLock<std::sync::Arc<parking_lot::Mutex<LayerPropertiesData>>>,
 }
 impl PropertyCell {
     fn lock(&self) -> parking_lot::ArcMutexGuard<parking_lot::RawMutex, LayerPropertiesData> {
         self.state
             .get_or_init(|| {
-                std::sync::Arc::new(parking_lot::Mutex::new(LayerPropertiesData::new()))
+                std::sync::Arc::new(parking_lot::Mutex::new(LayerPropertiesData::with_policy(
+                    self.policy,
+                )))
             })
             .lock_arc()
     }
     fn initialized(data: LayerPropertiesData) -> Self {
         Self {
+            policy: data.policy,
             state: std::sync::OnceLock::from(std::sync::Arc::new(parking_lot::Mutex::new(data))),
         }
     }
@@ -551,7 +575,10 @@ impl Clone for LayerProperties {
             }
             PropertyCell::initialized(state.lock().clone())
         } else {
-            PropertyCell::default()
+            PropertyCell {
+                policy: cell.policy,
+                ..Default::default()
+            }
         };
         Self::from_cell(std::sync::Arc::new(inner))
     }
@@ -622,7 +649,17 @@ impl LayerProperties {
         }
     }
     pub fn new() -> Self {
-        Self::from_cell(std::sync::Arc::new(PropertyCell::default()))
+        Self::with_policy(PropertyPolicy::Legacy)
+    }
+    pub fn with_policy(policy: PropertyPolicy) -> Self {
+        Self::from_cell(std::sync::Arc::new(PropertyCell {
+            policy,
+            ..Default::default()
+        }))
+    }
+    /// Query arithmetic without materializing this lazy property owner.
+    pub(crate) fn policy(&self) -> PropertyPolicy {
+        self.inner.cell().policy
     }
     pub fn from_state(state: &LayerPropertiesState, layer_id: LayerId, load_counter: u32) -> Self {
         Self::from_cell(std::sync::Arc::new(PropertyCell::initialized(

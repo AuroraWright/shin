@@ -13,7 +13,7 @@ use crate::{
 };
 
 #[path = "choice_model.rs"]
-mod model;
+pub(crate) mod model;
 pub use model::ChoiceModel;
 pub(crate) use model::shuffle as shuffle_choice_indices;
 use model::{GAP, Phase};

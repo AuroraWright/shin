@@ -22,7 +22,59 @@ use shin_render::{
 #[derive(Clone, RenderClone)]
 pub struct RainLayerImpl {
     textures: EffectsAtlasBorrow,
-    particles: RainParticles,
+    particles: RainModel,
+}
+#[derive(Clone, Debug)]
+enum RainModel {
+    Legacy(RainParticles),
+    Ger(crate::adv::gerokasu2::procedural_particles::GerRainParticles),
+}
+impl RainModel {
+    fn mode(&self) -> usize {
+        match self {
+            Self::Legacy(m) => m.mode,
+            Self::Ger(m) => m.mode,
+        }
+    }
+    fn particles(&self) -> &[super::RainParticle] {
+        match self {
+            Self::Legacy(m) => &m.particles,
+            Self::Ger(m) => &m.particles,
+        }
+    }
+    fn warm_up(&mut self, intensity: f32, direction: f32, speed: f32) {
+        match self {
+            Self::Legacy(m) => m.warm_up(intensity, direction, speed),
+            Self::Ger(m) => m.warm_up(intensity, direction, speed),
+        }
+    }
+    fn update(&mut self, delta: f32, intensity: f32, direction: f32, speed: f32) {
+        match self {
+            Self::Legacy(m) => m.update(delta, intensity, direction, speed),
+            Self::Ger(m) => m.update(delta, intensity, direction, speed),
+        }
+    }
+    #[cfg(test)]
+    fn reference_seed(&self) -> u32 {
+        match self {
+            Self::Legacy(m) => m.reference_seed(),
+            Self::Ger(m) => m.reference_seed(),
+        }
+    }
+    #[cfg(test)]
+    fn legacy(&self) -> &RainParticles {
+        let Self::Legacy(m) = self else {
+            panic!("Legacy rain fixture")
+        };
+        m
+    }
+    #[cfg(test)]
+    fn legacy_mut(&mut self) -> &mut RainParticles {
+        let Self::Legacy(m) = self else {
+            panic!("Legacy rain fixture")
+        };
+        m
+    }
 }
 impl std::fmt::Debug for RainLayerImpl {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -61,7 +113,30 @@ impl RainLayer {
     pub(crate) fn new(textures: EffectsAtlasBorrow, mode: i32, min: i32, max: i32) -> Self {
         Self::from_inner_constructor(|| RainLayerImpl {
             textures,
-            particles: RainParticles::new(mode, min, max, crate::engine_random::next_seed()),
+            particles: RainModel::Legacy(RainParticles::new(
+                mode,
+                min,
+                max,
+                crate::engine_random::next_seed(),
+            )),
+        })
+    }
+    pub(crate) fn new_gerokasu2(
+        textures: EffectsAtlasBorrow,
+        mode: i32,
+        min: i32,
+        max: i32,
+    ) -> Self {
+        Self::from_inner_constructor(|| RainLayerImpl {
+            textures,
+            particles: RainModel::Ger(
+                crate::adv::gerokasu2::procedural_particles::GerRainParticles::new(
+                    mode,
+                    min,
+                    max,
+                    crate::engine_random::next_seed(),
+                ),
+            ),
         })
     }
 }
@@ -69,13 +144,15 @@ impl RainLayer {
 #[cfg(test)]
 impl RainLayerImpl {
     pub(super) fn reference_owner_prepare(&mut self, count: usize, identity: usize) {
-        self.particles.reference_owner_prepare(count, identity);
+        self.particles
+            .legacy_mut()
+            .reference_owner_prepare(count, identity);
     }
     pub(super) fn reference_owner_words(&self) -> (Option<usize>, Vec<String>) {
-        self.particles.reference_owner_words()
+        self.particles.legacy().reference_owner_words()
     }
     pub(super) fn reference_owner_mutate(&mut self) {
-        self.particles.reference_owner_mutate();
+        self.particles.legacy_mut().reference_owner_mutate();
     }
     pub(super) fn reference_owner_advance(&mut self, intensity: f32, direction: f32, speed: f32) {
         self.particles.update(0.0, intensity, direction, speed);
@@ -117,7 +194,7 @@ impl NewDrawableLayer for RainLayerImpl {
             "Rain clipping is not implemented"
         );
         let textures = self.textures.read();
-        let (texture, width, height) = match self.particles.mode {
+        let (texture, width, height) = match self.particles.mode() {
             0 => (textures.required("rain"), 4.0, 150.0),
             1 => (textures.required("hanabira"), 30.0, 30.0),
             2 => (textures.required("snow"), 15.0, 15.0),
@@ -135,7 +212,7 @@ impl NewDrawableLayer for RainLayerImpl {
             .depth_stencil_shorthand(stencil_ref, false, false)
             .color_blend_type(ColorBlendType::from_regular_layer(drawable.blend_type));
         let matrix = transform.compute_final_transform();
-        let mut particles: Vec<_> = self.particles.particles.iter().collect();
+        let mut particles: Vec<_> = self.particles.particles().iter().collect();
         particles.sort_by(|a, b| b.depth.total_cmp(&a.depth));
         for particle in particles {
             let mut positions = vec![particle.position.x];
@@ -146,13 +223,16 @@ impl NewDrawableLayer for RainLayerImpl {
                 positions.push(particle.position.x - 1920.0);
             }
             for x in positions {
-                let matrix = matrix
-                    * Mat4::from_translation(Vec3::new(
-                        x - 960.0,
-                        particle.position.y - 540.0,
-                        0.0,
-                    ))
-                    * particle.shape;
+                let translation =
+                    Mat4::from_translation(Vec3::new(x - 960.0, particle.position.y - 540.0, 0.0));
+                let matrix = if matches!(self.particles, RainModel::Ger(_)) {
+                    crate::layer::render_params::multiply_transforms(
+                        crate::layer::render_params::multiply_transforms(matrix, translation),
+                        particle.shape,
+                    )
+                } else {
+                    matrix * translation * particle.shape
+                };
                 quad.render_sprite(pass, builder, texture.as_source(), matrix);
             }
         }
@@ -172,10 +252,10 @@ impl RainLayer {
             time::Ticks,
         };
         use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
-        let mode = self.inner_ref().particles.mode;
+        let mode = self.inner_ref().particles.mode();
         *self = Self::from_inner(RainLayerImpl {
             textures: self.inner_ref().textures.clone(),
-            particles: RainParticles::new(mode as i32, 100, 1500, 1),
+            particles: RainModel::Legacy(RainParticles::new(mode as i32, 100, 1500, 1)),
         });
         self.properties_mut()
             .property_tweener_mut(LayerProperty::RainIntensity)
@@ -193,12 +273,12 @@ impl RainLayer {
             movie_volume_settings: Default::default(),
         };
         self.update(&update);
-        assert!(!self.inner_ref().particles.particles.is_empty());
-        assert!(!self.inner_ref().particles.needs_warm_up);
+        assert!(!self.inner_ref().particles.particles().is_empty());
+        assert!(!self.inner_ref().particles.legacy().needs_warm_up);
         let previous: Vec<_> = self
             .inner_ref()
             .particles
-            .particles
+            .particles()
             .iter()
             .map(|p| p.position)
             .collect();
@@ -210,7 +290,7 @@ impl RainLayer {
             previous,
             self.inner_ref()
                 .particles
-                .particles
+                .particles()
                 .iter()
                 .map(|p| p.position)
                 .collect::<Vec<_>>()

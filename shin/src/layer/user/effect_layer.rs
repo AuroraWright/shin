@@ -56,10 +56,16 @@ impl EffectLayer {
         self.pending_children.extend_from_slice(&lower[common..]);
     }
     pub fn new() -> Self {
+        Self::with_policy(crate::layer::PropertyPolicy::Legacy)
+    }
+    pub(crate) fn new_gerokasu2() -> Self {
+        Self::with_policy(crate::layer::PropertyPolicy::Gerokasu2)
+    }
+    fn with_policy(policy: crate::layer::PropertyPolicy) -> Self {
         Self {
             update_tracker: Default::default(),
             state: NewDrawableLayerState::new(),
-            props: LayerProperties::new(),
+            props: LayerProperties::with_policy(policy),
             pending_children: Vec::new(),
         }
     }
