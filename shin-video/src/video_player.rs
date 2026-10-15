@@ -8,7 +8,6 @@ use std::{
 
 use anyhow::{Context, Result};
 use glam::{Mat4, Vec4};
-use kira::track::TrackId;
 use parking_lot::{Mutex, RwLock, RwLockReadGuard, RwLockUpgradableReadGuard};
 use shin_audio::{AudioData, AudioManager, AudioSettings};
 use shin_core::{
@@ -29,6 +28,19 @@ use crate::{
     mp4::Mp4,
     timer::Timer,
 };
+
+/// Catch on the actual compute worker, including loop restart preparation.
+/// A catch around the awaiting future cannot contain an escaped Rayon panic.
+fn prepare_movie_safely<T>(prepare: impl FnOnce() -> Result<T>) -> Result<T> {
+    std::panic::catch_unwind(std::panic::AssertUnwindSafe(prepare)).map_err(|panic| {
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&str>().copied())
+            .unwrap_or("unknown panic");
+        anyhow::anyhow!("Movie preparation panicked: {message}")
+    })?
+}
 
 /// Native terminal query requires both decoder EOF flags and the maximum
 /// declared track deadline. Decoder EOF alone can precede queued playback.
@@ -88,7 +100,7 @@ impl MovieLoop {
         self.cycle += 1;
         let prepare = self.prepare.clone();
         self.task = Some(Exclusive::new(shin_tasks::compute::spawn_loader(
-            move || prepare(),
+            move || prepare_movie_safely(|| prepare()),
         )));
     }
 
@@ -264,6 +276,18 @@ impl VideoPlayerHandle {
         paused: bool,
         repeat: bool,
     ) -> Result<VideoPlayerHandle> {
+        prepare_movie_safely(|| {
+            Self::prepare_with_playback_state(device, audio_manager, mp4, volume, paused, repeat)
+        })
+    }
+    fn prepare_with_playback_state<S: Read + Seek + Send + 'static>(
+        device: &wgpu::Device,
+        audio_manager: &AudioManager,
+        mp4: Mp4<S>,
+        volume: Volume,
+        paused: bool,
+        repeat: bool,
+    ) -> Result<VideoPlayerHandle> {
         let time_base = mp4
             .video_track
             .get_mp4_track_info(|track| track.timescale());
@@ -295,12 +319,15 @@ impl VideoPlayerHandle {
 
         info!("H264Decoder::new took {:?}", initialization_time);
 
-        let video_texture = VideoFrameTexture::new(
+        let video_texture = VideoFrameTexture::new_checked(
             device,
             video_decoder
                 .frame_size()
                 .context("Getting H264 frame size")?,
-        );
+        )?;
+        if let Some((_, frame)) = &pending_frame {
+            video_texture.validate_frame(frame)?;
+        }
 
         let mut audio_eof = None;
         let mut audio_failed = None;
@@ -309,7 +336,7 @@ impl VideoPlayerHandle {
             let settings = AudioSettings {
                 paused,
                 playback_rate: 1.0,
-                track: TrackId::Main,
+
                 fade_in: Tween::MS_15,
                 loop_start: None,
                 loop_count: 0,
@@ -452,6 +479,18 @@ impl VideoPlayerHandle {
             if let Some((result, retirement, offset)) = loop_result {
                 match result {
                     Ok(mut prepared) => {
+                        if let Err(err) = this.video_texture.validate_frame(&prepared.first.1) {
+                            error!(%err, "Repeating movie prepared an incompatible frame");
+                            this.stopped = true;
+                            this.timer.get_mut().pause_audio();
+                            // Retire the failed prepared decoder with its loader
+                            // scope, including the decoder's child tasks.
+                            #[cfg(not(target_arch = "wasm32"))]
+                            retirement.retire((prepared, err));
+                            #[cfg(target_arch = "wasm32")]
+                            drop((retirement, prepared, err));
+                            return;
+                        }
                         prepared.first.0.start_time += offset;
                         this.retire_video_decoder();
                         this.video_decoder = Some(Exclusive::new(prepared.decoder));
@@ -522,7 +561,12 @@ impl VideoPlayerHandle {
                         "Displaying frame #{}, time: {}",
                         timing.frame_number, timing.start_time
                     );
-                    this.video_texture.write_data_nv12(queue, frame);
+                    if let Err(err) = this.video_texture.write_data_nv12_checked(queue, frame) {
+                        error!(%err, "Invalid decoded movie frame");
+                        this.stopped = true;
+                        this.timer.get_mut().pause_audio();
+                        return;
+                    }
                     this.displayed_frame = Some(timing);
                     // the loop will not enter again, so the pending frame will now be displayed
                 } else {
@@ -620,7 +664,7 @@ mod tests {
             shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .unwrap();
         let (device, queue) =
-            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
                 .unwrap();
         let audio = AudioManager::new_for_tests();
         let bytes = opening_bytes();
@@ -668,7 +712,7 @@ mod tests {
             std::thread::sleep(Duration::from_millis(50));
             let frozen = player.current_time();
             let image = player.current_frame_timing();
-            assert_eq!(audio.kira_manager().lock().num_sounds(), 1);
+            assert_eq!(audio.kira_manager().lock().main_track().num_sounds(), 1);
             player.stop();
             player.start();
             assert!(player.is_paused(), "A failed decoder cannot restart");
@@ -686,10 +730,10 @@ mod tests {
             }
             assert_eq!(player.current_time(), frozen);
             assert_eq!(player.current_frame_timing(), image);
-            assert_eq!(audio.kira_manager().lock().num_sounds(), 1);
+            assert_eq!(audio.kira_manager().lock().main_track().num_sounds(), 1);
             drop(player);
             let deadline = Instant::now() + Duration::from_secs(5);
-            while audio.kira_manager().lock().num_sounds() != 0 {
+            while audio.kira_manager().lock().main_track().num_sounds() != 0 {
                 assert!(
                     Instant::now() < deadline,
                     "AAC failed voice survived owner retirement"
@@ -714,10 +758,10 @@ mod tests {
             shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .unwrap();
         let (device, queue) =
-            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default()))
                 .unwrap();
         let audio = AudioManager::new_for_tests();
-        assert_eq!(audio.kira_manager().lock().num_sounds(), 0);
+        assert_eq!(audio.kira_manager().lock().main_track().num_sounds(), 0);
         let mut rom = RomReader::new(
             StatelessFile::new(File::open(std::env::var("SHIN_REFERENCE_ROM").unwrap()).unwrap())
                 .unwrap(),
@@ -763,7 +807,7 @@ mod tests {
         std::thread::sleep(Duration::from_millis(50));
         let frozen = player.current_time();
         assert_eq!(
-            audio.kira_manager().lock().num_sounds(),
+            audio.kira_manager().lock().main_track().num_sounds(),
             1,
             "Failure pauses the retained voice"
         );
@@ -775,10 +819,10 @@ mod tests {
             std::thread::sleep(Duration::from_millis(15));
         }
         assert_eq!(player.current_time(), frozen);
-        assert_eq!(audio.kira_manager().lock().num_sounds(), 1);
+        assert_eq!(audio.kira_manager().lock().main_track().num_sounds(), 1);
         drop(player);
         let deadline = Instant::now() + Duration::from_secs(5);
-        while audio.kira_manager().lock().num_sounds() != 0 {
+        while audio.kira_manager().lock().main_track().num_sounds() != 0 {
             assert!(
                 Instant::now() < deadline,
                 "Failed movie owner leaked its paused voice"
@@ -814,3 +858,6 @@ mod tests {
         assert!(silent.is_finished(true, 300_300));
     }
 }
+
+#[cfg(test)]
+mod worker_failure_reference;

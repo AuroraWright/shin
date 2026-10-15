@@ -9,14 +9,14 @@ use std::{
 
 use anyhow::{Context, Result};
 use dpi::PhysicalSize;
-use futures_lite::{io::BufReader, AsyncBufReadExt, AsyncWriteExt};
+use futures_lite::{AsyncBufReadExt, AsyncWriteExt, io::BufReader};
 use shin_tasks::AsyncTask;
 use tracing::{debug, error, trace, warn};
 
 use crate::{
     h264_decoder::{
-        y4m::{self, FrameSize, PlanarFrame},
         FrameTiming, Nv12Frame,
+        y4m::{self, FrameSize, PlanarFrame},
     },
     mp4::Mp4TrackReader,
     mp4_bitstream_converter::Mp4BitstreamConverter,
@@ -43,7 +43,50 @@ pub struct SpawnFfmpegH264Decoder {
 // const FFMPEG_LOG_LEVEL: &str = "debug";
 const FFMPEG_LOG_LEVEL: &str = "info";
 
+async fn guard_decoder_worker(
+    name: &'static str,
+    errors: async_channel::Sender<Result<PlanarFrame>>,
+    worker: impl std::future::Future<Output = ()>,
+) {
+    let mut worker = std::pin::pin!(worker);
+    let result = std::future::poll_fn(|cx| {
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| worker.as_mut().poll(cx))) {
+            Ok(std::task::Poll::Pending) => std::task::Poll::Pending,
+            Ok(std::task::Poll::Ready(())) => std::task::Poll::Ready(Ok(())),
+            Err(panic) => std::task::Poll::Ready(Err(panic)),
+        }
+    })
+    .await;
+    if let Err(panic) = result {
+        let message = panic
+            .downcast_ref::<String>()
+            .map(String::as_str)
+            .or_else(|| panic.downcast_ref::<&str>().copied())
+            .unwrap_or("unknown panic");
+        // Keep the failed worker's pipe/channel owners alive until this error
+        // is published. Closing stdin first can race with FFmpeg EOF and hide
+        // the input failure behind an unrelated output-header error.
+        let _ = errors
+            .send(Err(anyhow::anyhow!(
+                "Movie {name} callback panicked: {message}"
+            )))
+            .await;
+    }
+}
+
 async fn forward_decoded_frames<R: futures_lite::AsyncRead + Unpin>(
+    stdout: R,
+    frame_sender: async_channel::Sender<Result<PlanarFrame>>,
+) {
+    guard_decoder_worker(
+        "decoded output",
+        frame_sender.clone(),
+        forward_decoded_frames_inner(stdout, frame_sender),
+    )
+    .await;
+}
+
+async fn forward_decoded_frames_inner<R: futures_lite::AsyncRead + Unpin>(
     stdout: R,
     frame_sender: async_channel::Sender<Result<PlanarFrame>>,
 ) {
@@ -134,71 +177,75 @@ impl super::H264DecoderTrait for SpawnFfmpegH264Decoder {
         let frame_sender_task =
             shin_tasks::async_io::spawn(forward_decoded_frames(stdout, frame_sender));
 
-        let packet_sender_task = shin_tasks::async_io::spawn(async move {
-            let mut track = track;
-            let mut buffer = Vec::new();
-            let mut stdin = stdin;
+        let packet_sender_task = shin_tasks::async_io::spawn(guard_decoder_worker(
+            "MP4 input",
+            input_error_sender.clone(),
+            async move {
+                let mut track = track;
+                let mut buffer = Vec::new();
+                let mut stdin = stdin;
 
-            let mut frame_number = 0;
+                let mut frame_number = 0;
 
-            loop {
-                match track.next_sample() {
-                    Ok(Some(sample)) => {
-                        // MP4 can do frame reordering if B-frames are used
-                        // this seems to be indicated by the sample.rendering_offset field
-                        // it also seems that this info can be duplicated in the h264 bistream in a form of picture_timing SEI NALUs
-                        // it also seems that ffmpeg handles the picture_timing SEI NALUs correctly, so we don't need to do anything with the rendering offset if they are present
-                        // NOTE: maybe what I said above is not correct, as, after stripping the SEI NALUs, the video still looks correct...
-                        // I'll ignore the rendering offset for now, but this should be accounted for if other decoders are implemented
+                loop {
+                    match track.next_sample() {
+                        Ok(Some(sample)) => {
+                            // MP4 can do frame reordering if B-frames are used
+                            // this seems to be indicated by the sample.rendering_offset field
+                            // it also seems that this info can be duplicated in the h264 bistream in a form of picture_timing SEI NALUs
+                            // it also seems that ffmpeg handles the picture_timing SEI NALUs correctly, so we don't need to do anything with the rendering offset if they are present
+                            // NOTE: maybe what I said above is not correct, as, after stripping the SEI NALUs, the video still looks correct...
+                            // I'll ignore the rendering offset for now, but this should be accounted for if other decoders are implemented
 
-                        let frame_timing = FrameTiming {
-                            frame_number,
-                            start_time: sample.start_time,
-                            duration: sample.duration,
-                        };
+                            let frame_timing = FrameTiming {
+                                frame_number,
+                                start_time: sample.start_time,
+                                duration: sample.duration,
+                            };
 
-                        frame_number += 1;
+                            frame_number += 1;
 
-                        if frame_timing_sender.send(frame_timing).is_err() {
-                            debug!("Game closed the channel, stopping sending frame timings");
-                            break;
-                        }
+                            if frame_timing_sender.send(frame_timing).is_err() {
+                                debug!("Game closed the channel, stopping sending frame timings");
+                                break;
+                            }
 
-                        if let Err(error) =
-                            bitstream_converter.convert_packet(&sample.bytes, &mut buffer)
-                        {
-                            let _ = input_error_sender
-                                .send(Err(error.context("Converting MP4 sample to Annex B")))
-                                .await;
-                            break;
-                        }
-                        trace!("Sending sample to ffmpeg ({} bytes)", buffer.len());
-                        match stdin.write_all(&buffer).await {
-                            Ok(_) => {}
-                            Err(e) => {
-                                error!("Error writing sample to ffmpeg: {}", e);
+                            if let Err(error) =
+                                bitstream_converter.convert_packet(&sample.bytes, &mut buffer)
+                            {
                                 let _ = input_error_sender
-                                    .send(Err(anyhow::Error::new(e)
-                                        .context("Writing MP4 sample to FFmpeg")))
+                                    .send(Err(error.context("Converting MP4 sample to Annex B")))
                                     .await;
                                 break;
                             }
+                            trace!("Sending sample to ffmpeg ({} bytes)", buffer.len());
+                            match stdin.write_all(&buffer).await {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    error!("Error writing sample to ffmpeg: {}", e);
+                                    let _ = input_error_sender
+                                        .send(Err(anyhow::Error::new(e)
+                                            .context("Writing MP4 sample to FFmpeg")))
+                                        .await;
+                                    break;
+                                }
+                            }
+                        }
+                        Ok(None) => {
+                            debug!("EOF from mp4, stopping sending to ffmpeg");
+                            break;
+                        }
+                        Err(e) => {
+                            error!("Error reading sample from mp4: {}", e);
+                            let _ = input_error_sender
+                                .send(Err(e.context("Reading MP4 sample for FFmpeg")))
+                                .await;
+                            break;
                         }
                     }
-                    Ok(None) => {
-                        debug!("EOF from mp4, stopping sending to ffmpeg");
-                        break;
-                    }
-                    Err(e) => {
-                        error!("Error reading sample from mp4: {}", e);
-                        let _ = input_error_sender
-                            .send(Err(e.context("Reading MP4 sample for FFmpeg")))
-                            .await;
-                        break;
-                    }
                 }
-            }
-        });
+            },
+        ));
 
         // pump ffmpeg's stderr to the logs
         // TODO: parse the ffmpeg's log leve?
@@ -271,6 +318,32 @@ impl super::H264DecoderTrait for SpawnFfmpegH264Decoder {
         }
     }
 
+    fn try_read_frame(&mut self) -> Result<super::DecoderPoll> {
+        let frame = if let Some(frame) = self.buffered_frame.take() {
+            frame
+        } else {
+            match self.frame_receiver.try_recv() {
+                Ok(frame) => frame?,
+                Err(async_channel::TryRecvError::Empty) => return Ok(super::DecoderPoll::Pending),
+                Err(async_channel::TryRecvError::Closed) => {
+                    anyhow::ensure!(
+                        self.frame_timing_receiver.try_recv().is_err(),
+                        "FFmpeg ended before decoding all MP4 video samples"
+                    );
+                    return Ok(super::DecoderPoll::Eof);
+                }
+            }
+        };
+        // Packet timing is published before its decoded frame can be queued.
+        // Never block the Higurashi update if that codec transport invariant fails.
+        let timing = self.frame_timing_receiver.try_recv()
+            .context("FFmpeg decoded frame has no queued MP4 timing")?;
+        let frame_size = *frame.size();
+        let frame = frame.into_nv12().context("Converting FFmpeg frame to NV12")?;
+        self.frame_size = Some(frame_size);
+        Ok(super::DecoderPoll::Frame(timing, frame))
+    }
+
     fn frame_size(&mut self) -> Result<PhysicalSize<u32>> {
         debug!("Reading frame info from ffmpeg");
         match self.frame_size {
@@ -302,6 +375,10 @@ impl Drop for SpawnFfmpegH264Decoder {
         }
     }
 }
+
+#[cfg(test)]
+#[path = "callback_failure_reference.rs"]
+mod callback_failure_reference;
 
 #[cfg(test)]
 mod tests {
@@ -484,8 +561,8 @@ mod tests {
             fs::File,
             io::{Cursor, SeekFrom},
             sync::{
-                atomic::{AtomicBool, Ordering},
                 Arc,
+                atomic::{AtomicBool, Ordering},
             },
         };
         struct FailingReader {

@@ -127,13 +127,8 @@ impl Timer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use kira::{
-        manager::{
-            AudioManager, AudioManagerSettings,
-            backend::mock::{MockBackend, MockBackendSettings},
-        },
-        track::TrackId,
-    };
+    use kira::{AudioManager, AudioManagerSettings};
+    use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use shin_audio::{AudioData, AudioSettings};
     use shin_core::{
         format::audio::{AudioBuffer, AudioFrameSource},
@@ -296,6 +291,7 @@ mod tests {
     fn stalled_movie_audio(paused: bool) -> (AudioManager<MockBackend>, Timer) {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -305,7 +301,6 @@ mod tests {
                 settings: AudioSettings {
                     paused,
                     playback_rate: 1.0,
-                    track: TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,
@@ -374,7 +369,7 @@ mod tests {
                     let sample = manager.backend_mut().process();
                     assert_eq!((sample.left, sample.right), (0.0, 0.0));
                 }
-                assert_eq!(manager.num_sounds(), 0, "Retired voice must be removed");
+                assert_eq!(manager.main_track().num_sounds(), 0, "Retired voice must be removed");
             }
         }
     }
@@ -412,6 +407,7 @@ mod tests {
     fn prepared_movie_audio_remains_paused_until_publication_starts_it() {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -421,7 +417,6 @@ mod tests {
                 settings: AudioSettings {
                     paused: true,
                     playback_rate: 1.0,
-                    track: TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,
@@ -477,6 +472,7 @@ mod tests {
     fn retired_movie_audio_ignores_future_gain_start_and_duplicate_retirement() {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -486,7 +482,6 @@ mod tests {
                 settings: AudioSettings {
                     paused: false,
                     playback_rate: 1.0,
-                    track: TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,
@@ -538,13 +533,14 @@ mod tests {
             unreachable!()
         };
         assert!(audio.audio_handle.get_wait_status().is_empty());
-        assert_eq!(manager.num_sounds(), 0);
+        assert_eq!(manager.main_track().num_sounds(), 0);
     }
 
     #[test]
     fn audio_sample_clock_ignores_game_delta_and_silent_eof_tail_keeps_advancing() {
         let mut manager = AudioManager::<MockBackend>::new(AudioManagerSettings {
             backend_settings: MockBackendSettings { sample_rate: 1000 },
+            internal_buffer_size: 1,
             ..Default::default()
         })
         .unwrap();
@@ -554,7 +550,6 @@ mod tests {
                 settings: AudioSettings {
                     paused: false,
                     playback_rate: 1.0,
-                    track: TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,

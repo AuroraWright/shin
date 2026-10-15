@@ -232,6 +232,27 @@ impl super::H264DecoderTrait for GStreamerH264Decoder {
                 .context("Failed to pull sample")?
         };
 
+        Ok(Some(self.decode_sample(sample)?))
+    }
+
+    fn try_read_frame(&mut self) -> Result<super::DecoderPoll> {
+        let sample = self.saved_frame.take()
+            .or_else(|| self.app_sink.try_pull_sample(gst::ClockTime::ZERO));
+        let Some(sample) = sample else {
+            return Ok(if self.app_sink.is_eos() { super::DecoderPoll::Eof }
+                else { super::DecoderPoll::Pending });
+        };
+        let (timing, frame) = self.decode_sample(sample)?;
+        Ok(super::DecoderPoll::Frame(timing, frame))
+    }
+
+    fn frame_size(&mut self) -> Result<PhysicalSize<u32>> {
+        Ok(self.frame_size)
+    }
+}
+
+impl GStreamerH264Decoder {
+    fn decode_sample(&mut self, sample: gst::Sample) -> Result<(FrameTiming, Nv12Frame)> {
         let buffer = sample.buffer().unwrap();
         // TODO: suboptimal: FrameTimings should already be in an absolute time unit
         let gst_time_to_mp4_time =
@@ -269,10 +290,7 @@ impl super::H264DecoderTrait for GStreamerH264Decoder {
             size: self.frame_size,
         };
 
-        Ok(Some((frame_timing, frame)))
-    }
+        Ok((frame_timing, frame))
 
-    fn frame_size(&mut self) -> Result<PhysicalSize<u32>> {
-        Ok(self.frame_size)
     }
 }

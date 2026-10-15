@@ -9,10 +9,19 @@ pub use nv12::Nv12Frame;
 
 use crate::mp4::Mp4TrackReader;
 
+/// Polling decoded output preserves a pending transport separately from EOF.
+pub enum DecoderPoll {
+    Pending,
+    Frame(FrameTiming, Nv12Frame),
+    Eof,
+}
+
 pub trait H264DecoderTrait: Sized {
     fn new<S: Read + Seek + Send + 'static>(track: Mp4TrackReader<S>) -> Result<Self>;
 
     fn read_frame(&mut self) -> Result<Option<(FrameTiming, Nv12Frame)>>;
+
+    fn try_read_frame(&mut self) -> Result<DecoderPoll>;
 
     fn frame_size(&mut self) -> Result<PhysicalSize<u32>>;
 }

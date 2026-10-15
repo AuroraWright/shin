@@ -1,12 +1,12 @@
 use dpi::PhysicalSize;
-use glam::{vec2, Mat4, Vec2, Vec4};
+use glam::{Mat4, Vec2, Vec4, vec2};
 use shin_render::{
+    DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder,
     gpu_texture::{GpuTexture, TextureKind},
     quad_vertices::build_quad_vertices,
     render_pass::RenderPass,
     shaders::types::texture::TextureSource,
     shaders::types::{buffer::VertexSource, vertices::PosTexVertex},
-    DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder,
 };
 
 use crate::h264_decoder::Nv12Frame;
@@ -21,6 +21,26 @@ pub struct VideoFrameTexture {
 
 impl VideoFrameTexture {
     pub fn new(device: &wgpu::Device, size: PhysicalSize<u32>) -> Self {
+        Self::new_checked(device, size).expect("Invalid movie texture extent")
+    }
+    pub(crate) fn new_checked(
+        device: &wgpu::Device,
+        size: PhysicalSize<u32>,
+    ) -> anyhow::Result<Self> {
+        anyhow::ensure!(
+            size.width >= 2 && size.height >= 2 && size.width % 2 == 0 && size.height % 2 == 0,
+            "Invalid NV12 movie extent {}x{}",
+            size.width,
+            size.height
+        );
+        let limit = device.limits().max_texture_dimension_2d;
+        anyhow::ensure!(
+            size.width <= limit && size.height <= limit,
+            "Movie extent {}x{} exceeds device texture limit {limit}",
+            size.width,
+            size.height
+        );
+
         let tex_y = GpuTexture::new_empty(
             device,
             Some("VideoFrameTexture Y"),
@@ -36,17 +56,44 @@ impl VideoFrameTexture {
             TextureKind::Updatable,
         );
 
-        Self {
+        Ok(Self {
             tex_y,
             tex_uv,
             size,
-        }
+        })
     }
 
+    pub(crate) fn validate_frame(&self, frame: &Nv12Frame) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.size == frame.size,
+            "Movie frame extent changed from {}x{} to {}x{}",
+            self.size.width,
+            self.size.height,
+            frame.size.width,
+            frame.size.height
+        );
+        let pixels = (self.size.width as usize)
+            .checked_mul(self.size.height as usize)
+            .ok_or_else(|| anyhow::anyhow!("Movie NV12 plane size overflow"))?;
+        anyhow::ensure!(
+            frame.y_plane.len() == pixels && frame.uv_plane.len() == pixels / 2,
+            "Invalid movie NV12 plane lengths: Y={},UV={},expected Y={pixels},UV={}",
+            frame.y_plane.len(),
+            frame.uv_plane.len(),
+            pixels / 2
+        );
+        Ok(())
+    }
     pub fn write_data_nv12(&self, queue: &wgpu::Queue, nv12: &Nv12Frame) {
-        // TODO: maybe support resizing the texture if the frame size changes?
-        assert_eq!(self.size, nv12.size);
-
+        self.write_data_nv12_checked(queue, nv12)
+            .expect("Invalid movie frame upload");
+    }
+    pub(crate) fn write_data_nv12_checked(
+        &self,
+        queue: &wgpu::Queue,
+        nv12: &Nv12Frame,
+    ) -> anyhow::Result<()> {
+        self.validate_frame(nv12)?;
         let size = self.size;
 
         queue.write_texture(
@@ -87,6 +134,7 @@ impl VideoFrameTexture {
                 depth_or_array_layers: 1,
             },
         );
+        Ok(())
     }
 
     pub fn get_size(&self) -> Vec2 {

@@ -1,17 +1,20 @@
 use std::{
     io::{Read, Seek},
     sync::{
-        atomic::{AtomicBool, Ordering},
         Arc,
+        atomic::{AtomicBool, Ordering},
     },
 };
 
 use anyhow::Context;
 use shin_core::format::audio::{AudioBuffer, AudioFrameSource};
 use symphonia::core::{
-    audio::AudioBufferRef,
-    codecs::{CodecParameters, Decoder, DecoderOptions, CODEC_TYPE_AAC},
-    formats::Packet,
+    audio::{Audio, GenericAudioBufferRef as AudioBufferRef},
+    codecs::audio::{
+        AudioCodecParameters as CodecParameters, AudioDecoder as Decoder,
+        AudioDecoderOptions as DecoderOptions, well_known::CODEC_ID_AAC as CODEC_TYPE_AAC,
+    },
+    packet::PacketRef,
 };
 
 use crate::mp4::Mp4TrackReader;
@@ -253,19 +256,42 @@ impl<S: Read + Seek> AacFrameSource<S> {
     }
 
     fn decode_frame(&mut self) -> anyhow::Result<Option<Vec<(f32, f32)>>> {
+        // Audio callbacks run after player preparation has returned. Convert a
+        // packet-reader/codec panic into the same terminal error as a failed
+        // decode; callers latch failure and never reuse the partial decoder.
+        std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.decode_frame_inner()))
+            .map_err(|panic| {
+                let message = panic
+                    .downcast_ref::<String>()
+                    .map(String::as_str)
+                    .or_else(|| panic.downcast_ref::<&str>().copied())
+                    .unwrap_or("unknown panic");
+                anyhow::anyhow!("Movie AAC callback panicked: {message}")
+            })?
+    }
+
+    fn decode_frame_inner(&mut self) -> anyhow::Result<Option<Vec<(f32, f32)>>> {
         let Some(frame) = self.track.next_sample()? else {
             return Ok(None);
         };
-        let packet =
-            Packet::new_from_slice(1, frame.start_time, frame.duration as u64, &frame.bytes);
-        let buffer = self.decoder.decode(&packet).context("Decoding AAC frame")?;
+        let packet = PacketRef::new(1,
+            i64::try_from(frame.start_time)
+                .context("AAC timestamp exceeds signed range")?
+                .into(), frame.duration.into(), &frame.bytes,
+        );
+        let buffer = self.decoder.decode_ref(&packet).context("Decoding AAC frame")?;
         let AudioBufferRef::F32(buffer) = buffer else {
             anyhow::bail!("Unsupported AAC sample format");
         };
-        let planes = buffer.planes();
-        let samples = match planes.planes() {
-            [mono] => mono.iter().map(|&sample| (sample, sample)).collect(),
-            [left, right] => left.iter().copied().zip(right.iter().copied()).collect(),
+        let samples = match buffer.num_planes() {
+            1 => buffer
+                .plane(0)
+                .unwrap()
+                .iter().map(|&sample| (sample, sample)).collect(),
+            2 => buffer
+                .plane(0)
+                .unwrap()
+                .iter().copied().zip(buffer.plane(1).unwrap().iter().copied()).collect(),
             _ => anyhow::bail!("Unsupported AAC channel count"),
         };
         Ok(Some(samples))
@@ -355,16 +381,14 @@ impl<S: Read + Seek> AudioFrameSource for AacFrameSource<S> {
 }
 
 #[cfg(test)]
+mod callback_failure_reference;
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use crate::mp4::Mp4;
-    use kira::{
-        manager::{
-            backend::mock::{MockBackend, MockBackendSettings},
-            AudioManager, AudioManagerSettings,
-        },
-        track::TrackId,
-    };
+    use kira::{AudioManager, AudioManagerSettings};
+    use shin_audio::test_support::{MockBackendSettings, SampleBackend as MockBackend};
     use shin_audio::{AudioData, AudioSettings};
     use shin_core::{
         format::{audio::AudioSource, rom::RomReader},
@@ -453,7 +477,7 @@ mod tests {
     #[test]
     #[ignore = "requires supplied ROM (SHIN_REFERENCE_ROM); no GPU or sound device required"]
     fn reference_aac_read_and_seek_failures_freeze_retained_voice() {
-        use crate::test_support::{opening_bytes, FaultingReader};
+        use crate::test_support::{FaultingReader, opening_bytes};
         let bytes = opening_bytes();
         for repeat in [false, true] {
             for warmup in [0, 8000] {
@@ -469,13 +493,13 @@ mod tests {
                     backend_settings: MockBackendSettings {
                         sample_rate: 48_000,
                     },
+                    internal_buffer_size: 1,
                     ..Default::default()
                 })
                 .unwrap();
                 let settings = AudioSettings {
                     paused: false,
                     playback_rate: 1.0,
-                    track: TrackId::Main,
                     fade_in: Tween::IMMEDIATE,
                     loop_start: None,
                     loop_count: 0,
@@ -529,7 +553,7 @@ mod tests {
                         assert_eq!(manager.backend_mut().process(), kira::Frame::ZERO);
                     }
                     assert_eq!(handle.position_samples(), frozen);
-                    assert_eq!(manager.num_sounds(), 1);
+                    assert_eq!(manager.main_track().num_sounds(), 1);
                     assert!(handle.get_wait_status().contains(AudioWaitStatus::PLAYING));
                 }
                 handle.stop(Tween::IMMEDIATE).unwrap();
@@ -537,7 +561,7 @@ mod tests {
                     manager.backend_mut().on_start_processing();
                     let _ = manager.backend_mut().process();
                 }
-                assert_eq!(manager.num_sounds(), 0);
+                assert_eq!(manager.main_track().num_sounds(), 0);
             }
         }
         let fail = Arc::new(AtomicBool::new(false));
@@ -721,6 +745,7 @@ mod tests {
                 backend_settings: MockBackendSettings {
                     sample_rate: 48_000,
                 },
+                internal_buffer_size: 1,
                 ..Default::default()
             })
             .unwrap()
@@ -730,7 +755,6 @@ mod tests {
             settings: AudioSettings {
                 paused: false,
                 playback_rate: 1.0,
-                track: TrackId::Main,
                 fade_in: Tween::IMMEDIATE,
                 loop_start: None,
                 loop_count: 0,
