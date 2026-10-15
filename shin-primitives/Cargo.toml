@@ -4,7 +4,7 @@ version = "0.8.1"
 edition = "2024"
 
 [dependencies]
-cfg-if = "1.0.0"
+cfg-if = "1.0.5"
 bytemuck = { workspace = true, features = ["derive"] }
 glam = { workspace = true }
 encase = { workspace = true, optional = true }

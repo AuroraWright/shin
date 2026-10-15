@@ -6,13 +6,13 @@ mod tests;
 use std::ops;
 
 use crate::parser::{
+    SyntaxKind,
+    SyntaxKind::*,
+    T,
     lex::{
         char_classes::{is_id_continue, is_id_start, is_whitespace},
         cursor::Cursor,
     },
-    SyntaxKind,
-    SyntaxKind::*,
-    T,
 };
 
 pub struct LexedStr<'a> {
@@ -238,7 +238,7 @@ impl Cursor<'_> {
                     kind: EOF,
                     len: 0,
                     error: None,
-                }
+                };
             }
         };
 

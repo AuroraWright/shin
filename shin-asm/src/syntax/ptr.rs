@@ -16,7 +16,7 @@ use std::{
 
 use rowan::TextRange;
 
-use crate::syntax::{syntax_node::SalLanguage, AstNode, AstSpanned, SyntaxNode};
+use crate::syntax::{AstNode, AstSpanned, SyntaxNode, syntax_node::SalLanguage};
 
 /// A "pointer" to a [`SyntaxNode`], via location in the source code.
 pub type SyntaxNodePtr = rowan::ast::SyntaxNodePtr<SalLanguage>;
@@ -111,7 +111,7 @@ impl<N: AstNode> From<AstPtr<N>> for SyntaxNodePtr {
 
 #[test]
 fn test_local_syntax_ptr() {
-    use crate::syntax::{ast, AstNode, SourceFile};
+    use crate::syntax::{AstNode, SourceFile, ast};
 
     let file = SourceFile::parse("function ABOBA()\nEXIT 0,0\nendfun")
         .ok()

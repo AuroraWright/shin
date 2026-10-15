@@ -1,16 +1,16 @@
 mod prelude {
     pub use crate::{
         compile::{
+            HirBlockBody, ResolveContext,
             def_map::DefValue,
             hir,
             hir::{
-                lower::{
-                    from_hir::{FromHirBlockCtx, FromHirCollectors},
-                    FromHirExpr, HirDiagnosticCollectorWithBlock,
-                },
                 ExprId,
-            },
-            HirBlockBody, ResolveContext,
+                lower::{
+                    FromHirExpr, HirDiagnosticCollectorWithBlock,
+                    from_hir::{FromHirBlockCtx, FromHirCollectors},
+                },
+                },
         },
         syntax::ast,
     };
@@ -27,14 +27,15 @@ fn check_from_hir_ok<T: crate::compile::hir::lower::FromHirExpr + Eq + std::fmt:
     expected: &[T],
 ) {
     use crate::compile::{
+        MakeWithFile, Program,
         db::Database,
-        def_map::{build_def_map, ResolveKind},
+        def_map::{ResolveKind, build_def_map},
         hir::lower::{
+            CodeAddressCollector, HirDiagnosticCollector,
             from_hir::{FromHirBlockCtx, FromHirCollectors},
-            test_utils, CodeAddressCollector, HirDiagnosticCollector,
+            test_utils,
         },
         resolve::ResolveContext,
-        MakeWithFile, Program,
     };
 
     let db = Database::default();

@@ -3,8 +3,8 @@ mod register;
 pub use register::*;
 
 use crate::syntax::{
-    ast::{AstSpanned, AstToken, SyntaxToken},
     SyntaxKind::*,
+    ast::{AstSpanned, AstToken, SyntaxToken},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash, AstToken)]

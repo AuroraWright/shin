@@ -5,20 +5,15 @@ use std::{
 };
 
 use expect_test::expect_file;
-use test_generator::test_resources;
+use crate::parser::{LexedStr, shortcuts::StrStep};
 
-use crate::parser::{shortcuts::StrStep, LexedStr};
-
-// I don't like the way test_generator generates test names, and we still need to use a fork for workspace support
-// maybe it makes sense to put into the `shin-derive` ;)
-#[test_resources("test_data/lexer/ok/*.sal")]
+// build.rs enumerates each manifest-relative fixture independently of Cargo cwd.
 fn lex_ok(sal: &str) {
     let case = TestCase::from_sal_path(sal);
     let actual = lex(&case.text);
     expect_file![case.sast].assert_eq(&actual)
 }
 
-#[test_resources("test_data/lexer/err/*.sal")]
 fn lex_err(sal: &str) {
     let case = TestCase::from_sal_path(sal);
     let actual = lex(&case.text);
@@ -42,7 +37,6 @@ fn lex(text: &str) -> String {
     res
 }
 
-#[test_resources("test_data/parser/ok/*.sal")]
 fn parse_ok(sal: &str) {
     let case = TestCase::from_sal_path(sal);
     let (actual, errors) = parse(&case.text);
@@ -54,7 +48,6 @@ fn parse_ok(sal: &str) {
     expect_file![case.sast].assert_eq(&actual);
 }
 
-#[test_resources("test_data/parser/err/*.sal")]
 fn parse_err(sal: &str) {
     let case = TestCase::from_sal_path(sal);
     let (actual, errors) = parse(&case.text);
@@ -135,3 +128,5 @@ impl TestCase {
         TestCase { sal, sast, text }
     }
 }
+
+include!(concat!(env!("OUT_DIR"), "/parser_resource_tests.rs"));

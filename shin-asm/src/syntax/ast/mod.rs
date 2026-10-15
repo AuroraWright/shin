@@ -10,8 +10,8 @@ pub use shin_derive::{AstNode, AstToken};
 pub use tokens::*;
 
 use super::{
-    syntax_node::{SyntaxNode, SyntaxNodeChildren, SyntaxToken},
     SyntaxKind,
+    syntax_node::{SyntaxNode, SyntaxNodeChildren, SyntaxToken},
 };
 use crate::syntax::ptr::AstPtr;
 
@@ -37,12 +37,6 @@ pub trait AstNode: AstSpanned {
         Self: Sized;
 
     fn syntax(&self) -> &SyntaxNode;
-    fn clone_for_update(&self) -> Self
-    where
-        Self: Sized,
-    {
-        Self::cast(self.syntax().clone_for_update()).unwrap()
-    }
     fn clone_subtree(&self) -> Self
     where
         Self: Sized,

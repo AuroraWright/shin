@@ -1,18 +1,19 @@
 use super::db::Db;
 use crate::syntax;
 
-#[salsa::input]
+#[salsa::input(debug)]
+#[derive(PartialOrd, Ord)]
 pub struct File {
-    #[id]
+    #[returns(clone)]
     pub path: String,
-    #[return_ref]
+    #[returns(ref)]
     pub contents: String,
 }
 
 #[salsa::tracked]
 impl File {
-    #[salsa::tracked]
-    pub fn emit_diagnostics(self, db: &dyn Db) {
+    #[salsa::tracked(returns(clone))]
+    pub fn emit_diagnostics(self, db: &dyn Db) -> () {
         let parse = syntax::SourceFile::parse(self.contents(db));
         for error in parse.errors() {
             error.clone().into_diagnostic().in_file(self).emit(db)
@@ -34,9 +35,9 @@ impl File {
     }
 }
 
-#[salsa::input]
+#[salsa::input(debug)]
 pub struct Program {
-    #[return_ref]
+    #[returns(ref)]
     pub files: Vec<File>,
     // TODO: program config (probably a toml)
 }

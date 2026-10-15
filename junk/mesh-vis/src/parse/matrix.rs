@@ -3,7 +3,7 @@ use std::fmt::Display;
 use glam::{Mat3, Mat4, Vec3, Vec4, Vec4Swizzles as _};
 use iced::{font, widget::column};
 use iced_core::color;
-use iced_widget::{text, Column, Space, Text};
+use iced_widget::{Column, Space, Text, text};
 
 #[derive(Debug, Copy, Clone)]
 pub enum Matrix {
@@ -64,7 +64,7 @@ fn matrix3_view_with_max_len<Message: 'static>(
         ..iced::Font::MONOSPACE
     });
 
-    column!(header, Space::with_height(2), body)
+    column!(header, Space::new().height(2), body)
 }
 fn matrix4_view_with_max_len<Message: 'static>(
     max_len: usize,
@@ -99,7 +99,7 @@ fn matrix4_view_with_max_len<Message: 'static>(
         ..iced::Font::MONOSPACE
     });
 
-    column!(header, Space::with_height(2), body)
+    column!(header, Space::new().height(2), body)
 }
 
 fn matrix3_view<Message: 'static>(matrix: Mat3) -> Column<'static, Message> {
@@ -263,10 +263,10 @@ impl MatrixDecomposition {
                 res = res.extend([
                     text(format!("Translation: {:.3}", self.translation)).into(),
                     matrix4_view_with_max_len(max_len, translation).into(),
-                    Space::with_height(10).into(),
+                    Space::new().height(10).into(),
                     text("Rotation:").into(),
                     matrix4_view_with_max_len(max_len, rotation).into(),
-                    Space::with_height(10).into(),
+                    Space::new().height(10).into(),
                     text(format!(
                         "Scale: {:.3} (1 / {:.3})",
                         self.scale,
@@ -280,7 +280,7 @@ impl MatrixDecomposition {
                 res = res.extend([
                     text("Rotation:").into(),
                     matrix4_view_with_max_len(max_len, rotation).into(),
-                    Space::with_height(10).into(),
+                    Space::new().height(10).into(),
                     text(format!(
                         "Scale: {:.3} (1 / {:.3})",
                         self.scale,
@@ -288,7 +288,7 @@ impl MatrixDecomposition {
                     ))
                     .into(),
                     matrix4_view_with_max_len(max_len, scale).into(),
-                    Space::with_height(10).into(),
+                    Space::new().height(10).into(),
                     text(format!("Translation: {:.3}", self.translation)).into(),
                     matrix4_view_with_max_len(max_len, translation).into(),
                 ]);

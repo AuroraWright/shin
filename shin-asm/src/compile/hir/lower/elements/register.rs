@@ -2,8 +2,8 @@ use shin_core::format::scenario::instruction_elements::Register;
 
 use super::prelude::*;
 use crate::compile::hir::lower::{
-    from_hir::{FromHirBlockCtx, FromHirCollectors},
     LowerResult,
+    from_hir::{FromHirBlockCtx, FromHirCollectors},
 };
 
 impl FromHirExpr for Register {

@@ -9,7 +9,7 @@ use super::{
 };
 use crate::{
     compile::{def_map::Name, diagnostics::Diagnostic, hir::lower::LowerError},
-    syntax::{ast, ast::AstNodeExt, AstToken},
+    syntax::{AstToken, ast, ast::AstNodeExt},
 };
 
 pub struct HirBlockCollector {

@@ -3,7 +3,7 @@ pub mod lower;
 #[cfg(test)]
 mod tests;
 
-use std::rc::Rc;
+use std::sync::Arc;
 
 use from_ast::HirBlockCollector;
 use la_arena::{Arena, Idx};
@@ -14,19 +14,18 @@ use text_size::TextRange;
 
 use crate::{
     compile::{
+        BlockId, Db, File, MakeWithFile, WithFile,
         def_map::Name,
         diagnostics::{Diagnostic, HirLocation},
         hir::lower::LowerResult,
-        BlockId, Db, File, MakeWithFile, WithFile,
     },
     syntax::{
-        ast,
+        AstSpanned, ast,
         ast::{
             visit,
             visit::{BlockIndex, ItemIndex},
         },
         ptr::AstPtr,
-        AstSpanned,
     },
 };
 
@@ -194,20 +193,21 @@ impl BlockSourceMap {
     }
 }
 
-#[salsa::tracked]
-pub struct HirBlockBodies {
-    #[return_ref]
-    bodies: FxHashMap<BlockId, Rc<HirBlockBody>>,
+#[salsa::tracked(debug)]
+pub struct HirBlockBodies<'db> {
+    #[tracked]
+    #[returns(ref)]
+    bodies: FxHashMap<BlockId, Arc<HirBlockBody>>,
 }
 
 #[salsa::tracked]
-impl HirBlockBodies {
-    #[salsa::tracked]
-    pub fn get_block(self, db: &dyn Db, block_id: BlockId) -> Option<Rc<HirBlockBody>> {
+impl<'db> HirBlockBodies<'db> {
+    #[salsa::tracked(returns(clone))]
+    pub fn get_block(self, db: &dyn Db, block_id: BlockId) -> Option<Arc<HirBlockBody>> {
         self.bodies(db).get(&block_id).cloned()
     }
 
-    #[salsa::tracked]
+    #[salsa::tracked(returns(clone))]
     pub fn get_block_ids(self, db: &dyn Db) -> Vec<BlockId> {
         let mut bodies = self.bodies(db).keys().cloned().collect::<Vec<_>>();
         bodies.sort();
@@ -216,31 +216,32 @@ impl HirBlockBodies {
     }
 }
 
-#[salsa::tracked]
-pub struct HirBlockBodySourceMaps {
-    #[return_ref]
-    bodies: FxHashMap<BlockId, Rc<BlockSourceMap>>,
+#[salsa::tracked(debug)]
+pub struct HirBlockBodySourceMaps<'db> {
+    #[tracked]
+    #[returns(ref)]
+    bodies: FxHashMap<BlockId, Arc<BlockSourceMap>>,
 }
 
 #[salsa::tracked]
-impl HirBlockBodySourceMaps {
-    #[salsa::tracked]
-    pub fn get_block(self, db: &dyn Db, block_id: BlockId) -> Option<Rc<BlockSourceMap>> {
+impl<'db> HirBlockBodySourceMaps<'db> {
+    #[salsa::tracked(returns(clone))]
+    pub fn get_block(self, db: &dyn Db, block_id: BlockId) -> Option<Arc<BlockSourceMap>> {
         self.bodies(db).get(&block_id).cloned()
     }
 }
 
-#[salsa::tracked]
-pub fn collect_file_bodies_with_source_maps(
-    db: &dyn Db,
+#[salsa::tracked(returns(clone))]
+pub fn collect_file_bodies_with_source_maps<'db>(
+    db: &'db dyn Db,
     file: File,
-) -> (HirBlockBodies, HirBlockBodySourceMaps) {
+) -> (HirBlockBodies<'db>, HirBlockBodySourceMaps<'db>) {
     struct FileBodiesCollector<'a> {
         db: &'a dyn Db,
         // TODO: actually, the map from the BlockId is somewhat dense...
         // but I don't want to build a specialized container for it (yet)
-        block_bodies: FxHashMap<BlockId, Rc<HirBlockBody>>,
-        block_source_maps: FxHashMap<BlockId, Rc<BlockSourceMap>>,
+        block_bodies: FxHashMap<BlockId, Arc<HirBlockBody>>,
+        block_source_maps: FxHashMap<BlockId, Arc<BlockSourceMap>>,
     }
 
     impl visit::Visitor for FileBodiesCollector<'_> {
@@ -266,8 +267,8 @@ pub fn collect_file_bodies_with_source_maps(
             }
 
             let block_id = BlockId::new_block(item_index, block_index);
-            self.block_bodies.insert(block_id, Rc::new(block));
-            self.block_source_maps.insert(block_id, Rc::new(source_map));
+            self.block_bodies.insert(block_id, Arc::new(block));
+            self.block_source_maps.insert(block_id, Arc::new(source_map));
         }
     }
 
@@ -284,8 +285,8 @@ pub fn collect_file_bodies_with_source_maps(
     (bodies, source_maps)
 }
 
-#[salsa::tracked]
-pub fn collect_file_bodies(db: &dyn Db, file: File) -> HirBlockBodies {
+#[salsa::tracked(returns(clone))]
+pub fn collect_file_bodies<'db>(db: &'db dyn Db, file: File) -> HirBlockBodies<'db> {
     let (bodies, _) = collect_file_bodies_with_source_maps(db, file);
 
     bodies

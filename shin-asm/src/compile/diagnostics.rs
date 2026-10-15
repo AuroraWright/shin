@@ -1,15 +1,16 @@
+use salsa::Accumulator as _;
 use std::{
     collections::hash_map::Entry,
     fmt::{Debug, Display},
 };
 
-use ariadne::{Source, Span as _};
+use ariadne::Source;
 use rustc_hash::FxHashMap;
 use text_size::TextRange;
 
 use crate::compile::{
-    hir::{HirBlockId, HirId, HirIdWithBlock},
     Db, File, MakeWithFile, WithFile,
+    hir::{HirBlockId, HirId, HirIdWithBlock},
 };
 
 /// A text range associated with a file. Fully identifies a span of text in the program. Final form of the diagnostic location
@@ -35,7 +36,7 @@ impl Span {
     }
 }
 
-#[salsa::tracked]
+#[salsa::tracked(returns(clone))]
 pub fn char_map(db: &dyn Db, file: File) -> Vec<u32> {
     // stolen from https://github.com/apollographql/apollo-rs/pull/668/files#diff-19fd09cc90a56224f51027101143c2190b9b913993ae35727bfbde19b96f87f7R24
     let contents = file.contents(db);
@@ -188,9 +189,10 @@ fn lower_diagnostic_into_ariadne<L: DiagnosticLocation>(
 ) -> ariadne::Report<'static, CharSpan> {
     let span = diagnostic.location.span(db).to_char_span(db);
 
-    ariadne::Report::build(ariadne::ReportKind::Error, *span.source(), span.start())
+    ariadne::Report::build(ariadne::ReportKind::Error, span.clone())
         .with_message(diagnostic.message)
-        .with_label(ariadne::Label::new(span))
+        .with_label(ariadne::Label::new(span)
+        .with_message(""))
         .with_labels(
             diagnostic
                 .additional_labels
@@ -218,34 +220,37 @@ impl<'db> AriadneDbCache<'db> {
 }
 
 impl ariadne::Cache<File> for AriadneDbCache<'_> {
+    type Storage = String;
     fn fetch(&mut self, &id: &File) -> Result<&Source, Box<dyn Debug + '_>> {
         Ok(match self.sources.entry(id) {
             Entry::Occupied(entry) => entry.into_mut(),
-            Entry::Vacant(entry) => entry.insert(Source::from(id.contents(self.db))),
+            Entry::Vacant(entry) => entry.insert(Source::from(id.contents(self.db).clone())),
         })
     }
 
     fn display<'a>(&self, &id: &'a File) -> Option<Box<dyn Display + 'a>> {
-        Some(Box::new(id.path(self.db)))
+        Some(Box::new(id.path(self.db).clone()))
     }
 }
 
 impl Diagnostic<Span> {
     pub fn emit(self, db: &dyn Db) {
-        SourceDiagnosticAccumulator::push(db, self)
+        SourceDiagnosticAccumulator(self).accumulate(db)
     }
 }
 
 impl Diagnostic<HirLocation> {
     pub fn emit(self, db: &dyn Db) {
-        HirDiagnosticAccumulator::push(db, self)
+        HirDiagnosticAccumulator(self).accumulate(db)
     }
 }
 
 #[salsa::accumulator]
-pub struct SourceDiagnosticAccumulator(Diagnostic<Span>);
+#[derive(Debug)]
+pub struct SourceDiagnosticAccumulator(pub Diagnostic<Span>);
 
 #[salsa::accumulator]
-pub struct HirDiagnosticAccumulator(Diagnostic<HirLocation>);
+#[derive(Debug)]
+pub struct HirDiagnosticAccumulator(pub Diagnostic<HirLocation>);
 
 // TODO: write a macro that gets the accumulated errors and lowers the Hir errors into Source errors

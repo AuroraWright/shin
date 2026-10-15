@@ -6,9 +6,9 @@ use super::{from_instr_args::FromInstrArgs, instr_lowerer::InstrLowerFn};
 use crate::compile::{
     hir,
     hir::lower::{
+        LowerResult,
         from_hir::{FromHirBlockCtx, FromHirCollectors},
         instruction::into_instruction::IntoInstructionResult,
-        LowerResult,
     },
 };
 

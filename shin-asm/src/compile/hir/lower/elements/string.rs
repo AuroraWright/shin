@@ -1,6 +1,6 @@
 use shin_core::format::text::{
-    string::{StringFixup, StringLengthDesc},
     SJisString,
+    string::{StringFixup, StringLengthDesc},
 };
 
 use super::prelude::*;

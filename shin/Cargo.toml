@@ -6,6 +6,7 @@ description = "A visual novel engine used by some entergram games"
 repository = "https://github.com/DCNick3/shin"
 license = "MPL-2.0"
 authors = ["DCNick3"]
+default-run = "shin"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
@@ -19,7 +20,9 @@ shin-video = { path = "../shin-video" }
 shin-window = { path = "../shin-window" }
 
 anyhow = { workspace = true }
-futures = "0.3.30"
+bytes = { workspace = true }
+getrandom = "0.3.1"
+futures = "0.3.34"
 
 # various non-allocating/SSO containers
 # TODO: consolidate
@@ -30,8 +33,8 @@ indexmap = { workspace = true }
 
 tracing = { workspace = true } # NOTE: enabling `release_max_level_off` increases perf a lot
 
-clap = { version = "4.5.9", features = ["derive"] }
-clap-num = "1.1.1"
+clap = { version = "4.6.7", features = ["derive"] }
+clap-num = "1.2.0"
 dirs-next = "2.0.0"
 
 winit = { workspace = true }
@@ -44,29 +47,26 @@ glam = { workspace = true, features = [
     # "scalar-math"
 ] }
 
-# Theese part of bevy does not depend on ECS or the reflection, so it's not a big problem to use them
-bevy_utils = { workspace = true }
-
 # just one more macro crate and rust will be perfect
-num-derive = "0.4.2"
+num-derive = "0.5.1"
 num-traits = "0.2.19"
 enum-map = { workspace = true }
-derive_more = { version = "2.0.1", features = ["from"] }
+derive_more = { version = "2.1.1", features = ["from"] }
 enum_dispatch = "0.3.13"
-anymap3 = "1.0.1"
+anymap3 = "1.1.0"
 derivative = "2.2.0"
 from_variants = "1.0.2"
-cfg-if = "1.0.0"
+cfg-if = "1.0.5"
 
 itertools = { workspace = true }
-once_cell = "1.19.0"
+once_cell = "1.21.4"
 
 egui = { workspace = true }
 egui-wgpu = { workspace = true }
 
 # kira for audio output
 kira = { workspace = true }
-bitflags = "2.6.0"
+bitflags = "2.13.2"
 
 drop_bomb = "0.1.5"
 
@@ -79,10 +79,21 @@ replace_with = { workspace = true }
 default = []
 gstreamer-video = ["shin-video/gstreamer"]
 tracy = ["shin-window/tracy"]
+# Internal automated acceptance entry; it never creates a manual package.
+higurashi-window-probe = []
+
+[[bin]]
+name = "higurashi-window-probe"
+path = "src/higurashi_window_probe.rs"
+required-features = ["higurashi-window-probe"]
 
 [dev-dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+wgpu = { workspace = true, features = ["spirv"] }
+bytemuck = { workspace = true }
+shin-audio = { path = "../shin-audio", features = ["reference-tests"] }
 binrw = { workspace = true }
-serde_json = "1.0.139"
+serde_json = "1.0.154"
 shin-video = { path = "../shin-video", features = ["reference-tests"] }
 
 [lints]
@@ -90,5 +101,4 @@ workspace = true
 
 [package.metadata.release]
 # this crate is not ready for publishing yet
-# (it has git dependencies)
 publish = false

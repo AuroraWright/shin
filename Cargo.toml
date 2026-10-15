@@ -20,58 +20,50 @@ members = [
 resolver = "2"
 
 [workspace.dependencies]
-# encase 0.10 requires glam 0.29, can't update any further
-glam = "0.29.0"
-dpi = "0.1.1"
+# glam provides the matching encase uniform integration.
+glam = { version = "0.34.1", features = ["encase-013"] }
+dpi = "0.1.2"
 
-# beta version for GATs
-enum-map = "3.0.0-beta.1"
-smallvec = "2.0.0-alpha.8"
-heapless = "0.8.0"
-indexmap = "2.7.1"
+# Stable enum-map retains GAT-backed enum maps.
+enum-map = "3.1.0"
+smallvec = { version = "1.16.3", features = ["const_generics"] }
+heapless = "0.9.3"
+indexmap = "2.14.2"
 
-wgpu = "24.0.1"
-winit = "0.30.5"
+wgpu = { version = "30.0.1", features = ["trace"] }
+winit = "0.30.13"
 
 # egui used for debug overlays
-egui = "0.31.0"
-egui-wgpu = "0.31.0"
+egui = "0.36.2"
+egui-wgpu = "0.36.2"
 
-kira = { version = "0.9.3", default-features = false }
+kira = { version = "0.12.5", default-features = false }
 
-image = { version = "0.25.1", default-features = false }
+image = { version = "0.25.10", default-features = false }
 
-tracing = "0.1.41"
-anyhow = "1.0.69"
+tracing = "0.1.44"
+anyhow = "1.0.104"
 
-bevy_utils = "0.15.2"
-itertools = "0.14.0"
-binrw = "0.14.0"
+itertools = "0.15.0"
+binrw = "0.15.2"
 
-bytes = "1.5.0"
+bytes = "1.12.1"
 
 # TODO: replace uses of `strum` with `enum-iterator` crate
-strum = "0.27.1"
-enum-iterator = "2.1.0"
-bytemuck = "1.16.1"
+strum = "0.28.0"
+enum-iterator = "2.3.0"
+bytemuck = "1.25.2"
 # Be careful when updating! We rely on private & internal APIs
-encase = "0.10.0"
+encase = "0.13.0"
 
 # TODO: migrate more things to parking_lot
 # running with deadlock detection for now because I've been getting rare deadlocks in wgpu :/
-parking_lot = { version = "0.12.3", features = ["deadlock_detection", "arc_lock"] }
+parking_lot = { version = "0.12.5", features = ["deadlock_detection", "arc_lock"] }
 
-replace_with = "0.1.7"
+replace_with = "0.1.8"
 
-rayon-core = "1.12.1"
-rayon = "1.10.0"
-
-[patch.crates-io]
-# git version for deadlock fix https://github.com/gfx-rs/wgpu/pull/7221
-wgpu = { git = "https://github.com/gfx-rs/wgpu.git", rev = "9aafe4c236dde009956888da824d2a4b048d2bd6" }
-
-# using a patched tracy here to force it to not use rdtsc, because it's unreliable on my system
-tracy-client-sys = { git = "https://github.com/DCNick3/rust_tracy_client.git", rev = "a23b3d685ef1c5416e9cc466e3fa84dfb8dc5968" }
+rayon-core = "1.13.0"
+rayon = "1.12.0"
 
 [profile.release]
 debug = true
@@ -103,5 +95,5 @@ useless_format = "allow"
 
 [workspace.metadata.release]
 shared-version = true
-publish = false # can't publish yet because of enum-map git dep
+publish = false # workspace release readiness is tracked separately
 tag-prefix = ""

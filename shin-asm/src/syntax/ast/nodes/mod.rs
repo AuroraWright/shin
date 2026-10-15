@@ -8,9 +8,9 @@ pub use items::*;
 
 use super::tokens::*;
 use crate::syntax::{
-    ast::{support, AstChildren, AstNode, AstSpanned, AstToken},
     SyntaxKind::*,
     SyntaxNode, SyntaxToken, T,
+    ast::{AstChildren, AstNode, AstSpanned, AstToken, support},
 };
 
 /// `SourceFile` represents a parse tree for a single Rust file.

@@ -10,8 +10,8 @@
 use std::mem;
 
 use crate::parser::{
-    output::Output,
     SyntaxKind::{self, *},
+    output::Output,
 };
 
 /// `Parser` produces a flat list of `Event`s.

@@ -9,8 +9,9 @@ pub mod ptr;
 use std::{marker::PhantomData, sync::Arc};
 
 pub use rowan::{
-    api::Preorder, Direction, GreenNode, NodeOrToken, SyntaxText, TextRange, TextSize,
+    Direction, GreenNode, NodeOrToken, SyntaxText, TextRange, TextSize,
     TokenAtOffset, WalkEvent,
+    api::Preorder,
 };
 
 pub use self::{

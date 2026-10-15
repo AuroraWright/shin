@@ -1,22 +1,22 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 
 use crate::compile::{
-    def_map,
-    hir::lower::{lower_file, LoweredBlock, LoweredFile},
-    BlockIdWithFile, Db, File, Program,
+    BlockIdWithFile, Db, File, Program, def_map,
+    hir::lower::{LoweredBlock, LoweredFile, lower_file},
 };
 
-#[salsa::tracked]
-pub struct LoweredProgram {
-    #[return_ref]
-    pub files: FxHashMap<File, LoweredFile>,
+#[salsa::tracked(debug)]
+pub struct LoweredProgram<'db> {
+    #[tracked]
+    #[returns(ref)]
+    pub files: FxHashMap<File, LoweredFile<'db>>,
 }
 
-impl LoweredProgram {
-    pub fn block(&self, db: &dyn Db, block_id: BlockIdWithFile) -> Rc<LoweredBlock> {
+impl<'db> LoweredProgram<'db> {
+    pub fn block(&self, db: &dyn Db, block_id: BlockIdWithFile) -> Arc<LoweredBlock> {
         self.files(db)
             .get(&block_id.file)
             .unwrap()
@@ -42,8 +42,8 @@ impl LoweredProgram {
     }
 }
 
-#[salsa::tracked]
-pub fn lower_program(db: &dyn Db, program: Program) -> LoweredProgram {
+#[salsa::tracked(returns(clone))]
+pub fn lower_program<'db>(db: &'db dyn Db, program: Program) -> LoweredProgram<'db> {
     let def_map = def_map::build_def_map(db, program);
 
     let mut files = FxHashMap::default();
@@ -56,13 +56,13 @@ pub fn lower_program(db: &dyn Db, program: Program) -> LoweredProgram {
 
 #[cfg(test)]
 mod tests {
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect, expect};
     use indoc::indoc;
 
     use crate::compile::{
+        File, Program,
         diagnostics::{HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
         hir::lower::test_utils,
-        File, Program,
     };
 
     fn check_from_hir(source: &str, expected: Expect) {
@@ -78,9 +78,15 @@ mod tests {
 
         let lowered_program = super::lower_program(db, program);
 
-        let hir_errors = super::lower_program::accumulated::<HirDiagnosticAccumulator>(db, program);
+        let hir_errors = super::lower_program::accumulated::<HirDiagnosticAccumulator>(db, program)
+            .into_iter()
+            .map(|diagnostic| diagnostic.0.clone())
+            .collect::<Vec<_>>();
         let source_errors =
-            super::lower_program::accumulated::<SourceDiagnosticAccumulator>(db, program);
+            super::lower_program::accumulated::<SourceDiagnosticAccumulator>(db, program)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         let diags = test_utils::diagnostics_to_str(db, hir_errors, source_errors);
 
         let mut result = String::new();

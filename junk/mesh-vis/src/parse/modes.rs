@@ -1,9 +1,9 @@
 use crate::{
     descriptors::VertexDescriptor,
     parse::{
+        FloatParseState, HexParseState,
         matrix::{DecompositionOrder, MatrixParseState},
         vertex::VertexParseState,
-        FloatParseState, HexParseState,
     },
 };
 

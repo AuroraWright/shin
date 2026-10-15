@@ -3,10 +3,10 @@ use std::cell::Cell;
 use drop_bomb::DropBomb;
 
 use crate::parser::{
+    SyntaxKind::{self, *},
     event::Event,
     input::Input,
     token_set::TokenSet,
-    SyntaxKind::{self, *},
 };
 
 /// `Parser` struct provides the low-level API for

@@ -7,12 +7,11 @@ use shin_core::format::scenario::instruction_elements::{Register, RegisterRepr};
 
 use crate::{
     compile::{
-        def_map::RegisterName, diagnostics::Span, make_diagnostic, Db, File, MakeWithFile, Program,
-        WithFile,
+        Db, File, MakeWithFile, Program, WithFile, def_map::RegisterName, diagnostics::Span, make_diagnostic,
     },
     syntax::{
-        ast::{self, visit, visit::ItemIndex},
         AstSpanned,
+        ast::{self, visit, visit::ItemIndex},
     },
 };
 

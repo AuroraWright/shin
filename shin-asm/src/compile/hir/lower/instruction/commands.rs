@@ -6,9 +6,9 @@ use shin_core::{
         text::U16FixupString,
     },
     vm::command::{
+        CompiletimeCommand,
         compiletime::{EXIT, MSGINIT, MSGSET, WAIT},
         types::MessageboxStyle,
-        CompiletimeCommand,
     },
 };
 

@@ -45,27 +45,31 @@ pub enum ResolveKind {
     LocalAndGlobal(BlockIdWithFile),
 }
 
-#[salsa::tracked]
-pub struct DefMap {
-    #[return_ref]
+#[salsa::tracked(debug)]
+pub struct DefMap<'db> {
+    #[tracked]
+    #[returns(ref)]
     items: ResolvedItems,
-    #[return_ref]
+    #[tracked]
+    #[returns(ref)]
     global_registers: ResolvedGlobalRegisters,
-    #[return_ref]
+    #[tracked]
+    #[returns(ref)]
     local_registers: LocalRegisters,
-    #[return_ref]
+    #[tracked]
+    #[returns(ref)]
     block_names: FxHashMap<BlockIdWithFile, BlockName>,
 }
 
-impl DefMap {
+impl<'db> DefMap<'db> {
     // pub fn get_item(&self, name: &Name) -> Option<FileDefRef> {
     //     self.items.get(name).copied()
     // }
 }
 
 #[salsa::tracked]
-impl DefMap {
-    #[salsa::tracked]
+impl<'db> DefMap<'db> {
+    #[salsa::tracked(returns(clone))]
     pub fn local_register(
         self,
         db: &dyn Db,
@@ -78,7 +82,7 @@ impl DefMap {
             .copied()
     }
 
-    #[salsa::tracked]
+    #[salsa::tracked(returns(clone))]
     pub fn global_register(self, db: &dyn Db, name: RegisterName) -> Option<Register> {
         // TODO: is this flatten correct?
         self.global_registers(db).get(&name).copied().flatten()
@@ -111,7 +115,7 @@ impl DefMap {
         self.global_register(db, name)
     }
 
-    #[salsa::tracked]
+    #[salsa::tracked(returns(clone))]
     pub fn resolve_item(self, db: &dyn Db, name: Name) -> Option<DefValue> {
         self.items(db).get(&name).cloned()
     }
@@ -174,8 +178,8 @@ impl DefMap {
     }
 }
 
-#[salsa::tracked]
-pub fn build_def_map(db: &dyn Db, program: Program) -> DefMap {
+#[salsa::tracked(returns(clone))]
+pub fn build_def_map<'db>(db: &'db dyn Db, program: Program) -> DefMap<'db> {
     let items = items::collect_item_defs(db, program);
     let items = items::resolve_item_defs(db, &items);
 
@@ -193,19 +197,24 @@ mod tests {
 
     use super::build_def_map;
     use crate::compile::{
+        DefMap, File, Program,
         db::Database,
         diagnostics::{HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
-        DefMap, File, Program,
     };
 
-    fn parse_def_map(code: &str) -> (Database, DefMap, Option<String>) {
-        let db = Database::default();
-        let file = File::new(&db, "test.sal".to_string(), code.to_string());
-        let program = Program::new(&db, vec![file]);
-        let def_map = build_def_map(&db, program);
+    fn parse_def_map<'db>(db: &'db Database, code: &str) -> (DefMap<'db>, Option<String>) {
+        let file = File::new(db, "test.sal".to_string(), code.to_string());
+        let program = Program::new(db, vec![file]);
+        let def_map = build_def_map(db, program);
 
-        let hir_errors = build_def_map::accumulated::<HirDiagnosticAccumulator>(&db, program);
-        let source_errors = build_def_map::accumulated::<SourceDiagnosticAccumulator>(&db, program);
+        let hir_errors = build_def_map::accumulated::<HirDiagnosticAccumulator>(db, program)
+            .into_iter()
+            .map(|diagnostic| diagnostic.0.clone())
+            .collect::<Vec<_>>();
+        let source_errors = build_def_map::accumulated::<SourceDiagnosticAccumulator>(db, program)
+            .into_iter()
+            .map(|diagnostic| diagnostic.0.clone())
+            .collect::<Vec<_>>();
 
         let errors = (!source_errors.is_empty() || !hir_errors.is_empty()).then(|| {
             format!(
@@ -215,12 +224,14 @@ mod tests {
             )
         });
 
-        (db, def_map, errors)
+        (def_map, errors)
     }
 
     #[test]
     fn check_map_dump() {
-        let (db, def_map, errors) = parse_def_map(
+        let db = Database::default();
+        let (def_map, errors) = parse_def_map(
+            &db,
             r#"
 def ABIBA = 3 + 3
 def BEBA = ABIBA * 2
@@ -247,9 +258,9 @@ LABEL2:
             items:
               ABIBA: Value(6)
               BEBA: Value(12)
-              KEKA: Block(WithFile { value: BlockId { item_index: 4, block_index: None }, file: File(Id { value: 1 }) })
-              LABEL1: Block(WithFile { value: BlockId { item_index: 5, block_index: Some(1) }, file: File(Id { value: 1 }) })
-              LABEL2: Block(WithFile { value: BlockId { item_index: 5, block_index: Some(2) }, file: File(Id { value: 1 }) })
+              KEKA: Block(WithFile { value: BlockId { item_index: 4, block_index: None }, file: File { [salsa id]: Id(0) } })
+              LABEL1: Block(WithFile { value: BlockId { item_index: 5, block_index: Some(1) }, file: File { [salsa id]: Id(0) } })
+              LABEL2: Block(WithFile { value: BlockId { item_index: 5, block_index: Some(2) }, file: File { [salsa id]: Id(0) } })
             registers:
               global:
                 _aboba: $v17
@@ -270,7 +281,9 @@ LABEL2:
 
     #[test]
     fn register_loop() {
-        let (db, def_map, errors) = parse_def_map(
+        let db = Database::default();
+        let (def_map, errors) = parse_def_map(
+            &db,
             r#"
 def $a = $b
 def $b = $a
@@ -279,7 +292,7 @@ def $b = $a
 
         expect![[r#"
             building def map produced errors:
-            source-level: [Diagnostic { message: "Encountered a loop while resolving register $a", location: Span(WithFile { value: 22..24, file: File(Id { value: 1 }) }), additional_labels: [] }]
+            source-level: [Diagnostic { message: "Encountered a loop while resolving register $a", location: Span(WithFile { value: 22..24, file: File { [salsa id]: Id(0) } }), additional_labels: [] }]
             hir-level: []"#]]
             .assert_eq(errors.as_deref().unwrap());
 
@@ -297,7 +310,9 @@ def $b = $a
 
     #[test]
     fn constexpr_overflow() {
-        let (db, def_map, errors) = parse_def_map(
+        let db = Database::default();
+        let (def_map, errors) = parse_def_map(
+            &db,
             r#"
 def A = 65536 * 65536
         "#,
@@ -305,7 +320,7 @@ def A = 65536 * 65536
 
         expect![[r#"
             building def map produced errors:
-            source-level: [Diagnostic { message: "Overflow in constant expression", location: Span(WithFile { value: 9..22, file: File(Id { value: 1 }) }), additional_labels: [] }]
+            source-level: [Diagnostic { message: "Overflow in constant expression", location: Span(WithFile { value: 9..22, file: File { [salsa id]: Id(0) } }), additional_labels: [] }]
             hir-level: []"#]]
         .assert_eq(errors.as_deref().unwrap());
 

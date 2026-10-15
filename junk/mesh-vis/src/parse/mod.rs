@@ -3,7 +3,7 @@ pub mod modes;
 pub mod vertex;
 
 use iced_core::color;
-use iced_widget::{text, Column};
+use iced_widget::{Column, text};
 
 use crate::Message;
 

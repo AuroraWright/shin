@@ -11,8 +11,8 @@ shin-render = { path = "../shin-render" }
 
 tracing = { workspace = true }
 
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
-tracing-tracy = { version = "0.11.4", default-features = false, features = [
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+tracing-tracy = { version = "0.12.0", default-features = false, features = [
     "system-tracing",
     "context-switch-tracing",
     "sampling",
@@ -20,16 +20,17 @@ tracing-tracy = { version = "0.11.4", default-features = false, features = [
     "broadcast",
     "callstack-inlines",
 ] }
-tracy-client = { version = "0.18.0", default-features = false, features = [
+tracy-client = { version = "0.19.0", default-features = false, features = [
     "system-tracing",
     "context-switch-tracing",
     "sampling",
     "code-transfer",
     "broadcast",
     "callstack-inlines",
+    "timer-fallback", # Pair with TRACY_DISALLOW_HW_TIMER in .cargo/config.toml.
 ] }
 
-cfg-if = "1.0.0"
+cfg-if = "1.0.5"
 
 enum-map = { workspace = true }
 
@@ -37,13 +38,13 @@ winit = { workspace = true, features = ["android-native-activity"] }
 wgpu = { workspace = true }
 
 anyhow = { workspace = true }
-derive-where = "1.2.7"
+derive-where = "1.7.0"
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-web-sys = { version = "0.3.70", features = ["Document"] }
+web-sys = { version = "0.3.106", features = ["Document"] }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc2 = "0.5.2"
+objc2 = "0.6.5"
 
 [features]
 tracy = ["tracing-tracy/enable"]
@@ -51,10 +52,10 @@ tracy = ["tracing-tracy/enable"]
 [dev-dependencies]
 dpi = { workspace = true }
 glam = { workspace = true }
-tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
 [target.'cfg(target_arch = "wasm32")'.dev-dependencies]
-console_error_panic_hook = "0.1.6"
+console_error_panic_hook = "0.1.7"
 tracing-wasm = { version = "0.2.1" }
 
 [lints]

@@ -7,8 +7,8 @@ use crate::{
         diagnostics::{Diagnostic, Span},
         hir,
         hir::{
-            lower::{LowerError, LowerResult},
             Expr,
+            lower::{LowerError, LowerResult},
         },
         make_diagnostic,
     },

@@ -2,16 +2,15 @@ use rustc_hash::FxHashMap;
 
 use crate::{
     compile::{
-        def_map::{BlockName, Name},
         BlockId, Db, File, MakeWithFile, Program, WithFile,
+        def_map::{BlockName, Name},
     },
     syntax::{
-        ast,
+        AstToken, ast,
         ast::{
             visit,
             visit::{BlockIndex, ItemIndex},
         },
-        AstToken,
     },
 };
 

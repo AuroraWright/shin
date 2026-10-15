@@ -1,6 +1,7 @@
+use salsa::Accumulator as _;
 use std::io;
 
-use binrw::{io::NoSeek, BinResult, BinWrite};
+use binrw::{BinResult, BinWrite, io::NoSeek};
 use rustc_hash::FxHashMap;
 use shin_asm::compile::hir::lower::from_hir::{FromHirBlockCtx, FromHirCollectors};
 use shin_core::format::scenario::{
@@ -8,18 +9,18 @@ use shin_core::format::scenario::{
 };
 
 use crate::compile::{
+    BlockIdWithFile, Db, DefMap, HirBlockBody, ResolveContext, WithFile,
     def_map::ResolveKind,
     diagnostics::HirDiagnosticAccumulator,
     hir,
     hir::{
+        HirBlockId,
         lower::{
             CodeAddressCollector, HirDiagnosticCollector, HirDiagnosticCollectorWithBlock,
             LowerError, LowerResult,
         },
-        HirBlockId,
     },
     types::SalsaBlockIdWithFile,
-    BlockIdWithFile, Db, DefMap, HirBlockBody, ResolveContext, WithFile,
 };
 
 struct CountWrite {
@@ -200,8 +201,9 @@ impl LoweredBlock {
     }
 }
 
-#[salsa::tracked]
-pub fn lower_block(db: &dyn Db, def_map: DefMap, block: SalsaBlockIdWithFile) -> LoweredBlock {
+#[salsa::tracked(returns(clone))]
+pub fn lower_block<'db>(db: &'db dyn Db, def_map: DefMap<'db>, block: SalsaBlockIdWithFile<'db>,
+) -> LoweredBlock {
     use crate::compile::MakeWithFile;
 
     let WithFile {
@@ -227,7 +229,7 @@ pub fn lower_block(db: &dyn Db, def_map: DefMap, block: SalsaBlockIdWithFile) ->
     );
 
     for diag in diagnostics.into_diagnostics() {
-        HirDiagnosticAccumulator::push(db, diag)
+        HirDiagnosticAccumulator(diag).accumulate(db)
     }
 
     result
@@ -235,16 +237,16 @@ pub fn lower_block(db: &dyn Db, def_map: DefMap, block: SalsaBlockIdWithFile) ->
 
 #[cfg(test)]
 mod tests {
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect, expect};
     use indoc::indoc;
 
     use crate::compile::{
+        File, MakeWithFile, Program,
         def_map::build_def_map,
         diagnostics::{HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
         hir,
         hir::lower::test_utils,
         types::SalsaBlockIdWithFile,
-        File, MakeWithFile, Program,
     };
 
     fn check_from_hir(source: &str, expected: Expect) {
@@ -270,9 +272,15 @@ mod tests {
         let lowered = super::lower_block(db, def_map, block);
 
         let hir_errors =
-            super::lower_block::accumulated::<HirDiagnosticAccumulator>(db, def_map, block);
+            super::lower_block::accumulated::<HirDiagnosticAccumulator>(db, def_map, block)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         let source_errors =
-            super::lower_block::accumulated::<SourceDiagnosticAccumulator>(db, def_map, block);
+            super::lower_block::accumulated::<SourceDiagnosticAccumulator>(db, def_map, block)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         let diags = test_utils::diagnostics_to_str(db, hir_errors, source_errors);
 
         let mut result = String::new();
@@ -313,20 +321,20 @@ mod tests {
             expect![[r#"
                 Diagnostics:
                 Error: expected an instruction or label
-                   ╭─[test.sal:2:1]
+                   ╭─[ test.sal:2:1 ]
                    │
                  2 │ 42
-                   │ ─  
-                   │     
+                   │ ┬  
+                   │ ╰── 
                 ───╯
 
 
                 Error: Unrecognized instruction: `x`
-                   ╭─[test.sal:1:1]
+                   ╭─[ test.sal:1:1 ]
                    │
                  1 │ x 96
-                   │ ─────  
-                   │         
+                   │ ──┬──  
+                   │   ╰──── 
                 ───╯
 
                 instructions:
@@ -344,47 +352,47 @@ mod tests {
             expect![[r#"
                 Diagnostics:
                 Error: expected COMMA
-                   ╭─[test.sal:1:9]
+                   ╭─[ test.sal:1:9 ]
                    │
                  1 │ zero $v0 aslk as
-                   │         ─  
-                   │             
+                   │         ┬  
+                   │         ╰── 
                 ───╯
 
 
                 Error: expected COMMA
-                   ╭─[test.sal:1:14]
+                   ╭─[ test.sal:1:14 ]
                    │
                  1 │ zero $v0 aslk as
-                   │              ─  
-                   │                  
+                   │              ┬  
+                   │              ╰── 
                 ───╯
 
 
                 Error: Extra argument: expected no more than 2 arguments
-                   ╭─[test.sal:1:15]
+                   ╭─[ test.sal:1:15 ]
                    │
                  1 │ zero $v0 aslk as
-                   │               ──  
-                   │                    
+                   │               ─┬  
+                   │                ╰── 
                 ───╯
 
 
                 Error: Could not find the definition of `aslk`
-                   ╭─[test.sal:1:10]
+                   ╭─[ test.sal:1:10 ]
                    │
                  1 │ zero $v0 aslk as
-                   │          ────  
-                   │                 
+                   │          ──┬─  
+                   │            ╰─── 
                 ───╯
 
 
                 Error: Expected a register, but got an integer literal
-                   ╭─[test.sal:2:5]
+                   ╭─[ test.sal:2:5 ]
                    │
                  2 │ abs 42, 42
-                   │     ──  
-                   │          
+                   │     ─┬  
+                   │      ╰── 
                 ───╯
 
                 instructions:

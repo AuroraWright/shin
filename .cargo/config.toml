@@ -1,3 +1,7 @@
 [target.x86_64-unknown-linux-gnu]
 linker = "clang"
 rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+
+[env]
+# Use upstream Tracy's forced software timer instead of the old no-RDTSC fork.
+TRACY_CLIENT_SYS_CXXFLAGS = "-DTRACY_DISALLOW_HW_TIMER"

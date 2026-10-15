@@ -11,8 +11,8 @@ use self::router::{Router, RouterBuilder};
 use crate::compile::{
     hir,
     hir::lower::{
-        from_hir::{FromHirBlockCtx, FromHirCollectors},
         LowerError, LowerResult,
+        from_hir::{FromHirBlockCtx, FromHirCollectors},
     },
 };
 
@@ -35,7 +35,7 @@ pub fn instruction_from_hir(
 
 #[cfg(test)]
 mod tests {
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect, expect};
     use shin_core::{
         format::{
             scenario::{
@@ -44,15 +44,16 @@ mod tests {
             },
             text::U16FixupString,
         },
-        vm::command::{compiletime::MSGSET, CompiletimeCommand},
+        vm::command::{CompiletimeCommand, compiletime::MSGSET},
     };
 
     use crate::compile::{
         db::Database,
         hir,
         hir::lower::{
+            CodeAddressCollector, HirDiagnosticCollector,
             from_hir::{FromHirBlockCtx, FromHirCollectors},
-            test_utils, CodeAddressCollector, HirDiagnosticCollector,
+            test_utils,
         },
         resolve::ResolveContext,
     };
@@ -195,11 +196,11 @@ mod tests {
             "zero 42",
             expect![[r#"
                 Error: Expected a register, but got an integer literal
-                   ╭─[test.sal:1:6]
+                   ╭─[ test.sal:1:6 ]
                    │
                  1 │ zero 42
-                   │      ──  
-                   │           
+                   │      ─┬  
+                   │       ╰── 
                 ───╯
             "#]],
         );
@@ -207,11 +208,11 @@ mod tests {
             "zero namae_or_whatever",
             expect![[r#"
                 Error: Expected a register, but got a name reference
-                   ╭─[test.sal:1:6]
+                   ╭─[ test.sal:1:6 ]
                    │
                  1 │ zero namae_or_whatever
-                   │      ─────────────────  
-                   │                          
+                   │      ────────┬────────  
+                   │              ╰────────── 
                 ───╯
             "#]],
         );
@@ -221,11 +222,11 @@ mod tests {
             "zero зелибоба",
             expect![[r#"
                 Error: Expected a register, but got a name reference
-                   ╭─[test.sal:1:6]
+                   ╭─[ test.sal:1:6 ]
                    │
                  1 │ zero зелибоба
-                   │      ────────  
-                   │                 
+                   │      ────┬───  
+                   │          ╰───── 
                 ───╯
             "#]],
         );

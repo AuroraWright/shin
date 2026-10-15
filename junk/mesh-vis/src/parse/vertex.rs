@@ -1,8 +1,8 @@
 use iced::font;
-use iced_core::{alignment::Horizontal, color, Length};
-use iced_widget::{scrollable, text, Column, Space, Text};
+use iced_core::{Length, alignment::Horizontal, color};
+use iced_widget::{Column, Space, Text, scrollable, text};
 
-use crate::{descriptors::VertexDescriptor, VertexView};
+use crate::{VertexView, descriptors::VertexDescriptor};
 
 pub enum VertexParseResult {
     Valid,
@@ -53,38 +53,34 @@ impl VertexParseState {
     pub fn view<Message: 'static>(&self) -> Column<'static, Message> {
         Column::with_children([
             // ---
-            Space::with_height(10).into(),
+            Space::new().height(10).into(),
             // ---
             self.result.view().into(),
             text(format!("{0} (0x{0:x}) vertices", self.vertices.len())).into(),
             scrollable(
-                iced_aw::Grid::with_rows(
-                    [iced_aw::GridRow::with_elements(
+                iced_widget::table::table(
                         self.descriptor
                             .column_names()
                             .into_iter()
-                            .map(|v| {
-                                text(v).width(Length::Fill).align_x(Horizontal::Left).font(
+                            .enumerate()
+                        .map(|(index, name)| {
+                            iced_widget::table::column(
+                                text(name).font(
                                     iced::Font {
                                         weight: font::Weight::Bold,
                                         ..iced::Font::MONOSPACE
-                                    },
-                                )
-                            })
-                            .collect(),
-                    )]
-                    .into_iter()
-                    .chain(self.vertices.iter().map(|v| v.view(self.descriptor.fields)))
-                    .collect(),
+                                    }),
+                                move |values: Vec<crate::descriptors::VertexPrimitiveValue>| {
+                                    text(values[index].to_string()).font(iced::Font::MONOSPACE)
+                                },
+                            )
+                            .align_x(Horizontal::Right)
+                            }),
+                    self.vertices.iter()
+                            .map(|vertex| vertex.primitive_values()
+                    .collect::<Vec<_>>()),
                 )
-                // .column_widths(&[
-                //     Length::FillPortion(1),
-                //     Length::FillPortion(1),
-                //     Length::FillPortion(1),
-                // ])
-                .horizontal_alignment(Horizontal::Right)
-                .column_spacing(20)
-                .width(Length::Fill), // .padding(20),
+                .padding_x(10).width(Length::Fill),
             )
             .width(Length::Fill)
             .into(),

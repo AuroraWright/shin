@@ -3,8 +3,8 @@ use shin_asm::compile::hir::lower::LowerResult;
 use crate::compile::{
     hir,
     hir::lower::{
-        from_hir::{FromHirBlockCtx, FromHirCollectors},
         FromHirExpr, LowerError,
+        from_hir::{FromHirBlockCtx, FromHirCollectors},
     },
 };
 

@@ -4,8 +4,9 @@ use anyhow::{Context, Result};
 use binrw::BinRead;
 use camino::Utf8PathBuf;
 use shin_asm::compile::{
+    File, Program,
     diagnostics::{AriadneDbCache, HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
-    hir, File, Program,
+    hir,
 };
 use shin_core::format::scenario::ScenarioHeader;
 
@@ -95,9 +96,15 @@ pub fn assembler_command(command: AssemblerCommand) -> Result<()> {
             let lowered_program = hir::lower::lower_program(db, program);
 
             let hir_errors =
-                hir::lower::lower_program::accumulated::<HirDiagnosticAccumulator>(db, program);
+                hir::lower::lower_program::accumulated::<HirDiagnosticAccumulator>(db, program)
+                    .into_iter()
+                    .map(|diagnostic| diagnostic.0.clone())
+                    .collect::<Vec<_>>();
             let source_errors =
-                hir::lower::lower_program::accumulated::<SourceDiagnosticAccumulator>(db, program);
+                hir::lower::lower_program::accumulated::<SourceDiagnosticAccumulator>(db, program)
+                    .into_iter()
+                    .map(|diagnostic| diagnostic.0.clone())
+                    .collect::<Vec<_>>();
 
             let mut ariadne_errors = Vec::new();
             ariadne_errors.extend(source_errors.into_iter().map(|e| e.into_ariadne(db)));

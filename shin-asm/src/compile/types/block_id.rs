@@ -57,7 +57,8 @@ pub type BlockIdWithFile = WithFile<BlockId>;
 impl MakeWithFile for BlockId {}
 
 #[salsa::interned]
-pub struct SalsaBlockIdWithFile {
+pub struct SalsaBlockIdWithFile<'db> {
+    #[returns(copy)]
     pub block_id: BlockIdWithFile,
 }
 

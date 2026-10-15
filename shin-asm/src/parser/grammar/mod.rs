@@ -4,9 +4,9 @@ mod items;
 use assert_matches::assert_matches;
 
 use crate::parser::{
-    parser::{CompletedMarker, Marker, Parser},
     SyntaxKind::{self, *},
-    TokenSet, T,
+    T, TokenSet,
+    parser::{CompletedMarker, Marker, Parser},
 };
 
 const EOL_SET: TokenSet = TokenSet::new(&[NEWLINE, EOF]);

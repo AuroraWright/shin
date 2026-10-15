@@ -109,12 +109,14 @@ pub fn savedata_command(command: SavedataCommand) -> Result<()> {
             if let Some(output_path) = output_path {
                 let output = File::create(output_path).context("Creating output file")?;
 
-                ron::ser::to_writer_pretty(output, &savedata, pretty_config)
+                ron::Options::default()
+                    .to_io_writer_pretty(output, &savedata, pretty_config)
                     .context("Writing human-readable savedata")?;
             } else {
                 let output = std::io::stdout().lock();
 
-                ron::ser::to_writer_pretty(output, &savedata, pretty_config)
+                ron::Options::default()
+                    .to_io_writer_pretty(output, &savedata, pretty_config)
                     .context("Writing human-readable savedata")?;
             }
 

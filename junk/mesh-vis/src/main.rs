@@ -4,21 +4,20 @@ mod my_combo_box;
 mod parse;
 
 use iced::{
-    font, keyboard, widget,
-    widget::{text, text_input, Column, Space},
-    Element, Task,
+    Element, Task, font, keyboard, widget,
+    widget::{Column, Space, text, text_input},
 };
-use iced_core::{alignment::Horizontal, Length, Size};
+use iced_core::{Length, Size, alignment::Horizontal};
 use iced_widget::{
     // combo_box as my_combo_box,
     row,
 };
-use parse::{modes::MeshModeParseState, HexParseState};
+use parse::{HexParseState, modes::MeshModeParseState};
 
 use crate::{
     descriptors::{
-        VertexDescriptor, VertexFieldDescriptor, VertexFieldType, VertexFieldValue,
-        VertexPrimitiveValue, VERTEX_DESCRTIPTORS,
+        VERTEX_DESCRTIPTORS, VertexDescriptor, VertexFieldDescriptor, VertexFieldType, VertexFieldValue,
+        VertexPrimitiveValue,
     },
     modes::Mode,
     parse::{matrix::DecompositionOrder, modes::MatrixModeParseState},
@@ -88,42 +87,8 @@ impl VertexView {
         VertexView { field_values }
     }
 
-    #[expect(unused)]
     pub fn primitive_values(&self) -> impl Iterator<Item = VertexPrimitiveValue> + '_ {
         self.field_values.iter().copied().flatten()
-    }
-
-    pub fn view<Message: 'static>(
-        &self,
-        _desc: &[VertexFieldDescriptor],
-    ) -> iced_aw::GridRow<'static, Message> {
-        let mut columns = vec![];
-
-        // TODO: visually show which floats belong to the same field
-        // TODO: visualize color fields
-        for &field_value in &self.field_values {
-            for (i, v) in (0..).zip(field_value) {
-                if i == 0 {
-                    // todo!()
-                }
-
-                let r = row([])
-                    // .push_maybe((i == 0).then(|| {
-                    //     todo!();
-                    //     todo!()
-                    // }))
-                    .push(
-                        text(format!("{}", v))
-                            .font(font::Font::MONOSPACE)
-                            .align_x(Horizontal::Right)
-                            .width(Length::Shrink),
-                    );
-
-                columns.push(r)
-            }
-        }
-
-        iced_aw::GridRow::with_elements(columns)
     }
 }
 
@@ -141,9 +106,9 @@ fn update(state: &mut MeshVisualizerState, message: Message) -> Task<Message> {
     match message {
         Message::SwitchFocus { backwards: shift } => {
             if shift {
-                widget::focus_previous()
+                widget::operation::focus_previous()
             } else {
-                widget::focus_next()
+                widget::operation::focus_next()
             }
         }
         Message::MainHexTextChanged(text) => {
@@ -154,7 +119,7 @@ fn update(state: &mut MeshVisualizerState, message: Message) -> Task<Message> {
             state.selected_mode = Some(mode);
             // it's annoying that we have to do this ourselves, but, AFAIU, widgets can't initiate tasks my themselves
 
-            widget::focus_next()
+            widget::operation::focus_next()
         }
         Message::IndexTextChanged(text) => {
             state.index_text = text;
@@ -163,12 +128,12 @@ fn update(state: &mut MeshVisualizerState, message: Message) -> Task<Message> {
         Message::VertexTypeChanged(desc) => {
             state.selected_vertex_type = Some(desc);
             // it's annoying that we have to do this ourselves, but, AFAIU, widgets can't initiate tasks my themselves
-            widget::focus_next()
+            widget::operation::focus_next()
         }
         Message::DecompositionOrderChanged(order) => {
             state.selected_decomposition_order = order;
             // it's annoying that we have to do this ourselves, but, AFAIU, widgets can't initiate tasks my themselves
-            widget::focus_next()
+            widget::operation::focus_next()
         }
     }
 }
@@ -184,9 +149,9 @@ fn view(app_state: &MeshVisualizerState) -> Element<Message> {
             .on_submit(Message::SwitchFocus { backwards: false })
             .padding(10)
             .into(),
-        Space::with_height(10).into(),
+        Space::new().height(10).into(),
         hex_parse_state.view().into(),
-        Space::with_height(10).into(),
+        Space::new().height(10).into(),
         my_combo_box::ComboBox::new(
             &app_state.mode_selector,
             "Select mode...",
@@ -211,10 +176,10 @@ fn view(app_state: &MeshVisualizerState) -> Element<Message> {
 
             // TODO: this might be a little too much code for a single function (and it's deeply nested too...)
             col1 = col1.extend([
-                Space::with_height(10).into(),
+                Space::new().height(10).into(),
                 state.float_parse.view().into(),
                 // ---
-                Space::with_height(20).into(),
+                Space::new().height(20).into(),
                 // ---
                 my_combo_box::ComboBox::new(
                     &app_state.vertex_selector,
@@ -244,10 +209,10 @@ fn view(app_state: &MeshVisualizerState) -> Element<Message> {
             );
 
             col1 = col1.extend([
-                Space::with_height(10).into(),
+                Space::new().height(10).into(),
                 state.float_parse.view().into(),
                 // ---
-                Space::with_height(20).into(),
+                Space::new().height(20).into(),
                 state.matrix_parse.result.view().into(),
                 state.matrix_parse.matrix_view().into(),
             ]);
@@ -259,7 +224,7 @@ fn view(app_state: &MeshVisualizerState) -> Element<Message> {
                         ..iced::Font::DEFAULT
                     })
                     .into(),
-                Space::with_height(10).into(),
+                Space::new().height(10).into(),
                 my_combo_box::ComboBox::new(
                     &app_state.decomposition_order_selector,
                     "Select decomposition order...",
@@ -267,7 +232,7 @@ fn view(app_state: &MeshVisualizerState) -> Element<Message> {
                     Message::DecompositionOrderChanged,
                 )
                 .into(),
-                Space::with_height(20).into(),
+                Space::new().height(20).into(),
                 state.matrix_parse.decomposition_view().into(),
             ]);
         }
@@ -284,9 +249,16 @@ fn view(app_state: &MeshVisualizerState) -> Element<Message> {
 }
 
 fn main() -> iced::Result {
-    iced::application::application("Mesh visualizer", update, view)
+    iced::application::application(MeshVisualizerState::default, update, view)
+        .title("Mesh visualizer")
         .subscription(|_state| {
-            keyboard::on_key_press(|key, modifiers| {
+            iced::event::listen_with(|event, status, _window| {
+                if status != iced::event::Status::Ignored { return None; }
+                let iced::Event::Keyboard(keyboard::Event::KeyPressed { key, modifiers, .. }) =
+                    event
+                else {
+                    return None;
+                };
                 let keyboard::Key::Named(key) = key else {
                     return None;
                 };

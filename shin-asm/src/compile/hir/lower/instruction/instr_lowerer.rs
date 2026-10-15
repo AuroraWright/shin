@@ -3,9 +3,9 @@ use typenum::{B0, B1};
 
 use super::from_instr_args::FromInstrArgs;
 use crate::compile::hir::lower::{
+    LowerResult,
     from_hir::{FromHirBlockCtx, FromHirCollectors},
     instruction::into_instruction::IntoInstructionResult,
-    LowerResult,
 };
 
 // Dummy type parameter is a hacky way to work around current rustc limitations

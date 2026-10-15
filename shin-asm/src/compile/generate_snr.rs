@@ -3,11 +3,11 @@ use std::io::{Cursor, Seek as _, SeekFrom, Write as _};
 use binrw::BinWrite;
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
-use shin_core::format::scenario::{instruction_elements::CodeAddress, ScenarioHeader};
+use shin_core::format::scenario::{ScenarioHeader, instruction_elements::CodeAddress};
 
 use crate::compile::{
-    hir::lower::{LowerResult, LoweredProgram},
     BlockIdWithFile, Db, MakeWithFile,
+    hir::lower::{LowerResult, LoweredProgram},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,18 +40,19 @@ impl BlockLayout {
     }
 }
 
-#[salsa::input]
+#[salsa::input(debug)]
 pub struct DonorHeaders {
-    #[return_ref]
+    #[returns(ref)]
     pub head_data: Vec<u8>,
+    #[returns(copy)]
     pub snr_header: ScenarioHeader,
 }
 
-#[salsa::tracked]
-pub fn layout_blocks(
-    db: &dyn Db,
+#[salsa::tracked(returns(clone))]
+pub fn layout_blocks<'db>(
+    db: &'db dyn Db,
     headers: DonorHeaders,
-    program: LoweredProgram,
+    program: LoweredProgram<'db>,
 ) -> LowerResult<BlockLayout> {
     let mut block_offsets = FxHashMap::default();
     let mut block_order = Vec::new();
@@ -76,8 +77,9 @@ pub fn layout_blocks(
     })
 }
 
-#[salsa::tracked]
-pub fn generate_snr(db: &dyn Db, headers: DonorHeaders, program: LoweredProgram) -> Vec<u8> {
+#[salsa::tracked(returns(clone))]
+pub fn generate_snr<'db>(db: &'db dyn Db, headers: DonorHeaders, program: LoweredProgram<'db>,
+) -> Vec<u8> {
     let block_layout = layout_blocks(db, headers, program).unwrap();
 
     let header = headers.snr_header(db);
@@ -111,26 +113,33 @@ pub fn generate_snr(db: &dyn Db, headers: DonorHeaders, program: LoweredProgram)
 
 #[cfg(test)]
 mod tests {
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect, expect};
     use indoc::indoc;
     use shin_asm::compile::hir::lower::LoweredProgram;
     use shin_core::format::scenario::ScenarioHeader;
 
     use crate::compile::{
+        Db, File, Program,
         db::Database,
         diagnostics::{HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
         generate_snr::DonorHeaders,
-        hir, Db, File, Program,
+        hir,
     };
 
-    fn lower_program(db: &dyn Db, source: &str) -> (Program, LoweredProgram) {
+    fn lower_program<'db>(db: &'db dyn Db, source: &str) -> (Program, LoweredProgram<'db>) {
         let file = File::new(db, "test.sal".to_string(), source.to_string());
         let program = Program::new(db, vec![file]);
         let lowered_program = hir::lower::lower_program(db, program);
         let hir_errors =
-            hir::lower::lower_program::accumulated::<HirDiagnosticAccumulator>(db, program);
+            hir::lower::lower_program::accumulated::<HirDiagnosticAccumulator>(db, program)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         let source_errors =
-            hir::lower::lower_program::accumulated::<SourceDiagnosticAccumulator>(db, program);
+            hir::lower::lower_program::accumulated::<SourceDiagnosticAccumulator>(db, program)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         assert!(hir_errors.is_empty());
         assert!(source_errors.is_empty());
 

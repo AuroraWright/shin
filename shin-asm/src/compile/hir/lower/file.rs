@@ -1,20 +1,20 @@
-use std::rc::Rc;
+use std::sync::Arc;
 
 use itertools::Itertools;
 use rustc_hash::FxHashMap;
 
 use crate::compile::{
-    hir, hir::lower::LoweredBlock, types::SalsaBlockIdWithFile, BlockId, Db, DefMap, File,
-    MakeWithFile,
+    BlockId, Db, DefMap, File, MakeWithFile, hir, hir::lower::LoweredBlock, types::SalsaBlockIdWithFile,
 };
 
-#[salsa::tracked]
-pub struct LoweredFile {
-    #[return_ref]
-    pub bodies: FxHashMap<BlockId, Rc<LoweredBlock>>,
+#[salsa::tracked(debug)]
+pub struct LoweredFile<'db> {
+    #[tracked]
+    #[returns(ref)]
+    pub bodies: FxHashMap<BlockId, Arc<LoweredBlock>>,
 }
 
-impl LoweredFile {
+impl<'db> LoweredFile<'db> {
     pub fn debug_dump(&self, db: &dyn Db) -> String {
         use std::fmt::Write;
         let mut result = String::new();
@@ -30,8 +30,8 @@ impl LoweredFile {
     }
 }
 
-#[salsa::tracked]
-pub fn lower_file(db: &dyn Db, def_map: DefMap, file: File) -> LoweredFile {
+#[salsa::tracked(returns(clone))]
+pub fn lower_file<'db>(db: &'db dyn Db, def_map: DefMap<'db>, file: File) -> LoweredFile<'db> {
     let block_bodies = hir::collect_file_bodies(db, file);
 
     let mut bodies = FxHashMap::default();
@@ -40,7 +40,7 @@ pub fn lower_file(db: &dyn Db, def_map: DefMap, file: File) -> LoweredFile {
         let salsa_block_id = SalsaBlockIdWithFile::new(db, block_id.in_file(file));
         bodies.insert(
             block_id,
-            Rc::new(hir::lower::lower_block(db, def_map, salsa_block_id)),
+            Arc::new(hir::lower::lower_block(db, def_map, salsa_block_id)),
         );
     }
 
@@ -49,14 +49,14 @@ pub fn lower_file(db: &dyn Db, def_map: DefMap, file: File) -> LoweredFile {
 
 #[cfg(test)]
 mod tests {
-    use expect_test::{expect, Expect};
+    use expect_test::{Expect, expect};
     use indoc::indoc;
 
     use crate::compile::{
+        File, Program,
         def_map::build_def_map,
         diagnostics::{HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
         hir::lower::test_utils,
-        File, Program,
     };
 
     fn check_from_hir(source: &str, expected: Expect) {
@@ -74,9 +74,15 @@ mod tests {
         let lowered_file = super::lower_file(db, def_map, file);
 
         let hir_errors =
-            super::lower_file::accumulated::<HirDiagnosticAccumulator>(db, def_map, file);
+            super::lower_file::accumulated::<HirDiagnosticAccumulator>(db, def_map, file)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         let source_errors =
-            super::lower_file::accumulated::<SourceDiagnosticAccumulator>(db, def_map, file);
+            super::lower_file::accumulated::<SourceDiagnosticAccumulator>(db, def_map, file)
+                .into_iter()
+                .map(|diagnostic| diagnostic.0.clone())
+                .collect::<Vec<_>>();
         let diags = test_utils::diagnostics_to_str(db, hir_errors, source_errors);
 
         let mut result = String::new();
@@ -136,13 +142,13 @@ mod tests {
                 instructions:
                   j { target: 00000000 }
                 code addresses:
-                  WithFile { value: BlockId { item_index: 0, block_index: Some(1) }, file: File(Id { value: 1 }) }
+                  WithFile { value: BlockId { item_index: 0, block_index: Some(1) }, file: File { [salsa id]: Id(0) } }
 
                 block Block { item_index: ItemIndex(0), block_index: BlockIndex(1) }:
                 instructions:
                   j { target: 00000000 }
                 code addresses:
-                  WithFile { value: BlockId { item_index: 0, block_index: Some(0) }, file: File(Id { value: 1 }) }
+                  WithFile { value: BlockId { item_index: 0, block_index: Some(0) }, file: File { [salsa id]: Id(0) } }
 
             "#]],
         );
@@ -163,56 +169,56 @@ mod tests {
             expect![[r#"
                 Diagnostics:
                 Error: expected COMMA
-                   ╭─[test.sal:3:13]
+                   ╭─[ test.sal:3:13 ]
                    │
                  3 │     ABOBA 42 42 42
-                   │             ─  
-                   │                 
+                   │             ┬  
+                   │             ╰── 
                 ───╯
 
 
                 Error: expected COMMA
-                   ╭─[test.sal:3:16]
+                   ╭─[ test.sal:3:16 ]
                    │
                  3 │     ABOBA 42 42 42
-                   │                ─  
-                   │                    
-                ───╯
-
-
-                Error: Expected a register, but got an integer literal
-                   ╭─[test.sal:6:10]
-                   │
-                 6 │     zero 42, 43
-                   │          ──  
-                   │               
-                ───╯
-
-
-                Error: Unresolved register alias: `$KEKAS`
-                   ╭─[test.sal:7:11]
-                   │
-                 7 │     not16 $KEKAS, z
-                   │           ──────  
-                   │                    
-                ───╯
-
-
-                Error: Could not find the definition of `z`
-                   ╭─[test.sal:7:19]
-                   │
-                 7 │     not16 $KEKAS, z
-                   │                   ─  
-                   │                       
+                   │                ┬  
+                   │                ╰── 
                 ───╯
 
 
                 Error: Unrecognized instruction: `ABOBA`
-                   ╭─[test.sal:3:5]
+                   ╭─[ test.sal:3:5 ]
                    │
                  3 │     ABOBA 42 42 42
-                   │     ───────────────  
-                   │                       
+                   │     ───────┬───────  
+                   │            ╰───────── 
+                ───╯
+
+
+                Error: Expected a register, but got an integer literal
+                   ╭─[ test.sal:6:10 ]
+                   │
+                 6 │     zero 42, 43
+                   │          ─┬  
+                   │           ╰── 
+                ───╯
+
+
+                Error: Unresolved register alias: `$KEKAS`
+                   ╭─[ test.sal:7:11 ]
+                   │
+                 7 │     not16 $KEKAS, z
+                   │           ───┬──  
+                   │              ╰──── 
+                ───╯
+
+
+                Error: Could not find the definition of `z`
+                   ╭─[ test.sal:7:19 ]
+                   │
+                 7 │     not16 $KEKAS, z
+                   │                   ┬  
+                   │                   ╰── 
                 ───╯
 
                 block Block { item_index: ItemIndex(0), block_index: BlockIndex(0) }:

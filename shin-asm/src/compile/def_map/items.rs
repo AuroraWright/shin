@@ -10,19 +10,20 @@ use shin_asm::compile::hir::lower::LowerResult;
 
 use crate::{
     compile::{
-        constexpr::{constexpr_evaluate, ConstexprContextValue, ConstexprValue},
+        BlockId, BlockIdWithFile, Db, File, MakeWithFile, Program,
+        constexpr::{ConstexprContextValue, ConstexprValue, constexpr_evaluate},
         def_map::Name,
         diagnostics::Span,
         hir,
         hir::lower::LowerError,
-        make_diagnostic, BlockId, BlockIdWithFile, Db, File, MakeWithFile, Program,
+        make_diagnostic,
     },
     syntax::{
+        AstSpanned, AstToken,
         ast::{
             self, visit,
             visit::{BlockIndex, ItemIndex},
         },
-        AstSpanned, AstToken,
     },
 };
 

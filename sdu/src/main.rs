@@ -84,6 +84,9 @@ struct GenerateCommand {
 enum PictureCommand {
     /// Convert a PIC file into a PNG file
     Decode {
+        /// Decode the older Higurashi PIC4 v2 file and fragment headers.
+        #[clap(long)]
+        higurashi: bool,
         /// Path to the PIC file
         picture_path: PathBuf,
         /// Path to the output PNG file
@@ -132,6 +135,9 @@ enum TextureArchiveCommand {
 enum AudioCommand {
     /// Convert a NXA file into a WAV file
     Decode {
+        /// Decode Higurashi NXA1 versions1/2, including older packet prefixes
+        #[clap(long)]
+        higurashi: bool,
         /// Path to the NXA file
         audio_path: PathBuf,
         /// Path to the output WAV file
@@ -139,6 +145,9 @@ enum AudioCommand {
     },
     /// Convert an NXA file into an OPUS file losslessly (it simply remuxes the opus packets)
     Remux {
+        /// Remux Higurashi NXA1 versions1/2, including older packet prefixes
+        #[clap(long)]
+        higurashi: bool,
         /// Path to the NXA file
         audio_path: PathBuf,
         /// Path to the output OPUS file
@@ -175,12 +184,19 @@ fn generate_command(command: GenerateCommand) -> Result<()> {
 fn picture_command(command: PictureCommand) -> Result<()> {
     match command {
         PictureCommand::Decode {
+            higurashi,
             picture_path: path,
             output_path,
         } => {
             let picture = std::fs::read(path)?;
-            let picture =
-                shin_core::format::picture::read_picture::<SimpleMergedPicture>(&picture, ())?;
+            let format = if higurashi {
+                shin_core::format::picture::PictureFormat::HigurashiV2
+            } else {
+                shin_core::format::picture::PictureFormat::Umineko
+            };
+            let picture = shin_core::format::picture::read_picture_with_format::<
+                SimpleMergedPicture,
+            >(&picture, (), format)?;
             picture.image.save(output_path)?;
             Ok(())
         }

@@ -2,14 +2,14 @@ use shin_core::format::scenario::instruction_elements::{CodeAddress, Register};
 
 use crate::{
     compile::{
+        BlockIdWithFile, File, MakeWithFile,
         def_map::{DefValue, Name},
         diagnostics::HirLocation,
         hir::{
-            self,
+            self, HirBlockBody, HirBlockId, HirDiagnostic, HirId, HirIdWithBlock,
             lower::{LowerError, LowerResult},
-            HirBlockBody, HirBlockId, HirDiagnostic, HirId, HirIdWithBlock,
         },
-        resolve, BlockIdWithFile, File, MakeWithFile,
+        resolve,
     },
     syntax::ast,
 };

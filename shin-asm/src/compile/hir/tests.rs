@@ -1,27 +1,32 @@
 use std::{
     fs,
     path::{Path, PathBuf},
-    rc::Rc,
+    sync::Arc,
 };
 
 use expect_test::expect_file;
-use test_generator::test_resources;
-
 use crate::compile::{
+    File,
     db::Database,
     diagnostics::{HirDiagnosticAccumulator, SourceDiagnosticAccumulator},
-    hir, File,
+    hir,
 };
 
-fn lower_block(code: &str) -> Rc<hir::HirBlockBody> {
+fn lower_block(code: &str) -> Arc<hir::HirBlockBody> {
     let db = Database::default();
     let db = &db;
     let file = File::new(db, "test.sal".to_string(), code.to_string());
     let bodies = hir::collect_file_bodies(db, file);
 
-    let hir_errors = hir::collect_file_bodies::accumulated::<HirDiagnosticAccumulator>(db, file);
+    let hir_errors = hir::collect_file_bodies::accumulated::<HirDiagnosticAccumulator>(db, file)
+        .into_iter()
+        .map(|diagnostic| diagnostic.0.clone())
+        .collect::<Vec<_>>();
     let source_errors =
-        hir::collect_file_bodies::accumulated::<SourceDiagnosticAccumulator>(db, file);
+        hir::collect_file_bodies::accumulated::<SourceDiagnosticAccumulator>(db, file)
+            .into_iter()
+            .map(|diagnostic| diagnostic.0.clone())
+            .collect::<Vec<_>>();
     if !source_errors.is_empty() || !hir_errors.is_empty() {
         panic!(
             "lowering produced errors:\n\
@@ -35,7 +40,6 @@ fn lower_block(code: &str) -> Rc<hir::HirBlockBody> {
     bodies.get_block(db, block_ids[0]).unwrap().clone()
 }
 
-#[test_resources("test_data/hir/ok/*.sal")]
 fn lower_ok(sal: &str) {
     let case = TestCase::from_sal_path(sal);
     let block_body = lower_block(&case.text);
@@ -43,8 +47,7 @@ fn lower_ok(sal: &str) {
     expect_file![case.hir].assert_eq(&block_body);
 }
 
-// #[test_resources("test_data/parser/err/*.sal")]
-// fn parse_err(sal: &str) {
+// // fn parse_err(sal: &str) {
 //     let case = TestCase::from_sal_path(sal);
 //     let (actual, errors) = parse(&case.text);
 //     assert!(
@@ -71,3 +74,5 @@ impl TestCase {
         TestCase { sal, hir, text }
     }
 }
+
+include!(concat!(env!("OUT_DIR"), "/hir_resource_tests.rs"));

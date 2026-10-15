@@ -4,8 +4,8 @@ use super::prelude::*;
 use crate::compile::{
     def_map::DefValue,
     hir::lower::{
-        from_hir::{FromHirBlockCtx, FromHirCollectors},
         LowerResult,
+        from_hir::{FromHirBlockCtx, FromHirCollectors},
     },
 };
 
@@ -41,16 +41,16 @@ mod tests {
 
     use super::CodeAddress;
     use crate::compile::{
+        MakeWithFile, Program,
         db::Database,
-        def_map::{build_def_map, ResolveKind},
+        def_map::{ResolveKind, build_def_map},
         hir::lower::{
+            CodeAddressCollector, FromHirExpr, HirDiagnosticCollector,
             from_hir::{FromHirBlockCtx, FromHirCollectors},
             test_utils,
             test_utils::lower_hir_ok,
-            CodeAddressCollector, FromHirExpr, HirDiagnosticCollector,
         },
         resolve::ResolveContext,
-        MakeWithFile, Program,
     };
 
     #[test]

@@ -9,7 +9,7 @@ shin-render-shader-types = { path = "../shin-render-shader-types" }
 wgpu = { workspace = true }
 bytemuck = { workspace = true }
 enum-iterator = { workspace = true }
-cfg-if = "1.0.0"
+cfg-if = "1.0.5"
 tracing = { workspace = true }
 
 [build-dependencies]
@@ -19,16 +19,16 @@ enum-iterator = { workspace = true }
 wgpu = { workspace = true }
 bytemuck = { workspace = true }
 
-naga = { version = "24.0.0", features = ["wgsl-in", "wgsl-out", "spv-out"] }
-spirv = "0.3.0"
+naga = { version = "30.0.1", features = ["wgsl-in", "wgsl-out", "spv-out"] }
+spirv = "0.4.0"
 # Be careful when updating! We rely on mangling implementation details
-naga_oil = "0.17.0"
+naga_oil = "0.23.0"
 
 heck = "0.5.0"
-proc-macro2 = "1.0.2"
-quote = "1.0.37"
-syn = "2.0.77"
-prettyplease = "0.2.22"
+proc-macro2 = "1.0.107"
+quote = "1.0.47"
+syn = "3.0.8"
+prettyplease = "0.3.0"
 
 itertools = { workspace = true }
 indexmap = { workspace = true }

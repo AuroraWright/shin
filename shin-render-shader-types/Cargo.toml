@@ -20,7 +20,7 @@ glam = { workspace = true, features = [
     #"scalar-math"
 ] }
 bytemuck = { workspace = true, features = ["derive"] }
-encase = { workspace = true, features = ["glam"] }
+encase = { workspace = true }
 
 enum-iterator = { workspace = true }
 

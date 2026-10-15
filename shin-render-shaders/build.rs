@@ -11,20 +11,21 @@ use heck::ToPascalCase;
 use indexmap::IndexMap;
 use itertools::{EitherOrBoth, Itertools};
 use naga::{
-    valid::{Capabilities, ValidationFlags},
     Handle, ShaderStage, Type, UniqueArena,
+    valid::{Capabilities, ValidationFlags},
 };
-use quote::{quote, TokenStreamExt};
+use quote::{TokenStreamExt, quote};
 use shin_render_shader_types::{
     uniforms::{
-        metadata::{ArraySchema, PrimitiveType, StructSchema, TypeSchema},
         BlendUniformParams, BlurUniformParams, ButtonUniformParams, CharacterPortraitUniformParams,
         ClearUniformParams, FillUniformParams, FontBorderUniformParams, FontUniformParams,
-        LayerUniformParams, MaskUniformParams, MosaicUniformParams, MovieUniformParams,
-        RasterUniformParams, RippleUniformParams, SpriteUniformParams, TapRippleUniformParams,
-        UniformType, WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
+        HigurashiBlurUniformParams, HigurashiRasterUniformParams, LayerUniformParams,
+        MaskUniformParams, MosaicUniformParams, MovieUniformParams, RasterUniformParams,
+        RippleUniformParams, SpriteUniformParams, TapRippleUniformParams, UniformType,
+        WiperDefaultUniformParams, WiperGlassUniformParams, WiperMaskUniformParams,
         WiperRippleUniformParams, WiperWaveUniformParams, WiperWhirlUniformParams,
         ZoomBlurUniformParams,
+        metadata::{ArraySchema, PrimitiveType, StructSchema, TypeSchema},
     },
     vertices::{
         BlendVertex, GlassVertex, MaskVertex, PosColTexVertex, PosColVertex, PosTexVertex,
@@ -224,7 +225,8 @@ impl GenCtx {
                 ty,
                 binding: Some(naga::Binding::Location {
                     location: attribute.shader_location,
-                    second_blend_source: false,
+                    blend_src: None,
+                    per_primitive: false,
                     interpolation: None,
                     sampling: None,
                 }),
@@ -299,6 +301,8 @@ fn generate_wgsl_types() -> WgslSchema {
     ctx.gen_uniform::<RasterUniformParams>();
     ctx.gen_uniform::<RippleUniformParams>();
     ctx.gen_uniform::<TapRippleUniformParams>();
+    ctx.gen_uniform::<HigurashiBlurUniformParams>();
+    ctx.gen_uniform::<HigurashiRasterUniformParams>();
     ctx.gen_uniform::<BlurUniformParams>();
     ctx.gen_uniform::<ZoomBlurUniformParams>();
     ctx.gen_uniform::<WiperWhirlUniformParams>();
@@ -536,6 +540,7 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
                     zero_initialize_workgroup_memory:
                         naga::back::spv::ZeroInitializeWorkgroupMemoryMode::Polyfill,
                     debug_info: None,
+                    ..Default::default()
                 },
                 None,
             )
@@ -566,8 +571,8 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
                         vertex_type_name =
                             Some(wgsl_schema.vertex_rust_names.get(dbg!(type_name)).unwrap());
                     }
-                    ShaderStage::Compute => {
-                        panic!("compute shaders are not supported")
+                    stage => {
+                        panic!("unsupported shader stage: {stage:?}")
                     }
                 }
             }
@@ -1001,6 +1006,9 @@ fn main() {
     println!("cargo:rerun-if-changed=wgsl/raster.wgsl");
     println!("cargo:rerun-if-changed=wgsl/ripple.wgsl");
     println!("cargo:rerun-if-changed=wgsl/tap_ripple.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/higurashi_blur.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/higurashi_postprocess.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/higurashi_raster.wgsl");
     println!("cargo:rerun-if-changed=wgsl/blur.wgsl");
     println!("cargo:rerun-if-changed=wgsl/zoom_blur.wgsl");
     println!("cargo:rerun-if-changed=wgsl/wiper_whirl.wgsl");

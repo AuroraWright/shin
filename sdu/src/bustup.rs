@@ -11,6 +11,9 @@ pub enum BustupCommand {
     /// The PNG files correspond to different images encoded in the BUP file and have to be composited to look like something you can find in-game.
     /// This export is suitable for conversion to other engines
     Decode {
+        /// Decode Higurashi BUP4 v3, preserving its fixed animation slots.
+        #[clap(long)]
+        higurashi: bool,
         /// Path to the BUP file
         bustup_path: PathBuf,
         /// Path to the output directory
@@ -20,6 +23,9 @@ pub enum BustupCommand {
     ///
     /// The PNG files will look close to what they look in-game, but will use up a lot of disk space, because there will be redundancy.
     Bake {
+        /// Decode Higurashi BUP4 v3 before compositing sprite states.
+        #[clap(long)]
+        higurashi: bool,
         /// Path to the BUP file
         bustup_path: PathBuf,
         /// Path to the output directory
@@ -30,12 +36,12 @@ pub enum BustupCommand {
 pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
     match command {
         BustupCommand::Decode {
+            higurashi,
             bustup_path,
             output_path,
         } => {
             let bustup = std::fs::read(bustup_path)?;
-            let bustup =
-                shin_core::format::bustup::read_bustup::<DefaultBustupBuilder>(&bustup, ())?;
+            let bustup = read_bustup(&bustup, higurashi)?;
 
             std::fs::create_dir_all(&output_path)?;
 
@@ -106,12 +112,12 @@ pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
             Ok(())
         }
         BustupCommand::Bake {
+            higurashi,
             bustup_path,
             output_path,
         } => {
             let bustup = std::fs::read(bustup_path)?;
-            let bustup =
-                shin_core::format::bustup::read_bustup::<DefaultBustupBuilder>(&bustup, ())?;
+            let bustup = read_bustup(&bustup, higurashi)?;
 
             std::fs::create_dir_all(&output_path)?;
 
@@ -136,13 +142,17 @@ pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
                     overlay(&mut image, &face2);
                 }
 
-                let mouths = if expression.mouths.is_empty() {
+                let mouths = if expression.mouths.is_empty()
+                    || (higurashi && expression.mouths.iter().all(PicBlock::is_empty))
+                {
                     vec![PicBlock::empty()]
                 } else {
                     expression.mouths
                 };
 
-                let eyes = if expression.eyes.is_empty() {
+                let eyes = if expression.eyes.is_empty()
+                    || (higurashi && expression.eyes.iter().all(PicBlock::is_empty))
+                {
                     vec![PicBlock::empty()]
                 } else {
                     expression.eyes
@@ -162,5 +172,16 @@ pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
 
             Ok(())
         }
+    }
+}
+
+fn read_bustup(
+    data: &[u8],
+    higurashi: bool,
+) -> anyhow::Result<shin_core::format::bustup::default_builder::Bustup> {
+    if higurashi {
+        shin_core::format::bustup::higurashi::read_higurashi_bustup(data)
+    } else {
+        shin_core::format::bustup::read_bustup::<DefaultBustupBuilder>(data, ())
     }
 }

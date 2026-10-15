@@ -3,7 +3,7 @@ use smol_str::SmolStr;
 use text_size::TextRange;
 
 use super::*;
-use crate::compile::diagnostics::{make_diagnostic, Diagnostic};
+use crate::compile::diagnostics::{Diagnostic, make_diagnostic};
 
 #[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub enum RegisterIdentKind {

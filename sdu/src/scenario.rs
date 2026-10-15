@@ -1,6 +1,6 @@
-use std::{fs::File, path::PathBuf};
+use std::{fs::File, io::Write, path::PathBuf};
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, ensure};
 use bytes::Bytes;
 use itertools::Itertools;
 use shin_core::{
@@ -12,8 +12,20 @@ use shin_core::{
 pub enum ScenarioCommand {
     /// Run a scenario in VM, printing all the commands executed
     ///
-    /// NOTE: this doesn't work too well with SELECT: it always selects the first option
+    /// Umineko uses dummy engine responses. Higurashi stops for explicit feedback.
     Trace {
+        /// Execute the older Higurashi VM without engine effects.
+        #[clap(long)]
+        higurashi: bool,
+        /// Maximum commands in a Higurashi trace.
+        #[clap(long, default_value = "1000")]
+        max_commands: usize,
+        /// Maximum instructions between Higurashi command yields.
+        #[clap(long, default_value = "100000")]
+        max_instructions: usize,
+        /// Explicit Higurashi command response at a hexadecimal script address.
+        #[clap(long, value_name = "ADDRESS=VALUE")]
+        reply: Vec<TraceReply>,
         /// Path to the SNR file
         scenario_path: PathBuf,
         /// Initial value of the memory cell "0", usually selecting the episode or smth
@@ -47,9 +59,29 @@ pub enum ScenarioCommand {
     ///
     /// NOTE: the format of the output is not stable yet
     Disassemble {
+        /// Decode the older Higurashi dialect and its static reachable code.
+        #[clap(long)]
+        higurashi: bool,
         scenario_path: PathBuf,
         output_filename: Option<PathBuf>,
     },
+}
+
+#[derive(Debug, Clone)]
+pub struct TraceReply {
+    address: CodeAddress,
+    value: i32,
+}
+
+impl std::str::FromStr for TraceReply {
+    type Err = anyhow::Error;
+    fn from_str(text: &str) -> Result<Self> {
+        let (address, value) = text.split_once('=').context("Expected ADDRESS=VALUE")?;
+        Ok(Self {
+            address: CodeAddress(u32::from_str_radix(address.trim_start_matches("0x"), 16)?),
+            value: value.parse()?,
+        })
+    }
 }
 
 fn make_output(output_filename: Option<PathBuf>) -> Result<Box<dyn std::io::Write>> {
@@ -84,6 +116,73 @@ fn trace(path: PathBuf, init_val: i32, output_filename: Option<PathBuf>) -> Resu
     }
 
     // println!("{:#?}", reader);
+    Ok(())
+}
+
+fn trace_higurashi(
+    path: PathBuf,
+    init_val: i32,
+    output_filename: Option<PathBuf>,
+    max_commands: usize,
+    max_instructions: usize,
+    replies: Vec<TraceReply>,
+) -> Result<()> {
+    use shin_core::{
+        format::scenario::higurashi::HigurashiScenario,
+        vm::higurashi::{HigurashiScripter, command::HigurashiRuntimeCommand},
+    };
+    ensure!(
+        max_commands > 0 && max_instructions > 0,
+        "Higurashi trace limits must be positive"
+    );
+    let scenario = HigurashiScenario::new(Bytes::from(std::fs::read(path)?))?;
+    let mut vm = HigurashiScripter::new(&scenario, init_val, 42)?;
+    let mut output = std::io::BufWriter::new(make_output(output_filename)?);
+    let mut replies_by_address = std::collections::BTreeMap::new();
+    for reply in replies {
+        ensure!(
+            replies_by_address
+                .insert(reply.address, reply.value)
+                .is_none(),
+            "Duplicate reply address {}",
+            reply.address
+        );
+    }
+    let mut result = CommandResult::None;
+    for _ in 0..max_commands {
+        let command = vm.run(result, max_instructions)?;
+        writeln!(
+            output,
+            "{:08x} next={:08x} seed={:08x} {:?}",
+            vm.position().0,
+            vm.next_position().0,
+            vm.random_state(),
+            command
+        )?;
+        if matches!(command, HigurashiRuntimeCommand::EXIT { arg1: 0, .. }) {
+            writeln!(output, "# stopped: EXIT")?;
+            output.flush()?;
+            return Ok(());
+        }
+        result = if let Some(dest) = command.destination() {
+            if let Some(&value) = replies_by_address.get(&vm.position()) {
+                writeln!(output, "# explicit reply: {dest} = {value}")?;
+                CommandResult::WriteMemory(dest, value)
+            } else {
+                writeln!(
+                    output,
+                    "# stopped: explicit response required for {dest}; use --reply {:08x}=VALUE",
+                    vm.position().0
+                )?;
+                output.flush()?;
+                return Ok(());
+            }
+        } else {
+            CommandResult::None
+        };
+    }
+    writeln!(output, "# stopped: command limit {max_commands}")?;
+    output.flush()?;
     Ok(())
 }
 
@@ -260,9 +359,29 @@ fn dump_info(path: PathBuf, output_filename: Option<PathBuf>) -> Result<()> {
     Ok(())
 }
 
-fn disassemble(path: PathBuf, output_filename: Option<PathBuf>) -> Result<()> {
+fn disassemble(path: PathBuf, output_filename: Option<PathBuf>, higurashi: bool) -> Result<()> {
     let scenario = std::fs::read(path)?;
     let scenario = Bytes::from(scenario);
+    if higurashi {
+        let scenario = shin_core::format::scenario::higurashi::HigurashiScenario::new(scenario)?;
+        let mut reader = scenario.instruction_reader(CodeAddress(scenario.header.code_offset))?;
+        let spans = reader.reachable_spans()?;
+        let mut output = std::io::BufWriter::new(make_output(output_filename)?);
+        for (start, end) in spans {
+            reader.set_position(start)?;
+            let instruction = reader.read()?;
+            writeln!(
+                output,
+                "{:08x} {:08x} {:02x} {:?}",
+                start.0,
+                end.0,
+                scenario.raw()[start.0 as usize],
+                instruction
+            )?;
+        }
+        output.flush()?;
+        return Ok(());
+    }
     let scenario = shin_core::format::scenario::Scenario::new(scenario)?;
 
     let mut output = make_output(output_filename)?;
@@ -293,10 +412,28 @@ fn disassemble(path: PathBuf, output_filename: Option<PathBuf>) -> Result<()> {
 pub fn scenario_command(command: ScenarioCommand) -> Result<()> {
     match command {
         ScenarioCommand::Trace {
+            higurashi,
+            max_commands,
+            max_instructions,
+            reply,
             scenario_path,
             init_val,
             output_filename,
-        } => trace(scenario_path, init_val, output_filename),
+        } => {
+            if higurashi {
+                trace_higurashi(
+                    scenario_path,
+                    init_val,
+                    output_filename,
+                    max_commands,
+                    max_instructions,
+                    reply,
+                )
+            } else {
+                ensure!(reply.is_empty(), "--reply requires --higurashi");
+                trace(scenario_path, init_val, output_filename)
+            }
+        }
         ScenarioCommand::TestLayouter {
             scenario_path,
             init_val,
@@ -311,8 +448,9 @@ pub fn scenario_command(command: ScenarioCommand) -> Result<()> {
             output_filename,
         } => dump_info(scenario_path, output_filename),
         ScenarioCommand::Disassemble {
+            higurashi,
             scenario_path,
             output_filename,
-        } => disassemble(scenario_path, output_filename),
+        } => disassemble(scenario_path, output_filename, higurashi),
     }
 }

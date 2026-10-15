@@ -2,35 +2,35 @@ use shin_core::format::scenario::instruction_elements::Register;
 
 use crate::{
     compile::{
-        def_map::{DefValue, Name, RegisterName, ResolveKind},
         Db, DefMap,
+        def_map::{DefValue, Name, RegisterName, ResolveKind},
     },
     syntax::ast::{self},
 };
 
 #[derive(Debug, Copy, Clone)]
-enum ResolveContextInner {
+enum ResolveContextInner<'db> {
     Empty,
     Real {
-        def_map: DefMap,
+        def_map: DefMap<'db>,
         resolve_kind: ResolveKind,
     },
 }
 
 pub struct ResolveContext<'db> {
     db: &'db dyn Db,
-    inner: ResolveContextInner,
+    inner: ResolveContextInner<'db>,
 }
 
-impl<'a> ResolveContext<'a> {
-    pub fn new_empty(db: &'a dyn Db) -> Self {
+impl<'db> ResolveContext<'db> {
+    pub fn new_empty(db: &'db dyn Db) -> Self {
         Self {
             db,
             inner: ResolveContextInner::Empty,
         }
     }
 
-    pub fn new(db: &'a dyn Db, def_map: DefMap, resolve_kind: ResolveKind) -> Self {
+    pub fn new(db: &'db dyn Db, def_map: DefMap<'db>, resolve_kind: ResolveKind) -> Self {
         Self {
             db,
             inner: ResolveContextInner::Real {

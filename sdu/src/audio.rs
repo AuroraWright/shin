@@ -28,6 +28,7 @@ struct OpusOggWriter<'writer, W: io::Write> {
     inner: ogg::writing::PacketWriter<'writer, W>,
     frame_idx: usize,
     frame_samples: usize,
+    end_granule: u64,
 }
 
 impl<'writer, W: io::Write> OpusOggWriter<'writer, W> {
@@ -61,7 +62,7 @@ impl<'writer, W: io::Write> OpusOggWriter<'writer, W> {
 
         // write the Opus Comment Header
         // vendor string length + vendor string + user comment count (always 0)
-        let opus_comment_header_bytes = b"OpusTags\x11\x00\x00\x00sdu remuxer\x00\x00\x00\x00";
+        let opus_comment_header_bytes = b"OpusTags\x0b\x00\x00\x00sdu remuxer\x00\x00\x00\x00";
 
         inner.write_packet(
             opus_comment_header_bytes,
@@ -74,6 +75,7 @@ impl<'writer, W: io::Write> OpusOggWriter<'writer, W> {
             inner,
             frame_idx: 0,
             frame_samples: audio_info.frame_samples as _,
+            end_granule: u64::from(audio_info.num_samples) + u64::from(audio_info.pre_skip),
         })
     }
 
@@ -86,11 +88,15 @@ impl<'writer, W: io::Write> OpusOggWriter<'writer, W> {
             frame,
             Self::SERIAL,
             if is_last_frame {
-                PacketWriteEndInfo::EndPage
+                PacketWriteEndInfo::EndStream
             } else {
                 PacketWriteEndInfo::NormalPacket
             },
-            samples_count,
+            if is_last_frame {
+                samples_count.min(self.end_granule)
+            } else {
+                samples_count
+            },
         )
     }
 }
@@ -98,11 +104,16 @@ impl<'writer, W: io::Write> OpusOggWriter<'writer, W> {
 pub fn audio_command(command: AudioCommand) -> anyhow::Result<()> {
     match command {
         AudioCommand::Decode {
+            higurashi,
             audio_path,
             output_path,
         } => {
             let audio = std::fs::read(audio_path).context("Reading input file")?;
-            let audio = shin_core::format::audio::read_audio(&audio)?;
+            let audio = if higurashi {
+                shin_core::format::audio::read_higurashi_audio(&audio)
+            } else {
+                shin_core::format::audio::read_audio(&audio)
+            }?;
 
             let info = audio.info().clone();
 
@@ -123,7 +134,9 @@ pub fn audio_command(command: AudioCommand) -> anyhow::Result<()> {
 
             while let Some((left, right)) = audio_source.read_sample() {
                 writer.write_sample(left).context("Writing sample")?;
-                writer.write_sample(right).context("Writing sample")?;
+                if info.channel_count == 2 {
+                    writer.write_sample(right).context("Writing sample")?;
+                }
             }
 
             writer.finalize().context("Finalizing the WAV file")?;
@@ -131,11 +144,16 @@ pub fn audio_command(command: AudioCommand) -> anyhow::Result<()> {
             Ok(())
         }
         AudioCommand::Remux {
+            higurashi,
             audio_path,
             output_path,
         } => {
             let audio = std::fs::read(audio_path).context("Reading input file")?;
-            let audio = shin_core::format::audio::read_audio(&audio)?;
+            let audio = if higurashi {
+                shin_core::format::audio::read_higurashi_audio(&audio)
+            } else {
+                shin_core::format::audio::read_audio(&audio)
+            }?;
 
             let info = audio.info().clone();
 

@@ -5,7 +5,7 @@ use text_size::TextRange;
 
 use crate::{
     parser,
-    syntax::{syntax_node::GreenNode, SyntaxError, SyntaxTreeBuilder},
+    syntax::{SyntaxError, SyntaxTreeBuilder, syntax_node::GreenNode},
 };
 
 pub(crate) fn parse_text(text: &str) -> (GreenNode, Vec<SyntaxError>) {
