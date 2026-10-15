@@ -2,6 +2,7 @@ use std::{fmt::Write, path::PathBuf};
 
 use image::RgbaImage;
 use itertools::Itertools;
+use shin_core::format::text::TextEncoding;
 use shin_core::format::{bustup::default_builder::DefaultBustupBuilder, picture::PicBlock};
 
 #[derive(clap::Subcommand, Debug)]
@@ -18,6 +19,9 @@ pub enum BustupCommand {
         bustup_path: PathBuf,
         /// Path to the output directory
         output_path: PathBuf,
+        /// Decode UTF-8 expression names used by Gerokasu2.
+        #[clap(long, conflicts_with = "higurashi")]
+        utf8_names: bool,
     },
     /// Convert a BUP file into pre-baked PNG files for every possible sprite state.
     ///
@@ -30,6 +34,9 @@ pub enum BustupCommand {
         bustup_path: PathBuf,
         /// Path to the output directory
         output_path: PathBuf,
+        /// Decode UTF-8 expression names used by Gerokasu2.
+        #[clap(long, conflicts_with = "higurashi")]
+        utf8_names: bool,
     },
 }
 
@@ -39,9 +46,10 @@ pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
             higurashi,
             bustup_path,
             output_path,
+            utf8_names,
         } => {
             let bustup = std::fs::read(bustup_path)?;
-            let bustup = read_bustup(&bustup, higurashi)?;
+            let bustup = read_bustup(&bustup, higurashi, utf8_names)?;
 
             std::fs::create_dir_all(&output_path)?;
 
@@ -115,9 +123,10 @@ pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
             higurashi,
             bustup_path,
             output_path,
+            utf8_names,
         } => {
             let bustup = std::fs::read(bustup_path)?;
-            let bustup = read_bustup(&bustup, higurashi)?;
+            let bustup = read_bustup(&bustup, higurashi, utf8_names)?;
 
             std::fs::create_dir_all(&output_path)?;
 
@@ -178,10 +187,19 @@ pub fn bustup_command(command: BustupCommand) -> anyhow::Result<()> {
 fn read_bustup(
     data: &[u8],
     higurashi: bool,
+    utf8_names: bool,
 ) -> anyhow::Result<shin_core::format::bustup::default_builder::Bustup> {
     if higurashi {
         shin_core::format::bustup::higurashi::read_higurashi_bustup(data)
     } else {
-        shin_core::format::bustup::read_bustup::<DefaultBustupBuilder>(data, ())
+        shin_core::format::bustup::read_bustup_with_encoding::<DefaultBustupBuilder>(
+            data,
+            (),
+            if utf8_names {
+                TextEncoding::Utf8
+            } else {
+                TextEncoding::ShiftJis
+            },
+        )
     }
 }

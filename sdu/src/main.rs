@@ -128,6 +128,9 @@ enum TextureArchiveCommand {
         texture_archive_path: PathBuf,
         /// Path to the output directory
         output_path: PathBuf,
+        /// Decode UTF-8 texture names used by Gerokasu2.
+        #[clap(long)]
+        utf8_names: bool,
     },
 }
 
@@ -321,12 +324,21 @@ fn texture_archive_command(command: TextureArchiveCommand) -> Result<()> {
         TextureArchiveCommand::Decode {
             texture_archive_path,
             output_path,
+            utf8_names,
         } => {
             // use std::fmt::Write;
 
             let texture_archive = std::fs::read(texture_archive_path)?;
+            let encoding = if utf8_names {
+                shin_core::format::text::TextEncoding::Utf8
+            } else {
+                shin_core::format::text::TextEncoding::ShiftJis
+            };
             let texture_archive =
-                shin_core::format::texture_archive::read_texture_archive(&texture_archive)?;
+                shin_core::format::texture_archive::read_texture_archive_with_encoding(
+                    &texture_archive,
+                    encoding,
+                )?;
 
             std::fs::create_dir_all(&output_path)?;
 
