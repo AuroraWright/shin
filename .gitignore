@@ -9,6 +9,11 @@ __pycache__/
 /gerokasu2/*.rom
 /gerokasu2/uncompressed_executable*
 /gerokasu2/.local/
+/gerokasu/*.rom
+/gerokasu/uncompressed_*
+/gerokasu/main.npdm
+/gerokasu/rtld
+/gerokasu/.local/
 /builds/manual-engine/shin
 /builds/manual-engine/Shin.app/
 /builds/manual-engine/assets*/
