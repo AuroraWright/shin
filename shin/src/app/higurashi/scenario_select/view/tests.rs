@@ -6,8 +6,7 @@ use super::*;
 use std::collections::HashMap;
 // Shared global programs1/2/5 are exact primary matches. Only the independent
 // literal GLSL replay is reused, never Config's production plans.
-#[path = "../../config/view_tests/gpu.rs"]
-mod gpu;
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../reverse-engineering/higurashi/scenario-select-render-capture/input.txt"
@@ -227,7 +226,7 @@ fn higurashi_scenario_select_real_assets_pixels_match_literal_native_shaders() {
     for name in names.values() {
         atlas.get(name);
     }
-    let mut reference = gpu::Renderer::new(&device);
+    let mut reference = replay::Renderer::new(&device, ShaderSet::Config);
     let view = View::new();
     let mut indices = vec![];
     let mut base = 0;
@@ -267,7 +266,7 @@ fn higurashi_scenario_select_real_assets_pixels_match_literal_native_shaders() {
                     for w in &f.original {
                         assert_eq!(w.len(), 24 + w[23] as usize);
                         let p = w[0];
-                        let draw = gpu::Draw {
+                        let draw = replay::Draw {
                             program: p,
                             blend: w[1],
                             primitive: 1,

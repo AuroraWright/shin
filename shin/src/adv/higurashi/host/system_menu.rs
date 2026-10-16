@@ -22,7 +22,7 @@ pub type GlobalSounds = Arc<Mutex<SystemSoundPlayer>>;
 
 /// Startup and First retain these resources for the concrete gameplay owner.
 pub struct Resources {
-    pub atlas: Arc<crate::adv::character_view::CharacterTextures>,
+    pub atlas: Arc<crate::adv::characters::view::CharacterTextures>,
     pub font: Arc<crate::asset::font::GpuFontLazy>,
     pub sounds: Arc<shin_core::format::sysse::SysSe>,
 }

@@ -1,6 +1,6 @@
 use super::super::{Metadata, model_tests::Fixture};
 use super::*;
-use glam::Vec2;
+use glam::{Mat4, Vec2};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../reverse-engineering/higurashi/cg-gallery-viewer-render-capture/input.txt"
@@ -128,7 +128,7 @@ fn reference_updated_cg_viewer_original480_frames1472_packets384_picture_passes(
                         1,
                         1,
                         u32::MAX,
-                        projection(),
+                        NATIVE_UI_PROJECTION,
                         [0., 0., 1920., 1080.],
                         0xff000000,
                     ));
@@ -146,7 +146,7 @@ fn reference_updated_cg_viewer_original480_frames1472_packets384_picture_passes(
                 }
                 Op::Badge { rect, color } => {
                     packets += 1;
-                    got.push(quad(2, 2, 0, projection(), rect, color));
+                    got.push(quad(2, 2, 0, NATIVE_UI_PROJECTION, rect, color));
                 }
                 Op::Overlay { opacity } => {
                     packets += 1;

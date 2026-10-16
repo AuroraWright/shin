@@ -180,6 +180,84 @@ impl Layout {
         .parse(text);
         Self::from_commands(font, commands, lines, size, text_size)
     }
+    /// d19f4/d1a08 selects zero origin/size padding when the SimpleText
+    /// outline flag is zero. d1f30..d1f6c then selects padding=-1, insetting
+    /// each glyph by one logical pixel.
+    pub fn unpadded(font: impl FontMetrics + Clone, text: &str, params: LayoutParams) -> Result<Self> {
+        let text_size = params.text_size;
+        let (commands, _, size) = HigurashiTextLayouter::new(
+            font.clone(),
+            params,
+            MessageTextLayouterDefaults {
+                color: 0xfff,
+                draw_speed: 50,
+                fade: 200,
+            },
+        )
+        .parse(text);
+        let mut glyphs = Vec::new();
+        for command in commands {
+            let Command::Char(c) = command else {
+                continue;
+            };
+            let info = font
+                .get_glyph_info(c.codepoint)
+                .context("Label glyph missing from font")?;
+            if info.actual_width == 0 || info.actual_height == 0 {
+                continue;
+            }
+            let scale = vec2(c.horizontal_scale, c.scale);
+            let scaled = scale * info.actual_size_f32();
+            let local_top = scale * info.bearing_screenspace_f32() - -1.0;
+            let local_bottom = (local_top + scaled) + -2.0;
+            let ratio = (local_bottom - local_top) / scaled + -1.0;
+            let normalized = info.actual_size_normalized();
+            let uv_top = normalized * (ratio * -0.5);
+            let uv_bottom = normalized * (ratio * 0.5 + 1.0);
+            let top = c.position + local_top;
+            let bottom = c.position + local_bottom;
+            let (color_top, color_bottom) = if c.is_rubi {
+                (0.0, 0.0)
+            } else {
+                // d2054 uses the unscaled screen-space bearing, then adds height
+                // before float conversion. Ruby's two tint weights remain zero.
+                let reciprocal = 1.0 / text_size;
+                (
+                    (-(info.bearing_y as i32)) as f32 * reciprocal,
+                    (info.actual_height as i32 - info.bearing_y as i32) as f32 * reciprocal,
+                )
+            };
+            glyphs.push(Glyph {
+                point: c.codepoint,
+                vertices: [
+                    TextVertex {
+                        position: vec4(top.x, top.y, uv_top.x, uv_top.y),
+                        color: color_top,
+                    },
+                    TextVertex {
+                        position: vec4(bottom.x, top.y, uv_bottom.x, uv_top.y),
+                        color: color_top,
+                    },
+                    TextVertex {
+                        position: vec4(top.x, bottom.y, uv_top.x, uv_bottom.y),
+                        color: color_bottom,
+                    },
+                    TextVertex {
+                        position: vec4(bottom.x, bottom.y, uv_bottom.x, uv_bottom.y),
+                        color: color_bottom,
+                    },
+                ],
+                border: outline::distances_with_radius(
+                    scale,
+                    info.actual_size_f32(),
+                    normalized,
+                    0,
+                    1.5,
+                ),
+            });
+        }
+        Ok(Self { size, glyphs })
+    }
     fn from_commands(
         font: impl FontMetrics,
         commands: Vec<Command>,

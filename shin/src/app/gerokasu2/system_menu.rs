@@ -1,8 +1,9 @@
 //! Retained native in-game SystemMenu, with caller-owned ADV modal scope.
-use super::{AppAction, Viewport, load_menu::text::Text};
+use super::{AppAction, Viewport};
+use crate::adv::gerokasu2::generic_text::Text;
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::{
             config::dialog::GerDialog,
             system_menu::{

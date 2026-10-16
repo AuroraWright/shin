@@ -1,11 +1,12 @@
 //! Updated77254 header/footer and79410 help artwork. The Switch's27560/cc940
 //! keeps A/B icon IDs unchanged. Global clocks are outside this draw function.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{
     browser_controls::{BrowserControls, RowMetadata},
     browser_decorations,
 };
 use crate::{
-    adv::character_view::CharacterTextures, layer::render_params::higurashi::HigurashiTransform,
+    adv::characters::view::CharacterTextures, layer::render_params::higurashi::HigurashiTransform,
 };
 use glam::{Mat4, Vec4, vec4};
 use shin_core::primitives::color::UnormColor;
@@ -52,10 +53,6 @@ impl Part {
     fn vertices(&self) -> [PosColTexVertex; 4] {
         browser_decorations::quad(self.rect, self.uv, self.color)
     }
-}
-fn projection() -> Mat4 {
-    // Original74d34 preserves the negative zero in the untranslated Z column.
-    glam::camera::rh::proj::opengl::orthographic(0.0, 1920.0, 1080.0, 0.0, -1.0, 1.0)
 }
 fn help(parts: &mut Vec<Part>, index: usize, color: UnormColor, mut x: f32, y: f32) -> f32 {
     const TABLE: [(i32, i32, i32, i32); 5] = [
@@ -139,7 +136,7 @@ fn parts(state: State) -> Vec<Part> {
     parts
 }
 pub(super) fn render(pass: &mut RenderPass, atlas: &CharacterTextures, state: State) {
-    let matrix = projection();
+    let matrix = NATIVE_UI_PROJECTION;
     for part in parts(state) {
         let vertices = part.vertices();
         if part.flash > 0.0 {

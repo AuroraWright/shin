@@ -202,7 +202,7 @@ fn check(cases: &[Case], packets: &[Packet]) -> (usize, usize) {
             assert_eq!(draw.texture, texture);
             assert_eq!(draw.program, if part.flash > 0.0 { 5 } else { 2 });
             assert_eq!(draw.count, 4);
-            assert_eq!(draw.matrix, projection().to_cols_array().map(f32::to_bits));
+            assert_eq!(draw.matrix, NATIVE_UI_PROJECTION.to_cols_array().map(f32::to_bits));
             let vertices = part.vertices();
             let bits: &[u32] = bytemuck::cast_slice(&vertices);
             assert_eq!(draw.vertices, bits);

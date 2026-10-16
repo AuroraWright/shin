@@ -1,7 +1,7 @@
 //! Ger B3BF0/B44C0/B46B0/B48B0 atlas packets and FNT6 GenericText rows.
-use super::text::Text;
+use crate::adv::gerokasu2::generic_text::Text;
 use crate::{
-    adv::{character_view::CharacterTextures, gerokasu2::save_menu::Controller},
+    adv::{characters::view::CharacterTextures, gerokasu2::save_menu::Controller},
     asset::{font::gerokasu2::GpuGerokasu2Font, system::AssetServer},
 };
 use anyhow::Result;

@@ -1,12 +1,13 @@
 //! Actual401e0 composition. Picture art and retained capture are owned by the
 //! concrete Viewer; neither is synthesized by this packet planner.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{Model, Picture};
 use crate::{
-    adv::{character_view::CharacterTextures, higurashi::reconstruction_mode::overlay::DrawPacket},
+    adv::{characters::view::CharacterTextures, higurashi::reconstruction_mode::overlay::DrawPacket},
     layer::render_params::higurashi::HigurashiTransform,
 };
 use anyhow::{Result, ensure};
-use glam::{Mat4, Vec4};
+use glam::Vec4;
 use shin_core::primitives::color::{FloatColor4, UnormColor};
 use shin_render::{
     ColorBlendType, DrawPrimitive, LayerFragmentShader, LayerShaderOutputKind, PassKind,
@@ -21,26 +22,6 @@ pub(super) enum Op {
     Picture(PassKind),
     Overlay { opacity: f32 },
     Badge { rect: [f32; 4], color: u32 },
-}
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2. / 1920.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -2. / 1080.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -1.,
-        0.,
-        -1.,
-        1.,
-        -0.,
-        1.,
-    ])
 }
 pub(super) fn plan(model: &Model) -> Vec<Op> {
     let mut out = vec![];
@@ -94,7 +75,7 @@ impl View {
                     .fill(
                         pass,
                         RenderRequestBuilder::new().color_blend_type(ColorBlendType::Opaque),
-                        HigurashiTransform::convert_clip_depth(projection()),
+                        HigurashiTransform::convert_clip_depth(NATIVE_UI_PROJECTION),
                     ),
                 Op::Picture(kind) => draw_picture(model.picture.as_ref().unwrap(), kind, 1, pass)?,
                 Op::Overlay { opacity } => {
@@ -137,7 +118,7 @@ impl View {
                             pass,
                             RenderRequestBuilder::new().color_blend_type(ColorBlendType::Layer1),
                             atlas.get("check").as_source(),
-                            HigurashiTransform::convert_clip_depth(projection()),
+                            HigurashiTransform::convert_clip_depth(NATIVE_UI_PROJECTION),
                         );
                 }
             }

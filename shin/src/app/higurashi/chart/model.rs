@@ -827,5 +827,4 @@ impl Task {
 }
 
 #[cfg(test)]
-#[path = "model_tests.rs"]
 mod tests;

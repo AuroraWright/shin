@@ -6,8 +6,7 @@ use super::*;
 use std::collections::HashMap;
 // Literal programs1/2/5 are shared global primary shaders; reuse only this raw
 // GLSL replay, never another screen's production packet plan.
-#[path = "../../config/view_tests/gpu.rs"]
-mod gpu;
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../reverse-engineering/higurashi/cg-gallery-render-capture/input.txt"
@@ -226,7 +225,7 @@ fn higurashi_cg_gallery_real_assets_parent_pixels_match_literal_native_shaders()
     for name in names.values() {
         atlas.get(name);
     }
-    let mut reference = gpu::Renderer::new(&device);
+    let mut reference = replay::Renderer::new(&device, ShaderSet::Config);
     let view = View::new();
     let indices = [
         0, 1, 2, 3, 12, 19, 31, 47, 48, 49, 50, 51, 160, 161, 360, 361, 363, 364, 365, 366, 420,
@@ -255,7 +254,7 @@ fn higurashi_cg_gallery_real_assets_parent_pixels_match_literal_native_shaders()
                     for w in &f.original {
                         assert_eq!(w.len(), 24 + w[23] as usize);
                         let p = w[0];
-                        let draw = gpu::Draw {
+                        let draw = replay::Draw {
                             program: p,
                             blend: w[1],
                             primitive: 1,

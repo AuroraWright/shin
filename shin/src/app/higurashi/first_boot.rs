@@ -1,7 +1,7 @@
 //! Updated58b44/59480/594fc startup. The supplied logo worker sets phase-1;
 //! the dormant timed logo table must not be used by normal application startup.
 use crate::{
-    adv::{character_view::CharacterTextures, higurashi::message_ui::HigurashiMessageTextures},
+    adv::{characters::view::CharacterTextures, higurashi::message_ui::HigurashiMessageTextures},
     asset::{font::GpuFontLazy, system::AssetServer},
     audio::{SystemSoundPlayer, VoicePlayer},
 };

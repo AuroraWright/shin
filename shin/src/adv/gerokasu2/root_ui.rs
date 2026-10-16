@@ -1,7 +1,7 @@
 //! ADV root UI: auto/skip indicators, the touch navi toolbar and the event
 //! hint (draw `11D20..12618`, enable `10760..10A14`/`114F0`, hit `152DC`).
 use super::cg_gallery::motion::Motion;
-use crate::adv::character_view::CharacterTextures;
+use crate::adv::characters::view::CharacterTextures;
 use glam::{Vec4, vec4};
 use shin_core::primitives::color::FloatColor4;
 use shin_render::{

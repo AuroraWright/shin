@@ -3,7 +3,7 @@
 use super::scene_host::{Globals, TitleTransition};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             audio::MusicEvent, music_commands::MusicCommands, reconstruction_mode::OverlayClock,
             runner::reconstruction_mode::Overlay, voice_commands::VoiceCommands,
@@ -63,6 +63,17 @@ struct Motion {
     overlay: OverlayClock,
     clocks: [HigurashiTweener; 5],
     pending: Option<MenuRequest>,
+}
+/// Native main-title tween control; every caller passes a verified mode.
+fn control(clock: &mut HigurashiTweener, value: f32, ticks: f32, flags: u32) {
+    clock
+        .control(value, Ticks::from_f32(ticks), flags)
+        .expect("Verified native main-title tween");
+}
+/// Freeze the evaluated value, then retarget at the menus' shared speed.
+fn rate(clock: &mut HigurashiTweener, value: f32) {
+    clock.fast_forward_to(clock.value());
+    control(clock, value, f32::from_bits(0x3e4ccccd), 0x40);
 }
 fn resolve_mode(argument: u32, last: &mut i32) -> u32 {
     let value = argument as i32;

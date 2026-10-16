@@ -1,9 +1,10 @@
 //! Unregistered concrete MovieMode/Viewer owner candidate. Native component
 //! evidence is frozen separately; root owns registration and actual acceptance.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{Action, Model, Task, Viewer, view::View};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             input::Buttons,
             mode_stack::{Mode, ModePush, ModeStack},
@@ -16,7 +17,7 @@ use crate::{
     render::PreRenderContext,
 };
 use anyhow::{Context, Result, bail, ensure};
-use glam::{Mat4, Vec2, Vec4};
+use glam::{Vec2, Vec4};
 use parking_lot::Mutex;
 use shin_audio::AudioManager;
 use shin_core::{
@@ -304,26 +305,6 @@ struct Media {
 }
 // Actual95ed0 Viewer backdrop projection. Keep the raw OpenGL matrix here;
 // the checked Packet submission applies the single WGPU depth bridge.
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2. / 1920.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -2. / 1080.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -1.,
-        0.,
-        -1.,
-        1.,
-        -0.,
-        1.,
-    ])
-}
 struct Bridge<'a, 'p> {
     loader: &'a mut Loader,
     grid: &'a mut Option<InputArea>,
@@ -788,7 +769,7 @@ impl Owner {
             !model.rows.is_empty(),
             "Movie concrete owner has no selectable rows"
         );
-        super::view::completion_layout(env.common.font.clone(), &model.completion)?;
+        crate::app::higurashi::gallery_view::completion_layout(env.common.font.clone(), &model.completion)?;
         model.publish_initial(&mut Initial(services))?;
         let mut view = View::new(env.common.font.clone());
         view.synchronize(&env.server, &model.view_state(false))?;
@@ -901,7 +882,7 @@ impl Owner {
                     let a = ((alpha.max(0.) * 255.) as u32).min(255) << 24;
                     crate::app::higurashi::kakera_menu::view::Packet {
                         texture: String::new(),
-                        matrix: projection(),
+                        matrix: NATIVE_UI_PROJECTION,
                         rect: [0., 0., 1920., 1080.],
                         uv: [0., 0., 1., 1.],
                         color: a,

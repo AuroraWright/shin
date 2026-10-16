@@ -1,8 +1,9 @@
 //! Updated63558 parent composition and641b0 controller hints.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{Model, catalog, motion::Motion};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::browser_navigation::labels::{Glyphs, Layout},
     },
     asset::{font::GpuFontLazy, system::AssetServer},
@@ -51,30 +52,10 @@ fn quad(
     })
 }
 const FULL: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2.0 / 1920.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -2.0 / 1080.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        -1.0,
-        1.0,
-        -0.0,
-        1.0,
-    ])
-}
 /// Native traversal appends child tasks after this complete parent sequence.
 pub(super) fn packets(motion: &Motion, atlas_present: bool) -> Vec<Draw> {
     let m = &motion.model;
-    let projection = projection();
+    let projection = NATIVE_UI_PROJECTION;
     let mut out = Vec::new();
     if atlas_present {
         let mut bg = quad(

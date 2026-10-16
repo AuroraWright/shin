@@ -6,7 +6,7 @@ pub(in crate::app::higurashi) use super::viewer::owner::Seeds;
 use super::{Action, Kind, Model, Services as ModelServices, Task, view::View, viewer};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             browser_navigation::labels::{Glyphs, Layout},
             input::Buttons,

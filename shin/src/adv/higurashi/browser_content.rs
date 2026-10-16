@@ -7,7 +7,7 @@ use super::{
     browser_history::Item,
 };
 use crate::{
-    adv::character_view::CharacterTextures, layer::render_params::higurashi::HigurashiTransform,
+    adv::characters::view::CharacterTextures, layer::render_params::higurashi::HigurashiTransform,
 };
 use glam::{Mat4, Vec4, vec4};
 use shin_core::primitives::color::UnormColor;

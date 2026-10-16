@@ -1,7 +1,7 @@
 //! Updated1bec4 rows and info/title/time panels, using the shared GPU programs.
 use super::SystemMenu;
 use crate::{
-    adv::{character_view::CharacterTextures, higurashi::message_glyphs::glyph_vertices},
+    adv::{characters::view::CharacterTextures, higurashi::message_glyphs::glyph_vertices},
     asset::{
         font::{GpuFontGlyphHandle, GpuFontLazy},
         system::AssetServer,

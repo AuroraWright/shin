@@ -2,8 +2,7 @@ use super::*;
 use std::collections::HashMap;
 // Config and Manual select the same updated global programs1/2/5. Reuse
 // only the independent literal GLSL renderer, never Config production plans.
-#[path = "../../config/view_tests/gpu.rs"]
-mod gpu;
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
     "/../reverse-engineering/higurashi/manual-render-capture/input.txt"
@@ -255,7 +254,7 @@ fn higurashi_manual_real_assets_pixels_match_literal_native_shaders() {
         atlas.get(name);
     }
     let view = View::new();
-    let mut renderer = gpu::Renderer::new(&device);
+    let mut renderer = replay::Renderer::new(&device, ShaderSet::Config);
     let indices = (0..15)
         .map(|i| 6 + i * 8)
         .chain([1, 2, 4, 5, 7, 120, 121, 122, 125, 126, 127])
@@ -298,7 +297,7 @@ fn higurashi_manual_real_assets_pixels_match_literal_native_shaders() {
                     for words in &originals[index] {
                         let program = words[0];
                         assert_eq!(words.len(), 29 + words[28] as usize);
-                        let draw = gpu::Draw {
+                        let draw = replay::Draw {
                             program,
                             blend: words[1],
                             primitive: 1,

@@ -1,7 +1,7 @@
 //! Original444b4 character selection artwork, rendered by the scene layer.
 use super::Model;
 use crate::{
-    adv::{character_view::CharacterTextures, higurashi::message_ui::HigurashiMessageTextures},
+    adv::{characters::view::CharacterTextures, higurashi::message_ui::HigurashiMessageTextures},
     asset::system::AssetServer,
     layer::{
         higurashi_properties::HigurashiProperties,

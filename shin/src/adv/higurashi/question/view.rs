@@ -1,7 +1,7 @@
 //! Updated23cd4 cache painting and23e98 composition, with float program6 tint.
 use super::{Question, text_params};
 use crate::{
-    adv::{dialog_view::DialogTextures, higurashi::message_glyphs::glyph_vertices},
+    adv::{dialog::view::DialogTextures, higurashi::message_glyphs::glyph_vertices},
     asset::{
         font::{GpuFontGlyphHandle, GpuFontLazy},
         system::AssetServer,

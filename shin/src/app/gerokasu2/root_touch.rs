@@ -3,7 +3,7 @@
 //! actions and HiddenWindow's tap (`1BC90`).
 use super::*;
 use crate::adv::{
-    character_view::CharacterTextures,
+    characters::view::CharacterTextures,
     gerokasu2::root_ui::{self, Availability, Indicators, RootUi},
     input_area::{InputArea, InputAreaTarget, TapInput, desktop_gesture_vector},
 };

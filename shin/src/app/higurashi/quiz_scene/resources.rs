@@ -2,7 +2,7 @@
 #[cfg(test)]
 use super::Model;
 use crate::{
-    adv::character_view::CharacterTextures,
+    adv::characters::view::CharacterTextures,
     asset::{mask::MaskTexture, system::AssetServer},
     layer::user::higurashi::HigurashiUserLayer,
 };

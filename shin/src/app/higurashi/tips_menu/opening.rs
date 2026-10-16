@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             input::Buttons, music_commands::MusicCommands, runner::reconstruction_mode::Overlay,
         },

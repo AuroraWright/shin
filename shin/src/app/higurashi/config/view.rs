@@ -1,9 +1,10 @@
 //! Updated50c58/4d140/4d9c0 Config parent, independently compared with original
 //! packets. The older menu has one scrollable flat list; titles/help are baked
 //! artwork. Private First/Question/SaveGame children remain the owner's draws.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{Control, RowState, ViewState};
 use crate::{
-    adv::{character_view::CharacterTextures, higurashi::browser_decorations},
+    adv::{characters::view::CharacterTextures, higurashi::browser_decorations},
     app::higurashi::kakera_menu::view::Packet,
     layer::render_params::{higurashi::HigurashiTransform, multiply_transforms as multiply},
 };
@@ -23,26 +24,6 @@ pub(super) enum Draw {
     },
 }
 const FULL: [f32; 4] = [0., 0., 1., 1.];
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2. / 1920.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -2. / 1080.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -1.,
-        0.,
-        -1.,
-        1.,
-        -0.,
-        1.,
-    ])
-}
 fn quad(
     out: &mut Vec<Draw>,
     texture: &str,
@@ -258,7 +239,7 @@ pub(super) fn packets(state: &ViewState, button_layout_swapped: bool) -> Vec<Dra
     if !state.ready {
         return out;
     }
-    let projection = projection();
+    let projection = NATIVE_UI_PROJECTION;
     let x = 1920. - state.progress * 1920.;
     let y = state.scroll + (-210.);
     let content = multiply(projection, Mat4::from_translation(vec3(x, -y, 0.)));

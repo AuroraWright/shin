@@ -1,8 +1,9 @@
 //! Updated daf38/db88c TIPS parent packets and retained completion glyphs.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::Model;
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             browser_controls::Scrollbar,
             browser_decorations,
@@ -30,30 +31,10 @@ pub(super) enum Draw {
     Completion(Mat4),
 }
 const FULL: [f32; 4] = [0.0, 0.0, 1.0, 1.0];
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2.0 / 1920.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -2.0 / 1080.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        -1.0,
-        1.0,
-        -0.0,
-        1.0,
-    ])
-}
 fn quad(texture: impl Into<String>, rect: [f32; 4], uv: [f32; 4], color: u32) -> Draw {
     Draw::Quad(Packet {
         texture: texture.into(),
-        matrix: projection(),
+        matrix: NATIVE_UI_PROJECTION,
         rect,
         uv,
         color,
@@ -117,7 +98,7 @@ pub(super) fn packets(model: &Model, atlas_present: bool, scrollbar: Scrollbar) 
         }
     }
     let parent = multiply(
-        projection(),
+        NATIVE_UI_PROJECTION,
         Mat4::from_translation(vec3(1848.0, 162.0, 0.0)),
     );
     let matrix = browser_decorations::scrollbar_transform(parent, 0.0, 0.0);
@@ -179,7 +160,7 @@ pub(super) fn packets(model: &Model, atlas_present: bool, scrollbar: Scrollbar) 
         Mat4::from_translation(vec3(48.0, 1012.0, 0.0)),
         Mat4::from_scale(vec3(1.0, 1.0, 0.0)),
     );
-    out.push(Draw::Completion(multiply(projection(), local)));
+    out.push(Draw::Completion(multiply(NATIVE_UI_PROJECTION, local)));
     out
 }
 pub(super) struct View {

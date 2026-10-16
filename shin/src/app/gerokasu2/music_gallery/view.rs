@@ -1,5 +1,5 @@
 use crate::adv::{
-    character_view::CharacterTextures,
+    characters::view::CharacterTextures,
     gerokasu2::music_gallery::{Controller, artwork},
 };
 use glam::{Mat4, Vec2, Vec3, Vec4};

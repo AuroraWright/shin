@@ -2,8 +2,8 @@
 use super::{AppAction, Viewport};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
-        config_dialog::ConfigDialogKind,
+        characters::view::CharacterTextures,
+        config::dialog::ConfigDialogKind,
         gerokasu2::config::{self, ConfigController, Input, Phase, Request},
         input_area::{InputArea, InputAreaTarget, PointerSampler},
     },

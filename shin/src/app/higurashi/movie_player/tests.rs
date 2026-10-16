@@ -6,9 +6,8 @@ use crate::{
     adv::higurashi::{reference_gpu_assets, reference_render_to_texture},
     asset::system::{AssetLoadContext, LayeredAssetIo},
 };
-#[path = "../chart/view_tests/gpu.rs"]
-mod gpu;
-use gpu::{Draw, Renderer};
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
+use replay::{Draw, Renderer};
 use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
 use std::{
     path::PathBuf,
@@ -223,7 +222,7 @@ fn higurashi_standalone_movie_real_transport_and_literal_sprite_pixels() {
     let (device, queue, _) = reference_gpu_assets();
     let manager = Arc::new(AudioManager::new_for_tests());
     let originals = sprites();
-    let mut renderer = Renderer::new(&device);
+    let mut renderer = Renderer::new(&device, ShaderSet::Chart);
     let mut comparisons = 0;
     for audio in [false, true] {
         let fixtures = Fixtures::new(audio);

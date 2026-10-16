@@ -1,7 +1,8 @@
 //! Updated e17dc/e21d4/e2958 Title.CatMenu: story and gallery categories.
+use super::{control, rate};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::input::Buttons,
         input_area::{InputArea, InputAreaTarget, PointerFrame},
     },
@@ -52,15 +53,6 @@ struct State {
     pointer: i32,
     rows: Vec<Row>,
     actions: Vec<Action>,
-}
-fn control(clock: &mut HigurashiTweener, value: f32, ticks: f32, flags: u32) {
-    clock
-        .control(value, Ticks::from_f32(ticks), flags)
-        .expect("Native category tween");
-}
-fn rate(clock: &mut HigurashiTweener, value: f32) {
-    clock.fast_forward_to(clock.value());
-    control(clock, value, f32::from_bits(0x3e4ccccd), 0x40);
 }
 impl State {
     fn new(variant: u32, unlock_word: i16, selected: i32) -> Self {

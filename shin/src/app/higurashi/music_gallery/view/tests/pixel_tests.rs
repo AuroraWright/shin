@@ -1,8 +1,7 @@
 //! Original uploaded parent packets + literal primary shaders, actual TXA/font.
 //! No production packet plan constructs the independent expected frame.
 use super::*;
-#[path = "../../chart/view_tests/gpu.rs"]
-mod gpu;
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 
 fn clear(ctx: &mut crate::render::PreRenderContext, target: &wgpu::TextureView) {
     let mut pass = ctx.begin_pass(
@@ -60,7 +59,7 @@ fn higurashi_music_real_assets_parent_pixels_match_literal_native_shaders() {
         )
         .collect::<HashMap<_, _>>();
     let mut view = View::new(font.clone());
-    let mut renderer = gpu::Renderer::new(&device);
+    let mut renderer = replay::Renderer::new(&device, ShaderSet::Chart);
     // Original authored title bands, both hint layouts, locked/partial unlocks,
     // fractional/end scrolling, absent art and row/close flash boundaries.
     // Capture-bearing First overlay pixels are a separate owner-level concern.
@@ -145,7 +144,7 @@ fn higurashi_music_real_assets_parent_pixels_match_literal_native_shaders() {
                             5 => vec![d.matrix.to_vec(), d.uniforms[0][..4].to_vec()],
                             _ => unreachable!(),
                         };
-                        let draw = gpu::Draw {
+                        let draw = replay::Draw {
                             program: d.header[0],
                             blend: d.header[1],
                             primitive: 1,

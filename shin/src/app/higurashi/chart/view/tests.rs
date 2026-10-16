@@ -1,6 +1,7 @@
 //! Independent actual48de8/SimpleText packets and literal native shader replay.
 use super::super::{catalog::Catalog, model::Model};
 use super::*;
+use glam::vec2;
 use serde::Deserialize;
 use shin_core::format::{
     font::read_font_metrics, rom::RomReader, scenario::higurashi::HigurashiScenario,
@@ -12,8 +13,7 @@ use std::{
     io::{BufReader, Read},
     path::PathBuf,
 };
-#[path = "view_tests/gpu.rs"]
-mod gpu;
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 #[derive(Deserialize)]
 struct Manifest {
     profiles: Vec<Profile>,
@@ -513,7 +513,7 @@ fn higurashi_chart_real_assets_pixels_match_literal_native_shaders() {
         )
         .collect::<HashMap<_, _>>();
     let mut view = View::new(font.clone());
-    let mut renderer = gpu::Renderer::new(&device);
+    let mut renderer = replay::Renderer::new(&device, ShaderSet::Chart);
     let mut frames = 0;
     for &i in &manifest.pixel_profiles {
         let p = &manifest.profiles[i];
@@ -560,7 +560,7 @@ fn higurashi_chart_real_assets_pixels_match_literal_native_shaders() {
                             5 => vec![d.matrix.to_vec(), d.u1.clone()],
                             _ => unreachable!(),
                         };
-                        let draw = gpu::Draw {
+                        let draw = replay::Draw {
                             program: d.program,
                             blend: d.blend,
                             primitive: 1,

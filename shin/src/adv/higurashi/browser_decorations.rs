@@ -2,7 +2,7 @@
 //! Keep the old engine's caps, strip topology and matrix operation order.
 use super::browser_controls::Scrollbar;
 use crate::{
-    adv::character_view::CharacterTextures,
+    adv::characters::view::CharacterTextures,
     layer::render_params::{higurashi::HigurashiTransform, multiply_transforms as multiply},
 };
 use glam::{Mat4, Vec4, vec2, vec3};

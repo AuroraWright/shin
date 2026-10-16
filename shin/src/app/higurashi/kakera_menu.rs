@@ -127,7 +127,7 @@ impl Model {
             artwork: None,
         }
     }
-    fn apply_artwork(&mut self, atlas: &crate::adv::character_view::CharacterTextures) {
+    fn apply_artwork(&mut self, atlas: &crate::adv::characters::view::CharacterTextures) {
         if self.artwork.is_some() { return; }
         let suffix = if self.alternate { "_org" } else { "" };
         self.artwork = Some(self.pages.iter().enumerate().map(|(page, rows)| {

@@ -4,7 +4,7 @@
 use super::{ConcealOwners, HigurashiHost, HostMode, ModalOwners, ModeServices};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             browser_controls::{self, Event},
             browser_history::BrowserHistory,

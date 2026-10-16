@@ -3,7 +3,7 @@
 use super::{AppAction, MenuBgm, Viewport};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::{
             bustup_gallery::{
                 self, Action, Controller, Input, ViewerInput,

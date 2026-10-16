@@ -31,54 +31,67 @@ pub enum DrawPacket {
         minmax: Vec2,
     },
 }
-impl OverlayClock {
-    pub fn draw_packet(&self, dimensions: Option<(u32, u32)>) -> Option<DrawPacket> {
-        if !self.visible() {
-            return None;
-        }
-        Some(if let Some((width, height)) = dimensions {
-            let extent = if self.flags & 8 == 0 {
-                Vec2::ONE
-            } else {
-                glam::vec2(1920.0 / width as f32, 1080.0 / height as f32)
-            };
-            DrawPacket::Masked {
-                vertices: build_quad_vertices(|uv| MaskVertex {
-                    position: uv,
-                    texture_position: uv,
-                    mask_position: glam::vec2(
-                        if self.flags & 2 != 0 {
-                            1.0 - uv.x
-                        } else {
-                            uv.x
-                        },
-                        if self.flags & 4 != 0 {
-                            1.0 - uv.y
-                        } else {
-                            uv.y
-                        },
-                    ) * extent,
-                }),
-                minmax: Vec2::from_array(self.mask_weights()),
-            }
+pub fn draw_packet(clock: &OverlayClock, dimensions: Option<(u32, u32)>) -> Option<DrawPacket> {
+    if !clock.visible() {
+        return None;
+    }
+    Some(if let Some((width, height)) = dimensions {
+        let extent = if clock.flags & 8 == 0 {
+            Vec2::ONE
         } else {
-            DrawPacket::Plain {
-                vertices: build_quad_vertices(|uv| PosTexVertex {
-                    position: uv,
-                    texture_position: uv,
-                }),
-                opacity: 1.0 - self.elapsed / self.duration,
-            }
-        })
+            glam::vec2(1920.0 / width as f32, 1080.0 / height as f32)
+        };
+        DrawPacket::Masked {
+            vertices: build_quad_vertices(|uv| MaskVertex {
+                position: uv,
+                texture_position: uv,
+                mask_position: glam::vec2(
+                    if clock.flags & 2 != 0 {
+                        1.0 - uv.x
+                    } else {
+                        uv.x
+                    },
+                    if clock.flags & 4 != 0 {
+                        1.0 - uv.y
+                    } else {
+                        uv.y
+                    },
+                ) * extent,
+            }),
+            minmax: Vec2::from_array(fused_mask_weights(clock)),
+        }
+    } else {
+        DrawPacket::Plain {
+            vertices: build_quad_vertices(|uv| PosTexVertex {
+                position: uv,
+                texture_position: uv,
+            }),
+            opacity: 1.0 - clock.elapsed / clock.duration,
+        }
+    })
+}
+
+/// Native597A4 uses FMSUB: preserve its one-rounding endpoint arithmetic.
+pub fn fused_mask_weights(clock: &OverlayClock) -> [f32; 2] {
+    let inverse = 1.0 / clock.softness;
+    let span = inverse + 1.0;
+    let progress = clock.elapsed / clock.duration;
+    if clock.flags & 1 == 0 {
+        let first = (-span).mul_add(progress, 1.0);
+        [first, inverse + first]
+    } else {
+        let first = span * (1.0 - progress);
+        [first, first - inverse]
     }
 }
+
 impl Overlay {
     pub fn render(&self, pass: &mut RenderPass) {
         let dimensions = self.mask.as_ref().map(|m| {
             let s = m.texture.size();
             (s.width, s.height)
         });
-        let Some(packet) = self.clock.draw_packet(dimensions) else {
+        let Some(packet) = draw_packet(&self.clock, dimensions) else {
             return;
         };
         let builder =

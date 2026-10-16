@@ -5,7 +5,7 @@ use super::ViewState;
 use super::{Action, Kind, Model, Services, Task, view::View};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             browser_controls::Scrollbar,
             input::Buttons,

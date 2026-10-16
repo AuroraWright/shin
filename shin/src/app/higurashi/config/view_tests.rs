@@ -9,7 +9,7 @@ use serde::Deserialize;
 use shin_render::shaders::types::vertices::PosColTexVertex;
 use std::{collections::HashMap, path::PathBuf};
 
-mod gpu;
+use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 #[derive(Deserialize)]
 struct Manifest {
     profiles: Vec<Profile>,
@@ -352,9 +352,9 @@ fn clear(context: &mut crate::render::PreRenderContext, target: &wgpu::TextureVi
 fn higurashi_config_real_assets_pixels_match_literal_native_shaders() {
     let (manifest, originals, names) = corpus();
     let (device, queue, server) = crate::adv::higurashi::reference_gpu_assets();
-    let atlas: std::sync::Arc<crate::adv::character_view::CharacterTextures> =
+    let atlas: std::sync::Arc<crate::adv::characters::view::CharacterTextures> =
         server.load_sync("/config.txa").unwrap();
-    let system: std::sync::Arc<crate::adv::character_view::CharacterTextures> =
+    let system: std::sync::Arc<crate::adv::characters::view::CharacterTextures> =
         server.load_sync("/systex.txa").unwrap();
     for (&(source, _), name) in &names {
         if source == 0 {
@@ -364,7 +364,7 @@ fn higurashi_config_real_assets_pixels_match_literal_native_shaders() {
         }
     }
     let view = View::new();
-    let mut renderer = gpu::Renderer::new(&device);
+    let mut renderer = replay::Renderer::new(&device, ShaderSet::Config);
     let mut frames = 0;
     for &index in &manifest.pixel_profiles {
         let profile = &manifest.profiles[index];
@@ -401,7 +401,7 @@ fn higurashi_config_real_assets_pixels_match_literal_native_shaders() {
                             2 => None,
                             _ => unreachable!(),
                         };
-                        let draw = gpu::Draw {
+                        let draw = replay::Draw {
                             program: n.program,
                             blend: n.blend,
                             primitive: 1,

@@ -2,6 +2,9 @@
 //! runner reexecution required. This test does not claim shader/pixel parity.
 use super::super::{Model, Task};
 use super::*;
+use crate::adv::higurashi::browser_navigation::labels::Layout;
+use crate::app::higurashi::gallery_view::completion_layout;
+use shin_core::layout::font::FontMetrics;
 use crate::adv::higurashi::{browser_controls::Scrollbar, reconstruction_mode::overlay::DrawPacket};
 use serde::Deserialize;
 use shin_core::{
@@ -404,7 +407,7 @@ fn expected(
             mask: false,
             count: 4,
             start: 0,
-            matrix: projection().to_cols_array().map(f32::to_bits),
+            matrix: NATIVE_UI_PROJECTION.to_cols_array().map(f32::to_bits),
             uniforms: [vec![], vec![]],
             vertices,
         });
@@ -661,5 +664,4 @@ fn higurashi_movie_parent_packets_match_original_230_profiles_9082_packets() {
     );
 }
 
-#[path = "view_tests/pixel_tests.rs"]
 mod pixel_tests;

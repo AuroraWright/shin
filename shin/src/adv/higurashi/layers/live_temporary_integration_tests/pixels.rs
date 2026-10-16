@@ -1,7 +1,7 @@
 use super::gpu::Shaders;
 use super::*;
 use crate::{
-    adv::character_view::CharacterTextures,
+    adv::characters::view::CharacterTextures,
     adv::higurashi::{reference_gpu_assets, reference_render_to_texture},
     layer::render_params::higurashi::HigurashiTransform,
 };

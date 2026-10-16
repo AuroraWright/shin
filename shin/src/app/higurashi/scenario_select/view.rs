@@ -1,7 +1,8 @@
 //! Original b4e04/b5524: baked atlas rows, static shell, blackout then children.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::ViewState;
 use crate::{
-    adv::character_view::CharacterTextures, layer::render_params::higurashi::HigurashiTransform,
+    adv::characters::view::CharacterTextures, layer::render_params::higurashi::HigurashiTransform,
 };
 use glam::{Mat4, Vec4, vec4};
 use shin_core::primitives::color::UnormColor;
@@ -17,33 +18,13 @@ pub(super) struct Packet {
     pub opaque: bool,
     pub flash: f32,
 }
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2. / 1920.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -2. / 1080.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -1.,
-        0.,
-        -1.,
-        1.,
-        -0.,
-        1.,
-    ])
-}
 const FULL: [f32; 4] = [0., 0., 1., 1.];
 fn alpha(v: f32) -> u32 {
     ((v.clamp(0., 1.) * 255.) as u32) << 24
 }
 fn quad(out: &mut Vec<Packet>, name: impl Into<String>, rect: [f32; 4], uv: [f32; 4], color: u32) {
     out.push(Packet {
-        matrix: projection(),
+        matrix: NATIVE_UI_PROJECTION,
         texture: name.into(),
         rect,
         uv,

@@ -1,7 +1,9 @@
-//! Independent literal original Chart programs1/2/5 raw WGPU replay.
+//! Independent raw WGPU replay of the literal original Chart/Config shader
+//! programs, shared by the Higurashi menu pixel tests.
 //! No Clip, production material shader, transform bridge, or render builder is
 //! used here. Matrices/vertices are the original uploaded GL words; the literal
 //! vertex GLSL applies only the already audited GL-to-WGPU depth bridge.
+use crate::render::native_gpu_state::{compare, native_blend, stencil_operation};
 use std::{borrow::Cow, collections::HashMap, path::PathBuf};
 
 use shin_render::shaders::types::texture::TextureSource;
@@ -74,6 +76,29 @@ impl From<&Draw> for Key {
     }
 }
 
+/// Which captured native shader directory a test replays.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ShaderSet {
+    /// `SHIN_HIGURASHI_CHART_SHADERS`: programs 1-5.
+    Chart,
+    /// `SHIN_HIGURASHI_CONFIG_SHADERS`: programs 1, 2 and 5.
+    Config,
+}
+impl ShaderSet {
+    fn environment(self) -> &'static str {
+        match self {
+            Self::Chart => "SHIN_HIGURASHI_CHART_SHADERS",
+            Self::Config => "SHIN_HIGURASHI_CONFIG_SHADERS",
+        }
+    }
+    fn stem(self, program: u32) -> String {
+        match self {
+            Self::Chart => format!("native-chart-{program}"),
+            Self::Config => format!("native-config-{program}"),
+        }
+    }
+}
+
 struct Program {
     vertex: wgpu::ShaderModule,
     fragment: wgpu::ShaderModule,
@@ -84,11 +109,15 @@ struct Program {
     stride: u64,
 }
 impl Program {
-    fn new(device: &wgpu::Device, program: u32) -> Self {
+    fn new(device: &wgpu::Device, set: ShaderSet, program: u32) -> Self {
+        let reviewed = match set {
+            ShaderSet::Chart => matches!(program, 1..=5),
+            ShaderSet::Config => matches!(program, 1 | 2 | 5),
+        };
         let (environment, stem, buffers, textured, stride) = match program {
-            1 | 2 | 3 | 4 | 5 => (
-                "SHIN_HIGURASHI_CHART_SHADERS",
-                format!("native-chart-{program}"),
+            _ if reviewed => (
+                set.environment(),
+                set.stem(program),
                 if program == 3 || program == 4 {
                     3
                 } else if program == 5 {
@@ -105,7 +134,7 @@ impl Program {
                     24
                 },
             ),
-            value => panic!("Unreviewed original Chart program {value}"),
+            value => panic!("Unreviewed original {set:?} program {value}"),
         };
         let directory = PathBuf::from(std::env::var(environment).unwrap());
         let shader = |stage| {
@@ -215,7 +244,7 @@ impl Program {
                     shader_location: 1,
                 },
             ],
-            value => panic!("Unreviewed Chart vertex descriptor {value}"),
+            value => panic!("Unreviewed vertex descriptor {value}"),
         };
         let stencil = wgpu::StencilFaceState {
             compare: compare(key.stencil[0]),
@@ -278,80 +307,17 @@ impl Program {
     }
 }
 
-fn compare(value: u32) -> wgpu::CompareFunction {
-    match value {
-        0 => wgpu::CompareFunction::Never,
-        1 => wgpu::CompareFunction::Less,
-        2 => wgpu::CompareFunction::Equal,
-        3 => wgpu::CompareFunction::LessEqual,
-        4 => wgpu::CompareFunction::Greater,
-        5 => wgpu::CompareFunction::NotEqual,
-        6 => wgpu::CompareFunction::GreaterEqual,
-        7 => wgpu::CompareFunction::Always,
-        value => panic!("Unreviewed original compare {value}"),
-    }
-}
-fn stencil_operation(value: u32) -> wgpu::StencilOperation {
-    match value {
-        0 => wgpu::StencilOperation::Keep,
-        1 => wgpu::StencilOperation::Zero,
-        2 => wgpu::StencilOperation::Replace,
-        3 => wgpu::StencilOperation::IncrementClamp,
-        4 => wgpu::StencilOperation::DecrementClamp,
-        5 => wgpu::StencilOperation::Invert,
-        6 => wgpu::StencilOperation::IncrementWrap,
-        7 => wgpu::StencilOperation::DecrementWrap,
-        value => panic!("Unreviewed original stencil operation {value}"),
-    }
-}
-fn native_blend(value: u32) -> wgpu::BlendState {
-    // Original a8630 endpoint + SDK enum names. This is independent of the
-    // shared ColorBlendType conversion, including older RGB ReverseSubtract.
-    // https://smo.monsterdruide.one/docs/nvn_8h.html
-    use wgpu::{BlendComponent, BlendFactor as F, BlendOperation as O};
-    if value == 1 {
-        return wgpu::BlendState {
-            color: BlendComponent {
-                src_factor: F::One,
-                dst_factor: F::Zero,
-                operation: O::Add,
-            },
-            alpha: BlendComponent {
-                src_factor: F::One,
-                dst_factor: F::Zero,
-                operation: O::Add,
-            },
-        };
-    }
-    let (source, destination, operation) = match value {
-        2 => (F::SrcAlpha, F::OneMinusSrcAlpha, O::Add),
-        3 => (F::SrcAlpha, F::One, O::Add),
-        4 => (F::SrcAlpha, F::One, O::ReverseSubtract),
-        5 => (F::One, F::OneMinusSrcAlpha, O::Add),
-        value => panic!("Unreviewed original blend {value}"),
-    };
-    wgpu::BlendState {
-        color: BlendComponent {
-            src_factor: source,
-            dst_factor: destination,
-            operation,
-        },
-        alpha: BlendComponent {
-            src_factor: F::OneMinusDstAlpha,
-            dst_factor: F::One,
-            operation: O::Add,
-        },
-    }
-}
 
 pub(crate) struct Renderer {
+    set: ShaderSet,
     programs: HashMap<u32, Program>,
     pipelines: HashMap<Key, wgpu::RenderPipeline>,
     sampler: wgpu::Sampler,
 }
 impl Renderer {
-    pub(crate) fn new(device: &wgpu::Device) -> Self {
+    pub(crate) fn new(device: &wgpu::Device, set: ShaderSet) -> Self {
         Self {
+            set,
             programs: HashMap::new(),
             pipelines: HashMap::new(),
             sampler: device.create_sampler(&wgpu::SamplerDescriptor {
@@ -433,7 +399,7 @@ impl Renderer {
         let program = self
             .programs
             .entry(draw.program)
-            .or_insert_with(|| Program::new(context.device, draw.program));
+            .or_insert_with(|| Program::new(context.device, self.set, draw.program));
         let pipeline = self
             .pipelines
             .entry(key)

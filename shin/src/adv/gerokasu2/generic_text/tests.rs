@@ -7,8 +7,8 @@ use std::{
 
 #[test]
 fn generic_fill_keeps_zero_and_multiplies_packed_alpha() {
-    assert_eq!(fill_color(UnormColor(0), 0.75).into_vec4(), Vec4::ZERO);
-    let color = fill_color(UnormColor(0x80102040), 0.5).into_vec4();
+    assert_eq!(fill_color(UnormColor(0), Vec4::new(1.0, 1.0, 1.0, 0.75)).into_vec4(), Vec4::ZERO);
+    let color = fill_color(UnormColor(0x80102040), Vec4::new(1.0, 1.0, 1.0, 0.5)).into_vec4();
     let inverse = f32::from_bits(0x3b808081);
     assert_eq!(color, Vec4::new(64.0, 32.0, 16.0, 64.0) * inverse);
 }
@@ -128,7 +128,7 @@ fn ger_native_select_text_generic_packed_colors_vertices_and_thresholds() {
                     let rgba = if outline {
                         Vec4::new(0.0, 0.0, 0.0, opacity)
                     } else {
-                        fill_color(UnormColor(color), opacity).into_vec4()
+                        fill_color(UnormColor(color), Vec4::new(1.0, 1.0, 1.0, opacity)).into_vec4()
                     };
                     assert_eq!(
                         words[4..8],

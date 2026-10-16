@@ -2,7 +2,7 @@
 use super::{AppAction, Viewport};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::manual::{self, Action, Controller, Input},
         input_area::{InputArea, InputAreaTarget, PointerSampler},
     },

@@ -7,7 +7,7 @@ use std::sync::{
 use super::text::Text;
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::backlog::{
             self,
             history::{Geometry, History},

@@ -10,7 +10,7 @@ use super::{
     read_history::MessageReadHistory,
 };
 use crate::{
-    adv::{character_view::CharacterTextures, input_area::PointerFrame},
+    adv::{characters::view::CharacterTextures, input_area::PointerFrame},
     asset::{font::GpuFontLazy, system::AssetServer},
 };
 use anyhow::{Result, ensure};

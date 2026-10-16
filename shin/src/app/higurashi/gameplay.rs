@@ -2,7 +2,7 @@
 use super::{first_boot::CommonAssets, scene_host::Globals};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             audio::AudioFramePolicy,
             host::HigurashiHost,

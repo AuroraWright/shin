@@ -1,7 +1,7 @@
 //! Native packet submission through the existing atlas/Picture block renderer.
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::{
             cg_gallery::{Controller, artwork, viewer::Viewer},
             reconstruction_mode::overlay::Overlay,

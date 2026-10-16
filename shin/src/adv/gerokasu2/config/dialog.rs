@@ -3,10 +3,10 @@
 //! reuse the shared Question owner. Device publication remains a host boundary.
 use crate::{
     adv::{
-        backlog_rollback::{Confirmation, Outcome},
-        character_view::CharacterTextures,
-        dialog_input::DialogInput,
-        dialog_view::DialogGeometry,
+        backlog::rollback::{Confirmation, Outcome},
+        characters::view::CharacterTextures,
+        dialog::input::DialogInput,
+        dialog::view::DialogGeometry,
     },
     app::AppAction,
     asset::{

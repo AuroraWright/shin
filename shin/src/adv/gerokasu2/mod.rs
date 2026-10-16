@@ -9,6 +9,7 @@ pub mod config;
 pub mod descriptors;
 pub mod drawables;
 pub mod exit_mode;
+pub mod generic_text;
 pub mod gallery;
 pub mod layer_control;
 pub mod layer_edit;

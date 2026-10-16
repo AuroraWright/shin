@@ -20,7 +20,7 @@ use shin_render::{
 
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             character_selection::view::View as CharacterView, message_ui::HigurashiMessageTextures,
         },

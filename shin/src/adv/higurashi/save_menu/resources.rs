@@ -1,6 +1,6 @@
 //! Updated b378c publishes only /saveload.txa. NewRodin and the scrollbar's
 //! /systex.txa are shared engine resources, supplied by the owning scene.
-use crate::{adv::character_view::CharacterTextures, asset::system::AssetServer};
+use crate::{adv::characters::view::CharacterTextures, asset::system::AssetServer};
 use anyhow::{Result, ensure};
 use shin_core::format::save::higurashi::SaveDate;
 use std::sync::Arc;

@@ -1,4 +1,5 @@
 use super::*;
+use shin_core::time::Ticks;
 use std::{
     io::Write,
     process::{Command, Stdio},

@@ -8,8 +8,7 @@ use glam::Vec2;
 use shin_core::{format::save::higurashi::SaveData, time::Ticks};
 pub(super) mod opening;
 pub(super) mod owner;
-#[path = "quiz_scene/random.rs"]
-mod random;
+use super::random;
 pub(super) mod view;
 
 pub(super) const EXIT_PROMPT: &str = "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？";

@@ -566,7 +566,7 @@ fn finish_factory(
     let sounds = slot.globals().unwrap().sounds.clone();
     let clock = slot.globals().unwrap().clock.ticks();
     let (composed, pixels) = fixture.capture(slot, extent);
-    let atlas: Arc<crate::adv::character_view::CharacterTextures> =
+    let atlas: Arc<crate::adv::characters::view::CharacterTextures> =
         fixture.server.load_sync("/chart.txa").unwrap();
     let weak_atlas = Arc::downgrade(&atlas);
     drop(atlas);

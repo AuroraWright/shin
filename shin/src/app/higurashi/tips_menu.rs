@@ -177,7 +177,7 @@ impl Model {
             actions: vec![],
         })
     }
-    fn apply_artwork(&mut self, atlas: &crate::adv::character_view::CharacterTextures) {
+    fn apply_artwork(&mut self, atlas: &crate::adv::characters::view::CharacterTextures) {
         for row in &mut self.rows {
             let name = format!("title{}", row.atlas_id >> 5);
             row.artwork_available = atlas.contains(&name)

@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             browser_controls::Scrollbar,
             mode_stack::{Mode, ModePush, ModeStack},

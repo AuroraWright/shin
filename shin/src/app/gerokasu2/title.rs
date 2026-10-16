@@ -2,7 +2,7 @@
 use super::{AppAction, MenuBgm, Viewport};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::reconstruction_mode::{OverlayClock, overlay::Overlay},
         gerokasu2::title::{self, TitleAction, TitleAvailability, TitleController, TitleInput},
         input_area::{PointerKind, PointerSampler},

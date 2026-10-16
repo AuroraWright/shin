@@ -1,34 +1,29 @@
 //! Actual older48de8 Chart parent composition. The owner draws the mixed child
 //! scope after these packets; this view does not fabricate a Question overlay.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::model::Model;
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             browser_controls::Scrollbar,
             browser_decorations,
-            browser_navigation::labels::{Glyph, Glyphs, Layout},
+            browser_navigation::labels::{Glyphs, Layout},
         },
     },
     app::higurashi::kakera_menu::view::Packet,
     asset::{font::GpuFontLazy, system::AssetServer},
-    layer::{
-        message_layer::outline,
-        render_params::{higurashi::HigurashiTransform, multiply_transforms as multiply},
-    },
+    layer::render_params::{higurashi::HigurashiTransform, multiply_transforms as multiply},
 };
-use anyhow::{Context, Result, ensure};
-use glam::{Mat4, Vec2, Vec4, vec2, vec3, vec4};
-use shin_core::layout::{
-    HigurashiTextLayouter, LayoutParams, MessageTextLayouterDefaults, commands::Command,
-    font::FontMetrics,
-};
+use anyhow::{Result, ensure};
+use glam::{Mat4, Vec2, Vec4, vec3, vec4};
+use shin_core::layout::{LayoutParams, font::FontMetrics};
 use shin_render::{
     ColorBlendType, DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder,
     render_pass::RenderPass,
     shaders::types::{
         buffer::VertexSource,
-        vertices::{PosColTexVertex, TextVertex},
+        vertices::PosColTexVertex,
     },
 };
 use std::sync::Arc;
@@ -47,26 +42,6 @@ const FULL: [f32; 4] = [0., 0., 1., 1.];
 const PALETTE: [u32; 7] = [
     0xffff99cb, 0xffffd8eb, 0xff14c3f5, 0xffeb2020, 0xfff6e024, 0xfff49922, 0xff29e66b,
 ];
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2. / 1920.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -2. / 1080.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -1.,
-        0.,
-        -1.,
-        1.,
-        -0.,
-        1.,
-    ])
-}
 fn quad(out: &mut Vec<Draw>, name: &str, matrix: Mat4, rect: [f32; 4], uv: [f32; 4], color: u32) {
     out.push(Draw::Quad(Packet {
         texture: name.to_owned(),
@@ -158,7 +133,7 @@ pub(super) fn packets(
     if !ready {
         return out;
     }
-    let p = projection();
+    let p = NATIVE_UI_PROJECTION;
     let slide = 1920. - m.progress * 1920.;
     let graph = multiply(p, Mat4::from_translation(vec3(slide, 0., 0.)));
     let g = &m.groups[m.current_group as usize];
@@ -442,84 +417,16 @@ fn label_layout(font: impl FontMetrics + Clone, text: &str) -> Result<Layout> {
             glyphs: Vec::new(),
         });
     }
-    let text_size = 32.0;
-    let (commands, _, size) = HigurashiTextLayouter::new(
-        font.clone(),
+    Layout::unpadded(
+        font,
+        text,
         LayoutParams {
             layout_width: 640.0,
-            text_size,
+            text_size: 32.0,
             perform_soft_breaks: false,
             ..Default::default()
         },
-        MessageTextLayouterDefaults {
-            color: 0xfff,
-            draw_speed: 50,
-            fade: 200,
-        },
     )
-    .parse(text);
-    let mut glyphs = Vec::new();
-    for command in commands {
-        let Command::Char(c) = command else {
-            continue;
-        };
-        let info = font
-            .get_glyph_info(c.codepoint)
-            .context("Chart label glyph missing from font")?;
-        if info.actual_width == 0 || info.actual_height == 0 {
-            continue;
-        }
-        let scale = vec2(c.horizontal_scale, c.scale);
-        let scaled = scale * info.actual_size_f32();
-        let local_top = scale * info.bearing_screenspace_f32() - -1.0;
-        let local_bottom = (local_top + scaled) + -2.0;
-        let ratio = (local_bottom - local_top) / scaled + -1.0;
-        let normalized = info.actual_size_normalized();
-        let uv_top = normalized * (ratio * -0.5);
-        let uv_bottom = normalized * (ratio * 0.5 + 1.0);
-        let top = c.position + local_top;
-        let bottom = c.position + local_bottom;
-        let (color_top, color_bottom) = if c.is_rubi {
-            (0.0, 0.0)
-        } else {
-            // d2054 uses the unscaled screen-space bearing, then adds height
-            // before float conversion. Ruby's two tint weights remain zero.
-            let reciprocal = 1.0 / text_size;
-            (
-                (-(info.bearing_y as i32)) as f32 * reciprocal,
-                (info.actual_height as i32 - info.bearing_y as i32) as f32 * reciprocal,
-            )
-        };
-        glyphs.push(Glyph {
-            point: c.codepoint,
-            vertices: [
-                TextVertex {
-                    position: vec4(top.x, top.y, uv_top.x, uv_top.y),
-                    color: color_top,
-                },
-                TextVertex {
-                    position: vec4(bottom.x, top.y, uv_bottom.x, uv_top.y),
-                    color: color_top,
-                },
-                TextVertex {
-                    position: vec4(top.x, bottom.y, uv_top.x, uv_bottom.y),
-                    color: color_bottom,
-                },
-                TextVertex {
-                    position: vec4(bottom.x, bottom.y, uv_bottom.x, uv_bottom.y),
-                    color: color_bottom,
-                },
-            ],
-            border: outline::distances_with_radius(
-                scale,
-                info.actual_size_f32(),
-                normalized,
-                0,
-                1.5,
-            ),
-        });
-    }
-    Ok(Layout { size, glyphs })
 }
 pub(super) fn completion_layout(font: impl FontMetrics + Clone, text: &str) -> Result<Layout> {
     //472a4..472b8 passes width640/font40 and outline1. Native d19f4
@@ -630,5 +537,4 @@ impl View {
     }
 }
 #[cfg(test)]
-#[path = "view_tests.rs"]
 mod tests;

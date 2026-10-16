@@ -1,6 +1,6 @@
 //! SELECT overlay owner and four-bit result history;kept in the Ger dialect.
 pub(crate) mod draw;
-mod text;
+use super::generic_text::Text;
 use super::{
     message_ui::MessageResources,
     save_commands::{SaveCapture, SaveServices},
@@ -63,7 +63,9 @@ impl SelectionHistory {
     }
 }
 struct Label {
-    text: text::Text,
+    text: Text,
+    /// OriginalD4980..D49A8 adds both sides of the three-pixel border.
+    layout_size: Vec2,
 }
 pub type SharedSelection = Arc<parking_lot::Mutex<SelectionOwner>>;
 pub struct SelectionOwner {
@@ -95,19 +97,23 @@ impl SelectionOwner {
         for &index in &model.indices {
             let (commands, lines, size) =
                 choice_layouter(resources.medium.metrics()).parse(&request.variants[index]);
-            let text = text::Text::prepare(
+            // D484C supplies caller text_size48 for gradient interpolation.
+            let text = Text::prepare(
                 &assets.context().wgpu_device,
                 &assets.context().wgpu_queue,
                 &resources.medium,
                 commands,
                 lines,
-                size,
+                48.0,
             )?;
-            labels.push(Label { text });
+            labels.push(Label {
+                text,
+                layout_size: size + Vec2::splat(6.0),
+            });
         }
         model.heights = labels
             .iter()
-            .map(|l| l.text.layout_size().y + 16.0)
+            .map(|l| l.layout_size.y + 16.0)
             .collect();
         Ok(Self {
             model,
@@ -205,7 +211,7 @@ impl SelectionOwner {
                 builder,
                 transform
                     * Mat4::from_translation(vec3(
-                        960.0 - label.text.layout_size().x * 0.5,
+                        960.0 - label.layout_size.x * 0.5,
                         8.0,
                         0.0,
                     )),

@@ -2,8 +2,8 @@
 //! geometry. Font measurement, constructor services and GPU calls are bounded
 //! contracts in these probes; this does not claim hardware rendering coverage.
 use crate::adv::{
-    backlog_rollback::{Confirmation, Outcome},
-    dialog_input::DialogInput,
+    backlog::rollback::{Confirmation, Outcome},
+    dialog::input::DialogInput,
 };
 use crate::app::AppAction;
 use enum_map::EnumMap;

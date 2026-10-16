@@ -1,5 +1,5 @@
-//! SELECT's GenericText uses completed glyphs and the generic SDF renderer.
-//! Native D43F0 adds a three-pixel border; D4AE0 draws all outlines, then fills.
+//! Ger GenericText glyph renderer (native SELECT SDF path). Callers supply
+//! the text size: SELECT 48px, SaveMenu 44px with a1252px inner width.
 use std::sync::Arc;
 
 use anyhow::{Context, Result, ensure};
@@ -28,7 +28,6 @@ struct Character {
 pub struct Text {
     characters: Vec<Character>,
     vertices: Option<OwnedVertexBuffer<TextVertex>>,
-    layout_size: Vec2,
 }
 
 impl Text {
@@ -38,7 +37,7 @@ impl Text {
         font: &Arc<GpuGerokasu2Font>,
         commands: Vec<Command>,
         lines: Vec<LineInfo>,
-        layout_size: Vec2,
+        text_size: f32,
     ) -> Result<Self> {
         let requested = commands
             .iter()
@@ -47,8 +46,8 @@ impl Text {
                 _ => None,
             })
             .collect::<Vec<_>>();
-        // Original90FC0 installs this same medium font for both regular and
-        // bold characters. GenericText ignores timing/control commands.
+        // GenericText uses the caller font for both regular and bold
+        // characters and ignores timing/control commands.
         let mut glyphs = font
             .clone()
             .load_glyphs(device.clone(), queue.clone(), &requested)
@@ -61,19 +60,19 @@ impl Text {
             };
             ensure!(
                 character.line_index < lines.len(),
-                "SELECT generic character has no line"
+                "Ger GenericText character has no line"
             );
             let glyph = glyphs
                 .next()
-                .context("SELECT generic glyph batch is incomplete")?;
+                .context("Ger GenericText glyph batch is incomplete")?;
             // D463C/D4658 translate parsed coordinates by the fixed border.
-            // D484C supplies caller text_size48 for gradient interpolation,
+            // D484C supplies the caller text_size for gradient interpolation,
             // including characters with inline font-size changes.
             let draw = GlyphDraw::new(
                 glyph.geometry()?,
                 character.position + Vec2::splat(3.0),
                 vec2(character.horizontal_scale, character.scale),
-                48.0,
+                text_size,
                 character.is_rubi,
             )?;
             vertices.extend_from_slice(&draw.vertices);
@@ -87,22 +86,28 @@ impl Text {
             OwnedVertexBuffer::allocate_vertex(
                 device,
                 &vertices,
-                Some("Gerokasu2SelectText/vertices"),
+                Some("Gerokasu2GenericText/vertices"),
             )
         });
         Ok(Self {
             characters,
             vertices,
-            // OriginalD4980..D49A8 adds both sides of the border to the box.
-            layout_size: layout_size + Vec2::splat(6.0),
         })
     }
 
-    pub fn layout_size(&self) -> Vec2 {
-        self.layout_size
+    pub fn render(
+        &self,
+        pass: &mut RenderPass,
+        builder: RenderRequestBuilder,
+        transform: Mat4,
+        tint: Vec4,
+    ) -> Result<()> {
+        self.render_colored(pass, builder, transform, Vec4::new(1., 1., 1., tint.w))
     }
 
-    pub fn render(
+    /// ChapterSelector supplies an unquantized RGBA multiplier to GenericText.
+    /// Other menu callers retain their original alpha-only `render` contract.
+    pub fn render_colored(
         &self,
         pass: &mut RenderPass,
         builder: RenderRequestBuilder,
@@ -128,7 +133,7 @@ impl Text {
                     // Unlike MessageLayer, GenericText multiplies packed
                     // alpha too. Native50074+4FFA8 preserve color0 as zero.
                     (
-                        fill_color(character.color, tint.w),
+                        fill_color(character.color, tint),
                         character.draw.fill_thresholds,
                     )
                 };
@@ -151,14 +156,14 @@ impl Text {
     }
 }
 
-fn fill_color(color: UnormColor, opacity: f32) -> FloatColor4 {
+fn fill_color(color: UnormColor, tint: Vec4) -> FloatColor4 {
     let inverse = f32::from_bits(0x3b808081);
     let packed = color.0;
     FloatColor4::from_rgba(
-        (packed & 255) as f32 * inverse,
-        ((packed >> 8) & 255) as f32 * inverse,
-        ((packed >> 16) & 255) as f32 * inverse,
-        (((packed >> 24) & 255) as f32 * inverse) * opacity,
+        ((packed & 255) as f32 * inverse) * tint.x,
+        (((packed >> 8) & 255) as f32 * inverse) * tint.y,
+        (((packed >> 16) & 255) as f32 * inverse) * tint.z,
+        (((packed >> 24) & 255) as f32 * inverse) * tint.w,
     )
 }
 

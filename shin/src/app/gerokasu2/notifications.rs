@@ -13,7 +13,7 @@ use shin_core::{
 };
 use shin_render::{ColorBlendType, RenderRequestBuilder, render_pass::RenderPass};
 
-use super::load_menu::text::Text;
+use crate::adv::gerokasu2::generic_text::Text;
 use crate::asset::{font::gerokasu2::GpuGerokasu2Font, system::AssetServer};
 
 /// Native 98E10 flag words used by both owners: bit6 speed duration, bit7

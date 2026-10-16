@@ -1,6 +1,6 @@
 //! Shared renderer submission of the native Manual packet model.
 use crate::adv::{
-    character_view::CharacterTextures,
+    characters::view::CharacterTextures,
     gerokasu2::manual::{
         Controller,
         artwork::{self, CLIP, PAGE},

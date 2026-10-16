@@ -1,7 +1,8 @@
 //! Updated722f4/72938 pages, full-byte stencil panel and baked shell/hints.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::ViewState;
 use crate::{
-    adv::character_view::CharacterTextures,
+    adv::characters::view::CharacterTextures,
     layer::render_params::{higurashi::HigurashiTransform, multiply_transforms as multiply},
 };
 use glam::{Mat4, Vec4, vec3, vec4};
@@ -25,26 +26,6 @@ const DEFAULT: [u32; 5] = [7, 0, 0, 0, 0xffff];
 const CLIP: [u32; 5] = [7, 0, 0, 3, 0xffffff];
 const PAGE: [u32; 5] = [3, 0, 0, 0, 0x1ffff];
 const FULL: [f32; 4] = [0., 0., 1., 1.];
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2. / 1920.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -2. / 1080.,
-        0.,
-        0.,
-        0.,
-        0.,
-        -1.,
-        0.,
-        -1.,
-        1.,
-        -0.,
-        1.,
-    ])
-}
 fn quad(
     out: &mut Vec<Packet>,
     matrix: Mat4,
@@ -117,7 +98,7 @@ pub(super) fn packets(state: &ViewState, button_layout_swapped: bool) -> Vec<Pac
     if !state.ready {
         return out;
     }
-    let shell = projection();
+    let shell = NATIVE_UI_PROJECTION;
     // Native fsub1920-(progress*1920), followed by74cac multiplication.
     let page = multiply(
         shell,

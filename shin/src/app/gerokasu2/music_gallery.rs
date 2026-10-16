@@ -3,7 +3,7 @@
 use super::{AppAction, MenuBgm, Viewport};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::{
             music_gallery::{self, Action, CatalogItem, Controller, Input, Phase},
             reconstruction_mode::{OverlayClock, overlay::Overlay},

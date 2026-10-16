@@ -3,7 +3,7 @@
 use std::sync::Arc;
 
 use crate::{
-    adv::character_view::CharacterTextures,
+    adv::characters::view::CharacterTextures,
     asset::system::AssetServer,
     layer::user::higurashi::temporary::optional_patch_banner,
     layer::{

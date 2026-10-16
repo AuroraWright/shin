@@ -3,7 +3,7 @@
 use super::{Action, Model, Task, view::View};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             input::Buttons,
             mode_stack::{Mode, ModePush, ModeStack},
@@ -588,7 +588,7 @@ impl Owner {
         };
         //Pure metrics/layout preflight before a fallible parent side effect.
         //The subsequent retained glyph preparation uses these immutable inputs.
-        super::view::completion_layout(env.common.font.clone(), &model.completion_text)?;
+        crate::app::higurashi::gallery_view::completion_layout(env.common.font.clone(), &model.completion_text)?;
         //Native completion/achievement precedes First capture/submission. There
         //is no success or capture.take on a parent callback failure.
         for action in model.take_actions() {

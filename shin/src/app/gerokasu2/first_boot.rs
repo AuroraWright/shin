@@ -10,7 +10,7 @@
 //! texture over 1920x1080, then the captured frame with color (1,1,1,overlay).
 //! After the null entry finishes, lambda 5D0FC runs the DF9B0 boot gate
 //! (TitleDemo or Title). FirstBoot reads no input.
-use crate::{adv::character_view::CharacterTextures, asset::system::AssetServer};
+use crate::{adv::characters::view::CharacterTextures, asset::system::AssetServer};
 use anyhow::Result;
 use shin_core::{
     primitives::color::FloatColor4,

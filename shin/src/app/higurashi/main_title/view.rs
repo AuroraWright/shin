@@ -1,6 +1,7 @@
 //! Updated deb80/de9c0 parent draw order and byte-quantized sprite tint.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{Frame, particles::Particles};
-use crate::{adv::character_view::CharacterTextures, layer::render_params::multiply_transforms};
+use crate::{adv::characters::view::CharacterTextures, layer::render_params::multiply_transforms};
 use glam::{Mat4, vec3};
 use shin_core::primitives::color::UnormColor;
 use shin_render::{
@@ -46,26 +47,6 @@ pub(super) struct Packet {
     pub color: u32,
     pub matrix: Mat4,
 }
-pub(super) fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2.0 / 1920.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -2.0 / 1080.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        -1.0,
-        1.0,
-        -0.0,
-        1.0,
-    ])
-}
 fn alpha(value: f32) -> u32 {
     u32::from((value.max(0.0) * 255.0) as u8) << 24
 }
@@ -75,7 +56,7 @@ pub(super) fn packets(
     frame: &Frame,
     particles: &Particles,
 ) -> Vec<Packet> {
-    let matrix = projection();
+    let matrix = NATIVE_UI_PROJECTION;
     let mut packets = Vec::new();
     if atlas_present {
         packets.push(Packet {

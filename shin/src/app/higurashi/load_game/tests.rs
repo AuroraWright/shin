@@ -228,7 +228,7 @@ impl Storage for Memory {
 #[ignore = "original full updated read/decode/CRC worker and trial-existence check;bounded in-memory SDK"]
 fn higurashi_load_game_read_workers_match_native() {
     let corpus: serde_json::Value = serde_json::from_str(include_str!(
-        "../../../../../reverse-engineering/higurashi/native-save-codec-golden.json"
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/native-save-codec-golden.json")
     ))
     .unwrap();
     let good: Vec<Vec<u8>> = corpus["profiles"].as_array().unwrap()[..9]

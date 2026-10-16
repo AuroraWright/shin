@@ -416,7 +416,7 @@ fn patchless_kakera_sparse_artwork_skips_missing_pages_and_cells_with_bounded_na
 fn patchless_kakera_actual_base_atlas_keeps_normal_cards_and_allows_escape_from_missing_origin() {
     use crate::{
         adv::{
-            character_view::CharacterTextures,
+            characters::view::CharacterTextures,
             higurashi::{input::Buttons, reference_gpu_assets},
             input_area::InputAreaTarget,
         },

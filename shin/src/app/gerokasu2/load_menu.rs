@@ -26,15 +26,14 @@ use shin_input::ActionState;
 use shin_render::render_pass::RenderPass;
 use std::sync::Arc;
 mod preview;
-pub(super) mod text;
 mod view;
 pub(super) use save_menu::{Action as LoadMenuAction, StorageRequest};
 pub(super) struct LoadMenuHost {
     model: Controller,
     assets: Arc<AssetServer>,
     data: SaveData,
-    atlas: Arc<crate::adv::character_view::CharacterTextures>,
-    system: Arc<crate::adv::character_view::CharacterTextures>,
+    atlas: Arc<crate::adv::characters::view::CharacterTextures>,
+    system: Arc<crate::adv::characters::view::CharacterTextures>,
     dates: [Option<SaveDate>; 100],
     previews: preview::Previews,
     empty: view::Labels,
@@ -68,9 +67,9 @@ impl LoadMenuHost {
         mode: save_menu::Mode,
     ) -> Result<Self> {
         let (atlas, font, system) = futures::try_join!(
-            assets.load::<crate::adv::character_view::CharacterTextures, _>(save_menu::ATLAS),
+            assets.load::<crate::adv::characters::view::CharacterTextures, _>(save_menu::ATLAS),
             assets.load::<GpuGerokasu2Font, _>("/system.fnt"),
-            assets.load::<crate::adv::character_view::CharacterTextures, _>("/systex.txa")
+            assets.load::<crate::adv::characters::view::CharacterTextures, _>("/systex.txa")
         )?;
         atlas.require_names(save_menu::ATLAS, &save_menu::TEXTURES)?;
         system.require_names("/systex.txa", &["scroll"])?;

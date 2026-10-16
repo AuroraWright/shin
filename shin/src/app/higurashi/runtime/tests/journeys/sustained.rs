@@ -10,6 +10,7 @@ mod first_book;
 mod himatsubushi;
 mod hirukowashi;
 mod hajisarashi_features;
+mod hinamizawa_features;
 mod kamikanshi_features;
 mod main;
 mod meakashi;
@@ -18,12 +19,14 @@ mod miotsukushi_omote_features;
 mod origin10008_features;
 mod origin_watanagashi_features;
 mod origin_skip;
+mod remaining_routes;
 mod someutsushi;
 mod taraimawashi;
 mod tatarigoroshi;
 mod tsukiotoshi;
 mod tsumihoroboshi_features;
 mod watanagashi;
+mod yoigoshi_features;
 
 fn initial() -> SaveData {
     let mut saved = SaveData::default();

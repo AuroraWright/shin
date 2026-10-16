@@ -5,7 +5,7 @@ use super::{
 };
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{browser_controls::BrowserControls, browser_history::Row},
     },
     asset::{font::GpuFontLazy, system::AssetServer},

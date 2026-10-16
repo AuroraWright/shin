@@ -4,6 +4,7 @@ use super::{
 };
 use binrw::BinWrite;
 use shin_core::format::scenario::instruction_elements::UntypedNumberSpec;
+use shin_core::format::text::U8String;
 use shin_core::vm::command::types::LayerType;
 use std::{
     io::Write,
@@ -112,7 +113,14 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
         .unwrap() as i32;
     let mut cases = 0;
     let mut rendered = 0;
-    for (kind, resource) in [(2, 424), (3, bustup), (2, -1)] {
+    // Native 20df0 publishes a Null layer for an absent PIC record (negative ID); a present
+    // record whose file is missing is the asset fault retained by the owner.
+    for (kind, resource, missing) in [
+        (2, 424, false),
+        (3, bustup, false),
+        (2, -1, false),
+        (2, 424, true),
+    ] {
         for flags in 0..4 {
             let mut raw = authored.raw().to_vec();
             let entry = 0x25491;
@@ -122,6 +130,9 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
             raw[entry..entry + code.len()].copy_from_slice(&code);
             let mut scenario = HigurashiScenario::new(raw.into()).unwrap();
             scenario.header.code_offset = entry as u32;
+            if missing {
+                scenario.picture_info[424].name = U8String::new("missing/none");
+            }
             let scenario = Arc::new(scenario);
             let mut runner = shin_tasks::block_on(HigurashiRunner::load(
                 assets.clone(),
@@ -170,7 +181,9 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
                 .unwrap(),
                 Status::Waiting
             );
-            assert_eq!(seeds, 1);
+            // Native worker41c80 constructs the owner (6717c samples seeds) only
+            // after the resource opens; starting the load draws none.
+            assert_eq!(seeds, 0, "case {kind}/{resource}/{missing}/{flags}");
             let (gate, ready) = hold(&mut runner);
             let retained = (
                 runner.position(),
@@ -309,13 +322,17 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
                 );
             }
             let deadline = Instant::now() + Duration::from_secs(30);
+            let mut published_seeds = 0;
             let completion = loop {
                 assert!(Instant::now() < deadline, "loading timeout {kind}/{flags}");
                 let result = shin_tasks::block_on(runner.pump(
                     policy(),
                     1,
                     100,
-                    || panic!("publication consumed seeds"),
+                    || {
+                        published_seeds += 1;
+                        [5, 6, 7, 8]
+                    },
                     &mut voice,
                 ));
                 if !matches!(result, Ok(Status::Waiting)) {
@@ -323,9 +340,10 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
                 }
                 std::thread::sleep(Duration::from_millis(1));
             };
-            if resource < 0 {
+            if missing {
                 let error = completion.unwrap_err().to_string();
-                assert!(error.contains("Negative Higurashi picture ID"));
+                assert!(error.contains("missing/none"), "{error}");
+                assert_eq!(published_seeds, 0);
                 for _ in 0..4 {
                     assert_eq!(
                         shin_tasks::block_on(runner.pump(
@@ -353,6 +371,8 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
                 assert_eq!(runner.completed_commands(), 0);
             } else {
                 assert_eq!(completion.unwrap(), Status::CommandBudget);
+                // Only a fresh (non-keep) owner samples seeds; keep inherits the old ones.
+                assert_eq!(published_seeds, usize::from(flags & 1 == 0));
                 assert_eq!(
                     (
                         runner.position(),
@@ -364,7 +384,9 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
                 let owner = runner.frame.scene.layers().layer(target).unwrap();
                 assert_eq!(
                     owner.layer_type(),
-                    if kind == 2 {
+                    if resource < 0 {
+                        LayerType::Null
+                    } else if kind == 2 {
                         LayerType::Picture
                     } else {
                         LayerType::Bustup
@@ -392,7 +414,7 @@ fn higurashi_runner_polls_assets_without_blocking_live_frame_or_replaying_vm() {
                 );
                 assert_eq!(runner.completed_commands(), 2);
             }
-            if resource < 0 {
+            if missing {
                 assert_eq!(
                     retained,
                     (

@@ -5,11 +5,13 @@ use super::super::{
     model_tests::{self, evidence},
 };
 use super::*;
+use crate::adv::higurashi::browser_navigation::labels::Layout;
+use crate::app::higurashi::gallery_view::completion_layout;
+use shin_core::layout::font::FontMetrics;
 use crate::adv::higurashi::reconstruction_mode::overlay::DrawPacket;
 use serde::Deserialize;
 use shin_core::format::font::read_font_metrics;
 use std::{collections::HashMap, io::BufReader};
-#[path = "pixel_tests.rs"]
 mod pixel_tests;
 
 #[derive(Deserialize)]

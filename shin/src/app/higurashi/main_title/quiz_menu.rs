@@ -1,8 +1,9 @@
 //! Updated e3258/e3bec/e4260 title QuizMenu. All eight choices start authored
 //! ADV scenarios5..12; the selected scenario's script supplies QUIZ operands.
+use super::{control, rate};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::input::Buttons,
         input_area::{InputArea, InputAreaTarget, PointerFrame},
     },
@@ -36,15 +37,6 @@ struct State {
     cancelled: bool,
     rows: Vec<Row>,
     actions: Vec<Action>,
-}
-fn control(clock: &mut HigurashiTweener, value: f32, ticks: f32, flags: u32) {
-    clock
-        .control(value, Ticks::from_f32(ticks), flags)
-        .expect("Native quiz menu tween");
-}
-fn rate(clock: &mut HigurashiTweener, value: f32) {
-    clock.fast_forward_to(clock.value());
-    control(clock, value, f32::from_bits(0x3e4ccccd), 0x40);
 }
 impl State {
     fn new() -> Self {

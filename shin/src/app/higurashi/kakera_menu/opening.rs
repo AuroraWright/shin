@@ -6,7 +6,7 @@ use super::{
 };
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             music_commands::MusicCommands,
             question::{self, Question, view::View},

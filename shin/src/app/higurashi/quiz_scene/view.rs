@@ -1,9 +1,10 @@
 //! Original updated9d1b0 parent composition. Child captured overlays belong
 //! to the scene adapter and render after this complete parent sequence.
+use crate::render::NATIVE_UI_PROJECTION;
 use super::{ANSWER_POSITIONS, Model, motion::Motion, resources::Prepared};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::browser_navigation::labels::{Glyphs, Layout},
     },
     app::higurashi::kakera_menu::view::Packet,
@@ -52,26 +53,6 @@ const ANSWER_ORIGINS: [[f32; 2]; 4] = [
     [624.0, 936.0],
     [40.0, 860.0],
 ];
-fn projection() -> Mat4 {
-    Mat4::from_cols_array(&[
-        2.0 / 1920.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -2.0 / 1080.0,
-        0.0,
-        0.0,
-        0.0,
-        0.0,
-        -1.0,
-        0.0,
-        -1.0,
-        1.0,
-        -0.0,
-        1.0,
-    ])
-}
 fn packet(
     texture: impl Into<String>,
     matrix: Mat4,
@@ -98,7 +79,7 @@ fn slice(digit: i32, width: i32, total: f32, span: f32) -> [f32; 4] {
 }
 pub(super) fn packets(motion: &Motion) -> Vec<Draw> {
     let m = &motion.model;
-    let p = projection();
+    let p = NATIVE_UI_PROJECTION;
     let mut out = Vec::new();
     if motion.ready {
         let mut bg = packet("bg", p, [0.0, 0.0, 1920.0, 1080.0], FULL, 0xff808080);

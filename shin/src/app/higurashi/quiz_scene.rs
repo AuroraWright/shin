@@ -7,7 +7,7 @@ use shin_core::time::Ticks;
 pub(super) mod catalog;
 pub(super) mod motion;
 pub(super) mod opening;
-mod random;
+use super::random;
 pub(super) mod resources;
 #[cfg(test)]
 mod tests;

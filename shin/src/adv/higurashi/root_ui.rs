@@ -1,6 +1,6 @@
 //! Updated1382c auto/skip indicators, sliding navi buttons and event hint.
 use super::input::{ReadState, message_requests, suppress_transient_audio};
-use crate::adv::character_view::CharacterTextures;
+use crate::adv::characters::view::CharacterTextures;
 use glam::{Vec4, vec2, vec3, vec4};
 use shin_core::primitives::color::{FloatColor4, UnormColor};
 use shin_render::{

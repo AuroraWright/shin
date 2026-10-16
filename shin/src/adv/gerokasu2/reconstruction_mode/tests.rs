@@ -1,4 +1,5 @@
 use super::*;
+use shin_core::time::Ticks;
 #[derive(Default)]
 struct Events {
     events: Vec<u8>,
@@ -198,7 +199,7 @@ fn ger_native_reconstruction_mode_clock_packets_resume_and_completion() {
                                 if drawn && masked {
                                     assert_eq!(
                                         &native[9..11],
-                                        &clock.mask_weights().map(f32::to_bits),
+                                        &overlay::fused_mask_weights(&clock).map(f32::to_bits),
                                         "{row:?}"
                                     );
                                 }
@@ -209,7 +210,7 @@ fn ger_native_reconstruction_mode_clock_packets_resume_and_completion() {
                                         "{row:?}"
                                     );
                                 }
-                                match clock.draw_packet(masked.then_some((640, 360))) {
+                                match overlay::draw_packet(&clock, masked.then_some((640, 360))) {
                                     Some(overlay::DrawPacket::Masked { vertices, .. }) => {
                                         let words: Vec<_> = vertices
                                             .into_iter()

@@ -3,7 +3,7 @@
 use super::{Cue, Input, Metadata, Model, Picture, Services, Task, view::View};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::mode_stack::{Mode, ModePush, ModeStack},
         input_area::{InputArea, InputAreaTarget, PointerFrame},
     },

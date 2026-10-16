@@ -16,7 +16,7 @@ use shin_render::{
 
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         gerokasu2::backlog::{
             self,
             chapter::{
@@ -27,7 +27,7 @@ use crate::{
         },
         input_area::{InputArea, InputAreaTarget, PointerSampler, desktop_gesture_vector},
     },
-    app::gerokasu2::load_menu::text::Text,
+    adv::gerokasu2::generic_text::Text,
     asset::{font::gerokasu2::GpuGerokasu2Font, system::AssetServer},
 };
 

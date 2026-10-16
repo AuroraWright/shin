@@ -1,7 +1,8 @@
 //! Updated df934/e0510/e0d2c top menu. Older two-column layout and mode requests.
+use super::{control, rate};
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::input::Buttons,
         input_area::{InputArea, InputAreaTarget, PointerFrame},
     },
@@ -57,15 +58,6 @@ struct State {
     idle_demo: bool,
     rows: Vec<Row>,
     actions: Vec<Action>,
-}
-fn control(clock: &mut HigurashiTweener, value: f32, ticks: f32, flags: u32) {
-    clock
-        .control(value, Ticks::from_f32(ticks), flags)
-        .expect("Verified native top tween");
-}
-fn rate(clock: &mut HigurashiTweener, value: f32) {
-    clock.fast_forward_to(clock.value());
-    control(clock, value, f32::from_bits(0x3e4ccccd), 0x40);
 }
 impl State {
     fn new(plus: bool, auto_valid: bool, selected: i32) -> Self {
