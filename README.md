@@ -166,6 +166,20 @@ to be ignored with a log warning. The loose file takes priority over a
 `localized.toml` provided by an asset archive; without it, normal archive
 priority applies. Translations remain separate for each game/asset server.
 
+`--text-websocket HOST:PORT` (for example `--text-websocket 127.0.0.1:9001`)
+starts a WebSocket server for text hookers. Every connected client receives
+each displayed text as one plain-text message, with `@` markup and ruby
+readings removed:
+
+- all three games: every message box text, without the speaker's name;
+- Umineko only: the selected character's name and description, the selected
+  tip's title and text, and the page shown in the 紫発言確認 (purple
+  statement) screens.
+
+A client that connects later first receives the most recent text. If the port
+is busy, the game still starts and logs an error. The manual package's launchers
+all serve on `127.0.0.1:9001`.
+
 `--game higurashi --inspect-assets` inspects the supplied archives and scenario
 without opening a window or reading/writing progress.
 
