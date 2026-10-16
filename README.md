@@ -124,6 +124,48 @@ progress at the desktop data directory's `shin/higurashi/progress.dat`;
 through the title or in-game menu. Direct `--load-save`, `--unsafe-entry-point`
 and `--fast-forward-to` launches currently apply to Umineko.
 
+Both games optionally load `mod.rom` from the selected asset directory before
+all standard archives and loose-file layers. Files absent from `mod.rom` fall
+through to the existing patch/append/base layers. For Higurashi, a modded
+`main.snr` also determines whether Origin/append content is supported.
+The base archive keeps its existing `data.rom` filename. With the manual
+launchers, place the file at `higurashi/mod.rom` or
+`umineko_switch_files/mod.rom`; optional links cover both Umineko versions.
+
+All three games accept an optional UTF-8 `localized.toml` in the selected assets
+folder. Restart the game after editing it. Entries are exact, case-sensitive
+code-defined UI strings:
+
+```toml
+"確認" = "Confirm"
+"達成率:{percent}％" = "Completion: {percent}%"
+```
+
+Copy the keys you need from [Higurashi's reference](localization/higurashi.localized.toml.example),
+[Umineko's reference](localization/umineko.localized.toml.example) or
+[Gerokasu2's reference](localization/gerokasu2.localized.toml.example)
+(for Gerokasu2, put the file in `gerokasu2/localized.toml`).
+English profiles adapted from the supplied executable translation lists are
+available for [Higurashi](localization/higurashi.en.toml) (39 keys,
+[translation source](https://github.com/masagrator/HigurashiENX/blob/main/exefs_texts.txt))
+and [Umineko](localization/umineko.en.toml) (60 keys,
+[translation source](https://github.com/andOlga/umineko-catbox-english/blob/rebirth/exefs_texts.txt)).
+Copy the appropriate profile to your assets folder as `localized.toml` and
+restart. These profiles cover only translations present in those lists;
+other code strings retain Japanese. Copies are also in the manual package's
+`localization` directory. Existing active dictionaries are not overwritten.
+These references contain only production code strings, excluding scenario
+`.snr` content and text baked into artwork. Identity entries keep the original
+text; omitted keys also keep it. Individual quiz answers can be translated
+without replacing parts of other words. Preserve text commands such as `@r`
+and format placeholders such as `{name}` or `{}`; numbered placeholders can
+reorder positional values. Use TOML escaping for quotes, backslashes and newlines.
+The supplied game fonts must contain the translated characters (Unicode above
+U+FFFF is unsupported). Invalid TOML or non-string values cause the whole file
+to be ignored with a log warning. The loose file takes priority over a
+`localized.toml` provided by an asset archive; without it, normal archive
+priority applies. Translations remain separate for each game/asset server.
+
 `--game higurashi --inspect-assets` inspects the supplied archives and scenario
 without opening a window or reading/writing progress.
 
@@ -145,11 +187,29 @@ atlas and FNT6 font decoding, story rendering, command execution and basic
 message/card/choice input, read tracking, skip and autoplay are connected through a
 separate game adapter. The Ger native save codec, resource preparation and
 retained-command restoration are connected to `--load-save`/`--save-slot`;
-`--save-file` enables Ger autosave/global writes. Current end-to-end hardware
-validation is pending because exact Loopback Audio initialization is blocked.
+Ger autosave/global writes default to the desktop data directory at
+`shin/gerokasu2/progress.dat`; `--save-file` overrides that path. Normal launch
+uses the original title artwork and native-backed New/Continue controller;
+explicit `--load-save` still restores directly. Saved-progress and RESUME
+restoration checks now pass on Metal with exact Loopback Audio.
 Ger mask loading/unloading, automatic resource gallery commits and the retained
 RESUME reconstruction worker are connected; their CPU/native checks pass.
-Title/menu, settings, backlog and full gameplay remain under implementation.
+Title Load, Config and Manual now have retained owners and native controllers.
+Load has original artwork/scrollbar and manual-slot restoration; Config persists
+settings; Manual displays the original pages. Confirmation dialogs use a native
+cached composition and palette. CG and Music galleries now have original artwork,
+saved unlock gating, real Picture/track playback and captured fresh-Title returns.
+The Bustup gallery and retained story EXIT/save/Title handoff are implemented with
+native CPU comparisons; their integrated device journeys remain unverified.
+The in-game system menu uses Y / M and retains gameplay across Save, Load,
+Config, Manual and Title. X / B opens the backlog, B / Escape hides the window,
+and Plus / I and Minus / U skip to the next chapter or return to the current one
+after the native Yes/No dialog. Save/Delete uses frozen live progress and atomic
+rollback-capable writes. An actual-asset Metal/Loopback journey passes Save's
+No/Yes paths, Delete, Config and Manual returns, pause and closing-input recovery.
+Saved thumbnails, native write/error panels, conditional title-demo playback,
+backlog and full gameplay remain under implementation; menu-to-Load/Title and
+gallery/EXIT device journeys still need coverage.
 See [Gerokasu2 status and evidence](gerokasu2/STATUS.md).
 
 ![screenshot.png](screenshot.png)

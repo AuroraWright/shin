@@ -5563,6 +5563,7 @@ dependencies = [
  "shin-video",
  "shin-window",
  "smallvec",
+ "toml 1.1.8+spec-1.1.0",
  "tracing",
  "wgpu 30.0.1",
  "winit",
