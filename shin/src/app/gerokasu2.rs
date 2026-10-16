@@ -117,7 +117,7 @@ pub(crate) struct GerHost {
     chapter: Option<chapter_skip::ChapterQuestion>,
     /// Indicators, navi toolbar and event hint (`/adv.txa`).
     root: crate::adv::gerokasu2::root_ui::RootUi,
-    root_atlas: Arc<crate::adv::character_view::CharacterTextures>,
+    root_atlas: Arc<crate::adv::characters::view::CharacterTextures>,
     touch: root_touch::Touch,
     /// Contact-requested openings, dispatched by the app's menu gates.
     pub request: Option<root_touch::Request>,
@@ -554,7 +554,7 @@ pub struct Gerokasu2App {
     /// Config's touch-effect row (settings v17, as in Umineko).
     touch_effect: super::touch_effect::TouchEffect,
     touch_background: Option<shin_render::render_texture::RenderTexture>,
-    system_textures: Option<Arc<crate::adv::character_view::CharacterTextures>>,
+    system_textures: Option<Arc<crate::adv::characters::view::CharacterTextures>>,
 }
 impl Drop for Gerokasu2App {
     fn drop(&mut self) {

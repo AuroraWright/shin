@@ -199,7 +199,7 @@ impl SceneHost {
     }
     pub(super) fn system_textures(
         &self,
-    ) -> Option<&Arc<crate::adv::character_view::CharacterTextures>> {
+    ) -> Option<&Arc<crate::adv::characters::view::CharacterTextures>> {
         self.common.as_ref().map(|common| &common._system)
     }
     pub(super) fn run_in_background(&self) -> bool {

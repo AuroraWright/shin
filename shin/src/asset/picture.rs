@@ -142,15 +142,12 @@ pub(super) fn vertex_data(block: &PicBlock) -> (Vec<PosTexVertex>, Vec<u16>) {
 }
 
 #[cfg(test)]
-#[path = "picture_native_load_tests.rs"]
 mod native_load_tests;
 
 #[cfg(test)]
-#[path = "picture_cache_tests.rs"]
 mod cache_tests;
 
 #[cfg(test)]
-#[path = "picture_header_tests.rs"]
 mod header_tests;
 
 #[derive(Copy, Clone)]

@@ -24,7 +24,7 @@ fn reference_startup_storage_failure_without_dialog_artwork() {
     super::storage_read_reference::run_startup_storage_failure(true);
 }
 
-pub(super) use crate::adv::storage_notice_failure_reference::assert_notice_pixels;
+pub(super) use crate::adv::reference_tests::storage_notice_failure::assert_notice_pixels;
 
 #[test]
 #[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary saves/assets only"]
@@ -128,5 +128,5 @@ fn reference_adv_storage_failure_without_dialog_artwork() {
         dynamic_buffer: &mut dynamic,
         encoder: &mut encoder,
     };
-    crate::adv::storage_notice_failure_reference::verify(&server, &assets, &mut ctx, &target);
+    crate::adv::reference_tests::storage_notice_failure::verify(&server, &assets, &mut ctx, &target);
 }

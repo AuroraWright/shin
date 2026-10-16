@@ -1,113 +1,43 @@
 //! Native title scene10a870 saved-progression snapshot and authored menu setup.
 //! Owns setup, animation, input, assets and drawing for the app scene host.
 use shin_core::format::save::SaveData;
-#[allow(dead_code)]
-mod bustup_catalog;
-#[allow(dead_code)]
-mod bustup_input;
-#[allow(dead_code)]
-mod bustup_menu;
-#[cfg(test)]
-mod bustup_render_reference;
-#[allow(dead_code)]
-mod bustup_resources;
-mod bustup_scene;
-#[allow(dead_code)]
-mod bustup_view;
-#[allow(dead_code)]
-mod bustup_viewer;
-pub(crate) use bustup_scene::BustupScene;
+pub(crate) use bustup::scene::BustupScene;
 mod captured_scene;
 #[allow(dead_code)]
 mod cg_gallery;
-#[allow(dead_code)]
-mod cg_gallery_input;
-#[cfg(test)]
-mod cg_gallery_render_reference;
-mod cg_gallery_scene;
-#[allow(dead_code)]
-mod cg_gallery_text;
-#[cfg(test)]
-mod gallery_completion_reference;
-pub(crate) use cg_gallery_scene::CgGalleryScene;
-#[allow(dead_code)]
-mod cg_gallery_view;
+pub(crate) use cg_gallery::scene::CgGalleryScene;
 #[allow(dead_code)]
 mod cg_viewer;
-#[allow(dead_code)]
-mod cg_viewer_input;
-#[allow(dead_code)]
-mod cg_viewer_motion;
-#[allow(dead_code)]
-mod cg_viewer_scene;
-#[allow(dead_code)]
-mod cg_viewer_view;
 mod child;
 mod episode_chooser;
-mod episode_chooser_scene;
-mod episode_chooser_view;
 mod episode_transition;
-mod episode_transition_backdrop;
-mod episode_transition_scene;
-pub(crate) use episode_transition_scene::EpisodeScene;
-mod episode_transition_view;
+pub(crate) use episode_transition::scene::EpisodeScene;
 mod input;
 mod motion;
 // Native MovieMode retains its gallery beneath independently owned movie children.
 #[allow(dead_code)]
 mod movie_gallery;
 #[allow(dead_code)]
-mod movie_gallery_input;
-mod movie_gallery_scene;
-mod movie_gallery_text;
-#[allow(dead_code)]
-mod movie_gallery_view;
-#[allow(dead_code)]
 mod movie_playback;
-#[allow(dead_code)]
-mod movie_playback_scene;
-pub(crate) use movie_gallery_scene::MovieGalleryScene;
+pub(crate) use movie_gallery::scene::MovieGalleryScene;
 // Native MusicMode replaces Title and retains global audio/save ownership.
 #[allow(dead_code)]
 mod music_gallery;
-#[allow(dead_code)]
-mod music_gallery_audio;
-#[allow(dead_code)]
-mod music_gallery_input;
-mod music_gallery_scene;
-#[allow(dead_code)]
-mod music_gallery_text;
-#[allow(dead_code)]
-mod music_gallery_view;
-pub(crate) use music_gallery_scene::MusicGalleryScene;
+pub(crate) use music_gallery::scene::MusicGalleryScene;
 #[cfg(test)]
-mod pending_save_reference;
-#[cfg(test)]
-mod render_reference;
-#[cfg(test)]
-pub(crate) use pending_save_reference::reference_pending_config_save;
+pub(crate) use reference_tests::pending_save::reference_pending_config_save;
 mod scenario_select;
-mod scenario_select_details;
-#[cfg(test)]
-mod scenario_select_frame_reference;
-mod scenario_select_input;
-mod scenario_select_opening;
-#[cfg(test)]
-mod scenario_select_render_reference;
-mod scenario_select_scene;
-mod scenario_select_selection;
-pub(crate) use scenario_select_scene::{ScenarioDestination, ScenarioSelectScene};
-#[cfg(test)]
-mod scenario_select_tab_reference;
-mod scenario_select_view;
+pub(crate) use scenario_select::scene::{ScenarioDestination, ScenarioSelectScene};
 mod scene;
 mod title_demo;
-mod title_demo_scene;
 #[cfg(test)]
 pub(crate) use motion::Phase as TitlePhase;
 pub(crate) use scene::TitleScene;
-pub(crate) use title_demo_scene::TitleDemoScene;
+pub(crate) use title_demo::scene::TitleDemoScene;
 mod view;
+mod bustup;
+#[cfg(test)]
+mod reference_tests;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -562,8 +492,4 @@ mod tests {
     }
 }
 
-#[cfg(test)]
-mod scenario_unlock_reference;
 
-#[cfg(test)]
-mod unlocked_save_reference;

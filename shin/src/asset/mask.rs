@@ -202,7 +202,6 @@ fn load_vertices(
 }
 
 #[cfg(test)]
-#[path = "mask_native_load_tests.rs"]
 mod native_load_tests;
 
 impl Asset for MaskTexture {

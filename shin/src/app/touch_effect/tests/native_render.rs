@@ -1,3 +1,6 @@
+use super::*;
+use super::native_particles::check_native_touch_star_packets;
+
 #[test]
 #[ignore = "requires supplied ROM and Metal; no audio is opened"]
 fn reference_touch_effect_native_art_and_mouse_render() {

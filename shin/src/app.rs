@@ -207,7 +207,7 @@ pub struct App {
     character_scroll_axis: f32,
     touch_effect: touch_effect::TouchEffect,
     touch_background: Option<shin_render::render_texture::RenderTexture>,
-    system_textures: Option<Arc<crate::adv::character_view::CharacterTextures>>,
+    system_textures: Option<Arc<crate::adv::characters::view::CharacterTextures>>,
 }
 
 impl App {

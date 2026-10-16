@@ -4,7 +4,7 @@ use crate::{
     adv::{
         GlobalData, SaveRecovery,
         assets::{AdvAssets, AdvFonts},
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         storage_retry_dialog::StorageRetryDialog,
     },
     asset::{effects::EffectsAtlasBorrow, system::AssetServer},

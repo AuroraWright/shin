@@ -1,3 +1,5 @@
+use super::*;
+
 // Exact native particle records for prepared drag/release callbacks and clocks.
 // The native input-area dispatch/platform frame clock is supplied by the host.
 use std::{
@@ -154,7 +156,7 @@ fn reference_native_touch_particle_records() {
     std::fs::remove_file(binary).unwrap();
 }
 
-fn check_native_touch_star_packets(
+pub(super) fn check_native_touch_star_packets(
     ctx: &mut crate::render::PreRenderContext,
     target: &wgpu::Texture,
     view: &wgpu::TextureView,

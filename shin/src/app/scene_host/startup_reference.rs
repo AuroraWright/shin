@@ -1762,7 +1762,7 @@ fn reference_title_load_thumbnail_size_and_mouse_confirmation() {
         save.settings.v0_bgmvol = 0;
         save.settings.v3_sysvol = 0;
         save.manual_save_slots[0] = Some(shin_core::format::save::GameData::from_entry(
-            crate::adv::save_menu_screen::reference_authored_thumbnail_entry(&assets.scenario),
+            crate::adv::save_menu::screen::reference_authored_thumbnail_entry(&assets.scenario),
         ));
         let globals = GlobalData::open(None, Some(save)).unwrap();
         let mut title = TitleScene::new(server.clone(), TitleSetup::from_save(globals.save(), 0));

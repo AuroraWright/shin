@@ -306,8 +306,8 @@ mod tests {
     #[test]
     fn localization_reference_templates_parse_as_unchanged_defaults() {
         for source in [
-            include_str!("../../../localization/higurashi.localized.toml.example"),
-            include_str!("../../../localization/umineko.localized.toml.example"),
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../localization/higurashi.localized.toml.example")),
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../localization/umineko.localized.toml.example")),
         ] {
             let table = TextOverrides::parse(source).unwrap();
             assert!(table.exact.is_empty());

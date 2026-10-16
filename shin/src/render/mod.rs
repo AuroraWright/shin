@@ -13,6 +13,8 @@ use shin_render::{
 };
 use winit::dpi::PhysicalSize;
 
+#[cfg(test)]
+pub(crate) mod native_gpu_state;
 #[expect(unused)]
 pub mod overlay;
 pub mod render_texture_holder;
@@ -44,6 +46,17 @@ pub fn top_left_projection_matrix() -> Mat4 {
         1.0,
     )
 }
+
+/// Original OpenGL-convention 1920x1080 UI projection: top-left origin, Y down
+/// and an untranslated Z column that keeps its negative zero. Unlike
+/// [`top_left_projection_matrix`] it does not remap depth for wgpu.
+#[rustfmt::skip]
+pub const NATIVE_UI_PROJECTION: Mat4 = Mat4::from_cols_array(&[
+    2.0 / 1920.0, 0.0, 0.0, 0.0,
+    0.0, -2.0 / 1080.0, 0.0, 0.0,
+    0.0, 0.0, -1.0, 0.0,
+    -1.0, 1.0, -0.0, 1.0,
+]);
 
 pub fn normalized_projection_matrix() -> Mat4 {
     shin_orthographic_projection_matrix(0.0, 1.0, 1.0, 0.0, -1.0, 1.0)
@@ -111,5 +124,20 @@ impl PreRenderContext<'_, '_, '_, '_> {
             label,
             true,
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn native_ui_projection_is_the_original_orthographic_matrix() {
+        let original =
+            glam::camera::rh::proj::opengl::orthographic(0.0, 1920.0, 1080.0, 0.0, -1.0, 1.0);
+        assert_eq!(
+            NATIVE_UI_PROJECTION.to_cols_array().map(f32::to_bits),
+            original.to_cols_array().map(f32::to_bits)
+        );
     }
 }

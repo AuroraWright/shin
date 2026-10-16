@@ -11,7 +11,7 @@ pub(crate) fn reference_live_bustup_roundtrip<'a>(
     target: &wgpu::Texture,
     view: &wgpu::TextureView,
 ) {
-    use crate::{adv::character_view::CharacterTextures, layer::message_layer::MessageboxTextures};
+    use crate::{adv::characters::view::CharacterTextures, layer::message_layer::MessageboxTextures};
     use shin_core::format::{save::SaveData, scenario::Scenario, sysse::SysSe};
     let scenario: Arc<Scenario> = server.load_sync("/main.snr").unwrap();
     let common = Arc::new(CommonAssets {
