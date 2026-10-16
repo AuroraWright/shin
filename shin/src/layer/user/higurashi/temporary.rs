@@ -2,7 +2,7 @@
 //! of inherited65-property clocks; opening/input owners poll before scene ticks.
 use crate::{
     adv::{
-        character_view::CharacterTextures,
+        characters::view::CharacterTextures,
         higurashi::{
             character_selection::view::View as CharacterView,
             input::{Buttons, OverlayInput},

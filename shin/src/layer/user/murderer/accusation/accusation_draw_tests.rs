@@ -407,7 +407,7 @@ pub(crate) fn reference_accusation_draw(context: &mut PreRenderContext, server: 
                 layer.render(&mut pass, &case.parent, 4, PassKind::Opaque);
             }
             drop(pass);
-            super::super::TileLayer::readback_reference_texture(context, &target)
+            crate::layer::user::TileLayer::readback_reference_texture(context, &target)
         };
         let actual = draw(context, false);
         let expected = draw(context, true);

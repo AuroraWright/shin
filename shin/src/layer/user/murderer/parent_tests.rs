@@ -278,7 +278,7 @@ pub(crate) fn reference_parent_properties_and_capture(
     context: &mut crate::render::PreRenderContext,
     server: &std::sync::Arc<crate::asset::system::AssetServer>,
 ) {
-    use super::murderer_accusation::MurdererAccusationView;
+    use super::accusation::MurdererAccusationView;
     use crate::{
         layer::{DrawableLayer, Layer},
         update::AdvUpdatable,
@@ -379,7 +379,7 @@ pub(crate) fn reference_parent_properties_and_capture(
                 layer.render(&mut pass, parent, 4, kind);
             }
         }
-        super::TileLayer::readback_reference_texture(context, &target)
+        crate::layer::user::TileLayer::readback_reference_texture(context, &target)
     };
     let mut frames = 0;
     for menu in 0..7 {
@@ -509,7 +509,7 @@ pub(crate) fn reference_parent_properties_and_capture(
             property_frame
         );
     }
-    super::murderer_accusation::reference_retained_wipe_ownership(context, server);
+    super::accusation::reference_retained_wipe_ownership(context, server);
     println!(
         "Murderer native parent: {frames} real1920x1080 frames across all7menus; opaque capture/presentation, stencil, ignored properties, active transforms, frozen property clocks and retained Default/Glass transitions pass"
     );

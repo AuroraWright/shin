@@ -1,30 +1,32 @@
+use super::*;
+
 // Included in Quiz's existing render-fixture module to use its GPU host and
 // independent decoded-atlas bilinear sampler. Expected draws come from native
 // command capture, not LastModel or the production renderer's geometry.
 #[derive(Debug, Clone, Copy)]
-struct LastPassTest {
-    passes: u8, // bit0 opaque, bit1 transparent
-    initial_stencil: u8,
-    overlap: bool,
-    transform: Option<LastTransformTest>,
+pub(super) struct LastPassTest {
+    pub(super) passes: u8, // bit0 opaque, bit1 transparent
+    pub(super) initial_stencil: u8,
+    pub(super) overlap: bool,
+    pub(super) transform: Option<LastTransformTest>,
 }
 #[derive(Debug, Clone, Copy)]
-struct LastTransformTest {
-    local: TransformParams,
-    parent: TransformParams,
-    flags: crate::layer::render_params::ComposeFlags,
-    properties: Option<LastPropertyTest>,
+pub(super) struct LastTransformTest {
+    pub(super) local: TransformParams,
+    pub(super) parent: TransformParams,
+    pub(super) flags: crate::layer::render_params::ComposeFlags,
+    pub(super) properties: Option<LastPropertyTest>,
 }
 #[derive(Debug, Clone, Copy)]
-struct LastPropertyTest {
-    values: [f32; 90],
-    wobblers: [(u32, i32, f32); 6],
-    advance: Option<f32>,
-    queued: Option<(usize, f32, f32)>,
-    fast_forward: bool,
+pub(super) struct LastPropertyTest {
+    pub(super) values: [f32; 90],
+    pub(super) wobblers: [(u32, i32, f32); 6],
+    pub(super) advance: Option<f32>,
+    pub(super) queued: Option<(usize, f32, f32)>,
+    pub(super) fast_forward: bool,
 }
 
-fn render_captured_last_draws(
+pub(super) fn render_captured_last_draws(
     layer: &crate::layer::user::last_layer::LastLayerImpl,
     pass: &mut RenderPass,
     captured: &str,
@@ -33,7 +35,7 @@ fn render_captured_last_draws(
     render_captured_draw_packets(|name| layer.reference_texture(name), pass, captured, kind);
 }
 
-fn render_captured_draw_packets<'a>(
+pub(super) fn render_captured_draw_packets<'a>(
     texture: impl Fn(&str) -> &'a GpuTexture,
     pass: &mut RenderPass,
     captured: &str,

@@ -217,7 +217,7 @@ fn expected(
     }
     super::hints_draw_tests::draw_native_hints(layer, &mut pass, packets);
     drop(pass);
-    super::super::TileLayer::readback_reference_texture(context, texture)
+    crate::layer::user::TileLayer::readback_reference_texture(context, texture)
 }
 fn compare(actual: &[u8], expected: &[u8], label: &str) {
     assert_eq!(actual.len(), expected.len());

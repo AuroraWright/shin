@@ -307,10 +307,10 @@ pub(crate) fn reference_purple_draw(context: &mut PreRenderContext, server: &Arc
             path
         })
         .collect();
-    let texts: Vec<_> = super::super::purple_text::CHAPTERS
+    let texts: Vec<_> = crate::layer::user::purple_text::CHAPTERS
         .iter()
         .map(|entry| entry.text)
-        .chain(super::super::purple_text::PERSON_TEXT)
+        .chain(crate::layer::user::purple_text::PERSON_TEXT)
         .collect();
     let font_input: String = texts
         .iter()
@@ -403,7 +403,7 @@ pub(crate) fn reference_purple_draw(context: &mut PreRenderContext, server: &Arc
         for chapter in [true, false] {
             for index in 0..if chapter { 29 } else { 17 } {
                 if chapter
-                    && super::super::purple_text::CHAPTERS[index]
+                    && crate::layer::user::purple_text::CHAPTERS[index]
                         .heading()
                         .is_some()
                 {
@@ -582,7 +582,7 @@ pub(crate) fn reference_purple_draw(context: &mut PreRenderContext, server: &Arc
                 layer.render(&mut pass, &case.parent, 4, PassKind::Opaque);
             }
             drop(pass);
-            super::super::TileLayer::readback_reference_texture(context, &target)
+            crate::layer::user::TileLayer::readback_reference_texture(context, &target)
         };
         let actual = draw(context, false);
         let expected = draw(context, true);
@@ -613,7 +613,7 @@ pub(crate) fn reference_purple_draw(context: &mut PreRenderContext, server: &Arc
             pass.clear(Some(UnormColor::BLACK), Some(0), Some(1.));
             native_frame(&layer, &mut pass, &without_text, &glyphs, case);
             drop(pass);
-            let baseline = super::super::TileLayer::readback_reference_texture(context, &target);
+            let baseline = crate::layer::user::TileLayer::readback_reference_texture(context, &target);
             let mut changed_inside = 0;
             for (pixel, (actual, baseline)) in actual
                 .chunks_exact(4)

@@ -124,8 +124,8 @@ fn probe_draw(tile: &Tile, p: &HigurashiProperties) -> Draw {
             .flat_map(|v| {
                 // Original program1 consumes BGRA and swizzles in_COLOR0.zyxw;
                 // the shared production vertex stores RGBA instead.
-                let rgba=v.color.0;
-                let bgra=(rgba & 0xff00ff00) | ((rgba & 255)<<16) | ((rgba>>16)&255);
+                let rgba = v.color.0;
+                let bgra = (rgba & 0xff00ff00) | ((rgba & 255) << 16) | ((rgba >> 16) & 255);
                 [
                     v.position.x.to_bits(),
                     v.position.y.to_bits(),
@@ -143,7 +143,7 @@ fn probe_draw(tile: &Tile, p: &HigurashiProperties) -> Draw {
 #[ignore = "actual Focus/Blur/controlled-empty Sakura clip call sites, independent original mask/material GLSL at720p/1080p; no audio/windows/saves"]
 fn higurashi_animation_and_blur_clip_call_sites_match_original_shader_transport() {
     let (device, queue, server) = reference_gpu_assets();
-    let atlas: std::sync::Arc<crate::adv::character_view::CharacterTextures> =
+    let atlas: std::sync::Arc<crate::adv::characters::view::CharacterTextures> =
         server.load_sync("/effects.txa").unwrap();
     let endpoints = [
         [0., 0., 1280., 720.],

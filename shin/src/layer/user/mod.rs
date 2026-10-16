@@ -50,12 +50,8 @@ mod plain_owner_tests;
 mod resource_clone_tests;
 #[cfg(test)]
 pub(crate) use movie_layer::{ReferencePreparationGate, reference_preparation_gate};
-pub mod murderer_accusation;
-pub mod murderer_model;
 #[cfg(test)]
-mod murderer_parent_tests;
-#[cfg(test)]
-pub(crate) use murderer_parent_tests::reference_parent_properties_and_capture;
+pub(crate) use murderer::parent_tests::reference_parent_properties_and_capture;
 mod null_layer;
 mod picture_layer;
 #[cfg(test)]
@@ -91,6 +87,7 @@ pub(crate) use sakura_layer::{PreparedSakuraLayer, SakuraLayer};
 #[cfg(test)]
 pub(crate) use sakura_particles::{SakuraArithmetic, SakuraParticles};
 mod tile_layer;
+pub mod murderer;
 
 pub use self::{
     bustup_layer::BustupLayer, movie_layer::MovieLayer, null_layer::NullLayer,
@@ -106,7 +103,7 @@ pub(crate) enum PreparedUserLayer {
     Animation(sakura_layer::PreparedSakuraLayer),
     Quiz(Arc<quiz_layer::QuizTextures>, i32),
     Cake(Arc<cake_layer::CakeTextures>),
-    Murderer(murderer_accusation::PreparedMurdererLayer),
+    Murderer(murderer::accusation::PreparedMurdererLayer),
     Last(Arc<last_layer::LastTextures>),
     InvalidInteractive(i32),
     InvalidAnimation(i32),
@@ -160,7 +157,7 @@ pub enum UserLayer {
     #[derivative(Debug = "transparent")]
     Cake(#[render_clone(needs_render)] cake_layer::CakeLayer),
     #[derivative(Debug = "transparent")]
-    Murderer(#[render_clone(needs_render)] murderer_accusation::MurdererAccusationView),
+    Murderer(#[render_clone(needs_render)] murderer::accusation::MurdererAccusationView),
     #[derivative(Debug = "transparent")]
     Rain(#[render_clone(needs_render)] rain_layer::RainLayer),
     #[derivative(Debug = "transparent")]
@@ -194,7 +191,7 @@ impl<T> InteractiveView<'_, T> {
 pub enum InteractiveLayerRef<'a> {
     Quiz(InteractiveView<'a, quiz_layer::QuizLayer>),
     Cake(InteractiveView<'a, cake_layer::CakeLayer>),
-    Murderer(InteractiveView<'a, murderer_accusation::MurdererAccusationView>),
+    Murderer(InteractiveView<'a, murderer::accusation::MurdererAccusationView>),
     Last(InteractiveView<'a, last_layer::LastLayer>),
 }
 impl InteractiveLayerRef<'static> {
@@ -419,7 +416,7 @@ impl UserLayer {
                     0 => PreparedUserLayer::Quiz(asset_server.load("/quiz.txa").await?, mask),
                     1 => PreparedUserLayer::Cake(asset_server.load("/cake.txa").await?),
                     2 => PreparedUserLayer::Murderer(
-                        murderer_accusation::MurdererAccusationView::prepare(asset_server, mask)
+                        murderer::accusation::MurdererAccusationView::prepare(asset_server, mask)
                             .await,
                     ),
                     3 => PreparedUserLayer::Last(asset_server.load("/last.txa").await?),
@@ -624,7 +621,7 @@ impl UserLayer {
                 match kind {
                     0 => quiz_layer::QuizLayer::load(asset_server, mask).await.into(),
                     1 => cake_layer::CakeLayer::load(asset_server).await.into(),
-                    2 => murderer_accusation::MurdererAccusationView::load_menu(asset_server, mask)
+                    2 => murderer::accusation::MurdererAccusationView::load_menu(asset_server, mask)
                         .await
                         .into(),
                     3 => last_layer::LastLayer::load(asset_server).await.into(),

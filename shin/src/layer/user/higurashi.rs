@@ -344,10 +344,20 @@ impl HigurashiUserLayer {
                 let clip = leaf_clip::Clip::from_endpoints(endpoints);
                 if clip.active() {
                     let gamma = tile_gamma::ActiveClip::new(tile, &drawable, endpoints)?;
-                    gamma.render(pass, transform.compute_tile_transform(), stencil_ref, pass_kind);
+                    gamma.render(
+                        pass,
+                        transform.compute_tile_transform(),
+                        stencil_ref,
+                        pass_kind,
+                    );
                 } else {
                     let gamma = tile_gamma::NoMask::new(tile, &drawable, endpoints, clip)?;
-                    gamma.render(pass, transform.compute_tile_transform(), stencil_ref, pass_kind);
+                    gamma.render(
+                        pass,
+                        transform.compute_tile_transform(),
+                        stencil_ref,
+                        pass_kind,
+                    );
                 }
                 return Ok(());
             }
@@ -423,7 +433,6 @@ impl HigurashiUserLayer {
         Ok(())
     }
 
-
     #[cfg(test)]
     pub async fn load(
         asset_server: &AssetServer,
@@ -458,10 +467,14 @@ impl HigurashiUserLayer {
                 ))
             }
             LayerType::Picture => {
-                let info = scenario
-                    .picture_info
-                    .get(usize::try_from(params.0).context("Negative Higurashi picture ID")?)
-                    .context("Higurashi picture ID outside metadata")?;
+                // Native 20df0 constructs the Null layer (6fafc) when bc3d4 finds no record,
+                // including negative IDs; Origin Tsumihoroboshi requests IDs past the table.
+                let Some(info) = usize::try_from(params.0)
+                    .ok()
+                    .and_then(|id| scenario.picture_info.get(id))
+                else {
+                    return Ok(Self::null(seeds));
+                };
                 let name = selected_asset_name(info.name.as_str(), setting);
                 let picture = asset_server
                     .load::<Picture, _>(format!("/picture/{name}.pic"))
@@ -469,10 +482,13 @@ impl HigurashiUserLayer {
                 Ok(Self::picture(picture, Some(name), seeds))
             }
             LayerType::Bustup => {
-                let info = scenario
-                    .bustup_info
-                    .get(usize::try_from(params.0).context("Negative Higurashi bustup ID")?)
-                    .context("Higurashi bustup ID outside metadata")?;
+                // Native bc3fc misses fall back to the same Null layer.
+                let Some(info) = usize::try_from(params.0)
+                    .ok()
+                    .and_then(|id| scenario.bustup_info.get(id))
+                else {
+                    return Ok(Self::null(seeds));
+                };
                 let name = selected_asset_name(info.name.as_str(), setting);
                 let bustup = asset_server
                     .load_with_args::<HigurashiBustup, _>(

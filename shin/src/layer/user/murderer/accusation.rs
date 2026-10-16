@@ -1,5 +1,5 @@
 //! Native mode-2 menus, purple transcript browsers, and accusation view.
-use super::murderer_model::{
+use super::model::{
     BACK_RECT, FIRST_SUSPECT_ENTRY, MurdererMenu, MurdererModel, MurdererWipeKind, SUBMIT_ENTRY,
     accusation_rect, replay_rect, top_menu_rect,
 };
@@ -207,9 +207,9 @@ impl MurdererTextures {
 pub struct MurdererAccusationImpl {
     textures: Arc<MurdererTextures>,
     model: Arc<Mutex<MurdererModel>>,
-    pages: Arc<super::purple_view::PurplePages>,
-    silhouettes: Arc<Vec<Option<Arc<crate::adv::character_view::CharacterTextures>>>>,
-    adv_textures: Arc<crate::adv::character_view::CharacterTextures>,
+    pages: Arc<crate::layer::user::purple_view::PurplePages>,
+    silhouettes: Arc<Vec<Option<Arc<crate::adv::characters::view::CharacterTextures>>>>,
+    adv_textures: Arc<crate::adv::characters::view::CharacterTextures>,
     transition: Arc<parking_lot::Mutex<MurdererTransitionRenderer>>,
 }
 #[derive(Debug, RenderClone)]
@@ -254,9 +254,9 @@ impl std::fmt::Debug for MurdererAccusationImpl {
 pub type MurdererAccusationView = NewDrawableLayerWrapper<MurdererAccusationImpl>;
 pub(crate) struct PreparedMurdererLayer {
     textures: Arc<MurdererTextures>,
-    pages: Arc<super::purple_view::PurplePages>,
-    silhouettes: Arc<Vec<Option<Arc<crate::adv::character_view::CharacterTextures>>>>,
-    adv_textures: Arc<crate::adv::character_view::CharacterTextures>,
+    pages: Arc<crate::layer::user::purple_view::PurplePages>,
+    silhouettes: Arc<Vec<Option<Arc<crate::adv::characters::view::CharacterTextures>>>>,
+    adv_textures: Arc<crate::adv::characters::view::CharacterTextures>,
     hint_progress: i32,
 }
 impl PreparedMurdererLayer {
@@ -368,7 +368,7 @@ impl MurdererAccusationView {
                 .await
                 .expect("Failed to load murderer textures"),
             hint_progress,
-            pages: super::purple_view::PurplePages::load(server).await,
+            pages: crate::layer::user::purple_view::PurplePages::load(server).await,
         }
     }
     #[cfg(test)]
@@ -381,7 +381,7 @@ impl MurdererAccusationView {
         )
     }
     #[cfg(test)]
-    pub(crate) fn reference_menu_state(&self) -> (super::murderer_model::MurdererMenu, bool) {
+    pub(crate) fn reference_menu_state(&self) -> (super::model::MurdererMenu, bool) {
         let inner = self.inner_ref();
         let model = inner.model.lock().unwrap();
         (model.menu, model.menu_input_busy())
@@ -405,7 +405,7 @@ impl MurdererAccusationView {
             .map(|wipe| (wipe.serial, wipe.elapsed, wipe.duration))
     }
     #[cfg(test)]
-    pub(crate) fn reference_wipe_kind(&self) -> Option<super::murderer_model::MurdererWipeKind> {
+    pub(crate) fn reference_wipe_kind(&self) -> Option<super::model::MurdererWipeKind> {
         self.inner_ref()
             .model
             .lock()
@@ -589,7 +589,7 @@ fn capture_pixels(context: &mut PreRenderContext, capture: &RenderTextureHolder)
                 TransformParams::default().compute_final_transform(),
             );
     }
-    super::TileLayer::readback_reference_texture(context, &texture)
+    crate::layer::user::TileLayer::readback_reference_texture(context, &texture)
 }
 
 /// Exercise native retained ownership while real menu captures are allocated.
@@ -628,7 +628,7 @@ pub(crate) fn reference_fast_forward(context: &mut PreRenderContext, server: &Ar
                 layer.render(&mut pass, &TransformParams::default(), 1, kind);
             }
         }
-        super::TileLayer::readback_reference_texture(context, &target)
+        crate::layer::user::TileLayer::readback_reference_texture(context, &target)
     };
     for kind in 0..7 {
         let mut actual = shin_tasks::block_on(MurdererAccusationView::load_menu(server, 20));
@@ -1161,80 +1161,66 @@ impl AdvUpdatable for MurdererAccusationImpl {
 }
 
 #[cfg(test)]
-#[path = "murderer_rule_draw_tests.rs"]
 mod rule_draw_tests;
 #[cfg(test)]
 pub(crate) use rule_draw_tests::reference_rule_draw;
 
-#[path = "murderer_rule.rs"]
 mod rule;
 
 #[cfg(test)]
-#[path = "murderer_top_draw_tests.rs"]
 mod top_draw_tests;
 #[cfg(test)]
 pub(crate) use top_draw_tests::reference_top_draw;
 
-#[path = "murderer_top.rs"]
 mod top;
 
 #[cfg(test)]
-#[path = "murderer_replay_draw_tests.rs"]
 mod replay_draw_tests;
 #[cfg(test)]
 pub(crate) use replay_draw_tests::reference_replay_draw;
 
-#[path = "murderer_replay.rs"]
 mod replay;
 
 #[cfg(test)]
-#[path = "murderer_hints_draw_tests.rs"]
 mod hints_draw_tests;
 #[cfg(test)]
 pub(crate) use hints_draw_tests::reference_hints_draw;
 
-#[path = "murderer_hints.rs"]
 mod hints;
 
-#[path = "murderer_capture.rs"]
 mod capture;
 
 #[cfg(test)]
-#[path = "murderer_capture_tests.rs"]
 mod capture_tests;
 #[cfg(test)]
 pub(crate) use capture_tests::reference_capture_lifecycle;
 
 #[cfg(test)]
-#[path = "murderer_purple_draw_tests.rs"]
 mod purple_draw_tests;
 #[cfg(test)]
 pub(crate) use purple_draw_tests::reference_purple_draw;
 
-#[path = "murderer_purple.rs"]
 mod purple;
 
 #[cfg(test)]
-#[path = "murderer_accusation_draw_tests.rs"]
 mod accusation_draw_tests;
 #[cfg(test)]
 pub(crate) use accusation_draw_tests::reference_accusation_draw;
 
-#[path = "murderer_select.rs"]
 mod select;
 
 // Owned interactive views dispatch through the same actual layer.
-impl super::InteractiveView<'_, MurdererAccusationView> {
+impl crate::layer::user::InteractiveView<'_, MurdererAccusationView> {
     #[cfg(test)]
     pub(crate) fn reference_controller_state(&self) -> (usize, usize, i32) {
         self.with(|layer| layer.reference_controller_state())
     }
     #[cfg(test)]
-    pub(crate) fn reference_menu_state(&self) -> (super::murderer_model::MurdererMenu, bool) {
+    pub(crate) fn reference_menu_state(&self) -> (super::model::MurdererMenu, bool) {
         self.with(|layer| layer.reference_menu_state())
     }
     #[cfg(test)]
-    pub(crate) fn reference_wipe_kind(&self) -> Option<super::murderer_model::MurdererWipeKind> {
+    pub(crate) fn reference_wipe_kind(&self) -> Option<super::model::MurdererWipeKind> {
         self.with(|layer| layer.reference_wipe_kind())
     }
     #[cfg(test)]

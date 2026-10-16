@@ -107,7 +107,7 @@ impl MurdererAccusationImpl {
                 .with_color(UnormColor::from_rgba(255, 255, 255, 128))
                 .fill(pass, mask, matrix);
             let origin = model.purple_list_scroll - 180.;
-            for entry in super::super::purple_text::CHAPTERS
+            for entry in crate::layer::user::purple_text::CHAPTERS
                 .iter()
                 .filter(|entry| entry.heading().is_none())
             {
@@ -183,7 +183,7 @@ impl MurdererAccusationImpl {
                 );
             }
             for index in 0..17 {
-                let rect = super::super::murderer_model::purple_person_rect(index).unwrap();
+                let rect = crate::layer::user::murderer::model::purple_person_rect(index).unwrap();
                 quad(rect, full).render_sprite(
                     pass,
                     builder,
@@ -192,7 +192,7 @@ impl MurdererAccusationImpl {
                 );
                 quad(rect, full)
                     .with_color(
-                        if super::super::murderer_model::purple_person_is_red(index) {
+                        if crate::layer::user::murderer::model::purple_person_is_red(index) {
                             UnormColor::from_rgba(255, 15, 15, 255)
                         } else {
                             UnormColor::WHITE

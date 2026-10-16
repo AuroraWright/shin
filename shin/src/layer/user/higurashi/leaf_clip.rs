@@ -72,8 +72,8 @@ impl Clip {
 
     pub(crate) fn vertices(self) -> [PosColVertex; 4] {
         let [left, top, width, height] = self.0;
-        let right = native_add(left,width);
-        let bottom = native_add(top,height);
+        let right = native_add(left, width);
+        let bottom = native_add(top, height);
         [
             vec3(left, top, -1.0),
             vec3(right, top, -1.0),
@@ -235,8 +235,8 @@ fn projected_visible(points: [[f32; 2]; 4], viewport: [f32; 4]) -> bool {
 }
 
 #[cfg(test)]
-mod tests;
+pub(crate) mod call_site_tests;
 #[cfg(test)]
 pub(crate) mod gpu_tests;
 #[cfg(test)]
-pub(crate) mod call_site_tests;
+mod tests;

@@ -1,4 +1,4 @@
-//! Native Replay renderer packets, including native parent composition, are the
+//! Native Top renderer packets, including native parent composition, are the
 //! independent geometry/UV/color/matrix oracle for the production child.
 use super::*;
 use crate::layer::{DrawableLayer, Layer};
@@ -8,7 +8,7 @@ use std::{
     process::{Command, Stdio},
 };
 
-fn draw_native_replay(layer: &MurdererAccusationView, pass: &mut RenderPass, captured: &str) {
+fn draw_native_top(layer: &MurdererAccusationView, pass: &mut RenderPass, captured: &str) {
     use shin_render::shaders::types::{
         buffer::VertexSource,
         vertices::{PosColTexVertex, PosColVertex},
@@ -17,26 +17,19 @@ fn draw_native_replay(layer: &MurdererAccusationView, pass: &mut RenderPass, cap
     let inner = layer.inner_ref();
     for line in captured.lines().filter(|line| line.starts_with("Q ")) {
         let f: Vec<_> = line.split_whitespace().collect();
-        assert_eq!(f.len(), 71);
+        assert_eq!(f.len(), 61);
         let scalar = |i: usize| f[i].parse::<f32>().unwrap();
-        let texture_for = |name: &str| match name {
+        let texture = match f[1] {
             "different_space_2d" => &inner.textures._different_space_2d,
-            "back" => &inner.textures._back,
-            "thumb_1_s" => &inner.textures._thumb_1_s,
-            "thumb_2_s" => &inner.textures._thumb_2_s,
-            "thumb_4_s" => &inner.textures._thumb_4_s,
-            "thumb_56_s" => &inner.textures._thumb_56_s,
-            "thumb_7_s" => &inner.textures._thumb_7_s,
-            "thumb_8_s" => &inner.textures._thumb_8_s,
-            "thumb_1" => &inner.textures._thumb_1,
-            "thumb_2" => &inner.textures._thumb_2,
-            "thumb_4" => &inner.textures._thumb_4,
-            "thumb_56" => &inner.textures._thumb_56,
-            "thumb_7" => &inner.textures._thumb_7,
-            "thumb_8" => &inner.textures._thumb_8,
-            name => panic!("Unexpected native Replay texture {name}"),
+            "Ber_Body1" => &inner.textures._ber_body1,
+            "Ber_Body2" => &inner.textures._ber_body2,
+            "Ber_Body3" => &inner.textures._ber_body3,
+            "Ber_Akuwarai2" => &inner.textures._ber_akuwarai2,
+            "Ber_AkuwaraiA1" => &inner.textures._ber_akuwaraia1,
+            "plate" => &inner.textures._plate,
+            "topmenu" => &inner.textures._topmenu,
+            name => panic!("Unexpected native Top texture {name}"),
         };
-        let texture = texture_for(f[1]);
         assert_eq!(f[3], "0");
         assert_eq!(&f[54..61], &["1", "6", "1", "0", "255", "255", "2"]);
         let vertices: [PosColTexVertex; 4] = std::array::from_fn(|i| {
@@ -69,18 +62,6 @@ fn draw_native_replay(layer: &MurdererAccusationView, pass: &mut RenderPass, cap
             position: v.position,
             color: v.color,
         });
-        let blend_vertices = std::array::from_fn::<_, 4, _>(|i| {
-            shin_render::shaders::types::vertices::BlendVertex {
-                position: vertices[i].position,
-                color: vertices[i].color,
-                texture_position: vec4(
-                    vertices[i].texture_position.x,
-                    vertices[i].texture_position.y,
-                    scalar(63 + 2 * i),
-                    scalar(64 + 2 * i),
-                ),
-            }
-        });
         let program = match f[2] {
             "1" => RenderProgramWithArguments::Fill {
                 vertices: VertexSource::VertexData {
@@ -95,19 +76,6 @@ fn draw_native_replay(layer: &MurdererAccusationView, pass: &mut RenderPass, cap
                 sprite: texture.as_source(),
                 transform: matrix,
             },
-            "6" => {
-                assert_eq!(f[62], "0");
-                RenderProgramWithArguments::Blend {
-                    vertices: VertexSource::VertexData {
-                        vertices: &blend_vertices,
-                    },
-                    texture1: texture.as_source(),
-                    texture2: texture_for(f[61]).as_source(),
-                    transform: matrix,
-                    blend: vec4(scalar(44), scalar(45), scalar(46), scalar(47)),
-                    flash: vec4(scalar(48), scalar(49), scalar(50), scalar(51)),
-                }
-            }
             "5" => RenderProgramWithArguments::Button {
                 vertices: VertexSource::VertexData {
                     vertices: &vertices,
@@ -123,7 +91,7 @@ fn draw_native_replay(layer: &MurdererAccusationView, pass: &mut RenderPass, cap
     }
 }
 
-pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc<AssetServer>) {
+pub(crate) fn reference_top_draw(context: &mut PreRenderContext, server: &Arc<AssetServer>) {
     use num_traits::FromPrimitive;
     use shin_render::shaders::types::texture::TextureTargetKind;
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
@@ -135,10 +103,10 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
     } else {
         "uncompressed_executable"
     });
-    let binary = std::env::temp_dir().join(format!("shin-murderer-replay-{}", std::process::id()));
+    let binary = std::env::temp_dir().join(format!("shin-murderer-top-{}", std::process::id()));
     let result = Command::new("/usr/bin/clang")
         .args(["-O0", "-Wall", "-Wextra"])
-        .arg(root.join("reverse-engineering/native-murderer-replay-draw.c"))
+        .arg(root.join("reverse-engineering/native-murderer-top-draw.c"))
         .arg("-lm")
         .arg("-o")
         .arg(&binary)
@@ -211,60 +179,42 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
                 TransformParams::default()
             }
         };
-        let feedbacks: [([f32; 6], [f32; 6], f32); 4] = [
-            ([1., 0., 0., 0., 0., 0.], [0.; 6], 0.),
-            ([0.; 6], [0.; 6], 0.2),
-            ([1.; 6], [0.; 6], 0.7),
-            (
-                [0.125, 0.333333, 0.7, 0.999, 0.001, 0.875],
-                [0.125, 0., 0.333, 0.7, 0.999, 1.],
-                1.,
-            ),
-        ];
-        let mut states = Vec::new();
-        for (focus, flash, back) in feedbacks {
-            states.push((0u32, 0usize, 0f32, focus, flash, back));
-        }
-        for selected in 0..6 {
-            let focus = std::array::from_fn(|i| if i == selected { 1. } else { 0. });
-            let flash = std::array::from_fn(|i| if i == selected { 0.7 } else { 0. });
-            states.push((1, selected, 0., focus, flash, 0.));
-            for amount in [0., 0.001, 0.125, 0.333333, 0.7, 0.999, 1.] {
-                // Native phase2 keeps drawing the transition while its timer
-                // advances. Focus animates independently during the exit.
-                let focus = std::array::from_fn(|i| if i == selected { 1. - amount } else { 0. });
-                states.push((2, selected, amount, focus, [0.; 6], 0.));
+        for art in [false, true] {
+            for feedback in 0..5 {
+                let (focus, flash) = match feedback {
+                    0 => ([1., 0., 0., 0., 0., 0.], [0.; 6]),
+                    1 => ([0.; 6], [0.; 6]),
+                    2 => ([1.; 6], [0.; 6]),
+                    3 => ([0.2, 0.4, 0.6, 0.8, 1., 0.], [0., 0.2, 0.7, 1., 0.4, 0.5]),
+                    _ => (
+                        [0.125, 0.333333, 0.7, 0.999, 0.001, 0.875],
+                        [0.125, 0., 0.333, 0.7, 0.999, 1.],
+                    ),
+                };
+                let focus: [f32; 6] = focus;
+                let flash: [f32; 6] = flash;
+                request += &format!("{} ", u8::from(art));
+                for (f, s) in focus.into_iter().zip(flash) {
+                    request += &format!("{:x} {:x} ", f.to_bits(), s.to_bits());
+                }
+                for v in values {
+                    request += &format!("{:x} ", v.to_bits());
+                }
+                request += "11 0 0 ".repeat(6).as_str();
+                request += "0 0 ";
+                for v in parent
+                    .transform
+                    .to_cols_array()
+                    .into_iter()
+                    .chain(parent.camera_position.to_array())
+                    .chain(parent.unconditionally_inherited_translation.to_array())
+                    .chain(parent.wobble_translation.to_array())
+                {
+                    request += &format!("{:x} ", v.to_bits());
+                }
+                request += "\n";
+                cases.push((profile, art, feedback, focus, flash, values, parent));
             }
-            states.push((3, selected, 1., focus, [0.; 6], 0.));
-        }
-        for (phase, selected, amount, focus, flash, back) in states {
-            request += &format!(
-                "{phase} {selected} {:x} {:x} ",
-                back.to_bits(),
-                amount.to_bits()
-            );
-            for (f, s) in focus.into_iter().zip(flash) {
-                request += &format!("{:x} {:x} ", f.to_bits(), s.to_bits());
-            }
-            for v in values {
-                request += &format!("{:x} ", v.to_bits());
-            }
-            request += "11 0 0 ".repeat(6).as_str();
-            request += "0 0 ";
-            for v in parent
-                .transform
-                .to_cols_array()
-                .into_iter()
-                .chain(parent.camera_position.to_array())
-                .chain(parent.unconditionally_inherited_translation.to_array())
-                .chain(parent.wobble_translation.to_array())
-            {
-                request += &format!("{:x} ", v.to_bits());
-            }
-            request += "\n";
-            cases.push((
-                profile, phase, selected, amount, focus, flash, back, values, parent,
-            ));
         }
     }
     let mut child = Command::new(&binary)
@@ -289,15 +239,15 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
     assert_eq!(frames.len(), cases.len());
     std::fs::write(
         std::env::temp_dir().join(if updated {
-            "shin-murderer-replay-native-1.03.txt"
+            "shin-murderer-top-native-1.03.txt"
         } else {
-            "shin-murderer-replay-native-original.txt"
+            "shin-murderer-top-native-original.txt"
         }),
         &native,
     )
     .unwrap();
     let target = context.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("Replay native child comparison"),
+        label: Some("Top native child comparison"),
         size: wgpu::Extent3d {
             width: 1920,
             height: 1080,
@@ -312,10 +262,9 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
     });
     let view = target.create_view(&Default::default());
     let mut worst_all = 0;
-    for ((profile, phase, selected, amount, focus, flash, back, values, parent), native) in
-        cases.iter().zip(frames)
+    for ((profile, art, feedback, focus, flash, values, parent), native) in cases.iter().zip(frames)
     {
-        let packet_count = 8 + focus.iter().filter(|v| **v > 0.).count() + usize::from(*phase >= 2);
+        let packet_count = 17 + flash.iter().filter(|v| **v > 0.).count();
         assert_eq!(
             native.lines().next().unwrap(),
             format!("{packet_count} 2 2 3 1 1")
@@ -327,7 +276,7 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
         {
             let mut model = layer.inner_ref().model.lock().unwrap();
             model.wipe = None;
-            model.reference_set_replay_drawing(*phase, *selected, *amount, *focus, *flash, *back);
+            model.reference_set_top_drawing(*art, *focus, *flash);
         }
         layer.pre_render(context, parent);
         let render = |context: &mut PreRenderContext, captured: bool| {
@@ -337,16 +286,16 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
                     kind: TextureTargetKind::RenderTexture,
                 },
                 Some(context.depth_stencil),
-                "Replay native frame",
+                "Top native frame",
             );
             pass.clear(Some(UnormColor::BLACK), Some(0), Some(1.0));
             if captured {
-                draw_native_replay(&layer, &mut pass, native);
+                draw_native_top(&layer, &mut pass, native);
             } else {
                 layer.render(&mut pass, parent, 4, PassKind::Opaque);
             }
             drop(pass);
-            super::super::TileLayer::readback_reference_texture(context, &target)
+            crate::layer::user::TileLayer::readback_reference_texture(context, &target)
         };
         let actual = render(context, false);
         let expected = render(context, true);
@@ -366,17 +315,17 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
             .unwrap();
         worst_all = worst_all.max(worst);
         eprintln!(
-            "Replay profile{profile} phase{phase} row{selected} amount{amount}: {visible} visible pixels, maxRGBAerror{worst}"
+            "Top profile{profile} art{art} feedback{feedback}: {visible} visible pixels, maxRGBAerror{worst}"
         );
         assert_eq!(
             worst, 0,
-            "Replay profile{profile} phase{phase} row{selected} amount{amount}: native child frame mismatch"
+            "Top profile{profile} art{art} feedback{feedback}: native child frame mismatch"
         );
     }
-    for at in [0x8e710usize, 0x9b250, 0xc7170] {
+    for at in [0x8cd70usize, 0x9b250, 0xc6d00] {
         let mut bytes = std::fs::read(&executable).unwrap();
         bytes[256 + at - if updated { 0xa0 } else { 0 }] ^= 1;
-        let path = std::env::temp_dir().join(format!("shin-replay-mutant-{}", std::process::id()));
+        let path = std::env::temp_dir().join(format!("shin-top-mutant-{}", std::process::id()));
         std::fs::write(&path, bytes).unwrap();
         let result = Command::new(&binary).arg(&path).output().unwrap();
         assert_eq!(result.status.code(), Some(2));
@@ -384,9 +333,6 @@ pub(crate) fn reference_replay_draw(context: &mut PreRenderContext, server: &Arc
     }
     std::fs::remove_file(binary).unwrap();
     println!(
-        "Replay unchanged native constructor+child+parent:{}frames/{}packets/{}pixels,6transforms x idle/flash/transition/completed profiles, maxRGBAerror{worst_all};3whole-image mutants rejected",
-        cases.len(),
-        native.lines().filter(|line| line.starts_with("Q ")).count(),
-        cases.len() * 1920 * 1080
+        "Top unchanged native constructor+palette+child+parent:60frames/1140packets/124416000pixels,6transforms x2art x5feedback profiles, maxRGBAerror{worst_all};3whole-image mutants rejected"
     );
 }

@@ -14,7 +14,7 @@ use shin_render::{
 };
 
 use crate::{
-    adv::character_view::CharacterTextures,
+    adv::characters::view::CharacterTextures,
     asset::system::AssetServer,
     layer::{
         higurashi_properties::HigurashiProperties,

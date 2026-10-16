@@ -1,3 +1,6 @@
+use super::*;
+use super::last_render::{LastPropertyTest, render_captured_draw_packets};
+
 // Executed original/1.03 draw packets are the expected geometry, colors, UVs,
 // transforms and stencil state. The actual path uses the complete layer wrapper.
 use crate::layer::{DrawableLayer, Layer, LayerProperties};
@@ -60,7 +63,7 @@ impl PlainDrawCase {
 
 enum PlainTestLayer {
     Quiz(QuizLayer),
-    Cake(super::super::cake_layer::CakeLayer),
+    Cake(crate::layer::user::cake_layer::CakeLayer),
 }
 macro_rules! with_plain_layer {
     ($layer:expr, $view:ident, $body:expr) => {
@@ -138,7 +141,7 @@ impl PlainDrawHost {
         use shin_render::{resize::{SurfaceResizeSource, ViewportParams}, shaders::types::texture::{DepthStencilTarget, TextureTarget, TextureTargetKind},
         };
         let mut layer = if case.cake {
-            PlainTestLayer::Cake(shin_tasks::block_on(super::super::cake_layer::CakeLayer::load(&self.server),
+            PlainTestLayer::Cake(shin_tasks::block_on(crate::layer::user::cake_layer::CakeLayer::load(&self.server),
             ))
         } else {
             PlainTestLayer::Quiz(shin_tasks::block_on(QuizLayer::load(&self.server, case.mask,

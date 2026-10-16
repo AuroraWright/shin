@@ -2037,7 +2037,7 @@ impl TileLayer {
         context: &mut crate::render::PreRenderContext,
         server: &std::sync::Arc<crate::asset::system::AssetServer>,
     ) {
-        use crate::adv::character_view::CharacterTextures;
+        use crate::adv::characters::view::CharacterTextures;
         use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
         use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
         use std::{fs::File, io::Read};
@@ -2162,7 +2162,7 @@ impl TileLayer {
         context: &mut crate::render::PreRenderContext,
         server: &std::sync::Arc<crate::asset::system::AssetServer>,
     ) {
-        use crate::adv::character_view::CharacterTextures;
+        use crate::adv::characters::view::CharacterTextures;
         use shin_core::{
             format::rom::RomReader,
             primitives::{color::UnormColor, stateless_reader::StatelessFile},
@@ -2291,7 +2291,7 @@ impl TileLayer {
         server: &std::sync::Arc<crate::asset::system::AssetServer>,
         scenario: &shin_core::format::scenario::Scenario,
     ) {
-        use crate::adv::{character_view::CharacterTextures, characters::CharacterModel};
+        use crate::adv::{characters::view::CharacterTextures, characters::CharacterModel};
         use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
         use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
         use std::{fs::File, io::Read};
@@ -2509,7 +2509,7 @@ impl TileLayer {
         server: &std::sync::Arc<crate::asset::system::AssetServer>,
         scenario: &shin_core::format::scenario::Scenario,
     ) {
-        use crate::adv::{character_view::CharacterTextures, characters::CharacterModel};
+        use crate::adv::{characters::view::CharacterTextures, characters::CharacterModel};
         use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
         use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
         use shin_render::{

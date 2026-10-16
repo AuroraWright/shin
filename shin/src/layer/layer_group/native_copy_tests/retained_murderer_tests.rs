@@ -3,7 +3,7 @@
 use super::*;
 use crate::{
     asset::system::{AssetLoadContext, AssetServer, LayeredAssetIo, cache::AssetCache},
-    layer::user::murderer_accusation::{MurdererAccusationView, PreparedMurdererLayer},
+    layer::user::murderer::accusation::{MurdererAccusationView, PreparedMurdererLayer},
     wiper::DefaultWiper,
 };
 use shin_core::time::Ticks;

@@ -257,7 +257,7 @@ pub(crate) fn reference_rule_draw(context: &mut PreRenderContext, server: &Arc<A
                 layer.render(&mut pass, parent, 4, PassKind::Opaque);
             }
             drop(pass);
-            super::super::TileLayer::readback_reference_texture(context, &target)
+            crate::layer::user::TileLayer::readback_reference_texture(context, &target)
         };
         let actual = render(context, false);
         let expected = render(context, true);
