@@ -57,7 +57,10 @@ fn capture(layers: &mut Gerokasu2Layers, id: i32) -> Result<Vec<PropertyTarget>>
     })
 }
 fn property(id: i32) -> Result<LayerProperty> {
-    ensure!((0..90).contains(&id), "Invalid Gerokasu2 property {id}");
+    ensure!(
+        (0..super::layers::property_count()).contains(&id),
+        "Invalid Gerokasu2 property {id}"
+    );
     Ok(LayerProperty::from_usize(id as usize))
 }
 #[derive(Debug)]

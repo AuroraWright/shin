@@ -57,13 +57,14 @@ pub fn apply_blur(
     source: &mut RenderTexture,
     target: &mut RenderTexture,
     radius: f32,
+    radius_y: f32,
 ) {
     let (width, height) = source.dimensions();
     let half_viewport = ((width >> 1) as f32, (height >> 1) as f32);
     for (stage, scale, step) in [
         (0, 1.0, Vec4::ZERO),
         (1, 0.5, Vec4::new(radius / 1920.0, 0.0, 0.0, 0.0)),
-        (2, 0.5, Vec4::new(0.0, radius / 1080.0, 0.0, 0.0)),
+        (2, 0.5, Vec4::new(0.0, radius_y / 1080.0, 0.0, 0.0)),
         (3, 0.5, Vec4::ZERO),
     ] {
         let vertices = build_quad_vertices(|uv| PosTexVertex {

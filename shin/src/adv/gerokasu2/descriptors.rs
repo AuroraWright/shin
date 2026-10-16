@@ -43,7 +43,7 @@ pub struct Descriptors {
     pub message: MessageDescriptor,
     /// Original9F10 constructor handles LAYERCTRL−5 independently of the
     /// isolated D8xxx integer-layer helper class.
-    pub message_properties: [i32; 90],
+    pub message_properties: [i32; 91],
     /// Native2DE1: stable read status captured by the MSGSET constructor.
     pub current_was_read: u8,
     /// Native2DE0: EXITarg1==0 sets1; nonzero EXIT leaves it unchanged.
@@ -189,8 +189,8 @@ impl Descriptors {
                 params,
             } => {
                 ensure!(
-                    (0..90).contains(property_id),
-                    "Ger message property {property_id} is outside90 targets"
+                    (0..super::layers::property_count()).contains(property_id),
+                    "Ger message property {property_id} is outside 91 targets"
                 );
                 let target = &mut self.message_properties[*property_id as usize];
                 *target = if params.2 as u32 & 0x80 != 0 {

@@ -3,6 +3,7 @@ pub mod audio_commands;
 pub mod backlog;
 pub mod bustup_gallery;
 pub mod card_select;
+pub mod dash_layer;
 pub mod cg_gallery;
 pub mod checkpoints;
 pub mod config;

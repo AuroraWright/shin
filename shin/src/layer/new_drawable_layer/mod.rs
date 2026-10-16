@@ -266,6 +266,12 @@ impl NewDrawableLayerState {
         }
 
         let blur_radius = props.get_value(LayerProperty::BlurRadius) * 0.001;
+        // Gerokasu (native 6cdb8/6d2e4) blurs vertically by its own radius.
+        let blur_radius_y = if crate::cli::Game::current() == crate::cli::Game::Gerokasu {
+            props.get_value(LayerProperty::BlurRadiusY) * 0.001
+        } else {
+            blur_radius
+        };
         let prop70 = props.get_value(LayerProperty::Prop70) * 0.001;
         let mosaic_size = props.get_value(LayerProperty::MosaicSize) as i32;
         let raster_horizontal_amplitude = props.get_value(LayerProperty::RasterHorizontalAmplitude);
@@ -275,6 +281,7 @@ impl NewDrawableLayerState {
         let ghosting_alpha = props.get_value(LayerProperty::GhostingAlpha) * 0.001;
 
         if blur_radius.abs() < f32::EPSILON
+            && blur_radius_y.abs() < f32::EPSILON
             && prop70.abs() < f32::EPSILON
             && mosaic_size <= 0
             && raster_horizontal_amplitude.abs() < f32::EPSILON
@@ -308,11 +315,17 @@ impl NewDrawableLayerState {
             transform,
         );
 
-        if blur_radius.abs() >= f32::EPSILON {
+        if blur_radius.abs() >= f32::EPSILON || blur_radius_y.abs() >= f32::EPSILON {
             let target = self
                 .render_texture_target
                 .get_or_insert_with(|| context.new_render_texture("Drawable effect target".into()));
-            effect_passes::apply_blur(context, render_texture_src, target, blur_radius);
+            effect_passes::apply_blur(
+                context,
+                render_texture_src,
+                target,
+                blur_radius,
+                blur_radius_y,
+            );
         }
         if prop70.abs() >= f32::EPSILON {
             let target = self

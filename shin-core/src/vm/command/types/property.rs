@@ -130,6 +130,12 @@ pub enum LayerProperty {
 
     UnconditionallyInheritedTranslationX = 88,
     UnconditionallyInheritedTranslationY = 89,
+
+    /// Gerokasu only: native 6cdb8 reads script properties 66/67 as separate
+    /// horizontal/vertical blur radii; script 67.. otherwise shift down by one
+    /// onto the shared numbering, and this slot holds the vertical radius.
+    /// Other games never write it.
+    BlurRadiusY = 90,
 }
 
 impl LayerProperty {

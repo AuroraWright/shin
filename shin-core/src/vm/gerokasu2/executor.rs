@@ -117,6 +117,17 @@ pub enum Gerokasu2RuntimeCommand {
     },
 }
 
+/// Gerokasu has 91 layer properties: native 6cdb8 reads 66/67 as the
+/// horizontal/vertical blur radii, so every later id is one above the shared
+/// numbering. Map onto it, with the vertical radius at 90 (`BlurRadiusY`).
+pub fn gerokasu_property_id(id: i32) -> i32 {
+    match id {
+        67 => 90,
+        68..=90 => id - 1,
+        _ => id,
+    }
+}
+
 #[derive(Clone)]
 pub struct Gerokasu2Scripter {
     scenario: Arc<Gerokasu2Scenario>,
@@ -133,6 +144,13 @@ mod replay_state;
 pub use replay_state::GerReplayState;
 
 impl Gerokasu2Scripter {
+    fn property_id(&self, id: i32) -> i32 {
+        if self.scenario.dialect == crate::format::scenario::gerokasu2::Dialect::Gerokasu {
+            gerokasu_property_id(id)
+        } else {
+            id
+        }
+    }
     pub fn new(scenario: Arc<Gerokasu2Scenario>, init_value: i32, random_seed: u32) -> Self {
         let position = CodeAddress(scenario.header.code_offset);
         Self {
@@ -447,7 +465,7 @@ impl Gerokasu2Scripter {
             }),
             CompiletimeCommand::LAYERCTRL(c) => Ok(Gerokasu2RuntimeCommand::LayerCtrl {
                 layer_id: self.raw(c.layer_id),
-                property_id: self.raw(c.property_id),
+                property_id: self.property_id(self.raw(c.property_id)),
                 params: c.params.into_untyped().into_runtime_form(&self.ctx),
             }),
             CompiletimeCommand::LAYERWAIT(c) => Ok(Gerokasu2RuntimeCommand::LayerWait {
@@ -456,7 +474,7 @@ impl Gerokasu2Scripter {
                     .wait_properties
                     .0
                     .into_iter()
-                    .map(|value| self.raw(value))
+                    .map(|value| self.property_id(self.raw(value)))
                     .collect(),
             }),
             CompiletimeCommand::LAYERSELECT(c) => Ok(Gerokasu2RuntimeCommand::LayerSelect {

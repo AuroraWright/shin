@@ -1165,3 +1165,16 @@ fn gerokasu2_vm_supplied_boot_prefix_matches_native_state() {
         native.finish()
     );
 }
+
+#[test]
+fn gerokasu_property_ids_map_onto_shared_numbering() {
+    // Blur X stays, blur Y moves to the appended slot, the rest shift down.
+    assert_eq!(super::gerokasu_property_id(65), 65);
+    assert_eq!(super::gerokasu_property_id(66), 66);
+    assert_eq!(super::gerokasu_property_id(67), 90);
+    // Mosaic, rain intensity and camera X/Y/Z.
+    assert_eq!(super::gerokasu_property_id(68), 67);
+    assert_eq!(super::gerokasu_property_id(74), 73);
+    assert_eq!([86, 87, 88].map(super::gerokasu_property_id), [85, 86, 87]);
+    assert_eq!(super::gerokasu_property_id(90), 89);
+}

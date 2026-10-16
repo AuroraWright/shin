@@ -588,9 +588,11 @@ impl LayerProperties {
     pub(crate) fn reference_copy_words(&self) -> Option<Vec<u32>> {
         self.inner.cell().state.get().map(|state| {
             let data = state.lock();
+            // Native layout: the shared 90 properties (not BlurRadiusY).
             let mut words: Vec<_> = data
                 .properties
                 .values()
+                .take(90)
                 .map(|t| t.value().to_bits())
                 .collect();
             for wobbler in [
@@ -633,8 +635,11 @@ impl LayerProperties {
         advance: Option<f32>,
     ) {
         let mut data = self.inner.lock();
+        // Native oracles cover the shared 90; BlurRadiusY stays at its default.
         for (prop, tween) in &mut data.properties {
-            tween.fast_forward_to(values[prop as usize]);
+            if let Some(value) = values.get(prop as usize) {
+                tween.fast_forward_to(*value);
+            }
         }
         [
             data.wobbler_x,

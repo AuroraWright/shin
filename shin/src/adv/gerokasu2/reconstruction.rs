@@ -25,14 +25,14 @@ pub fn consume_cache_index(cache: &mut [Option<u32>], generation: u32) -> Option
 
 /// Native 986C4 sets current/target and clears each tween queue. Retain the
 /// property owner and oscillators, as the native container/publication does.
-pub fn apply_properties(properties: &mut LayerProperties, values: [i32; 90]) {
+pub fn apply_properties(properties: &mut LayerProperties, values: [i32; 91]) {
     let mut state = LayerPropertiesState::new();
     for (index, value) in values.into_iter().enumerate() {
         state.set_property(LayerProperty::from_usize(index), value);
     }
     properties.restore_values(&state);
 }
-fn special(state: &Gerokasu2Layers, layer: SpecialLayer) -> [i32; 90] {
+fn special(state: &Gerokasu2Layers, layer: SpecialLayer) -> [i32; 91] {
     std::array::from_fn(|index| state.special_property(layer, LayerProperty::from_usize(index)))
 }
 

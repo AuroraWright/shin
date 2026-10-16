@@ -13,7 +13,17 @@ pub enum Game {
     Gerokasu,
 }
 
+static CURRENT: std::sync::OnceLock<Game> = std::sync::OnceLock::new();
+
 impl Game {
+    /// Record the game chosen on the command line, for render code that has no
+    /// asset context. Unset (as in tests) reads as the default game.
+    pub fn set_current(self) {
+        let _ = CURRENT.set(self);
+    }
+    pub fn current() -> Game {
+        CURRENT.get().copied().unwrap_or_default()
+    }
     /// Gerokasu and Gerokasu2 share one engine generation and app path.
     pub fn is_gerokasu_family(self) -> bool {
         matches!(self, Game::Gerokasu | Game::Gerokasu2)

@@ -203,6 +203,8 @@ pub enum PreparedBasicDrawable {
     Procedural(super::procedural_animation::PreparedProcedural),
     Rain(crate::asset::effects::EffectsAtlasBorrow, i32, i32, i32),
     FocusLine(crate::asset::effects::EffectsAtlasBorrow, glam::Vec2),
+    /// Gerokasu Animation mode 0.
+    Dash(crate::asset::effects::EffectsAtlasBorrow),
     InvalidAnimation(i32),
 }
 impl PreparedBasicDrawable {
@@ -267,6 +269,17 @@ impl PreparedBasicDrawable {
                     Self::CardSelect(assets.load("/cardselect.txa").await?, *second)
                 }
             }
+            LayerFactoryRequest::Animation { mode }
+                if assets.context().game == crate::cli::Game::Gerokasu =>
+            {
+                // Native 7b220 -> 249f0: mode 0 is DashAnimationLayer; any
+                // other mode returns no drawable.
+                if *mode == 0 {
+                    Self::Dash(super::dash_layer::load(assets).await?)
+                } else {
+                    Self::InvalidAnimation(*mode)
+                }
+            }
             LayerFactoryRequest::Animation { mode } => {
                 match super::procedural_animation::PreparedProcedural::prepare(
                     assets,
@@ -326,6 +339,12 @@ impl PreparedBasicDrawable {
                 retained_bustup: None,
             };
         }
+        if let Self::Dash(textures) = self {
+            return BasicDrawable {
+                layer: GerDrawable::Dash(super::dash_layer::construct(textures.clone())),
+                retained_bustup: None,
+            };
+        }
         if let Self::GerokasuCardSelect(resources, mask) = self {
             return BasicDrawable {
                 layer: GerDrawable::GerokasuCard(super::card_select::gerokasu_draw::construct(
@@ -362,7 +381,10 @@ impl PreparedBasicDrawable {
             Self::InvalidAnimation(mode) => {
                 panic!("Ger Animation mode {mode} returned no drawable at publication")
             }
-            Self::CardSelect(..) | Self::GerokasuCardSelect(..) | Self::Movie(..) => {
+            Self::CardSelect(..)
+            | Self::GerokasuCardSelect(..)
+            | Self::Dash(..)
+            | Self::Movie(..) => {
                 unreachable!()
             }
         };
@@ -386,6 +408,7 @@ pub enum GerDrawable {
     Shared(UserLayer),
     Card(CardLayer),
     GerokasuCard(super::card_select::gerokasu_draw::GerokasuCardLayer),
+    Dash(super::dash_layer::DashLayer),
 }
 impl GerDrawable {
     /// The QUIZ listener of an interactive drawable.
@@ -393,7 +416,7 @@ impl GerDrawable {
         &self,
     ) -> Option<Arc<parking_lot::Mutex<dyn super::card_select::CardInteraction>>> {
         match self {
-            Self::Shared(_) => None,
+            Self::Shared(_) | Self::Dash(_) => None,
             Self::Card(card) => Some(card.inner_ref().model.clone()),
             Self::GerokasuCard(card) => Some(card.inner_ref().model.clone()),
         }
@@ -406,6 +429,7 @@ impl std::ops::Deref for GerDrawable {
             Self::Shared(v) => v,
             Self::Card(v) => v,
             Self::GerokasuCard(v) => v,
+            Self::Dash(v) => v,
         }
     }
 }
@@ -415,6 +439,7 @@ impl std::ops::DerefMut for GerDrawable {
             Self::Shared(v) => v,
             Self::Card(v) => v,
             Self::GerokasuCard(v) => v,
+            Self::Dash(v) => v,
         }
     }
 }
@@ -424,6 +449,7 @@ impl shin_render::shaders::types::RenderClone for GerDrawable {
             Self::Shared(v) => Self::Shared(v.render_clone(ctx)),
             Self::Card(v) => Self::Card(v.render_clone(ctx)),
             Self::GerokasuCard(v) => Self::GerokasuCard(v.render_clone(ctx)),
+            Self::Dash(v) => Self::Dash(v.render_clone(ctx)),
         }
     }
 }

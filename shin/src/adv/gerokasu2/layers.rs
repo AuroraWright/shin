@@ -1,5 +1,5 @@
 //! Native integer layer state before drawable loading, publication and tweens.
-//! Gerokasu2 keeps the shared 48-bank/four-plane allocator and 90 properties,
+//! Gerokasu2 keeps the shared 48-bank/four-plane allocator and 90 properties (Gerokasu 91),
 //! but selected layers use address -6. No live draw owners are created here.
 use anyhow::{Result, bail, ensure};
 use enum_map::Enum;
@@ -15,11 +15,23 @@ use crate::adv::vm_state::layers::{
     LayerOperationTarget, LayerOperationTargetList, LayerbankAllocator,
 };
 
+/// Native record words hold the shared 90 properties.
 const PROPERTIES: usize = 90;
+/// Gerokasu's vertical blur radius (`BlurRadiusY`) lives outside the words.
+const ALL_PROPERTIES: usize = 91;
+
+/// Property 90 exists only in Gerokasu (see `gerokasu_property_id`).
+pub(crate) fn property_count() -> i32 {
+    if crate::cli::Game::current() == crate::cli::Game::Gerokasu {
+        ALL_PROPERTIES as i32
+    } else {
+        PROPERTIES as i32
+    }
+}
 const RECORD_WORDS: usize = 0x1ac / 4;
 const PROPERTY_WORD: usize = 15;
 
-fn initial_values() -> [i32; PROPERTIES] {
+fn initial_values() -> [i32; ALL_PROPERTIES] {
     std::array::from_fn(|index| LayerProperty::from_usize(index).initial_value())
 }
 
@@ -38,6 +50,7 @@ pub struct LayerRecord {
     /// Full ADV banks insert this resource generation at word3. The isolated
     /// integer helper has no corresponding word and keeps its107-word layout.
     initialization_id: u32,
+    blur_y: i32,
 }
 impl LayerRecord {
     fn empty() -> Self {
@@ -46,6 +59,7 @@ impl LayerRecord {
         Self {
             words,
             initialization_id: 0,
+            blur_y: 0,
         }
     }
     pub fn kind(&self) -> i32 {
@@ -58,7 +72,10 @@ impl LayerRecord {
         self.words[2]
     }
     pub fn property(&self, property: LayerProperty) -> i32 {
-        self.words[PROPERTY_WORD + property.into_usize()]
+        match property.into_usize() {
+            index @ 0..PROPERTIES => self.words[PROPERTY_WORD + index],
+            _ => self.blur_y,
+        }
     }
     pub fn parameters(&self) -> &[i32] {
         &self.words[7..15]
@@ -92,16 +109,19 @@ impl LayerRecord {
         Self {
             words,
             initialization_id: adv[3] as u32,
+            blur_y: 0,
         }
     }
     fn reset_properties(&mut self) {
-        self.words[PROPERTY_WORD..PROPERTY_WORD + PROPERTIES].copy_from_slice(&initial_values());
+        self.words[PROPERTY_WORD..PROPERTY_WORD + PROPERTIES]
+            .copy_from_slice(&initial_values()[..PROPERTIES]);
+        self.blur_y = 0;
     }
 }
 
 #[derive(Debug, Clone)]
 struct PlaneState {
-    properties: [i32; PROPERTIES],
+    properties: [i32; ALL_PROPERTIES],
     mask: [i32; 2],
 }
 
@@ -113,9 +133,9 @@ pub struct Gerokasu2Layers {
     back_started: bool,
     loads_with_init: u32,
     next_initialization_id: u32,
-    root: [i32; PROPERTIES],
-    screen: [i32; PROPERTIES],
-    page: [i32; PROPERTIES],
+    root: [i32; ALL_PROPERTIES],
+    screen: [i32; ALL_PROPERTIES],
+    page: [i32; ALL_PROPERTIES],
     planes: [PlaneState; PLANES_COUNT],
     records: [LayerRecord; LAYERBANKS_COUNT],
 }
@@ -193,7 +213,7 @@ impl Gerokasu2Layers {
             _ => None,
         }
     }
-    fn special_values(&self, layer: SpecialLayer) -> &[i32; PROPERTIES] {
+    fn special_values(&self, layer: SpecialLayer) -> &[i32; ALL_PROPERTIES] {
         match layer {
             SpecialLayer::Root => &self.root,
             SpecialLayer::Screen => &self.screen,
@@ -201,7 +221,7 @@ impl Gerokasu2Layers {
             SpecialLayer::Plane(plane) => &self.planes[usize::from(plane.raw())].properties,
         }
     }
-    fn special_values_mut(&mut self, layer: SpecialLayer) -> &mut [i32; PROPERTIES] {
+    fn special_values_mut(&mut self, layer: SpecialLayer) -> &mut [i32; ALL_PROPERTIES] {
         match layer {
             SpecialLayer::Root => &mut self.root,
             SpecialLayer::Screen => &mut self.screen,
@@ -324,7 +344,7 @@ impl Gerokasu2Layers {
         flags: i32,
     ) -> Result<LayerOperationTargetList> {
         ensure!(
-            (0..PROPERTIES as i32).contains(&property),
+            (0..property_count()).contains(&property),
             "Invalid Gerokasu2 property {property}"
         );
         let index = property as usize;
@@ -341,9 +361,12 @@ impl Gerokasu2Layers {
         }
         let targets = self.targets(id)?;
         for target in &targets {
-            apply(
-                &mut self.records[usize::from(target.layerbank.raw())].words[PROPERTY_WORD + index],
-            );
+            let record = &mut self.records[usize::from(target.layerbank.raw())];
+            apply(if index < PROPERTIES {
+                &mut record.words[PROPERTY_WORD + index]
+            } else {
+                &mut record.blur_y
+            });
         }
         Ok(targets)
     }

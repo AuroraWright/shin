@@ -40,6 +40,7 @@ fn run(window_probe: bool) -> anyhow::Result<()> {
     #[cfg(not(feature = "higurashi-window-probe"))]
     assert!(!window_probe, "The window probe requires its Cargo feature");
     let mut cli = cli::Cli::parse();
+    cli.game.set_current();
 
     if cli.inspect_assets {
         return game_inspection::inspect(&cli);

@@ -23,7 +23,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-fn values(state: &Gerokasu2Layers, special: SpecialLayer) -> [i32; 90] {
+fn values(state: &Gerokasu2Layers, special: SpecialLayer) -> [i32; 91] {
     std::array::from_fn(|index| state.special_property(special, LayerProperty::from_usize(index)))
 }
 
