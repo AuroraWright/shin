@@ -1,4 +1,20 @@
 //! Saved-route message browser data (native MessageBrowser::LogBuilder).
+mod collection;
+mod decoration;
+mod feedback;
+pub(super) mod gesture;
+mod help;
+pub(super) mod jump;
+mod jump_pointer;
+mod jump_view;
+pub(super) mod modal;
+mod model;
+mod pointer;
+pub(super) mod rollback;
+pub(super) mod screen;
+mod text;
+mod view;
+pub(super) mod voice;
 use anyhow::{Result, bail};
 use shin_core::{
     format::{
@@ -139,7 +155,7 @@ fn strip_choice_prefix(text: &str) -> &str {
 }
 
 #[cfg(test)]
-pub(super) mod tests {
+mod tests {
     use super::*;
     use crate::adv::{StartableCommand, VmState, command};
 
@@ -271,7 +287,7 @@ pub(super) mod tests {
         Scenario::new(bytes.into()).unwrap()
     }
 
-    fn confirm_jump(jump: &mut super::super::backlog_rollback::BacklogRollback) {
+    fn confirm_jump(jump: &mut crate::adv::backlog::rollback::BacklogRollback) {
         use shin_core::time::Ticks;
         jump.confirmation.update(Ticks::from_f32(12.0));
         jump.confirmation.update(Ticks::ZERO);
@@ -286,7 +302,7 @@ pub(super) mod tests {
 
     #[test]
     fn rollback_uses_saved_boundary_seed_and_historical_route_without_mutating_globals() {
-        use super::super::{backlog_rollback::BacklogRollback, reconstruction::ReconstructionStop};
+        use super::super::{backlog::rollback::BacklogRollback, reconstruction::ReconstructionStop};
         let scenario = fixture(true);
         let mut globals = SaveData::default();
         globals.persist_data.set(0, 1);
@@ -358,7 +374,7 @@ pub(super) mod tests {
 
     #[test]
     fn canceled_and_invalid_rollbacks_never_reconstruct_a_scene() {
-        use super::super::backlog_rollback::BacklogRollback;
+        use crate::adv::backlog::rollback::BacklogRollback;
         use shin_core::time::Ticks;
         let scenario = fixture(true);
         let globals = SaveData::default();
@@ -619,7 +635,7 @@ pub(super) mod tests {
         let before_future = future_globals.encode();
         let mut earlier = entry.clone();
         earlier.save_position = messages[39].save_position;
-        let collected = super::super::backlog_collection::BrowserHistory::collect(
+        let collected = crate::adv::backlog::collection::BrowserHistory::collect(
             &scenario,
             &earlier,
             &future_globals,
@@ -638,7 +654,7 @@ pub(super) mod tests {
         let selected = &collected.history.entries[collected.current_row.unwrap()];
         assert!(selected.save_position < earlier.save_position);
         let current_row = collected.current_row.unwrap();
-        let jump = super::super::backlog_jump::SceneJump::new(
+        let jump = crate::adv::backlog::jump::SceneJump::new(
             &collected.history,
             current_row,
             current_row,
@@ -669,7 +685,7 @@ pub(super) mod tests {
             .position(|row| std::ptr::eq(row, future_messages[79]))
             .unwrap();
         let future_jump =
-            super::super::backlog_jump::SceneJump::new(&collected.history, current_row, future_row)
+            crate::adv::backlog::jump::SceneJump::new(&collected.history, current_row, future_row)
                 .unwrap();
         assert_eq!(future_jump.markers.len(), checkpoint_rows.len() + 4);
         assert_eq!(future_jump.selected_target(), future_row);
@@ -708,7 +724,7 @@ pub(super) mod tests {
                 .position(|row| std::ptr::eq(row, message))
                 .unwrap();
             let mut jump =
-                super::super::backlog_rollback::BacklogRollback::new(&history, index, &entry)
+                crate::adv::backlog::rollback::BacklogRollback::new(&history, index, &entry)
                     .unwrap();
             confirm_jump(&mut jump);
             let scene = jump
@@ -747,13 +763,13 @@ pub(super) mod tests {
         let mut glyph_count = 0;
         let mut row_sizes = Vec::new();
         for entry in &history.entries {
-            let (text, color) = super::super::backlog_text::display_text(&entry.item).unwrap();
+            let (text, color) = crate::adv::backlog::text::display_text(&entry.item).unwrap();
             let (commands, lines, size) =
-                super::super::backlog_text::layout_message(&text, color, &regular, &bold);
+                crate::adv::backlog::text::layout_message(&text, color, &regular, &bold);
             assert!(size.is_finite());
             row_sizes.push((
                 size.y,
-                !super::super::backlog_model::voice_paths(&entry.item).is_empty(),
+                !crate::adv::backlog::model::voice_paths(&entry.item).is_empty(),
             ));
             assert!(
                 lines
@@ -772,7 +788,7 @@ pub(super) mod tests {
             }
         }
         let count = history.entries.len();
-        let document = super::super::backlog_model::BacklogModel::new(row_sizes, count - 1);
+        let document = crate::adv::backlog::model::BacklogModel::new(row_sizes, count - 1);
         assert_eq!(document.rows.len(), count);
         assert_eq!(document.selected, Some(count - 1));
         assert_eq!(document.scroll(), document.max_scroll());

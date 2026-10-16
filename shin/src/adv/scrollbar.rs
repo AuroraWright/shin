@@ -5,7 +5,7 @@ use shin_render::{
     ColorBlendType, RenderRequestBuilder, quad_vertices::QuadVertices, render_pass::RenderPass,
 };
 
-use super::character_view::CharacterTextures;
+use super::characters::view::CharacterTextures;
 
 pub(crate) fn slices(
     height: f32,

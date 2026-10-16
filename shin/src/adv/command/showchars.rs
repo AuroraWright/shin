@@ -1,5 +1,5 @@
 use super::prelude::*;
-use crate::adv::character_screen::CharacterScreen;
+use crate::adv::characters::screen::CharacterScreen;
 
 #[derive(Debug)]
 pub struct SHOWCHARS {

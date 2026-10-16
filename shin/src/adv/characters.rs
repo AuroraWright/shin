@@ -1,6 +1,9 @@
 //! Character-screen data and selection, recovered from native0x4e260..0x4fee8.
 //! A cell may contain several characters. Script grids expose their authored
 //! defaults; only the eight episode-menu grids expose state/variant controls.
+pub mod screen;
+pub mod text;
+pub mod view;
 use shin_core::format::scenario::info::{
     CharsGridConnectorColor as Color, CharsGridConnectorShape as Shape, CharsGridInfoItem,
     CharsGridSegment, CharsPortraitDisplayMode, CharsSpriteInfo, CharsSpriteSegment,

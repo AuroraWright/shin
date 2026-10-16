@@ -101,7 +101,7 @@ pub(crate) fn reference_live_maskload_policy<'a>(
             .is_ok()
         );
         assert!(
-            shin_tasks::block_on(crate::adv::save_menu_preview::SaveMenuPreviewScene::load(
+            shin_tasks::block_on(crate::adv::save_menu::preview::SaveMenuPreviewScene::load(
                 server,
                 &adv.audio_manager,
                 scenario,

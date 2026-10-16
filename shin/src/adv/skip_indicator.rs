@@ -1,5 +1,5 @@
 //! Native ADV top-right autoplay and skip status (original/1.03 12700..1293c).
-use super::{character_view::CharacterTextures, playback::PlaybackModes};
+use super::{characters::view::CharacterTextures, playback::PlaybackModes};
 use shin_core::{primitives::color::FloatColor4, time::Ticks};
 use shin_render::{
     ColorBlendType, RenderRequestBuilder, quad_vertices::QuadVertices, render_pass::RenderPass,

@@ -1,6 +1,6 @@
 //! SystemMenu title-return confirmation1e344 and callback1ff70.
 //! The title scene itself is a separate factory, not a restart of ADV bytecode.
-use super::save_menu_dialog::SaveMenuDialog;
+use super::save_menu::dialog::SaveMenuDialog;
 use crate::{app::AppAction, asset::system::AssetServer, render::PreRenderContext};
 use enum_map::EnumMap;
 use glam::Vec2;

@@ -1,6 +1,6 @@
 //! Native ADV event touch callbacks157d0/15c00 and skip hint12b70..12c48.
 use super::{
-    character_view::CharacterTextures,
+    characters::view::CharacterTextures,
     input_area::{InputArea, InputAreaTarget, PointerFrame},
 };
 use glam::Vec2;

@@ -1,5 +1,5 @@
 //! Native BGM title overlay (0x9e200..0x9e838).
-use super::character_text::CharacterTextGlyph;
+use super::characters::text::CharacterTextGlyph;
 use crate::asset::{
     font::{GpuFontGlyphHandle, GpuFontLazy},
     system::AssetServer,

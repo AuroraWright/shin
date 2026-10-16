@@ -1,4 +1,12 @@
 //! Shared native SaveMenu (d5bc0/d95e0); screen and storage own asynchronous work.
+pub(super) mod dialog;
+pub(super) mod preview;
+#[cfg(test)]
+pub(super) mod render_reference;
+pub(super) mod scene;
+pub(crate) mod screen;
+pub mod text;
+pub mod view;
 use super::input_area::InputAreaTarget;
 use glam::Vec2;
 use shin_core::{

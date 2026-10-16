@@ -15,7 +15,7 @@ use crate::{
 pub struct AdvAssets {
     pub scenario: Arc<Scenario>,
     pub fonts: AdvFonts,
-    pub menu_textures: Arc<super::character_view::CharacterTextures>,
+    pub menu_textures: Arc<super::characters::view::CharacterTextures>,
     pub messagebox_textures: Arc<MessageboxTextures>,
     /// ADV resource worker 1ef10 publishes this to the saved-load capture owner.
     pub scene_load_mask: Arc<MaskTexture>,

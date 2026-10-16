@@ -1,38 +1,7 @@
 pub mod assets;
 mod backlog;
-mod backlog_collection;
-mod backlog_decoration;
-mod backlog_feedback;
-mod backlog_gesture;
-mod backlog_help;
-mod backlog_jump;
-mod backlog_jump_pointer;
-mod backlog_jump_view;
-mod backlog_modal;
-mod backlog_model;
-mod backlog_pointer;
-mod backlog_rollback;
-mod backlog_screen;
-mod backlog_text;
-mod backlog_view;
-#[cfg(test)]
-mod chapter_continue_reference;
-#[cfg(test)]
-mod continue_message_reference;
-#[cfg(test)]
-mod current_progress_audit;
-#[cfg(test)]
-mod ep4_teaparty_ending_reference;
-#[cfg(test)]
-mod menu_browser_desktop_tests;
-#[cfg(test)]
-mod shared_picture_handoff_reference;
 
-mod backlog_voice;
 mod bgm_title;
-pub mod character_screen;
-pub mod character_text;
-pub mod character_view;
 pub mod characters;
 mod choice;
 mod command;
@@ -43,32 +12,17 @@ pub(crate) use command::apply_command_state_and_start;
 pub(crate) use command::apply_command_state_and_start_with_skip;
 mod chapter_navigation;
 pub mod config;
-pub mod config_dialog;
-#[cfg(test)]
-mod config_render_reference;
-pub mod config_screen;
-pub mod config_view;
-pub mod config_widgets;
-mod dialog_input;
-mod dialog_view;
-#[cfg(test)]
-mod ending_reference;
 mod event_skip;
 mod story_touch;
-#[cfg(test)]
-mod post_movie_touch_reference;
-pub(crate) use dialog_view::DialogText;
+pub(crate) use dialog::view::DialogText;
 mod gallery;
 pub mod gerokasu2;
 pub mod higurashi;
 pub mod information;
 pub mod input_area;
-#[cfg(test)]
-mod live_save_reference;
 pub mod manual;
-pub mod manual_screen;
-pub mod manual_view;
 pub mod modal_backdrop;
+pub(crate) mod overlay_clock;
 pub(crate) mod persistence;
 pub(crate) use persistence::{SaveRecovery, SaveRecoveryKind};
 pub mod play_clock;
@@ -78,32 +32,12 @@ mod restoration;
 mod route_label;
 pub(crate) mod save_game;
 pub mod save_menu;
-mod save_menu_dialog;
-#[cfg(test)]
-mod save_preparation_failure_reference;
 mod skip_indicator;
-#[cfg(all(test, unix))]
-pub(crate) mod storage_notice_failure_reference;
-pub(crate) use save_menu_dialog::SaveMenuDialog;
-mod save_menu_preview;
-#[cfg(test)]
-mod save_menu_render_reference;
-mod save_menu_scene;
-pub(crate) mod save_menu_screen;
-pub mod save_menu_text;
-pub mod save_menu_view;
+pub(crate) use save_menu::dialog::SaveMenuDialog;
 pub(crate) mod scene_load_fade;
 pub(crate) mod storage_retry_dialog;
 pub mod system_menu;
-mod system_menu_modal;
-pub mod system_menu_screen;
-pub mod system_menu_view;
 pub mod tips;
-#[cfg(test)]
-mod tips_render_reference;
-pub mod tips_screen;
-pub mod tips_text;
-pub mod tips_view;
 mod title_return;
 mod vm_state;
 
@@ -138,6 +72,9 @@ use tracing::{debug, warn};
 use vm_state::layers::ITER_VLAYER_SMALL_VECTOR_SIZE;
 pub use vm_state::{VmState, layers::LayerSelection};
 mod global_data;
+#[cfg(test)]
+pub(crate) mod reference_tests;
+mod dialog;
 pub(crate) use global_data::GlobalData;
 use winit::keyboard::KeyCode;
 
@@ -250,7 +187,7 @@ pub(crate) fn reference_saved_backlog_latency<'a>(
     server: &'a Arc<crate::asset::system::AssetServer>,
     context: &mut PreRenderContext<'a, '_, '_, '_>,
 ) {
-    backlog_screen::reference_saved_backlog_latency(server, context);
+    backlog::screen::reference_saved_backlog_latency(server, context);
 }
 
 pub struct Adv {
@@ -281,7 +218,7 @@ pub struct Adv {
     interactive_axes: glam::Vec2,
     pending_backlog: bool,
     pending_system_menu: bool,
-    system_menu: Option<system_menu_modal::SystemMenuModal>,
+    system_menu: Option<system_menu::modal::SystemMenuModal>,
     modal_pointer: input_area::PointerSampler,
     modal_pointer_extent: (u16, u16),
     modal_pointer_held: bool,
@@ -1223,10 +1160,10 @@ impl Adv {
         self.held_skip = false;
     }
     /// Retained factory request for menu children still under reconstruction.
-    pub fn pending_system_menu_request(&self) -> Option<&system_menu_screen::SystemMenuRequest> {
+    pub fn pending_system_menu_request(&self) -> Option<&system_menu::screen::SystemMenuRequest> {
         self.system_menu
             .as_ref()
-            .and_then(system_menu_modal::SystemMenuModal::pending_request)
+            .and_then(system_menu::modal::SystemMenuModal::pending_request)
     }
     /// Both authored EXIT and confirmed menu return queue a separate title.
     /// The scene host installs it next frame, retaining global save and audio.
@@ -1236,7 +1173,7 @@ impl Adv {
         }
         self.system_menu
             .as_ref()
-            .and_then(system_menu_modal::SystemMenuModal::pending_title_setup)
+            .and_then(system_menu::modal::SystemMenuModal::pending_title_setup)
             .cloned()
             .or_else(|| {
                 (self.finished && self.exit_save_finished)
@@ -1878,7 +1815,7 @@ impl Adv {
             self.adv_state.playback_modes.reset();
             self.adv_state
                 .play_system_sound(context.asset_server, "page", Default::default());
-            self.system_menu = Some(system_menu_modal::SystemMenuModal::new(
+            self.system_menu = Some(system_menu::modal::SystemMenuModal::new(
                 context.asset_server,
                 system_menu::SystemMenuSnapshot::from_vm(&self.vm_state),
                 self.assets.menu_textures.clone(),
@@ -2079,7 +2016,7 @@ impl Adv {
             self.adv_state.playback_modes.reset();
             self.adv_state.acquire_ui_hide();
             self.adv_state.acquire_audio_pause();
-            self.adv_state.backlog = Some(backlog_modal::BacklogModal::new(
+            self.adv_state.backlog = Some(backlog::modal::BacklogModal::new(
                 self.scenario.clone(),
                 entry,
                 globals,
@@ -2364,10 +2301,10 @@ pub struct AdvState {
     audio_pause_count: u32,
     hidden_ui_active: bool,
     modal_backdrop: Option<modal_backdrop::ModalBackdrop>,
-    backlog: Option<backlog_modal::BacklogModal>,
+    backlog: Option<backlog::modal::BacklogModal>,
     pending_resume: bool,
     pub choice_menu: Option<choice::ChoiceMenu>,
-    pub character_screen: Option<character_screen::CharacterScreen>,
+    pub character_screen: Option<characters::screen::CharacterScreen>,
     pub choice_font: Arc<crate::asset::font::GpuFontLazy>,
     pub choice_textures: Arc<crate::layer::message_layer::MessageboxTextures>,
     pub allow_running_animations: bool,
@@ -2756,7 +2693,7 @@ impl Updatable for AdvState {
             self.voice_focus_enabled,
             self.backlog
                 .as_ref()
-                .map_or(story_voice_active, backlog_modal::BacklogModal::is_playing),
+                .map_or(story_voice_active, backlog::modal::BacklogModal::is_playing),
         );
 
         let transform = TransformParams::default();

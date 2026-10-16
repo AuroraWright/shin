@@ -170,7 +170,7 @@ mod tests {
         use crate::layer::user::{
             cake_layer::CakeModel,
             last_layer::LastModel,
-            murderer_model::{MurdererModel, SUBMIT_ENTRY},
+            murderer::model::{MurdererModel, SUBMIT_ENTRY},
             quiz_layer::QuizModel,
         };
         enum Model {

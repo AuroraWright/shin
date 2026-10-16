@@ -105,7 +105,7 @@ mod tests {
         assert_eq!(clock.ticks(), 7440.125);
         assert_eq!(clock.saved_seconds(), 124);
         assert_eq!(
-            super::super::system_menu_view::play_time_text(clock.ticks()),
+            crate::adv::system_menu::view::play_time_text(clock.ticks()),
             "2分"
         );
     }

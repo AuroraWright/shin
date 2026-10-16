@@ -12,7 +12,6 @@ use crate::{
     render::{PreRenderContext, top_left_projection_matrix},
 };
 
-#[path = "choice_model.rs"]
 pub(crate) mod model;
 pub use model::ChoiceModel;
 pub(crate) use model::shuffle as shuffle_choice_indices;

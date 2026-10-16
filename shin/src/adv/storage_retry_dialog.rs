@@ -1,6 +1,6 @@
 //! Desktop recovery notices for storage and resource failures.
 //! Native storage workers call the external nn::diag::detail::AbortImpl handler.
-use super::{backlog_rollback::Confirmation, dialog_input::DialogInput, dialog_view::DialogView};
+use super::{backlog::rollback::Confirmation, dialog::input::DialogInput, dialog::view::DialogView};
 use crate::{app::AppAction, asset::system::AssetServer, render::PreRenderContext};
 use enum_map::EnumMap;
 use glam::Vec2;
@@ -38,7 +38,7 @@ impl StorageRetryDialog {
         Ok(dialog)
     }
     pub(crate) fn retry_requested(&mut self) -> bool {
-        self.confirmation.take_outcome() == Some(super::backlog_rollback::Outcome::Yes)
+        self.confirmation.take_outcome() == Some(super::backlog::rollback::Outcome::Yes)
     }
     /// Desktop resource/reconstruction failure notice. Native platform
     /// diagnostics and scheduling are a separate contract.

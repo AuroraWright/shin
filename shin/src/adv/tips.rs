@@ -1,5 +1,10 @@
 //! Native TipsMode106a30: filtered rows, captured input and text-pane motion.
 //! Rendering and async /tips.txa ownership are supplied by TipsScreen.
+#[cfg(test)]
+mod render_reference;
+pub mod screen;
+pub mod text;
+pub mod view;
 use enum_map::EnumMap;
 use glam::Vec2;
 use shin_core::{

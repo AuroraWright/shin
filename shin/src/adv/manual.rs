@@ -1,4 +1,6 @@
 //! Native ManualViewer state86370/86670, hosted by the ADV system menu.
+pub mod screen;
+pub mod view;
 use crate::app::AppAction;
 use glam::{Vec2, Vec4, vec4};
 use shin_core::time::{Easing, Ticks, Tween, Tweener};

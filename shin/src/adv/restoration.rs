@@ -423,7 +423,7 @@ mod reuse_tests {
     #[test]
     fn cache_selection_matches_complete_native_worker_and_lookup() {
         let lines =
-            include_str!("../../../reverse-engineering/native-save-hydration-cache-golden.txt")
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/native-save-hydration-cache-golden.txt"))
                 .lines()
                 .collect::<Vec<_>>();
         assert_eq!(lines.len(), 512 * 2);
