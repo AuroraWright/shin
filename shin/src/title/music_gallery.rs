@@ -1,5 +1,15 @@
 //! MusicMode list2fd50, selection31a60, play31970, opening327f0 and close32fd0.
 //! The model emits scene/audio requests consumed by MusicGalleryScene.
+#[allow(dead_code)]
+pub(super) mod audio;
+#[allow(dead_code)]
+pub(super) mod input;
+pub(super) mod scene;
+#[allow(dead_code)]
+pub(super) mod text;
+#[allow(dead_code)]
+pub(super) mod view;
+use crate::title::motion::rate;
 use shin_core::{
     format::{
         save::SaveData,
@@ -378,12 +388,6 @@ pub(super) struct MusicGalleryList {
     scroll: Tweener,
     requests: Vec<MusicRequest>,
     sounds: Vec<&'static str>,
-}
-fn rate(clock: &mut Tweener, value: f32, speed: f32) {
-    clock.enqueue_now(
-        value,
-        Tween::linear(Ticks::from_f32((value - clock.value()).abs() / speed)),
-    );
 }
 impl MusicGalleryList {
     pub fn new(items: &[MusicBoxInfoItem], save: &SaveData) -> anyhow::Result<Self> {

@@ -1,5 +1,7 @@
 //! Native MovieMode playback child89e60: cover8b7e0, monitor8a760,
 //! movie fade8bb20 and final cover/retirement8bd70. Owner still pending.
+#[allow(dead_code)]
+pub(super) mod scene;
 use shin_core::time::{Ticks, Tween, Tweener};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum PlaybackEvent {

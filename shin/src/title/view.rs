@@ -1,6 +1,6 @@
 //! Native title UI10c370/10c6d0. The owner supplies the rendered background.
 use super::{TitleItem, TitleSetup};
-use crate::adv::character_view::CharacterTextures;
+use crate::adv::characters::view::CharacterTextures;
 use glam::{Mat4, Vec4, vec4};
 use shin_core::primitives::color::{FloatColor4, UnormColor};
 use shin_render::{

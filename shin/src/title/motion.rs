@@ -64,7 +64,7 @@ fn wait(clock: &mut Tweener, ticks: f32) {
     let target = clock.target_value();
     enqueue(clock, target, ticks, Easing::Linear);
 }
-fn rate(clock: &mut Tweener, value: f32, speed: f32) {
+pub(super) fn rate(clock: &mut Tweener, value: f32, speed: f32) {
     // Native bb420 freezes the evaluated value and drops the prior queue;
     // flag40 then converts speed to abs(target-current)/speed.
     clock.enqueue_now(

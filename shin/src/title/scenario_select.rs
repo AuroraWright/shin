@@ -1,5 +1,19 @@
 //! Data owned by native Start's ScenarioSelect scene (constructor dc970).
 //! The resource worker, transitions and episode factory are still separate work.
+mod details;
+#[cfg(test)]
+mod frame_reference;
+mod input;
+mod opening;
+#[cfg(test)]
+mod render_reference;
+pub(super) mod scene;
+mod selection;
+#[cfg(test)]
+mod tab_reference;
+#[cfg(test)]
+mod unlock_reference;
+mod view;
 use shin_core::format::save::SaveData;
 
 /// Six 96-byte records at1736a8, reached through native2254e0.

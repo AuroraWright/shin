@@ -8,7 +8,7 @@ use super::{
     view,
 };
 use crate::{
-    adv::{character_view::CharacterTextures, input_area::PointerFrame},
+    adv::{characters::view::CharacterTextures, input_area::PointerFrame},
     app::AppAction,
     asset::{mask::MaskTexture, picture::Picture, system::AssetServer},
     layer::{
@@ -29,10 +29,8 @@ use shin_render::{render_pass::RenderPass, render_texture::RenderTexture};
 use std::sync::{Arc, mpsc};
 
 #[cfg(all(test, target_os = "macos"))]
-#[path = "scene/failure_reference.rs"]
 mod failure_reference;
 #[cfg(all(test, target_os = "macos"))]
-#[path = "scene/root_failure_reference.rs"]
 mod root_failure_reference;
 
 struct BackgroundAssets {
@@ -275,10 +273,10 @@ impl TitleScene {
             }
             for request in child.take_parent_requests() {
                 match request {
-                    super::episode_chooser_scene::ParentRequest::Dim(value) => {
+                    super::episode_chooser::scene::ParentRequest::Dim(value) => {
                         self.motion.viewer_dim(value)
                     }
-                    super::episode_chooser_scene::ParentRequest::RestoreRows => {
+                    super::episode_chooser::scene::ParentRequest::RestoreRows => {
                         self.motion.open_rows(true)
                     }
                 }
@@ -468,15 +466,15 @@ impl TitleScene {
     #[cfg(test)]
     pub(super) fn reference_episodes(
         &self,
-    ) -> Option<&super::episode_chooser_scene::EpisodeChooserScene> {
+    ) -> Option<&super::episode_chooser::scene::EpisodeChooserScene> {
         self.children.last().and_then(TitleChild::episodes)
     }
     #[cfg(test)]
-    pub(crate) fn reference_load(&self) -> Option<&crate::adv::save_menu_screen::SaveMenuScreen> {
+    pub(crate) fn reference_load(&self) -> Option<&crate::adv::save_menu::screen::SaveMenuScreen> {
         self.children.last().and_then(TitleChild::load)
     }
     #[cfg(test)]
-    pub(crate) fn reference_config(&self) -> Option<&crate::adv::config_screen::ConfigScreen> {
+    pub(crate) fn reference_config(&self) -> Option<&crate::adv::config::screen::ConfigScreen> {
         self.children.last().and_then(TitleChild::config)
     }
     #[cfg(test)]
@@ -484,7 +482,7 @@ impl TitleScene {
         self.children.len()
     }
     #[cfg(test)]
-    pub(crate) fn reference_manual(&self) -> Option<&crate::adv::manual_screen::ManualScreen> {
+    pub(crate) fn reference_manual(&self) -> Option<&crate::adv::manual::screen::ManualScreen> {
         self.children.last().and_then(TitleChild::manual)
     }
 }

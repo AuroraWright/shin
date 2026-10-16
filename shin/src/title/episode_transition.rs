@@ -1,4 +1,7 @@
 //! Captured-screen episode transition e32f0, clocks e3a18..e3afc.
+mod backdrop;
+pub(super) mod scene;
+mod view;
 use shin_core::time::{Easing, Ticks, Tween, Tweener};
 
 #[derive(Debug, Clone, Copy, PartialEq)]

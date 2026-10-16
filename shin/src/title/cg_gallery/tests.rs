@@ -388,7 +388,7 @@ fn fractional_analog_scroll_moves_focus_silently_and_keeps_column() {
 #[test]
 fn trackpad_wheel_scrolls_picture_gallery_through_live_input_dispatch() {
     let mut gallery = list(17);
-    let mut input = super::super::cg_gallery_input::CgGalleryInput::new();
+    let mut input = crate::title::cg_gallery::input::CgGalleryInput::new();
     for (number, (amount, expected)) in [
         (-3.25, 104.0),
         (-0.125, 108.0),

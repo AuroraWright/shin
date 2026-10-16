@@ -233,3 +233,11 @@ impl CgViewerNavigation {
 
 #[cfg(test)]
 mod tests;
+#[allow(dead_code)]
+mod input;
+#[allow(dead_code)]
+mod motion;
+#[allow(dead_code)]
+pub(super) mod scene;
+#[allow(dead_code)]
+pub(super) mod view;

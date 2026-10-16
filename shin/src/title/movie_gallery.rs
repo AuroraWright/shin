@@ -1,5 +1,12 @@
 //! MovieMode constructor87ae0, controller88d10 and deferred playback8b220.
 //! Native list/task model; gallery artwork and the playback child still need an owner.
+#[allow(dead_code)]
+mod input;
+pub(super) mod scene;
+pub(super) mod text;
+#[allow(dead_code)]
+pub(super) mod view;
+use crate::title::motion::rate;
 use shin_core::{
     format::{
         save::SaveData,
@@ -58,12 +65,6 @@ pub(super) struct MovieGalleryList {
     sounds: Vec<&'static str>,
     pointer_target: i32,
     pointer_row: i32,
-}
-fn rate(clock: &mut Tweener, value: f32, speed: f32) {
-    clock.enqueue_now(
-        value,
-        Tween::linear(Ticks::from_f32((value - clock.value()).abs() / speed)),
-    );
 }
 fn flash(clock: &mut Tweener) {
     rate(clock, 0.7, 0.2);

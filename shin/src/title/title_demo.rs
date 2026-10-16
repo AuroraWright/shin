@@ -1,4 +1,5 @@
 //! TitleDemo113b00: worker gate114a90, playback114280, skip114140.
+pub(super) mod scene;
 use shin_core::time::{Ticks, Tween, Tweener};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

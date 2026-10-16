@@ -440,7 +440,7 @@ fn run() {
         },
     ));
     let assets = shin_tasks::block_on(AdvAssets::load(&server)).unwrap();
-    let mut save = crate::adv::save_menu_screen::SaveMenuScreen::new(
+    let mut save = crate::adv::save_menu::screen::SaveMenuScreen::new(
         server.clone(),
         manager.clone(),
         assets.scenario.clone(),

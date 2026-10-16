@@ -2,9 +2,9 @@
 use super::TitleItem;
 use crate::{
     adv::{
-        GlobalData, config_screen::ConfigScreen, input_area::PointerFrame,
-        manual_screen::ManualScreen, save_game::SaveGameTask, save_menu::SaveMenuRequest,
-        save_menu_screen::SaveMenuScreen,
+        GlobalData, config::screen::ConfigScreen, input_area::PointerFrame,
+        manual::screen::ManualScreen, save_game::SaveGameTask, save_menu::SaveMenuRequest,
+        save_menu::screen::SaveMenuScreen,
     },
     app::AppAction,
     asset::system::AssetServer,
@@ -22,7 +22,7 @@ pub(super) struct LoadResources {
     pub canvas: (u32, u32),
 }
 pub(super) enum TitleChild {
-    Episodes(super::episode_chooser_scene::EpisodeChooserScene),
+    Episodes(super::episode_chooser::scene::EpisodeChooserScene),
     Manual(ManualScreen),
     Load {
         screen: SaveMenuScreen,
@@ -58,7 +58,7 @@ impl TitleChild {
     ) -> anyhow::Result<Self> {
         Ok(match item {
             TitleItem::Characters | TitleItem::Tips => {
-                Self::Episodes(super::episode_chooser_scene::EpisodeChooserScene::new(
+                Self::Episodes(super::episode_chooser::scene::EpisodeChooserScene::new(
                     item,
                     completed_episodes,
                     server,
@@ -236,7 +236,7 @@ impl TitleChild {
     }
     pub fn render(
         &self,
-        atlas: &crate::adv::character_view::CharacterTextures,
+        atlas: &crate::adv::characters::view::CharacterTextures,
         background: shin_render::shaders::types::texture::TextureSource<'_>,
         pass: &mut RenderPass,
     ) {
@@ -252,7 +252,7 @@ impl TitleChild {
             Self::Load { screen, .. } => screen.render(pass),
         }
     }
-    pub fn take_parent_requests(&mut self) -> Vec<super::episode_chooser_scene::ParentRequest> {
+    pub fn take_parent_requests(&mut self) -> Vec<super::episode_chooser::scene::ParentRequest> {
         match self {
             Self::Episodes(screen) => screen.take_parent_requests(),
             _ => Vec::new(),
@@ -265,7 +265,7 @@ impl TitleChild {
         }
     }
     #[cfg(test)]
-    pub fn episodes(&self) -> Option<&super::episode_chooser_scene::EpisodeChooserScene> {
+    pub fn episodes(&self) -> Option<&super::episode_chooser::scene::EpisodeChooserScene> {
         match self {
             Self::Episodes(screen) => Some(screen),
             _ => None,

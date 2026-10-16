@@ -1,5 +1,6 @@
 //! Native CGMode list (470e0), controls (49230), selection (497c0), and viewer task (4d180).
 //! Live resource, rendering, and child ownership are in cg_gallery_scene.
+use crate::title::motion::rate;
 use shin_core::{
     format::{
         save::SaveData,
@@ -56,12 +57,6 @@ pub(super) struct CgGalleryList {
     pointer_target: i32,
     pointer_row: i32,
     velocity: f32,
-}
-fn rate(clock: &mut Tweener, value: f32, speed: f32) {
-    clock.enqueue_now(
-        value,
-        Tween::linear(Ticks::from_f32((value - clock.value()).abs() / speed)),
-    );
 }
 fn flash(clock: &mut Tweener) {
     rate(clock, 0.7, 0.2);
@@ -428,3 +423,12 @@ impl CgGalleryList {
 
 #[cfg(test)]
 mod tests;
+#[allow(dead_code)]
+mod input;
+#[cfg(test)]
+mod render_reference;
+pub(super) mod scene;
+#[allow(dead_code)]
+pub(super) mod text;
+#[allow(dead_code)]
+mod view;

@@ -1,5 +1,8 @@
 //! Native Title episode task10e7e0. Clock polling precedes advancement.
 //! The retained owner consumes requests; constructing viewers belongs to it.
+pub(super) mod scene;
+pub(super) mod view;
+use crate::title::motion::rate;
 use super::{TitleItem, view::RowFeedback};
 use crate::{
     adv::input_area::{InputAreaTarget, ModalInputTarget},
@@ -57,12 +60,6 @@ fn queue(clock: &mut Tweener, value: f32, ticks: f32, easing: Easing) {
 }
 fn wait(clock: &mut Tweener, ticks: f32) {
     queue(clock, clock.target_value(), ticks, Easing::Linear);
-}
-fn rate(clock: &mut Tweener, value: f32, speed: f32) {
-    clock.enqueue_now(
-        value,
-        Tween::linear(Ticks::from_f32((value - clock.value()).abs() / speed)),
-    );
 }
 impl EpisodeChooser {
     pub fn new(item: TitleItem, completed: u16) -> anyhow::Result<Self> {
