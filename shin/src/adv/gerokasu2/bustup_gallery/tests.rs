@@ -344,7 +344,7 @@ fn ger_native_bustup_complete_selector_shell_digit_hint_packets() {
                     controls.to_bits(),
                     flash.to_bits()
                 ));
-                expected.push(artwork::packets(&m));
+                expected.push(artwork::packets(&m, crate::cli::Game::Gerokasu2));
             }
         }
     }
@@ -564,7 +564,7 @@ fn ger_native_bustup_selected_factories_options_and_background_secondary() {
 fn host_publication_wait_and_explicit_failed_return_recovery() {
     let mut m = Controller::new(catalog());
     assert!(!m.accepts_input());
-    assert!(artwork::packets(&m).is_empty());
+    assert!(artwork::packets(&m, crate::cli::Game::Gerokasu2).is_empty());
     m.assets_ready();
     for dt in [60., 0., 0.] {
         m.update(dt, true, false, Input::default(), ViewerInput::default());
@@ -595,4 +595,22 @@ fn host_publication_wait_and_explicit_failed_return_recovery() {
             .iter()
             .all(|a| matches!(a, Action::PlayBgm { id: 8, fade: 0 }))
     );
+}
+#[test]
+fn gerokasu_bustup_chrome_adds_sliding_bottom_band() {
+    use crate::cli::Game;
+    let mut m = Controller::new(catalog());
+    m.assets_ready();
+    m.controls_visibility.snap(0.5);
+    let base = artwork::packets(&m, Game::Gerokasu2);
+    let ger = artwork::packets(&m, Game::Gerokasu);
+    assert!(base.iter().all(|p| p.texture != "bottom"));
+    assert_eq!(base.iter().find(|p| p.texture == "top").unwrap().blend, 3);
+    assert_eq!(ger.iter().find(|p| p.texture == "top").unwrap().blend, 2);
+    assert_eq!(ger.len(), base.len() + 1);
+    let i = ger.iter().position(|p| p.texture == "bottom").unwrap();
+    assert_eq!(ger[i - 1].texture, "hidden");
+    assert_eq!(ger[i].rect, [0., 1036., 1920., 1124.]);
+    assert_eq!(ger[i].uv, [0., 0., 1., 1.]);
+    assert_eq!((ger[i].color, ger[i].blend), (u32::MAX, 2));
 }

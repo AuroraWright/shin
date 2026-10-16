@@ -26,7 +26,7 @@ fn push(o: &mut Vec<Quad>, texture: &'static str, rect: [f32; 4], uv: [f32; 4], 
     });
 }
 const FULL: [f32; 4] = [0., 0., 1., 1.];
-pub fn quads(m: &ConfigController) -> Vec<Quad> {
+pub fn quads(m: &ConfigController, game: crate::cli::Game) -> Vec<Quad> {
     let mut o = vec![];
     push(&mut o, "bg", [0., 0., 1920., 1080.], FULL, Space::Canvas);
     o.last_mut().unwrap().alpha = m.progress;
@@ -172,6 +172,17 @@ pub fn quads(m: &ConfigController) -> Vec<Quad> {
             Space::Canvas,
         );
         o.last_mut().unwrap().flash = m.flash(reset);
+    }
+    if game == crate::cli::Game::Gerokasu {
+        // Gerokasu 57974..57A0C: bottom band slides with the hints.
+        let y = m.progress.mul_add(-88., 1080.);
+        push(
+            &mut o,
+            "bottom",
+            [0., y, 1920., y + 88.],
+            FULL,
+            Space::Canvas,
+        );
     }
     let y = m.progress.mul_add(-88., 1100.);
     let mut right = 1872.;

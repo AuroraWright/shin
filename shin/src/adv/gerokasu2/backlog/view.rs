@@ -44,6 +44,7 @@ pub struct Presentation {
     pub chapter_open: bool,
     pub swapped: bool,
     pub close_flash: f32,
+    pub game: crate::cli::Game,
 }
 #[derive(Clone, Debug)]
 pub struct Packet {
@@ -189,9 +190,7 @@ pub fn row_packets(view: &Presentation, row: Row) -> RowPackets {
     let portrait = if row.kind == 0 && row.voice_count != 0 {
         usize::try_from(row.message_arg)
             .ok()
-            .and_then(|i| {
-                PORTRAITS.get(i).copied()
-            })
+            .and_then(|i| portraits(view.game).get(i).copied())
             .map(|texture| {
                 let y = ((row.height - 36.) - 196.) * 0.5;
                 let mut p = packet(texture, [0., y, 196., y + 196.], text_matrix);
@@ -219,6 +218,20 @@ pub const PORTRAITS: [&str; 9] = [
     "voice_hanp",
     "voice_other",
 ];
+/// Gerokasu 855C0..855D0: pointer table 0x17FDF8, indexed by message_arg.
+pub const GEROKASU_PORTRAITS: [&str; 5] = [
+    "voice_fuuka",
+    "voice_karin",
+    "voice_mina",
+    "voice_doremi",
+    "voice_other",
+];
+pub fn portraits(game: crate::cli::Game) -> &'static [&'static str] {
+    match game {
+        crate::cli::Game::Gerokasu => &GEROKASU_PORTRAITS,
+        _ => &PORTRAITS,
+    }
+}
 pub fn background(progress: f32) -> Packet {
     let mut p = packet("bg", [0., 0., 1920., 1080.], PROJECTION);
     p.color = ((progress * 255.).clamp(0., 255.) as u32) << 24 | 0xffffff;
@@ -264,9 +277,20 @@ pub fn chrome(view: &Presentation, selected_voiced_message: bool) -> Vec<Packet>
             PROJECTION,
         ),
     ];
-    out[0].blend = 3;
+    // Gerokasu 8576C..857D4 draws the top band in blend mode 2.
+    if view.game != crate::cli::Game::Gerokasu {
+        out[0].blend = 3;
+    }
     out[3].uv = [0., 0., 0.5, 1.];
     out[3].flash = view.close_flash;
+    if view.game == crate::cli::Game::Gerokasu {
+        // 85A10..85AA8: bottom band slides with the hints; S12 still holds
+        // the close button's 0.5, so only the left half is sampled.
+        let y = view.progress.mul_add(-88., 1080.);
+        let mut p = packet("bottom", [0., y, 1920., y + 88.], PROJECTION);
+        p.uv = [0., 0., 0.5, 1.];
+        out.push(p);
+    }
     let y = view.progress.mul_add(-88., 1080.) + 20.;
     let mut right = 1872.;
     const HINTS: [(i32, i32, i32, f32); 5] = [

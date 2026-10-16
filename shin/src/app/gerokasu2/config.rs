@@ -51,6 +51,9 @@ impl ConfigHost {
             server.load::<CharacterTextures, _>("/systex.txa")
         )?;
         atlas.require_names(config::ATLAS, config::TEXTURES)?;
+        if server.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(config::ATLAS, &["bottom"])?;
+        }
         system.require_names("/systex.txa", &["scroll"])?;
         let mut sounds = SystemSoundPlayer::new(audio);
         sounds.set_settings_volume(settings.v3_sysvol);
@@ -234,7 +237,8 @@ impl ConfigHost {
             1.,
         ]);
         let builder = RenderRequestBuilder::new().color_blend_type(ColorBlendType::Layer1);
-        for q in config::artwork::quads(&self.model) {
+        let game = self.server.context().game;
+        for q in config::artwork::quads(&self.model, game) {
             let offset = config::artwork::offset(&self.model, q.space);
             let mut rect = [
                 q.rect[0] + offset[0],
@@ -267,7 +271,8 @@ impl ConfigHost {
             } else {
                 // 54054..54068: `top` uses native blend mode 3 (additive), as
                 // in every other Ger menu header; the rest use mode 2.
-                let builder = if q.texture == "top" {
+                // Gerokasu 57610 keeps mode 2 for `top` as well.
+                let builder = if q.texture == "top" && game != crate::cli::Game::Gerokasu {
                     builder.color_blend_type(ColorBlendType::Layer2)
                 } else {
                     builder

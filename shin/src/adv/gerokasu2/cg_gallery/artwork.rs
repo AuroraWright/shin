@@ -96,7 +96,8 @@ fn number(out: &mut Vec<Packet>, number: usize, left: f32) {
         x += 30.;
     }
 }
-pub fn packets(s: &Controller) -> Vec<Packet> {
+pub fn packets(s: &Controller, game: crate::cli::Game) -> Vec<Packet> {
+    let gerokasu = game == crate::cli::Game::Gerokasu;
     let mut out = vec![];
     if !s.ready {
         return out;
@@ -151,7 +152,8 @@ pub fn packets(s: &Controller) -> Vec<Packet> {
         }
     }
     for (name, rect, blend) in [
-        ("top", [0., 0., 1920., 191.], 3),
+        // Gerokasu 4D604 keeps blend 2 for the top band.
+        ("top", [0., 0., 1920., 191.], if gerokasu { 2 } else { 3 }),
         ("caption", [32., 0., 576., 192.], 2),
         ("button_shadow", [1728., 0., 1920., 192.], 2),
     ] {
@@ -166,6 +168,17 @@ pub fn packets(s: &Controller) -> Vec<Packet> {
         2,
     );
     out.last_mut().unwrap().flash = s.close_flash.value();
+    if gerokasu {
+        // Gerokasu 4D880..4D908: static bottom band in blend 2.
+        quad(
+            &mut out,
+            "bottom",
+            [0., 992., 1920., 1080.],
+            FULL,
+            u32::MAX,
+            2,
+        );
+    }
     quad(
         &mut out,
         "numbg",

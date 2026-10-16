@@ -197,6 +197,8 @@ pub enum PreparedBasicDrawable {
     Picture(Arc<Picture>, String),
     Bustup(Arc<Gerokasu2Bustup>, String, Option<[f32; 3]>),
     CardSelect(Arc<CardTextures>, i32),
+    /// Gerokasu prisoner/pierrot CardSelect (same layer type 9).
+    GerokasuCardSelect(super::card_select::gerokasu_draw::GerokasuCardResources, i32),
     Movie(parking_lot::Mutex<crate::layer::user::MovieLayer>),
     Procedural(super::procedural_animation::PreparedProcedural),
     Rain(crate::asset::effects::EffectsAtlasBorrow, i32, i32, i32),
@@ -252,8 +254,18 @@ impl PreparedBasicDrawable {
                     *first == 0,
                     "Ger CardSelect resource mode {first} is not connected"
                 );
-                super::card_select::CardSelectModel::new(*second, 1)?;
-                Self::CardSelect(assets.load("/cardselect.txa").await?, *second)
+                if assets.context().game == crate::cli::Game::Gerokasu {
+                    Self::GerokasuCardSelect(
+                        super::card_select::gerokasu_draw::GerokasuCardResources::load(
+                            assets, *second,
+                        )
+                        .await?,
+                        *second,
+                    )
+                } else {
+                    super::card_select::CardSelectModel::new(*second, 1)?;
+                    Self::CardSelect(assets.load("/cardselect.txa").await?, *second)
+                }
             }
             LayerFactoryRequest::Animation { mode } => {
                 match super::procedural_animation::PreparedProcedural::prepare(
@@ -314,6 +326,16 @@ impl PreparedBasicDrawable {
                 retained_bustup: None,
             };
         }
+        if let Self::GerokasuCardSelect(resources, mask) = self {
+            return BasicDrawable {
+                layer: GerDrawable::GerokasuCard(super::card_select::gerokasu_draw::construct(
+                    resources,
+                    *mask,
+                    crate::engine_random::next_seed(),
+                )),
+                retained_bustup: None,
+            };
+        }
         let mut retained_bustup = None;
         let mut layer: UserLayer = match self {
             Self::Null => NullLayer::new().into(),
@@ -340,7 +362,9 @@ impl PreparedBasicDrawable {
             Self::InvalidAnimation(mode) => {
                 panic!("Ger Animation mode {mode} returned no drawable at publication")
             }
-            Self::CardSelect(..) | Self::Movie(..) => unreachable!(),
+            Self::CardSelect(..) | Self::GerokasuCardSelect(..) | Self::Movie(..) => {
+                unreachable!()
+            }
         };
         if matches!(
             self,
@@ -361,6 +385,19 @@ impl PreparedBasicDrawable {
 pub enum GerDrawable {
     Shared(UserLayer),
     Card(CardLayer),
+    GerokasuCard(super::card_select::gerokasu_draw::GerokasuCardLayer),
+}
+impl GerDrawable {
+    /// The QUIZ listener of an interactive drawable.
+    pub fn interaction(
+        &self,
+    ) -> Option<Arc<parking_lot::Mutex<dyn super::card_select::CardInteraction>>> {
+        match self {
+            Self::Shared(_) => None,
+            Self::Card(card) => Some(card.inner_ref().model.clone()),
+            Self::GerokasuCard(card) => Some(card.inner_ref().model.clone()),
+        }
+    }
 }
 impl std::ops::Deref for GerDrawable {
     type Target = dyn crate::layer::DrawableLayer;
@@ -368,6 +405,7 @@ impl std::ops::Deref for GerDrawable {
         match self {
             Self::Shared(v) => v,
             Self::Card(v) => v,
+            Self::GerokasuCard(v) => v,
         }
     }
 }
@@ -376,6 +414,7 @@ impl std::ops::DerefMut for GerDrawable {
         match self {
             Self::Shared(v) => v,
             Self::Card(v) => v,
+            Self::GerokasuCard(v) => v,
         }
     }
 }
@@ -384,6 +423,7 @@ impl shin_render::shaders::types::RenderClone for GerDrawable {
         match self {
             Self::Shared(v) => Self::Shared(v.render_clone(ctx)),
             Self::Card(v) => Self::Card(v.render_clone(ctx)),
+            Self::GerokasuCard(v) => Self::GerokasuCard(v.render_clone(ctx)),
         }
     }
 }

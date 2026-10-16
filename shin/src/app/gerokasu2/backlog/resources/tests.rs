@@ -179,6 +179,7 @@ fn ger_backlog_rows_render_text_portraits_chrome_and_retain_native_cache_order()
         chapter_open: false,
         swapped: false,
         close_flash: 0.,
+        game: crate::cli::Game::Gerokasu2,
     };
     resources.prepare(view.scroll).unwrap();
     let original_cache = resources.visible.clone();

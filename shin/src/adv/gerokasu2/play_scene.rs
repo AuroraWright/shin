@@ -1,7 +1,7 @@
 //! Shared root/message/voice scene adapter used by gameplay and hardware probes.
 use super::{
     audio_commands::AudioCommands,
-    card_select::CardSelectModel,
+    card_select::CardInteraction,
     drawables::BasicLoadBackend,
     gallery::{GalleryServices, GalleryUnlocks},
     layer_control::LayerControlServices,
@@ -53,7 +53,9 @@ struct Services {
     playback: super::playback::Playback,
     selection: Option<super::selection::SharedSelection>,
     selection_history: super::selection::SelectionHistory,
-    interactive: Option<Arc<parking_lot::Mutex<CardSelectModel>>>,
+    interactive: Option<Arc<parking_lot::Mutex<dyn CardInteraction>>>,
+    /// Gerokasu CardSelect's own voice handle (42A60 +0x5A8).
+    card_voice: Option<crate::audio::VoicePlayer>,
     gallery: GalleryUnlocks,
     save: SaveSession,
     message_capture: Option<SaveCapture>,
@@ -77,6 +79,60 @@ impl Services {
             audio.bgm_player.update();
             audio.se_player.update();
             audio.system_player.update();
+        }
+    }
+    /// Gerokasu CardSelect sounds and its voice handle (E3180/E3830).
+    fn pump_card(&mut self, delta: Ticks) {
+        use super::card_select::gerokasu::CardEvent;
+        let events = self
+            .interactive
+            .as_ref()
+            .map_or_else(Vec::new, |m| m.lock().take_events());
+        for event in events {
+            match event {
+                CardEvent::Sound(name) => {
+                    self.audio
+                        .lock()
+                        .system_player
+                        .play(&self.assets, name, Volume(1.0));
+                }
+                CardEvent::Voice(name) => {
+                    let player = self.card_voice.get_or_insert_with(|| {
+                        crate::audio::VoicePlayer::new(
+                            self.audio.lock().manager.clone(),
+                            self.assets.clone(),
+                        )
+                    });
+                    player.set_settings_volume(
+                        self.loaded_settings
+                            .as_ref()
+                            .map_or(100, |settings| settings.v2_voicevol),
+                    );
+                    player.play_mapped(
+                        &Vec::new(),
+                        &name,
+                        0,
+                        0,
+                        crate::audio::VoicePlayFlags::empty(),
+                        Volume(1.0),
+                    );
+                }
+                CardEvent::StopVoice => {
+                    if let Some(player) = &mut self.card_voice {
+                        player.stop();
+                    }
+                }
+            }
+        }
+        let Some(player) = &mut self.card_voice else {
+            return;
+        };
+        player.update(delta);
+        let playing = player
+            .get_wait_status()
+            .contains(shin_core::vm::command::types::AudioWaitStatus::PLAYING);
+        if let Some(model) = &self.interactive {
+            model.lock().set_voice_playing(playing);
         }
     }
     fn play_selection_cues(&mut self) {
@@ -131,12 +187,9 @@ impl QuizServices for Services {
     ) -> Result<()> {
         self.interactive = target
             .and_then(|(plane, bank)| self.backend.layer(plane, bank))
-            .and_then(|layer| match &layer.layer {
-                GerDrawable::Card(card) => Some(card.inner_ref().model.clone()),
-                _ => None,
-            });
+            .and_then(|layer| layer.layer.interaction());
         if let Some(model) = &self.interactive {
-            model.lock().listener = true;
+            model.lock().attach_listener();
         }
         Ok(())
     }
@@ -799,6 +852,12 @@ impl Gerokasu2PlayScene {
             if clear_display {
                 message.clear_for_reconstruction();
             }
+            // Gerokasu MSGFACE publishes immediately rather than at MSGSET.
+            if let Some(args) = replay.save.descriptors.message.ger_face {
+                let change = shin_core::vm::gerokasu2::message_face::MessageFaceState::new(0)
+                    .on_ger_msgface(args, &self.services.scenario.bustup_info);
+                message.apply_portrait(self.services.assets.clone(), change);
+            }
         }
         let (vm, layers, save, pending, response) = replay.take_live_parts();
         self.runner
@@ -924,6 +983,7 @@ impl Gerokasu2PlayScene {
                 selection: None,
                 selection_history: Default::default(),
                 interactive: None,
+                card_voice: None,
                 gallery: GalleryUnlocks::default(),
                 save,
                 message_capture: None,
@@ -1041,6 +1101,7 @@ impl Gerokasu2PlayScene {
                 .loaded_layer(&self.services.scenario, kind, params, false);
         }
         let status = result?;
+        self.services.pump_card(delta);
         if std::mem::take(&mut self.services.resume_requested) {
             let position = self.services.save.timeline.resume_position;
             let (save, restored) = self.services.save.fork_for_restore(position, position);
@@ -1132,6 +1193,13 @@ impl Gerokasu2PlayScene {
             .interactive
             .as_ref()
             .is_some_and(|m| m.lock().pointer_release())
+    }
+    /// B for the interactive layer; `false` leaves it to the ADV.
+    pub fn cancel_card(&mut self) -> bool {
+        self.services
+            .interactive
+            .as_ref()
+            .is_some_and(|m| m.lock().cancel_input())
     }
     pub fn card_pointer_cancel(&mut self) {
         if let Some(m) = &self.services.interactive {

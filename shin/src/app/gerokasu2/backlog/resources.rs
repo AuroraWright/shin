@@ -53,6 +53,9 @@ pub(in crate::app::gerokasu2) struct Resources {
 #[cfg(test)]
 mod tests;
 impl Resources {
+    pub fn game(&self) -> crate::cli::Game {
+        self.assets.context().game
+    }
     pub fn refresh_geometry(&mut self, controller: &mut backlog::Controller) -> Result<()> {
         if let Some(geometry) = self.measurement.snapshot()? {
             controller
@@ -137,9 +140,14 @@ impl Resources {
         let (atlas, system, font) = futures::try_join!(
             assets.load::<CharacterTextures, _>(backlog::ATLAS),
             assets.load::<CharacterTextures, _>("/systex.txa"),
-            assets.load::<GpuGerokasu2Font, _>("/NewRodin-Medium.fnt"),
+            assets.load::<GpuGerokasu2Font, _>(
+                crate::adv::gerokasu2::message_ui::medium_font_path(assets.context().game),
+            ),
         )?;
-        atlas.require_names(backlog::ATLAS, &backlog::view::PORTRAITS)?;
+        atlas.require_names(
+            backlog::ATLAS,
+            backlog::view::portraits(assets.context().game),
+        )?;
         atlas.require_names(
             backlog::ATLAS,
             &[
@@ -154,6 +162,9 @@ impl Resources {
                 "key",
             ],
         )?;
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(backlog::ATLAS, &["bottom"])?;
+        }
         system.require_names("/systex.txa", &["scroll"])?;
         let history = Arc::new(history);
         let worker_history = history.clone();

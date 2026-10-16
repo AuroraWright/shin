@@ -29,18 +29,21 @@ pub struct MessageTextures {
     pub selection: GpuTexture,
 }
 
+/// Gerokasu ships one FNT4 message font under the Umineko name.
+pub fn medium_font_path(game: crate::cli::Game) -> &'static str {
+    if game == crate::cli::Game::Gerokasu {
+        "/newrodin.fnt"
+    } else {
+        "/newrodin-medium.fnt"
+    }
+}
 pub struct MessageResources {
     pub medium: Arc<GpuGerokasu2Font>,
     pub textures: Arc<MessageTextures>,
 }
 impl MessageResources {
     pub async fn load(assets: &AssetServer) -> Result<Self> {
-        // Gerokasu ships one FNT4 message font under the Umineko name.
-        let font = if assets.context().game == crate::cli::Game::Gerokasu {
-            "/newrodin.fnt"
-        } else {
-            "/newrodin-medium.fnt"
-        };
+        let font = medium_font_path(assets.context().game);
         let (medium, textures) = futures::try_join!(
             assets.load(font),
             assets.load("/msgtex.txa")

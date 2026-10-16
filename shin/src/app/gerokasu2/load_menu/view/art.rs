@@ -76,6 +76,7 @@ pub fn plan_with_mode(
     dates: &[Option<SaveDate>; 100],
     row_flash: impl Fn(usize) -> f32,
     close_flash: f32,
+    game: crate::cli::Game,
 ) -> Vec<Packet> {
     let mut out = vec![quad(
         "bg",
@@ -212,6 +213,16 @@ pub fn plan_with_mode(
     );
     p.kind = Kind::Button { flash: close_flash };
     out.push(p);
+    if game == crate::cli::Game::Gerokasu {
+        // Gerokasu B58F0..B5988: bottom band slides with the hints.
+        let y = (-88f32).mul_add(progress, 1080.);
+        out.push(quad(
+            "bottom",
+            vec4(0., y, 1920., y + 88.),
+            vec4(0., 0., 1., 1.),
+            u32::MAX,
+        ));
+    }
     let y = (-88f32).mul_add(progress, 1100.);
     let mut right = 1872.;
     let load = [

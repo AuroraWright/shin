@@ -610,6 +610,7 @@ impl Host {
             chapter_open: self.chapter.is_some(),
             swapped: false,
             close_flash: self.lifecycle.close_flash(),
+            game: self.resources.game(),
         };
         let flashes = (0..self.resources.history.entries.len())
             .map(|i| self.lifecycle.portrait_flash(i))

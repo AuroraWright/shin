@@ -65,7 +65,7 @@ pub fn construct(textures: Arc<CardTextures>, mask: i32, seed: u32) -> anyhow::R
         },
     ))
 }
-fn camera() -> Mat4 {
+pub(super) fn camera() -> Mat4 {
     glam::camera::rh::proj::directx::perspective(
         f32::from_bits(0x3f7d821c),
         f32::from_bits(0x3fe38e39),

@@ -12,9 +12,14 @@ use shin_render::{
     ColorBlendType, DepthStencilState, RenderRequestBuilder, StencilFunction, StencilOperation,
     StencilPipelineState, StencilState, quad_vertices::QuadVertices, render_pass::RenderPass,
 };
-pub(super) fn render(model: &Controller, atlas: &CharacterTextures, pass: &mut RenderPass) {
+pub(super) fn render(
+    model: &Controller,
+    atlas: &CharacterTextures,
+    pass: &mut RenderPass,
+    game: crate::cli::Game,
+) {
     // Desktop uses the shared fixed A/B controller contract; native key layout0.
-    for q in artwork::packets(model, false) {
+    for q in artwork::packets(model, false, game) {
         let c = q.color.to_le_bytes();
         let quad = QuadVertices::new()
             .with_box(q.rect[0], q.rect[1], q.rect[2], q.rect[3])

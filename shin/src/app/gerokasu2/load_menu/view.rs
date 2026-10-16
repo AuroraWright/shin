@@ -110,6 +110,7 @@ pub fn render(
     thumbnails: &[Option<Arc<shin_render::render_texture::RenderTexture>>; 100],
     empty: &Labels,
     loading: &Labels,
+    game: crate::cli::Game,
 ) -> Result<()> {
     use art::Kind;
     use shin_core::primitives::color::UnormColor;
@@ -127,6 +128,7 @@ pub fn render(
         dates,
         |i| model.row_flash(i),
         model.close_flash(),
+        game,
     ) {
         if let Kind::Text(i) = p.kind {
             labels[i]
@@ -204,7 +206,9 @@ pub fn render(
                 } else {
                     atlas.get(p.texture)
                 };
-                let builder = builder.color_blend_type(if p.texture == "top" {
+                // Gerokasu B5668 keeps blend 2 for `top`.
+                let additive = p.texture == "top" && game != crate::cli::Game::Gerokasu;
+                let builder = builder.color_blend_type(if additive {
                     ColorBlendType::Layer2
                 } else if p.texture == "nodata" {
                     ColorBlendType::Opaque

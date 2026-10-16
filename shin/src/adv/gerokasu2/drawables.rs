@@ -164,7 +164,7 @@ impl BasicLoadBackend {
         {
             for bank in plane.get_used_layerbank_ids() {
                 if let Some(layer) = plane.get_layer(bank) {
-                    if !matches!(layer.layer, super::layer_factory::GerDrawable::Card(_)) {
+                    if layer.layer.interaction().is_none() {
                         layers.push(layer.render_clone(ctx));
                     }
                 }

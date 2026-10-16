@@ -315,7 +315,7 @@ fn ger_native_config_original_parent_row_artwork() {
         m.update(10.);
         m.select(selected);
         m.scroll.snap(0.);
-        let expected = artwork::quads(&m);
+        let expected = artwork::quads(&m, crate::cli::Game::Gerokasu2);
         assert_eq!(lines.len(), expected.len());
         for (line, q) in lines.into_iter().zip(&expected) {
             let words: Vec<_> = line.split_whitespace().collect();
@@ -504,4 +504,22 @@ fn ger_native_config_original_open_close_clocks() {
     }
     assert_eq!(count, 144);
     eprintln!("GER_CONFIG_NATIVE_CLOCK samples={count}");
+}
+#[test]
+fn gerokasu_config_adds_sliding_bottom_band() {
+    use crate::cli::Game;
+    let mut m = ConfigController::new(Settings::default());
+    m.progress = 0.5;
+    let base = artwork::quads(&m, Game::Gerokasu2);
+    let ger = artwork::quads(&m, Game::Gerokasu);
+    assert!(base.iter().all(|q| q.texture != "bottom"));
+    assert_eq!(ger.len(), base.len() + 1);
+    let i = ger.iter().position(|q| q.texture == "bottom").unwrap();
+    assert_eq!(
+        (ger[i - 1].texture, ger[i + 1].texture),
+        ("default", "help_config")
+    );
+    assert_eq!(ger[i].rect, [0., 1036., 1920., 1124.]);
+    assert_eq!(ger[i].uv, [0., 0., 1., 1.]);
+    assert_eq!((ger[i].alpha, ger[i].space), (1., artwork::Space::Canvas));
 }

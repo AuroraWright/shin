@@ -69,6 +69,31 @@ pub fn choice_layouter<Font: TextFontMetrics + Clone>(
     .with_gerokasu2_rules()
 }
 
+/// Gerokasu CardSelect messages (46B20 -> 1E0B0): a 1280px outlined box at
+/// 48px with the same rules as SELECT labels.
+pub fn card_message_layouter<Font: TextFontMetrics + Clone>(
+    font: Font,
+) -> super::MessageTextLayouter<Font> {
+    super::MessageTextLayouter::new(
+        font.clone(),
+        font,
+        LayoutParams {
+            layout_width: 1274.0,
+            text_size: 48.0,
+            rubi_size: 0.0,
+            perform_soft_breaks: false,
+            always_leave_space_for_rubi: false,
+            ..Default::default()
+        },
+        MessageTextLayouterDefaults {
+            color: 999,
+            draw_speed: 50,
+            fade: 200,
+        },
+    )
+    .with_gerokasu2_rules()
+}
+
 #[cfg(test)]
 mod selection_tests;
 

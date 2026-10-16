@@ -175,13 +175,10 @@ impl BasicLoadBackend {
             layer
                 .properties_mut()
                 .set_layerload_counter1(record.initialization_id());
-            if let GerDrawable::Card(card) = &mut layer.layer {
-                if record.interaction_completed() {
-                    card.inner_ref()
-                        .model
-                        .lock()
-                        .restore_result(record.interaction_result());
-                }
+            if let Some(model) = layer.layer.interaction()
+                && record.interaction_completed()
+            {
+                model.lock().restore_result(record.interaction_result());
             }
             prepared
                 .screen_mut()

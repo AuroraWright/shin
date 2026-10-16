@@ -279,7 +279,7 @@ fn ger_native_cg_complete_cell_shell_digit_hint_check_packets() {
                             0.25f32.to_bits(),
                             0.5f32.to_bits()
                         ));
-                        expected.push(artwork::packets(&m));
+                        expected.push(artwork::packets(&m, crate::cli::Game::Gerokasu2));
                     }
                 }
             }
@@ -661,4 +661,24 @@ fn ger_native_cg_confirm_waits_for_flash_and_passes_exact_viewer_group() {
         );
     }
     println!("GER_CG_PLAY owners=8 states={}", expected.len());
+}
+#[test]
+fn gerokasu_cg_chrome_adds_bottom_band() {
+    use crate::cli::Game;
+    let mut m = Controller::new(entries(13, 1)).unwrap();
+    m.assets_ready();
+    let base = artwork::packets(&m, Game::Gerokasu2);
+    let ger = artwork::packets(&m, Game::Gerokasu);
+    assert!(base.iter().all(|p| p.texture != "bottom"));
+    assert_eq!(base.iter().find(|p| p.texture == "top").unwrap().blend, 3);
+    assert_eq!(ger.iter().find(|p| p.texture == "top").unwrap().blend, 2);
+    assert_eq!(ger.len(), base.len() + 1);
+    let i = ger.iter().position(|p| p.texture == "bottom").unwrap();
+    assert_eq!(
+        (ger[i - 1].texture.as_str(), ger[i + 1].texture.as_str()),
+        ("close", "numbg")
+    );
+    assert_eq!(ger[i].rect, [0., 992., 1920., 1080.]);
+    assert_eq!(ger[i].uv, [0., 0., 1., 1.]);
+    assert_eq!((ger[i].color, ger[i].blend), (u32::MAX, 2));
 }

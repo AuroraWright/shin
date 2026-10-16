@@ -107,6 +107,9 @@ impl BustupGalleryHost {
         let mut model = Controller::new(catalog);
         let atlas: Arc<CharacterTextures> = assets.load(bustup_gallery::ATLAS).await?;
         atlas.require_names(bustup_gallery::ATLAS, bustup_gallery::TEXTURES)?;
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(bustup_gallery::ATLAS, &["bottom"])?;
+        }
         let mask = assets.load(bustup_gallery::MASK).await?;
         let (primary, secondary) = model.selected_background();
         let (background, bustup) = futures::try_join!(
@@ -349,7 +352,7 @@ impl BustupGalleryHost {
             self.scene
                 .render(pass, &TransformParams::default(), 0, kind);
         }
-        for packet in bustup_gallery::artwork::packets(&self.model) {
+        for packet in bustup_gallery::artwork::packets(&self.model, self.assets.context().game) {
             let [b, g, r, a] = packet.color.to_le_bytes();
             let vertices = QuadVertices::new()
                 .with_box(

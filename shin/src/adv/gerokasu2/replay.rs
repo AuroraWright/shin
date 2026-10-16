@@ -376,6 +376,7 @@ fn supported(command: &Cmd) -> bool {
             | Cmd::MessageInit { .. }
             | Cmd::MessageSet { .. }
             | Cmd::MessageFace { .. }
+            | Cmd::GerMessageFace { .. }
             | Cmd::VoicePlay { .. }
             | Cmd::VoiceWait { .. }
             | Cmd::Selection { .. }

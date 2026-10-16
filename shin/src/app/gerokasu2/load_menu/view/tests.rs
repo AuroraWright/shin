@@ -70,6 +70,7 @@ fn compare_artwork(mode: crate::adv::gerokasu2::save_menu::Mode) {
                                 &dates,
                                 |i| if i == selected { flash } else { 0. },
                                 flash,
+                                crate::cli::Game::Gerokasu2,
                             )
                             .into_iter()
                             .filter(|p| !matches!(p.kind, art::Kind::Text(_)))
@@ -243,4 +244,22 @@ fn compare_artwork(mode: crate::adv::gerokasu2::save_menu::Mode) {
         "GER_LOAD_NATIVE_RENDER profiles={} quads={quads} exact_uv_color_program=true max_canvas_absolute_difference={max_xy}",
         expected.len()
     );
+}
+#[test]
+fn gerokasu_save_load_adds_sliding_bottom_band() {
+    use crate::{adv::gerokasu2::save_menu::Mode, cli::Game};
+    let dates = std::array::from_fn(|_| None);
+    let plan = |game| art::plan_with_mode(Mode::Load, 0.5, 0., 0, &dates, |_| 0., 0., game);
+    let base = plan(Game::Gerokasu2);
+    let ger = plan(Game::Gerokasu);
+    assert!(base.iter().all(|p| p.texture != "bottom"));
+    assert_eq!(ger.len(), base.len() + 1);
+    let i = ger.iter().position(|p| p.texture == "bottom").unwrap();
+    assert_eq!(
+        (ger[i - 1].texture, ger[i + 1].texture),
+        ("close", "help_saveload")
+    );
+    assert_eq!(ger[i].rect, glam::vec4(0., 1036., 1920., 1124.));
+    assert_eq!(ger[i].uv, glam::vec4(0., 0., 1., 1.));
+    assert_eq!((ger[i].color, ger[i].kind), (u32::MAX, art::Kind::Sprite));
 }

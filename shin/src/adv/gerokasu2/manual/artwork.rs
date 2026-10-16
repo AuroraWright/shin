@@ -99,7 +99,7 @@ fn hint(out: &mut Vec<Packet>, mut right: f32, y: f32, row: usize, swapped: bool
     }
     right - 10.
 }
-pub fn packets(model: &Controller, swapped: bool) -> Vec<Packet> {
+pub fn packets(model: &Controller, swapped: bool, game: crate::cli::Game) -> Vec<Packet> {
     packets_for(
         model.resources_ready(),
         model.count,
@@ -107,6 +107,7 @@ pub fn packets(model: &Controller, swapped: bool) -> Vec<Packet> {
         model.scroll(),
         model.close_flash(),
         swapped,
+        game,
     )
 }
 pub fn packets_for(
@@ -116,7 +117,9 @@ pub fn packets_for(
     scroll: f32,
     flash: f32,
     swapped: bool,
+    game: crate::cli::Game,
 ) -> Vec<Packet> {
+    let gerokasu = game == crate::cli::Game::Gerokasu;
     if !ready {
         return vec![];
     }
@@ -166,7 +169,8 @@ pub fn packets_for(
     }
     let y = progress.mul_add(150., -150.);
     for (t, x, right, blend) in [
-        ("top", 0., 1920., 3),
+        // Gerokasu 7C7F0 keeps blend 2 for the top band.
+        ("top", 0., 1920., if gerokasu { 2 } else { 3 }),
         ("caption", 32., 576., 2),
         ("button_shadow", 1728., 1920., 2),
     ] {
@@ -192,6 +196,21 @@ pub fn packets_for(
         2,
     );
     out.last_mut().unwrap().flash = flash;
+    if gerokasu {
+        // Gerokasu 7CA90..7CB2C: bottom band slides with the hints, tinted
+        // (1,1,1,0.85); 533A0 truncates the alpha to 0xD8.
+        let y = progress.mul_add(-88., 1080.);
+        push(
+            &mut out,
+            "bottom",
+            [0., y, 1920., y + 88.],
+            FULL,
+            shell,
+            (((0.85f32 * 255.) as u32) << 24) | 0xffffff,
+            DEFAULT,
+            2,
+        );
+    }
     let y = progress.mul_add(-88., 1080.) + 20.;
     let right = hint(&mut out, 1872., y, 1, swapped);
     hint(&mut out, right, y, 0, swapped);

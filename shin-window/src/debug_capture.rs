@@ -3,7 +3,10 @@
 //! With `SHIN_DEBUG_CAPTURE_DIR=<dir>`, every `SHIN_DEBUG_CAPTURE_EVERY` (60)
 //! presented frames are written as `<dir>/frame-<n>.rgba`: a 12-byte header
 //! (`RGBA`, u32 width, u32 height, little endian) and tightly packed rows in
-//! the surface byte order. Release builds and unset variables do nothing.
+//! the surface byte order. `SHIN_DEBUG_CAPTURE_FROM` skips earlier frames,
+//! `SHIN_DEBUG_CAPTURE_AFTER_SECS` earlier wall-clock time, and
+//! `SHIN_DEBUG_CAPTURE_LIMIT` caps the number of dumps.
+//! Release builds and unset variables do nothing.
 use std::{
     path::PathBuf,
     sync::{
@@ -15,6 +18,9 @@ use std::{
 struct Settings {
     dir: PathBuf,
     every: u64,
+    from: u64,
+    after: std::time::Instant,
+    limit: u64,
 }
 
 fn settings() -> Option<&'static Settings> {
@@ -31,7 +37,25 @@ fn settings() -> Option<&'static Settings> {
                 .and_then(|value| value.parse().ok())
                 .filter(|&value| value > 0)
                 .unwrap_or(60);
-            Some(Settings { dir, every })
+            let from = std::env::var("SHIN_DEBUG_CAPTURE_FROM")
+                .ok()
+                .and_then(|value| value.parse().ok())
+                .unwrap_or(0);
+            let secs = |name| {
+                std::env::var(name)
+                    .ok()
+                    .and_then(|value| value.parse().ok())
+            };
+            let after = std::time::Instant::now()
+                + std::time::Duration::from_secs(secs("SHIN_DEBUG_CAPTURE_AFTER_SECS").unwrap_or(0));
+            let limit = secs("SHIN_DEBUG_CAPTURE_LIMIT").unwrap_or(u64::MAX);
+            Some(Settings {
+                dir,
+                every,
+                from,
+                after,
+                limit,
+            })
         })
         .as_ref()
 }
@@ -43,7 +67,12 @@ pub fn due() -> bool {
     let Some(settings) = settings() else {
         return false;
     };
-    FRAME.fetch_add(1, Ordering::Relaxed) % settings.every == 0
+    static TAKEN: AtomicU64 = AtomicU64::new(0);
+    let frame = FRAME.fetch_add(1, Ordering::Relaxed);
+    frame >= settings.from
+        && frame % settings.every == 0
+        && std::time::Instant::now() >= settings.after
+        && TAKEN.fetch_add(1, Ordering::Relaxed) < settings.limit
 }
 
 pub struct Pending {

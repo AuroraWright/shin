@@ -213,7 +213,7 @@ fn manual_pointer_close_bounds_and_numbered_page_geometry() {
         assert!(m.probe(x, y));
         assert_eq!(m.contact, contact);
     }
-    let p = artwork::packets_for(true, 15, 1., 0., 0., false);
+    let p = artwork::packets_for(true, 15, 1., 0., 0., false, crate::cli::Game::Gerokasu2);
     assert_eq!(p[2].texture, "001");
     assert_eq!(p[2].rect, [240., 166., 1680., 976.]);
     assert!(p.iter().all(|p| p.texture != "obi"));
@@ -335,7 +335,15 @@ fn ger_native_manual_complete_page_shell_hint_vertex_and_matrix_packets() {
     for (i, &(ready, count, progress, scroll, flash, swapped)) in profiles.iter().enumerate() {
         let header = lines.next().unwrap();
         assert!(header.starts_with(&format!("D {i} ")));
-        let expected = artwork::packets_for(ready, count, progress, scroll, flash, swapped);
+        let expected = artwork::packets_for(
+            ready,
+            count,
+            progress,
+            scroll,
+            flash,
+            swapped,
+            crate::cli::Game::Gerokasu2,
+        );
         for (j, p) in expected.iter().enumerate() {
             let line = lines.next().unwrap();
             assert!(line.starts_with("P "), "missing packet {i}/{j}: {line}");
@@ -389,4 +397,19 @@ fn ger_native_manual_complete_page_shell_hint_vertex_and_matrix_packets() {
         "GER_MANUAL_RENDER_COMPARE profiles={} packets={packets}",
         profiles.len()
     );
+}
+#[test]
+fn gerokasu_manual_adds_sliding_bottom_band() {
+    use crate::cli::Game;
+    let base = artwork::packets_for(true, 3, 0.5, 0., 0., false, Game::Gerokasu2);
+    let ger = artwork::packets_for(true, 3, 0.5, 0., 0., false, Game::Gerokasu);
+    assert!(base.iter().all(|p| p.texture != "bottom"));
+    assert_eq!(base.iter().find(|p| p.texture == "top").unwrap().blend, 3);
+    assert_eq!(ger.iter().find(|p| p.texture == "top").unwrap().blend, 2);
+    assert_eq!(ger.len(), base.len() + 1);
+    let i = ger.iter().position(|p| p.texture == "bottom").unwrap();
+    assert_eq!(ger[i - 1].texture, "close");
+    assert_eq!(ger[i].rect, [0., 1036., 1920., 1124.]);
+    assert_eq!(ger[i].uv, [0., 0., 1., 1.]);
+    assert_eq!((ger[i].color, ger[i].blend), (0xd8ffffff, 2));
 }

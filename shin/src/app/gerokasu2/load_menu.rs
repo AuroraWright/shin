@@ -72,6 +72,9 @@ impl LoadMenuHost {
             assets.load::<crate::adv::characters::view::CharacterTextures, _>("/systex.txa")
         )?;
         atlas.require_names(save_menu::ATLAS, &save_menu::TEXTURES)?;
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(save_menu::ATLAS, &["bottom"])?;
+        }
         system.require_names("/systex.txa", &["scroll"])?;
         let mut model = Controller::new_with_mode(
             mode,
@@ -256,6 +259,7 @@ impl LoadMenuHost {
             &self.previews.textures,
             &self.empty,
             &self.loading,
+            self.assets.context().game,
         )?;
         if let Some(dialog) = &self.dialog {
             dialog.render(pass)?

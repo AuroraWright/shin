@@ -32,6 +32,8 @@ pub struct MessageDescriptor {
     /// Some("") preserves SELECT's non-null source-pointer condition.
     pub text: Option<Arc<str>>,
     pub face: i32,
+    /// Gerokasu's last five-operand MSGFACE, re-applied after restore.
+    pub ger_face: Option<[i32; 5]>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -85,6 +87,7 @@ impl Descriptors {
                 style,
                 text: None,
                 face,
+                ger_face: None,
             },
             message_properties: std::array::from_fn(|index| {
                 LayerProperty::from_usize(index).initial_value()
@@ -154,6 +157,10 @@ impl Descriptors {
             }
             Cmd::MessageInit { style } => self.message.style = *style,
             Cmd::MessageFace { face } => self.message.face = *face,
+            Cmd::GerMessageFace { args } => {
+                self.message.face = args[1];
+                self.message.ger_face = Some(*args);
+            }
             Cmd::MessageSet {
                 msg_id,
                 auto_wait,

@@ -2,6 +2,112 @@
 use anyhow::{Result, ensure};
 use shin_core::time::{Easing, Ticks, Tweener};
 pub mod draw;
+pub mod gerokasu;
+pub mod gerokasu_draw;
+
+/// The QUIZ-bound interactive drawable as seen by the scene and app input.
+pub trait CardInteraction: Send {
+    /// First listener query (QUIZ bind).
+    fn attach_listener(&mut self);
+    fn ready(&self) -> bool;
+    fn result(&self) -> Option<i32>;
+    fn restore_result(&mut self, result: i32);
+    fn select(&mut self, index: usize) -> bool;
+    fn confirm(&mut self) -> bool;
+    fn navigate(&mut self, direction: i32) -> bool;
+    /// B; `false` leaves the button to the ADV.
+    fn cancel_input(&mut self) -> bool {
+        false
+    }
+    fn pointer_move(&mut self, position: glam::Vec2) -> bool;
+    fn pointer_press(&mut self) -> bool;
+    fn pointer_release(&mut self) -> bool;
+    fn pointer_cancel(&mut self);
+    /// Sounds and voice requests since the last drain.
+    fn take_events(&mut self) -> Vec<gerokasu::CardEvent> {
+        Vec::new()
+    }
+    fn set_voice_playing(&mut self, _playing: bool) {}
+}
+impl CardInteraction for CardSelectModel {
+    fn attach_listener(&mut self) {
+        self.listener = true;
+    }
+    fn ready(&self) -> bool {
+        CardSelectModel::ready(self)
+    }
+    fn result(&self) -> Option<i32> {
+        CardSelectModel::result(self)
+    }
+    fn restore_result(&mut self, result: i32) {
+        CardSelectModel::restore_result(self, result);
+    }
+    fn select(&mut self, index: usize) -> bool {
+        CardSelectModel::select(self, index)
+    }
+    fn confirm(&mut self) -> bool {
+        CardSelectModel::confirm(self)
+    }
+    fn navigate(&mut self, direction: i32) -> bool {
+        CardSelectModel::navigate(self, direction)
+    }
+    fn pointer_move(&mut self, position: glam::Vec2) -> bool {
+        CardSelectModel::pointer_move(self, position)
+    }
+    fn pointer_press(&mut self) -> bool {
+        CardSelectModel::pointer_press(self)
+    }
+    fn pointer_release(&mut self) -> bool {
+        CardSelectModel::pointer_release(self)
+    }
+    fn pointer_cancel(&mut self) {
+        CardSelectModel::pointer_cancel(self);
+    }
+}
+impl CardInteraction for gerokasu::GerokasuCardModel {
+    fn attach_listener(&mut self) {
+        gerokasu::GerokasuCardModel::attach_listener(self);
+    }
+    fn ready(&self) -> bool {
+        gerokasu::GerokasuCardModel::ready(self)
+    }
+    fn result(&self) -> Option<i32> {
+        gerokasu::GerokasuCardModel::result(self)
+    }
+    fn restore_result(&mut self, result: i32) {
+        gerokasu::GerokasuCardModel::restore_result(self, result);
+    }
+    fn select(&mut self, index: usize) -> bool {
+        self.ready() && self.phase == 1 && self.select_card(index as i32)
+    }
+    fn confirm(&mut self) -> bool {
+        self.ready() && gerokasu::GerokasuCardModel::confirm(self)
+    }
+    fn navigate(&mut self, direction: i32) -> bool {
+        self.ready() && gerokasu::GerokasuCardModel::navigate(self, direction)
+    }
+    fn cancel_input(&mut self) -> bool {
+        self.ready() && self.cancel()
+    }
+    fn pointer_move(&mut self, position: glam::Vec2) -> bool {
+        gerokasu::GerokasuCardModel::pointer_move(self, position)
+    }
+    fn pointer_press(&mut self) -> bool {
+        gerokasu::GerokasuCardModel::pointer_press(self)
+    }
+    fn pointer_release(&mut self) -> bool {
+        gerokasu::GerokasuCardModel::pointer_release(self)
+    }
+    fn pointer_cancel(&mut self) {
+        gerokasu::GerokasuCardModel::pointer_cancel(self);
+    }
+    fn take_events(&mut self) -> Vec<gerokasu::CardEvent> {
+        std::mem::take(&mut self.events)
+    }
+    fn set_voice_playing(&mut self, playing: bool) {
+        self.voice_playing = playing;
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Card {

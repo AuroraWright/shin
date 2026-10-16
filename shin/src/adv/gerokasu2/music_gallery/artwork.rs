@@ -124,7 +124,8 @@ fn hint(out: &mut Vec<Packet>, mut right: f32, id: usize, color: u32, swapped: b
     }
     right - 10.
 }
-pub fn packets(model: &Controller, swapped: bool) -> Vec<Packet> {
+pub fn packets(model: &Controller, swapped: bool, game: crate::cli::Game) -> Vec<Packet> {
+    let gerokasu = game == crate::cli::Game::Gerokasu;
     let mut out = vec![];
     quad(&mut out, "bg", [0., 0., 1920., 1080.], FULL, u32::MAX, 1);
     let origin = model.scroll() + -176.;
@@ -173,8 +174,17 @@ pub fn packets(model: &Controller, swapped: bool) -> Vec<Packet> {
             quad(&mut out, "flash", rect, FULL, alpha(flash) | 0xffffff, 2);
         }
     }
-    // Top strip covers rows that move behind the caption. Native uses blend3.
-    quad(&mut out, "top", [0., 0., 1920., 192.], FULL, u32::MAX, 3);
+    // Top strip covers rows that move behind the caption. Native uses blend3;
+    // Gerokasu 2F594 selects blend 2.
+    let blend = if gerokasu { 2 } else { 3 };
+    quad(
+        &mut out,
+        "top",
+        [0., 0., 1920., 192.],
+        FULL,
+        u32::MAX,
+        blend,
+    );
     quad(
         &mut out,
         "caption",
@@ -200,6 +210,17 @@ pub fn packets(model: &Controller, swapped: bool) -> Vec<Packet> {
         2,
     );
     out.last_mut().unwrap().flash = model.flash();
+    if gerokasu {
+        // Gerokasu 2F80C..2F894: static bottom band in blend 2.
+        quad(
+            &mut out,
+            "bottom",
+            [0., 992., 1920., 1080.],
+            FULL,
+            u32::MAX,
+            2,
+        );
+    }
     let mut right = hint(&mut out, 1872., 1, u32::MAX, swapped);
     right = hint(
         &mut out,

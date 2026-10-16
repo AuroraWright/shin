@@ -395,7 +395,7 @@ fn ger_native_music_row_chrome_hint_packets() {
                         elapsed.to_bits(),
                         u8::from(swapped)
                     ));
-                    expected.push(artwork::packets(&m, swapped));
+                    expected.push(artwork::packets(&m, swapped, crate::cli::Game::Gerokasu2));
                     bars.push(artwork::scrollbar(&m));
                 }
             }
@@ -539,4 +539,20 @@ fn ger_native_music_first_resource_gate_capture_clock_and_stop() {
         "Ger Music native First: {profiles} profiles,{} exact resource/capture/audio/input snapshots",
         expected.len()
     );
+}
+#[test]
+fn gerokasu_music_chrome_adds_bottom_band() {
+    use crate::cli::Game;
+    let m = owner(3, 1);
+    let base = artwork::packets(&m, false, Game::Gerokasu2);
+    let ger = artwork::packets(&m, false, Game::Gerokasu);
+    assert!(base.iter().all(|p| p.texture != "bottom"));
+    assert_eq!(base.iter().find(|p| p.texture == "top").unwrap().blend, 3);
+    assert_eq!(ger.iter().find(|p| p.texture == "top").unwrap().blend, 2);
+    assert_eq!(ger.len(), base.len() + 1);
+    let i = ger.iter().position(|p| p.texture == "bottom").unwrap();
+    assert_eq!(ger[i - 1].texture, "close");
+    assert_eq!(ger[i].rect, [0., 992., 1920., 1080.]);
+    assert_eq!(ger[i].uv, [0., 0., 1., 1.]);
+    assert_eq!((ger[i].color, ger[i].blend), (u32::MAX, 2));
 }

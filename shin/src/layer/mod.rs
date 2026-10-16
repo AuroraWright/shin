@@ -15,7 +15,7 @@ mod root_layer_group;
 mod screen_layer;
 mod update_tracker;
 pub mod user;
-mod wobbler;
+pub(crate) mod wobbler;
 
 use derive_more::From;
 use glam::vec3;

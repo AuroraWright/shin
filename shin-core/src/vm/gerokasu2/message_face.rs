@@ -68,6 +68,14 @@ impl MessageFaceState {
         }
     }
 
+    /// Gerokasu: MSGSET never requests a face; only MSGFACE does.
+    pub fn set_gerokasu(&mut self) {
+        self.gerokasu = true;
+    }
+    pub fn is_gerokasu(&self) -> bool {
+        self.gerokasu
+    }
+
     pub fn retained_index(&self) -> i32 {
         self.retained_index
     }

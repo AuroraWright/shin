@@ -43,8 +43,13 @@ fn packet(q: &artwork::Packet, atlas: &CharacterTextures, pass: &mut RenderPass)
         vertices.render_sprite(pass, builder, atlas.get(&q.texture).as_source(), matrix);
     }
 }
-pub(super) fn render_grid(m: &Controller, atlas: &CharacterTextures, pass: &mut RenderPass) {
-    for q in artwork::packets(m) {
+pub(super) fn render_grid(
+    m: &Controller,
+    atlas: &CharacterTextures,
+    pass: &mut RenderPass,
+    game: crate::cli::Game,
+) {
+    for q in artwork::packets(m, game) {
         packet(&q, atlas, pass);
     }
 }

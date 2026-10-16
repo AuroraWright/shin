@@ -70,6 +70,9 @@ impl MusicGalleryHost {
             Controller::new(&items, &data.save_vectors.unlocked_bgms).map_err(|e| anyhow!(e))?;
         let atlas: Arc<CharacterTextures> = assets.load(music_gallery::ATLAS).await?;
         atlas.require_names(music_gallery::ATLAS, music_gallery::TEXTURES)?;
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(music_gallery::ATLAS, &["bottom"])?;
+        }
         for row in &model.rows {
             let name = format!("title{}", row.name / 32);
             atlas.require_names(music_gallery::ATLAS, &[name.as_str()])?;
@@ -242,7 +245,8 @@ impl MusicGalleryHost {
         Ok(())
     }
     pub fn render(&self, pass: &mut RenderPass) -> Result<()> {
-        view::render(&self.model, &self.atlas, &self.system, pass);
+        let game = self.assets.context().game;
+        view::render(&self.model, &self.atlas, &self.system, pass, game);
         if let Some(previous) = &self.previous {
             previous.render(pass);
         }

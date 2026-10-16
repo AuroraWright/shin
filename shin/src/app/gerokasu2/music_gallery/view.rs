@@ -15,9 +15,10 @@ pub(super) fn render(
     atlas: &CharacterTextures,
     system: &CharacterTextures,
     pass: &mut RenderPass,
+    game: crate::cli::Game,
 ) {
     let matrix = Mat4::from_cols_array(&artwork::PROJECTION);
-    for p in artwork::packets(model, false) {
+    for p in artwork::packets(model, false, game) {
         if p.texture == "top" {
             for bar in artwork::scrollbar(model) {
                 let vertices = bar.vertices.map(|v| PosColTexVertex {

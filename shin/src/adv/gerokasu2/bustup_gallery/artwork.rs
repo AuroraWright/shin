@@ -54,7 +54,8 @@ fn number_glyphs(out: &mut Vec<Packet>, current: usize, count: usize, x: f32, y:
         left += 16.0;
     }
 }
-pub fn packets(menu: &Controller) -> Vec<Packet> {
+pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
+    let gerokasu = game == crate::cli::Game::Gerokasu;
     if !menu.ready {
         return vec![];
     }
@@ -182,7 +183,10 @@ pub fn packets(menu: &Controller) -> Vec<Packet> {
     if controls > 0.0 {
         let y = controls.mul_add(150., -150.);
         let mut q = draw("top", 0., y, 1920., 192., full, white);
-        q.blend = 3;
+        // Gerokasu 37D60 keeps blend 2 for the top band.
+        if !gerokasu {
+            q.blend = 3;
+        }
         out.push(q);
         out.push(draw("caption", 32., y, 512., 192., full, white));
         out.push(draw("button_shadow", 1600., y, 320., 192., full, white));
@@ -197,6 +201,11 @@ pub fn packets(menu: &Controller) -> Vec<Packet> {
                 menu.confirm_flash.value()
             });
             out.push(q);
+        }
+        if gerokasu {
+            // Gerokasu 380C8..38164: bottom band slides with the hints.
+            let y = controls.mul_add(-88., 1080.);
+            out.push(draw("bottom", 0., y, 1920., 88., full, white));
         }
         let y = controls.mul_add(-88., 1080.) + 20.;
         let mut right = 1872.;

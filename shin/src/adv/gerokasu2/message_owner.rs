@@ -69,12 +69,16 @@ impl Gerokasu2MessageOwner {
         async_message_active: bool,
         retained_face: i32,
     ) -> Result<Self> {
-        Ok(Self::from_resources(
+        let mut owner = Self::from_resources(
             MessageResources::load(assets).await?,
             style,
             async_message_active,
             retained_face,
-        ))
+        );
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            owner.face.set_gerokasu();
+        }
+        Ok(owner)
     }
     pub fn from_resources(
         resources: MessageResources,
@@ -104,7 +108,11 @@ impl Gerokasu2MessageOwner {
         descriptor: &super::descriptors::MessageDescriptor,
     ) {
         self.commands.restore_descriptor(descriptor);
+        let gerokasu = self.face.is_gerokasu();
         self.face = MessageFaceState::new(descriptor.face);
+        if gerokasu {
+            self.face.set_gerokasu();
+        }
     }
     pub(crate) fn clear_for_reconstruction(&mut self) {
         if let Some(message) = self.message.as_mut() {

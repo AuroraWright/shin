@@ -104,6 +104,9 @@ impl CgGalleryHost {
         let mut model = Controller::new(entries).map_err(anyhow::Error::msg)?;
         let atlas: Arc<CharacterTextures> = assets.load(cg_gallery::ATLAS).await?;
         atlas.require_names(cg_gallery::ATLAS, cg_gallery::TEXTURES)?;
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(cg_gallery::ATLAS, &["bottom"])?;
+        }
         // Native4EE70 publishes the atlas before acquiring change.msk. This host
         // awaits both before replacing Title; renderer publication timing differs.
         for entry in &model.entries {
@@ -409,7 +412,7 @@ impl CgGalleryHost {
         Ok(())
     }
     pub fn render(&self, pass: &mut RenderPass) -> Result<()> {
-        view::render_grid(&self.model, &self.atlas, pass);
+        view::render_grid(&self.model, &self.atlas, pass, self.assets.context().game);
         if let Some(v) = &self.viewer {
             view::render_viewer(
                 &v.model,

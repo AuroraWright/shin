@@ -464,6 +464,9 @@ impl GerHost {
                     }
                     if input[AppAction::Enter].is_clicked {
                         self.scene.confirm_card();
+                    } else if input[AppAction::Cancel].is_clicked {
+                        // Gerokasu 49A00: B undoes or puts the card back.
+                        self.scene.cancel_card();
                     }
                 } else if input[AppAction::Up].is_clicked_or_repeated {
                     // 117D8: the message layer takes repeated Up (bit24)

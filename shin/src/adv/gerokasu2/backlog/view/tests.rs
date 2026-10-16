@@ -115,6 +115,7 @@ fn ger_native_backlog_view_packets_and_hover_match() {
             progress: f(0),
             scroll: f(1),
             close_flash: f(2),
+            game: crate::cli::Game::Gerokasu2,
             chapter_open: n(6) != 0,
             swapped: n(8) != 0,
             selected: n(9),
@@ -552,4 +553,40 @@ fn ger_native_backlog_view_pointer_callbacks_and_inertia_match() {
         "GER_BACKLOG_POINTER_MATCH cases={} press/release/drag/fling/inertia",
         expected.len()
     );
+}
+
+#[test]
+fn gerokasu_chrome_adds_bottom_band_and_own_portraits() {
+    let view = Presentation {
+        progress: 0.5,
+        scroll: 0.,
+        selected: 0,
+        chapter_open: false,
+        swapped: false,
+        close_flash: 0.,
+        game: crate::cli::Game::Gerokasu,
+    };
+    let chrome = chrome(&view, true);
+    assert_eq!(chrome[0].texture, "top");
+    assert_eq!(chrome[0].blend, 2);
+    let bottom = chrome.iter().find(|p| p.texture == "bottom").unwrap();
+    assert_eq!(bottom.rect, [0., 1036., 1920., 1124.]);
+    assert_eq!(bottom.uv, [0., 0., 0.5, 1.]);
+    let row = Row {
+        index: 0,
+        top: 0.,
+        height: 300.,
+        kind: 0,
+        voice_count: 1,
+        message_arg: 3,
+        flash: 0.,
+    };
+    assert_eq!(row_packets(&view, row).portrait.unwrap().texture, "voice_doremi");
+    let view = Presentation {
+        game: crate::cli::Game::Gerokasu2,
+        ..view
+    };
+    let chrome = super::chrome(&view, true);
+    assert_eq!(chrome[0].blend, 3);
+    assert!(chrome.iter().all(|p| p.texture != "bottom"));
 }

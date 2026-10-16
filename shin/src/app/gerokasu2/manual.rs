@@ -38,6 +38,9 @@ impl ManualHost {
     ) -> Result<Self> {
         let atlas: Arc<CharacterTextures> = assets.load(manual::ATLAS).await?;
         atlas.require_names(manual::ATLAS, manual::TEXTURES)?;
+        if assets.context().game == crate::cli::Game::Gerokasu {
+            atlas.require_names(manual::ATLAS, &["bottom"])?;
+        }
         let mut count = 0i32;
         loop {
             let next = count
@@ -131,7 +134,7 @@ impl ManualHost {
             })
     }
     pub fn render(&self, pass: &mut RenderPass) -> Result<()> {
-        view::render(&self.model, &self.atlas, pass);
+        view::render(&self.model, &self.atlas, pass, self.assets.context().game);
         Ok(())
     }
 }
