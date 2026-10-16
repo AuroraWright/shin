@@ -53,7 +53,9 @@ impl ChildServices for Frame<'_, '_> {
             },
             &self.globals.data,
             flags,
-            self.globals.server.contains("/append.txt"),
+            self.globals.server.contains("/append.txt")
+                && self.globals.common.scenario.variant
+                    == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
             self.extent,
         )?;
         *self.config = Some(RetainedConfig {
@@ -107,7 +109,9 @@ impl ChildServices for Frame<'_, '_> {
             current.as_ref(),
             &self.globals.data,
             slots,
-            self.globals.server.contains("/append.txt"),
+            self.globals.server.contains("/append.txt")
+                && self.globals.common.scenario.variant
+                    == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
             self.extent,
         )?;
         let owner = Owner::from_prepared(

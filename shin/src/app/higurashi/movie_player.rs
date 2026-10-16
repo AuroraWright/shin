@@ -322,6 +322,10 @@ impl Player {
             .as_ref()
             .map(|player| player.current_time_micros())
     }
+    #[cfg(test)]
+    pub fn reference_retirement(&self) -> shin_tasks::LoaderRetirement {
+        self.loading.as_ref().expect("Live Player loader").retirement.clone()
+    }
     /// Native8fc24/+20 joins workers before Viewer destroys its tweens. Its
     /// external Player and retained RGBA survive until the later +8 release.
     /// Do not replace this with +30/pause, which keeps codec work alive.

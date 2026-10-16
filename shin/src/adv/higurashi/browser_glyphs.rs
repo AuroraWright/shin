@@ -40,7 +40,13 @@ pub fn layout<Font: FontMetrics + Clone>(
         Item::Choice { .. } | Item::CharacterChoice { .. } => (0, 0xfcc),
         Item::Checkpoint { .. } => (0, 0xcff),
     };
-    Ok(HigurashiBacklogLayouter::new(font, style, color, voices).parse(&row.item.display_text()?))
+    let text = row.item.display_text()?;
+    let layouter = HigurashiBacklogLayouter::new(font, style, color, voices);
+    Ok(if matches!(row.item, Item::CharacterChoice { .. }) {
+        layouter.parse(&text)
+    } else {
+        layouter.parse_raw(&text)
+    })
 }
 
 pub struct PositionedRow {
@@ -297,3 +303,82 @@ impl BrowserGlyphCache {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod localization_tests {
+    use super::*;
+    #[derive(Clone)]
+    struct Metrics(bool);
+    impl FontMetrics for Metrics {
+        fn localize<'a>(&self, text: &'a str) -> std::borrow::Cow<'a, str> {
+            if self.0 {
+                std::borrow::Cow::Owned("English".into())
+            } else {
+                std::borrow::Cow::Borrowed(text)
+            }
+        }
+        fn get_ascent(&self) -> u32 {
+            40
+        }
+        fn get_descent(&self) -> u32 {
+            10
+        }
+        fn get_glyph_info(&self, _: char) -> Option<GlyphInfo> {
+            Some(GlyphInfo {
+                bearing_x: 0,
+                bearing_y: 40,
+                advance_width: 20,
+                actual_width: 20,
+                actual_height: 40,
+                texture_width: 32,
+                texture_height: 64,
+            })
+        }
+    }
+    #[test]
+    fn localization_browser_keeps_authored_rows_raw_and_translates_code_character_labels() {
+        let items = [
+            Item::Message {
+                text: "確認".into(),
+                style: 0,
+                argument: None,
+            },
+            Item::Choice {
+                title: "確認".into(),
+                text: "確認".into(),
+            },
+            Item::Checkpoint {
+                title: "確認".into(),
+                text: "確認".into(),
+            },
+        ];
+        for item in items {
+            let row = Row {
+                boundary: 1,
+                index: 0,
+                item,
+            };
+            let raw = layout(&row, Metrics(false), HigurashiBacklogVoices::Count(0)).unwrap();
+            let overridden = layout(&row, Metrics(true), HigurashiBacklogVoices::Count(0)).unwrap();
+            assert_eq!(overridden.commands, raw.commands);
+            assert_eq!(overridden.lines, raw.lines);
+            assert_eq!(overridden.size, raw.size);
+        }
+        let row = Row {
+            boundary: 1,
+            index: 0,
+            item: Item::CharacterChoice { response: 0 },
+        };
+        let translated = layout(&row, Metrics(true), HigurashiBacklogVoices::Count(0)).unwrap();
+        let expected = HigurashiBacklogLayouter::new(
+            Metrics(false),
+            0,
+            0xfcc,
+            HigurashiBacklogVoices::Count(0),
+        )
+        .parse_raw("English");
+        assert_eq!(translated.commands, expected.commands);
+        assert_eq!(translated.lines, expected.lines);
+        assert_eq!(translated.size, expected.size);
+    }
+}

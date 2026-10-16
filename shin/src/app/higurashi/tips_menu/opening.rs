@@ -251,6 +251,9 @@ impl Opening {
                     }
                 }
             }
+            if let Some(atlas) = &self.atlas {
+                self.motion.model.apply_artwork(atlas);
+            }
             self.motion.advance(
                 if self.ready { 2 } else { 1 },
                 self.mask.is_some(),

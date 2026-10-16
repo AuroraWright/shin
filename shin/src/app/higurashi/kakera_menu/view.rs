@@ -93,14 +93,16 @@ pub(super) fn packets(motion: &Motion, atlas_present: bool) -> Vec<Draw> {
             Mat4::from_translation(vec3(motion.clocks[7].value(), 0.0, 0.0)),
         );
         let suffix = if m.alternate { "_org" } else { "" };
-        out.push(quad(
+        if m.any_artwork() { out.push(quad(
             format!("k_title{:02}{suffix}", m.page + 1),
             page,
             [526.0, 152.0, 1390.0, 278.0],
             FULL,
             u32::MAX,
         ));
+        }
         for (cell, &fragment) in m.pages[m.page].iter().enumerate() {
+            if !m.cell_available(m.page, cell) { continue; }
             let (left, top) = catalog::CELLS[cell];
             let (x, y) = (left as f32, top as f32);
             let status = m.statuses[fragment];
@@ -196,7 +198,7 @@ pub(super) fn packets(motion: &Motion, atlas_present: bool) -> Vec<Draw> {
             FULL,
             u32::MAX,
         ));
-        if !m.alternate {
+        if m.can_exit() {
             let mut back = quad(
                 "close",
                 projection,
@@ -217,7 +219,7 @@ pub(super) fn packets(motion: &Motion, atlas_present: bool) -> Vec<Draw> {
             0xd8ffffff,
         ));
         let mut right = 1872.0;
-        let hints: &[usize] = if m.alternate {
+        let hints: &[usize] = if !m.can_exit() {
             &[2, 3, 0]
         } else {
             &[1, 2, 3, 0]
@@ -226,7 +228,7 @@ pub(super) fn packets(motion: &Motion, atlas_present: bool) -> Vec<Draw> {
         const HINTS: [(u32, u32, u32); 4] = [(0, 0, 214), (2, 48, 76), (1, 96, 78), (5, 144, 248)];
         for &id in hints {
             let (key, row, width) = HINTS[id];
-            let color = if id == 2 && m.statuses[m.selected_fragment()] == 0 {
+            let color = if id == 2 && (m.statuses[m.selected_fragment()] == 0 || !m.cell_available(m.page, m.selected)) {
                 0xff808080
             } else {
                 u32::MAX
@@ -360,7 +362,19 @@ impl View {
     ) {
         for draw in packets(motion, atlas.is_some()) {
             match draw {
-                Draw::Quad(p) => p.render(pass, atlas),
+                Draw::Quad(mut p) => {
+                    if matches!(p.texture.as_str(), "new" | "new2" | "new3") {
+                        if let Some(atlas) = atlas {
+                            if !atlas.contains(&p.texture) {
+                                continue;
+                            }
+                            let size = atlas.get(&p.texture).size_vec();
+                            p.rect[0] = p.rect[2] - size.x;
+                            p.rect[1] = p.rect[3] - size.y;
+                        }
+                    }
+                    p.render(pass, atlas);
+                }
                 Draw::Details(parent) => {
                     for (i, (glyphs, color)) in self.details.iter().enumerate() {
                         let native = multiply(

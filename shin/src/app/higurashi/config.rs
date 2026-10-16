@@ -87,6 +87,7 @@ pub(super) struct Model {
     initial: Settings,
     pub flags: u32,
     pub append: bool,
+    extra_artwork: bool,
     pub progress: f32,
     pub selected: usize,
     pub scroll: HigurashiTweener,
@@ -180,6 +181,7 @@ impl Model {
             settings,
             flags,
             append,
+            extra_artwork: true,
             progress: 0.,
             selected: 0,
             scroll: HigurashiTweener::new(0.),
@@ -200,6 +202,16 @@ impl Model {
         };
         this.rebuild();
         Ok(this)
+    }
+    /// Base label slots6/7 mean font settings, not the updated Origin options.
+    fn set_extra_artwork(&mut self, supported: bool) {
+        if self.extra_artwork != supported {
+            self.extra_artwork = supported;
+            self.rebuild();
+            let maximum = (self.height - 770).max(0) as f32;
+            self.scroll
+                .fast_forward_to(self.scroll.value().clamp(0., maximum));
+        }
     }
     fn rebuild(&mut self) {
         self.rows.clear();
@@ -272,7 +284,7 @@ impl Model {
         }
         other.extend([(19, 17, -2), (17, 16, -2)]);
         section(self, 2, &other);
-        if self.append && (self.flags | 2) == 2 {
+        if self.append && self.extra_artwork && (self.flags | 2) == 2 {
             section(self, 3, &[(6, 24, -3), (7, 25, 3)]);
         }
         self.height = self.headings.last().unwrap().bottom;

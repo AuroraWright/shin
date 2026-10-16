@@ -302,6 +302,16 @@ struct Frames {
 }
 impl Frames {
     fn step(&mut self, slot: &mut TitleSlot, delta: f32, pressed: u32, repeat: u32) {
+        self.step_with_permission(slot, delta, pressed, repeat, true);
+    }
+    fn step_with_permission(
+        &mut self,
+        slot: &mut TitleSlot,
+        delta: f32,
+        pressed: u32,
+        repeat: u32,
+        permission: bool,
+    ) {
         self.number += 1;
         let pointer = PointerFrame {
             number: self.number,
@@ -314,12 +324,12 @@ impl Frames {
             ..Default::default()
         };
         if slot.title.is_some() {
-            slot.update_title(Ticks::from_f32(delta), true, buttons, &pointer)
+            slot.update_title(Ticks::from_f32(delta), permission, buttons, &pointer)
                 .unwrap();
         } else {
             shin_tasks::block_on(slot.update_game(
                 Ticks::from_f32(delta),
-                true,
+                permission,
                 buttons,
                 &pointer,
                 policy(),
@@ -699,6 +709,7 @@ fn higurashi_chart_title_wrapper_retains_source_and_full_shortcut_factory() {
             slot.set_analog_input(Analog {
                 axes: [127, 0, 0, 0],
                 dpad_held: 0,
+                ..Default::default()
             });
             frames.step(&mut slot, 0., 0, 0);
         }
@@ -707,6 +718,7 @@ fn higurashi_chart_title_wrapper_retains_source_and_full_shortcut_factory() {
             slot.set_analog_input(Analog {
                 axes: [-127, 0, 0, 0],
                 dpad_held: 0,
+                ..Default::default()
             });
             frames.step(&mut slot, 0., 0, 0);
         }
@@ -854,5 +866,124 @@ fn higurashi_chart_system_menu_wrapper_preserves_paused_source_and_shortcut_payl
     }
     eprintln!(
         "Chart ADV:2 actual Y/SystemMenu4/back0+1/native prune/resume,4 modal constructions,real CHART route/full source with pending writes and visual/VM freeze,2 actual stage1 Questions/fresh complete ADV payloads,one retained seed/source retirement/capture/retry at720p1080p;zero storage writes"
+    );
+}
+
+#[test]
+#[ignore = "real Title/ADV Chart wheel bridge, fractional motion/Question/permission/one-shot720p1080p; offscreen GPU/exact Loopback Audio; no user saves"]
+fn higurashi_chart_wheel_reaches_title_and_gameplay_without_replay_or_modal_leak() {
+    use crate::app::higurashi::input_bridge::Input;
+    use shin_input::RawInputState;
+    fn wheel(input: &mut Input, slot: &mut TitleSlot, amount: f32) {
+        let mut raw = RawInputState::new();
+        raw.mouse.scroll_amount = amount;
+        input.raw_input(&raw);
+        input.update(Duration::from_nanos(16_666_667));
+        slot.set_analog_input(input.analog());
+    }
+    fn scroll(slot: &TitleSlot) -> (f32, f32) {
+        let (_, y, scroll) = chart(slot).unwrap().reference_cursor();
+        (f32::from_bits(y), f32::from_bits(scroll))
+    }
+    let fixture = Fixture::new();
+    for extent in EXTENTS {
+        for from_game in [false, true] {
+            let (seed, count) = seed_source();
+            let (mut slot, storage, before) = if from_game {
+                let (slot, storage, before, _) = fixture.game(extent, seed);
+                (slot, storage, before)
+            } else {
+                fixture.title(extent, seed)
+            };
+            let mut frames = Frames::default();
+            if from_game {
+                frames.game_chart(&mut slot, &fixture, extent);
+            } else {
+                frames.title_chart(&mut slot);
+            }
+            frames.step(&mut slot, 3., 0, 0);
+            let mut input = Input::default();
+            // Real captured-index Question owns permission; wheel cannot move
+            // the underlying Chart or wait until the dialog closes.
+            frames.step(&mut slot, 0., 1 << 24, 0);
+            frames.until(&mut slot, |s| {
+                chart(s)
+                    .unwrap()
+                    .reference_question()
+                    .is_some_and(|(_, p, _)| p == 2)
+            });
+            let before_question = scroll(&slot);
+            wheel(&mut input, &mut slot, -5.);
+            frames.step(&mut slot, 0., 0, 0);
+            assert_eq!(scroll(&slot), before_question);
+            frames.step(&mut slot, 0., 1 << 25, 0);
+            frames.until(&mut slot, |s| {
+                chart(s).unwrap().reference_question().is_none()
+            });
+            frames.step(&mut slot, 0., 0, 0);
+            assert_eq!(scroll(&slot), before_question);
+            // Reach a known bound; fractional displacement is not quantized to
+            // signed stick bytes, and does not depend on elapsed ticks.
+            wheel(&mut input, &mut slot, 100000.);
+            frames.step(&mut slot, 0., 0, 0);
+            let (y, position) = scroll(&slot);
+            assert_eq!(position, 0.);
+            wheel(&mut input, &mut slot, -1. / 64.);
+            frames.step(&mut slot, 0., 0, 0);
+            assert_eq!(scroll(&slot), (y + 0.5, 0.5));
+            frames.step(&mut slot, 0., 0, 0); // no fresh Analog setter
+            assert_eq!(scroll(&slot), (y + 0.5, 0.5));
+            let (_, pixels_before) = fixture.capture(&mut slot, extent);
+            wheel(&mut input, &mut slot, -3.);
+            frames.step(&mut slot, 0., 0, 0);
+            assert_eq!(scroll(&slot), (y + 96.5, 96.5));
+            let (_, pixels_after) = fixture.capture(&mut slot, extent);
+            assert_ne!(
+                pixels_before, pixels_after,
+                "visible Chart scroll at{extent:?},game={from_game}"
+            );
+            wheel(&mut input, &mut slot, -2.);
+            frames.step_with_permission(&mut slot, 0., 0, 0, false);
+            assert_eq!(scroll(&slot), (y + 96.5, 96.5));
+            frames.step(&mut slot, 0., 0, 0);
+            assert_eq!(scroll(&slot), (y + 96.5, 96.5));
+            // A sampled displacement cancelled by resize/focus/scene input
+            // cleanup must not reach the next Chart update.
+            wheel(&mut input, &mut slot, -2.);
+            slot.cancel_input().unwrap();
+            frames.step(&mut slot, 0., 0, 0);
+            assert_eq!(scroll(&slot), (y + 96.5, 96.5));
+            // Missing optional Analog still preserves true held D-pad input.
+            frames.number += 1;
+            let pointer = PointerFrame {
+                number: frames.number,
+                time_seconds: frames.number as f64 / 60.,
+                events: &[],
+            };
+            let buttons = Buttons {
+                held: 1 << 6,
+                ..Default::default()
+            };
+            if from_game {
+                shin_tasks::block_on(slot.update_game(
+                    Ticks::ZERO,
+                    true,
+                    buttons,
+                    &pointer,
+                    policy(),
+                    audio(),
+                ))
+                .unwrap();
+            } else {
+                slot.update_title(Ticks::ZERO, true, buttons, &pointer)
+                    .unwrap();
+            }
+            assert_eq!(scroll(&slot).0, y + 106.5);
+            assert_eq!(count.load(Ordering::SeqCst), 0, "scroll never starts ADV");
+            no_write(&storage, &before);
+        }
+    }
+    eprintln!(
+        "Chart wheel: Title and Gameplay at720p/1080p; fractional/large displacement,visible pixels,real Question/denial/cancel,one-shot,D-pad fallback; no saves"
     );
 }

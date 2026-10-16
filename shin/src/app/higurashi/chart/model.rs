@@ -22,9 +22,11 @@ use shin_core::{
 use std::sync::Arc;
 
 #[derive(Clone, Copy, Debug, Default)]
-pub(super) struct Input {
+pub(in crate::app::higurashi) struct Input {
     pub buttons: Buttons,
     pub axes: [i8; 4],
+    /// Desktop displacement in down-positive wheel lines, independent of axes.
+    pub wheel_scroll: f32,
 }
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(super) struct Node {
@@ -80,7 +82,10 @@ pub(super) struct Model {
     pub catalog: Arc<Catalog>,
     pub nodes: Vec<Node>,
     pub available: Vec<i32>,
-    #[allow(dead_code, reason = "Preserve the native initial group separately from live navigation.")]
+    #[allow(
+        dead_code,
+        reason = "Preserve the native initial group separately from live navigation."
+    )]
     pub initial_group: i32,
     pub current_group: i32,
     pub available_index: i32,
@@ -517,9 +522,23 @@ impl Model {
             dy = i32::from(input.axes[1]) / 10;
         }
         let axis = i32::from(input.axes[3]);
-        if !(-15..=15).contains(&axis) && axis != 0 {
+        let stick_scroll = if !(-15..=15).contains(&axis) {
+            ((axis / 16) * 4) as f32
+        } else {
+            0.
+        };
+        let wheel = if input.wheel_scroll.is_finite() {
+            input.wheel_scroll
+        } else {
+            0.
+        };
+        if stick_scroll != 0. || wheel != 0. {
             let old = self.group().scroll.value();
-            let next = self.clamp_scroll(old + ((axis / 16) * 4) as f32);
+            // Same32px/line gain as Umineko's Music/CG/TIPS screens. Shared
+            // PixelDelta normalization makes one logical pixel one Chart pixel.
+            // This is displacement, so neither frame time nor stick clamping
+            // applies. keep_scroll moves the cursor with the viewport too.
+            let next = self.clamp_scroll(old + stick_scroll + wheel * 32.);
             self.keep_scroll(next);
             self.speed = 0.;
         }

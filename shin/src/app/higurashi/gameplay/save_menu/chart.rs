@@ -49,12 +49,17 @@ impl Frame<'_, '_> {
             menu.id == request.id,
             "Chart ID differs from borrowed host mode"
         );
-        let (buttons, axes) = self
-            .chart_input
-            .map(|input| (input.buttons(self.buttons), input.axes))
-            .unwrap_or((self.buttons, [0; 4]));
-        menu.owner
-            .poll(delta, permission, buttons, axes, self.pointer)?;
+        let input = self.chart_input;
+        menu.owner.poll(
+            delta,
+            permission,
+            crate::app::higurashi::chart::model::Input {
+                buttons: input.map_or(self.buttons, |input| input.buttons(self.buttons)),
+                axes: input.map_or([0; 4], |input| input.axes),
+                wheel_scroll: input.map_or(0., |input| input.wheel_scroll),
+            },
+            self.pointer,
+        )?;
         let mut returned = false;
         while let Some(event) = menu.owner.take_request() {
             match event {

@@ -744,3 +744,43 @@ fn higurashi_top_menu_pixels_match_original_render_packets() {
         "Higurashi top render:{pairs} byte-identical native/GPU packet pairs at720p/1080p;cold/partial entrance,disabled tint,normal/append atlas/grid,selection UV,program5 float flash and packed opacity pass"
     );
 }
+
+#[test]
+fn patchless_top_menu_missing_origin_resolves_remembered_selection_and_bounds() {
+    let mut state = State::new(false, true, 8);
+    assert_eq!(state.rows.len(), 8);
+    assert_eq!(state.rows[state.selected()].id, 0);
+    assert_eq!(state.row_at(vec2(300., 940.)), -1);
+    state.phase = 2;
+    for direction in [4, 5, 6, 7] {
+        for _ in 0..16 {
+            state.poll_controls(
+                false,
+                Buttons {
+                    repeat: 1 << direction,
+                    ..Default::default()
+                },
+            );
+            assert!(state.selected() < 8);
+            assert_ne!(state.rows[state.selected()].id, 8);
+        }
+    }
+    for id in 0..8 {
+        let (v, v2) = row_uv(id, 1040);
+        assert_eq!(
+            (v, v2),
+            (
+                id as f32 * 130. / 1040.,
+                id as f32 * 130. / 1040. + 0.125
+            )
+        );
+        let (v, v2) = row_uv(id, 1024);
+        assert_eq!(
+            (v, v2),
+            (
+                id as f32 * 128. / f32::from_bits(0x44808000),
+                id as f32 * 128. / f32::from_bits(0x44808000) + f32::from_bits(0x3ddf20df)
+            )
+        );
+    }
+}

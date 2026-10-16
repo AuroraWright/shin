@@ -408,11 +408,6 @@ impl TitleSlot {
                 .title
                 .as_ref()
                 .context("Story transfer lost its source title")?;
-            ensure!(
-                source.globals.common.scenario.variant
-                    == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
-                "Fresh ADV requires updated Higurashi"
-            );
             // Pure validation leaves the old Title playable. Seed consumption
             // and the concrete runner constructor still follow its retirement.
             let mut bindings = Bindings::new(&source.globals.data, data)?;

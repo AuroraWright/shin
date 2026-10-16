@@ -119,6 +119,7 @@ impl HigurashiApp {
     }
 }
 impl ShinApp for HigurashiApp {
+    const WINDOW_TITLE: &'static str = "ひぐらしのなく頃に奉";
     const FULLSCREEN_SHORTCUT: Option<winit::keyboard::KeyCode> =
         Some(winit::keyboard::KeyCode::KeyF);
     type Parameters = Cli;
@@ -279,6 +280,17 @@ impl ShinApp for HigurashiApp {
 mod tests {
     use super::*;
     use clap::Parser;
+
+    #[test]
+    fn each_game_window_is_titled_with_the_game_name() {
+        use shin_window::ShinApp;
+        assert_eq!(HigurashiApp::WINDOW_TITLE, "ひぐらしのなく頃に奉");
+        assert_eq!(crate::app::App::WINDOW_TITLE, "うみねこのなく頃に咲 〜猫箱と夢想の交響曲〜");
+        assert_eq!(
+            crate::app::gerokasu2::Gerokasu2App::WINDOW_TITLE,
+            "幻想牢獄のカレイドスコープ 2"
+        );
+    }
     use std::{
         ffi::OsString,
         sync::atomic::{AtomicU64, Ordering},

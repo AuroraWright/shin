@@ -311,6 +311,23 @@ pub(super) struct TopMenu {
     state: State,
     area: InputArea,
 }
+// Keep the accepted updated executable's UV constants. Original da9dc uses
+// 130-pixel bands in the base atlas, drawn here in the existing desktop rect.
+fn row_uv(id: i32, height: u32) -> (f32, f32) {
+    if id == 8 {
+        return (0.0, 0.875);
+    }
+    if height == 1024 {
+        let v = (id * 128) as f32 / f32::from_bits(0x44808000);
+        (v, v + f32::from_bits(0x3ddf20df))
+    } else if height == 1040 {
+        let v = (id * 130) as f32 / 1040.0;
+        (v, v + 0.125)
+    } else {
+        let v = (id * 128) as f32 / height as f32;
+        (v, v + 112.0 / height as f32)
+    }
+}
 impl TopMenu {
     pub fn new(plus: bool, auto_valid: bool, selected: i32, extent: (u16, u16)) -> Self {
         Self {
@@ -333,12 +350,18 @@ impl TopMenu {
         self.area.disable(&mut self.state);
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_phase(&self) -> i32 {
         self.state.phase
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_selection(&self) -> i32 {
         self.state.rows[self.state.selected()].id
     }
@@ -379,12 +402,13 @@ impl TopMenu {
         let transform = crate::render::top_left_projection_matrix();
         for (index, row) in self.state.rows.iter().enumerate() {
             let u = if index == selected { 0.5 } else { 0.0 };
-            let (v, v2) = if row.id == 8 {
-                (0.0, 0.875)
-            } else {
-                let v = (row.id * 128) as f32 / f32::from_bits(0x44808000);
-                (v, v + f32::from_bits(0x3ddf20df))
-            };
+            let (v, v2) = row_uv(
+                row.id,
+                atlas
+                    .get(if row.id == 8 { "o_menu" } else { "t_menu" })
+                    .size()
+                    .height,
+            );
             let opacity = row.opacity.value()
                 * if self.state.enabled & (1 << index) != 0 {
                     1.0

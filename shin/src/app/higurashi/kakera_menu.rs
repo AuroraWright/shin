@@ -30,6 +30,7 @@ pub(in crate::app::higurashi) struct Model {
     pub page: usize,
     pub selected: usize,
     pub bgm_id: i32,
+    artwork: Option<Vec<Vec<bool>>>,
 }
 impl Model {
     pub fn new(
@@ -123,6 +124,38 @@ impl Model {
             page,
             selected,
             bgm_id,
+            artwork: None,
+        }
+    }
+    fn apply_artwork(&mut self, atlas: &crate::adv::character_view::CharacterTextures) {
+        if self.artwork.is_some() { return; }
+        let suffix = if self.alternate { "_org" } else { "" };
+        self.artwork = Some(self.pages.iter().enumerate().map(|(page, rows)| {
+            let title = atlas.contains(&format!("k_title{:02}{suffix}", page + 1));
+            rows.iter().map(|id| title && atlas.contains(&format!("{id:02}{suffix}"))).collect()
+        }).collect());
+        if !self.cell_available(self.page, self.selected) {
+            if let Some((page, cell)) = self.pages.iter().enumerate().find_map(|(page, rows)| {
+                (0..rows.len()).find(|&cell| self.cell_available(page, cell)).map(|cell| (page, cell))
+            }) { self.page = page; self.selected = cell; }
+        }
+    }
+    pub(super) fn cell_available(&self, page: usize, cell: usize) -> bool {
+        self.artwork.as_ref().is_none_or(|pages| pages[page][cell])
+    }
+    pub(super) fn any_artwork(&self) -> bool {
+        self.artwork.as_ref().is_none_or(|pages| pages.iter().flatten().any(|&yes| yes))
+    }
+    pub(super) fn can_exit(&self) -> bool { !self.alternate || !self.any_artwork() }
+    pub(super) fn turn_page(&mut self, direction: i32) {
+        for step in 1..=self.pages.len() {
+            let page = (self.page as i32 + direction * step as i32).rem_euclid(self.pages.len() as i32) as usize;
+            if let Some(cell) = (0..self.pages[page].len()).find(|&cell| self.cell_available(page, cell)) {
+                self.page = page;
+                self.selected = self.selected.min(self.pages[page].len() - 1);
+                if !self.cell_available(page, self.selected) { self.selected = cell; }
+                return;
+            }
         }
     }
     pub fn catalog(&self) -> &'static [Fragment] {
@@ -137,6 +170,7 @@ impl Model {
     }
     ///62d08 emits at most four dependent fragment labels in descriptor order.
     pub fn details(&self) -> Vec<Detail> {
+        if !self.cell_available(self.page, self.selected) { return Vec::new(); }
         self.catalog()[self.selected_fragment()].follows[..4]
             .iter()
             .take_while(|&&id| id >= 0)
@@ -166,6 +200,7 @@ impl Model {
         if dx == 0 && dy == 0 {
             return false;
         }
+        if !self.any_artwork() { return false; }
         let old = self.selected;
         let count = self.pages[self.page].len() as i32;
         let mut row = old as i32 / 3;
@@ -186,7 +221,12 @@ impl Model {
                 }
             }
         }
-        self.selected = (3 * row + column) as usize;
+        let candidate = (3 * row + column) as usize;
+        self.selected = if self.cell_available(self.page, candidate) { candidate } else {
+            let step = if dy != 0 { dy * 3 } else { dx };
+            (1..=count).map(|i| (candidate as i32 + step * i).rem_euclid(count) as usize)
+                .find(|&cell| self.cell_available(self.page, cell)).unwrap_or(old)
+        };
         old != self.selected
     }
     ///64ac0 uses six authored432x244 rectangles in1920x1080 coordinates.
@@ -194,8 +234,9 @@ impl Model {
         catalog::CELLS
             .iter()
             .take(self.pages[self.page].len())
-            .position(|&(left, top)| {
-                x >= left as f32
+            .enumerate()
+            .position(|(cell, &(left, top))| {
+                self.cell_available(self.page, cell) && x >= left as f32
                     && x < (left + 432) as f32
                     && y >= top as f32
                     && y < (top + 244) as f32

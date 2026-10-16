@@ -98,7 +98,11 @@ fn hint(
     right + -10.
 }
 /// Parent only: the concrete owner draws its last borrowed child snapshot last.
+#[cfg(test)]
 pub(super) fn packets(state: &ViewState, swapped: bool) -> Vec<Packet> {
+    packets_with_size(state, swapped, (2160, 1800))
+}
+fn packets_with_size(state: &ViewState, swapped: bool, size: (u32, u32)) -> Vec<Packet> {
     let mut out = vec![];
     if state.ready {
         quad(&mut out, "ks_bg", [0., 0., 1920., 1080.], FULL, u32::MAX);
@@ -111,18 +115,15 @@ pub(super) fn packets(state: &ViewState, swapped: bool) -> Vec<Packet> {
             } else {
                 row.art_band
             };
-            let u = ((band / 15) * 720) as f32 / 2160.;
-            let v = ((band % 15) * 120) as f32 / 1800.;
+            if !super::art_band_available(band, size) {
+                continue;
+            }
+            let uv = label_uv(band, size);
             quad(
                 &mut out,
                 "sce_menu",
                 [x, y, x + 720., y + 120.],
-                [
-                    u,
-                    v,
-                    u + f32::from_bits(0x3eaaaaab),
-                    v + f32::from_bits(0x3d888889),
-                ],
+                uv,
                 0xffffff | alpha(row.opacity),
             );
             out.last_mut().unwrap().flash = row.flash;
@@ -177,6 +178,12 @@ pub(super) fn packets(state: &ViewState, swapped: bool) -> Vec<Packet> {
     }
     out
 }
+fn label_uv(band: u32, (width, height): (u32, u32)) -> [f32; 4] {
+    let u = ((band / 15) * 720) as f32 / width as f32;
+    let v = ((band % 15) * 120) as f32 / height as f32;
+    // Match the accepted updated native arithmetic exactly when dimensions agree.
+    [u, v, u + 720. / width as f32, v + 120. / height as f32]
+}
 impl Packet {
     fn render(&self, atlas: Option<&CharacterTextures>, pass: &mut RenderPass) {
         let c = self.color.to_le_bytes();
@@ -229,7 +236,13 @@ impl View {
         button_layout_swapped: bool,
         pass: &mut RenderPass,
     ) {
-        for packet in packets(state, button_layout_swapped) {
+        let size = atlas
+            .map(|atlas| {
+                let size = atlas.get("sce_menu").size();
+                (size.width, size.height)
+            })
+            .unwrap_or((2160, 1800));
+        for packet in packets_with_size(state, button_layout_swapped, size) {
             packet.render(atlas, pass);
         }
     }

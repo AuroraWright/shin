@@ -12,9 +12,7 @@ use crate::{
     render::PreRenderContext,
 };
 use anyhow::{Context, Result, ensure};
-use shin_core::{
-    format::scenario::higurashi::HigurashiVariant, time::Ticks, vm::command::types::Volume,
-};
+use shin_core::{time::Ticks, vm::command::types::Volume};
 use shin_render::{render_pass::RenderPass, render_texture::RenderTexture};
 
 struct Frame<'a> {
@@ -88,10 +86,6 @@ pub(in crate::app::higurashi) struct Opening {
 impl Opening {
     pub fn preflight(globals: &Globals, extent: (u16, u16)) -> Result<()> {
         ensure!(extent.0 > 0 && extent.1 > 0, "Invalid Music input extent");
-        ensure!(
-            globals.common.scenario.variant == HigurashiVariant::Updated,
-            "Music requires updated Higurashi"
-        );
         Model::new(
             &globals.common.scenario.music_box_info,
             &globals.data.save_vectors.unlocked_bgms,
@@ -206,12 +200,18 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_owner(&self) -> &Owner {
         self.owner.as_ref().unwrap()
     }
     #[cfg(feature = "higurashi-window-probe")]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_window_state(
         &self,
     ) -> crate::app::higurashi::window_probe::music_gallery::State {

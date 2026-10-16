@@ -15,10 +15,7 @@ use super::{
 use crate::asset::system::AssetServer;
 use anyhow::{Context, Result, ensure};
 use shin_core::{
-    format::scenario::{
-        higurashi::{HigurashiScenario, HigurashiVariant},
-        instruction_elements::CodeAddress,
-    },
+    format::scenario::{higurashi::HigurashiScenario, instruction_elements::CodeAddress},
     time::Ticks,
     vm::{
         command::CommandResult,
@@ -60,7 +57,8 @@ pub struct Policy {
     pub paused: bool,
     pub fast_skip: bool,
     /// Resolved native137d0(ADV, VM) read/skip/preferences decision for this
-    /// command. It is independent of visual/timer fast skip.
+    /// command. It also gates WIPE construction at65b4 and WAIT completion
+    /// at4d20/4d64, independently of visual/timer fast skip.
     pub suppress_transient_audio: bool,
     pub read_flags: u32,
     pub text_speed: i32,
@@ -429,10 +427,6 @@ impl HigurashiRunner {
         random_seed: u32,
         seeds: impl FnMut() -> [u32; 4],
     ) -> Result<Self> {
-        ensure!(
-            scenario.variant == HigurashiVariant::Updated,
-            "Higurashi runner currently requires the updated scenario/UI resources"
-        );
         let vm = HigurashiScripter::new(&scenario, init_val, random_seed)?;
         let message = HigurashiMessageOwner::load(&assets).await?;
         Ok(Self::from_loaded_parts(
@@ -450,10 +444,6 @@ impl HigurashiRunner {
         message: HigurashiMessageOwner,
         seeds: impl FnMut() -> [u32; 4],
     ) -> Result<Self> {
-        ensure!(
-            scenario.variant == HigurashiVariant::Updated,
-            "Fresh ADV requires updated Higurashi"
-        );
         Ok(Self::from_loaded_parts(
             assets, scenario, None, message, seeds,
         ))
@@ -725,14 +715,35 @@ impl HigurashiRunner {
         memory: &mut super::autosave::AutosaveMemory,
         services: &mut impl super::fake_select::command::Services,
     ) -> Result<Option<bool>> {
-        ensure!(self.reconstruction.is_none(), "Higurashi reconstruction mode is active");
-        let pending = self.pending.as_mut().context("No Higurashi command is pending")?;
-        ensure!(matches!(pending.owner, Owner::External), "FakeSelect requires its external continuation");
-        if !matches!(pending.command, Cmd::FAKESELECT {}) { return Ok(None); }
-        let boundary = self.read_state.as_ref().context("FakeSelect requires native preparation")?.timeline().boundary;
-        let complete = pending.fake_select.as_mut().context("FakeSelect constructor has not completed")?
+        ensure!(
+            self.reconstruction.is_none(),
+            "Higurashi reconstruction mode is active"
+        );
+        let pending = self
+            .pending
+            .as_mut()
+            .context("No Higurashi command is pending")?;
+        ensure!(
+            matches!(pending.owner, Owner::External),
+            "FakeSelect requires its external continuation"
+        );
+        if !matches!(pending.command, Cmd::FAKESELECT {}) {
+            return Ok(None);
+        }
+        let boundary = self
+            .read_state
+            .as_ref()
+            .context("FakeSelect requires native preparation")?
+            .timeline()
+            .boundary;
+        let complete = pending
+            .fake_select
+            .as_mut()
+            .context("FakeSelect constructor has not completed")?
             .poll_live(progress, memory, boundary, services)?;
-        if complete { self.complete_external(CommandResult::None)?; }
+        if complete {
+            self.complete_external(CommandResult::None)?;
+        }
         Ok(Some(complete))
     }
     /// Resolve SELECT against the same active response vector as variables and
@@ -892,7 +903,9 @@ impl HigurashiRunner {
     pub fn kakera_command(&self) -> Option<&super::kakera::KakeraCommand> {
         self.pending.as_ref()?.kakera.as_ref()
     }
-    pub fn scenario_select_command(&self) -> Option<&super::scenario_select::ScenarioSelectCommand> {
+    pub fn scenario_select_command(
+        &self,
+    ) -> Option<&super::scenario_select::ScenarioSelectCommand> {
         self.pending.as_ref()?.scenario_select.as_ref()
     }
     pub fn quiz_command(&self) -> Option<&super::quiz::QuizCommand> {
@@ -998,17 +1011,36 @@ impl HigurashiRunner {
         execution: super::autosave::Execution,
         services: &mut impl super::scenario_select::ScenarioSelectServices,
     ) -> Result<Option<bool>> {
-        ensure!(self.reconstruction.is_none(), "Higurashi reconstruction mode is active");
-        let pending = self.pending.as_mut().context("No Higurashi command is pending")?;
-        ensure!(matches!(pending.owner, Owner::External), "ScenarioSelect requires an external continuation");
+        ensure!(
+            self.reconstruction.is_none(),
+            "Higurashi reconstruction mode is active"
+        );
+        let pending = self
+            .pending
+            .as_mut()
+            .context("No Higurashi command is pending")?;
+        ensure!(
+            matches!(pending.owner, Owner::External),
+            "ScenarioSelect requires an external continuation"
+        );
         if !matches!(pending.command, Cmd::SNRSEL { .. }) {
             return Ok(None);
         }
-        let state = self.read_state.as_ref().context("ScenarioSelect requires native preparation")?;
-        let command = pending.scenario_select.as_mut().context("ScenarioSelect constructor has not completed")?;
+        let state = self
+            .read_state
+            .as_ref()
+            .context("ScenarioSelect requires native preparation")?;
+        let command = pending
+            .scenario_select
+            .as_mut()
+            .context("ScenarioSelect constructor has not completed")?;
         let complete = match execution {
-            super::autosave::Execution::Live => command.poll_live(progress, memory, state.timeline().boundary, services)?,
-            super::autosave::Execution::Replay => command.poll_replay(progress.progress(), state.timeline().boundary)?,
+            super::autosave::Execution::Live => {
+                command.poll_live(progress, memory, state.timeline().boundary, services)?
+            }
+            super::autosave::Execution::Replay => {
+                command.poll_replay(progress.progress(), state.timeline().boundary)?
+            }
         };
         if complete {
             self.complete_external(CommandResult::None)?;
@@ -1299,7 +1331,9 @@ impl HigurashiRunner {
                         pending.kakera = Some(super::kakera::KakeraCommand::new());
                     }
                     if matches!(pending.command, Cmd::SNRSEL { .. }) {
-                        pending.scenario_select = Some(super::scenario_select::ScenarioSelectCommand::new(&pending.command)?);
+                        pending.scenario_select = Some(
+                            super::scenario_select::ScenarioSelectCommand::new(&pending.command)?,
+                        );
                     }
                     if matches!(pending.command, Cmd::QUIZ { .. }) {
                         pending.quiz = Some(super::quiz::QuizCommand::new(&pending.command)?);
@@ -1352,7 +1386,13 @@ impl HigurashiRunner {
                     if let Some((_, services)) = native.as_mut() {
                         pending.copy_message_start(self.read_state.as_ref().unwrap(), *services)?;
                     }
-                    let status = self.frame.poll_command(policy.fast_skip, voice);
+                    // 65b4 resolves137d0 again after a retained Mask load. Live
+                    // skip is command/read dependent, separate from fast_skip.
+                    let skip_wipe = matches!(pending.command, Cmd::WIPE { .. })
+                        && policy.suppress_transient_audio;
+                    let status = self
+                        .frame
+                        .poll_command(policy.fast_skip || skip_wipe, voice);
                     if let Some((_, services)) = native.as_mut() {
                         self.frame
                             .scene
@@ -1363,7 +1403,7 @@ impl HigurashiRunner {
                     }
                 }
                 Owner::Clock(wait) => {
-                    if !wait.poll(policy.fast_skip) {
+                    if !wait.poll(policy.fast_skip || policy.suppress_transient_audio) {
                         return Ok(Status::Waiting);
                     }
                 }
@@ -1443,7 +1483,9 @@ impl HigurashiRunner {
                         super::unlock::poll(
                             *kind,
                             ids,
-                            native.as_mut().and_then(|(_, services)| services.layer_settings()),
+                            native
+                                .as_mut()
+                                .and_then(|(_, services)| services.layer_settings()),
                         )?;
                     }
                     // SAVEINFO/CHART polls complete immediately. prepare already
@@ -1472,7 +1514,10 @@ impl HigurashiRunner {
                         allow_interrupt,
                     } => {
                         let mut wait = Wait::new(*amount, *allow_interrupt);
-                        if !wait.poll(policy.fast_skip) {
+                        // 4d64 resolves137d0 on the initial poll too. Waiting
+                        // for post-poll timer clearing would expose a frame
+                        // of intermediate artwork before continuing the VM.
+                        if !wait.poll(policy.fast_skip || policy.suppress_transient_audio) {
                             pending.owner = Owner::Clock(wait);
                             return Ok(Status::Waiting);
                         }
@@ -1547,7 +1592,9 @@ impl HigurashiRunner {
                             .scene
                             .dispatch_with_assets(
                                 command,
-                                policy.fast_skip,
+                                // Native65a4..65bc uses the same137d0 decision
+                                // as transient audio, before constructing a wipe.
+                                policy.fast_skip || policy.suppress_transient_audio,
                                 Some((self.assets.clone(), self.scenario.clone())),
                             )?
                             .unwrap();
@@ -1797,3 +1844,6 @@ mod reconstruction_mode_tests;
 mod reload_tests;
 #[cfg(test)]
 mod source_command_reconstruction_tests;
+
+#[cfg(test)]
+mod wipe_skip_tests;

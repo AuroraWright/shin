@@ -1,10 +1,7 @@
 //! Actual dcf00/dcf30 arguments and15c64 completion/continuation selection.
 use super::{Model, RuntimeGameData};
-use anyhow::{Result, ensure};
-use shin_core::format::{
-    save::higurashi::SaveVectors,
-    scenario::higurashi::{HigurashiScenario, HigurashiVariant},
-};
+use anyhow::Result;
+use shin_core::format::{save::higurashi::SaveVectors, scenario::higurashi::HigurashiScenario};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(in crate::app::higurashi) struct Request {
@@ -37,15 +34,12 @@ pub(in crate::app::higurashi) fn from_exit(
     vectors: &mut SaveVectors,
     unlock: u32,
 ) -> Result<ExitReturn> {
-    ensure!(
-        scenario.variant == HigurashiVariant::Updated,
-        "TIPS return requires updated Higurashi"
-    );
     let id = data.progress.active_entry().scenario_id;
     let found = scenario
         .tips_info
         .iter()
-        .position(|tip| tip.updated_field.map(i32::from) == Some(id));
+        .enumerate()
+        .position(|(index, _)| super::script_id(scenario, index).map(i32::from) == Some(id));
     let selected = found.unwrap_or(0) as i32;
     if let Some(index) = found.filter(|_| unlock & 1 != 0) {
         let bit = 2 * index + 1;

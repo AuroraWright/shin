@@ -146,7 +146,13 @@ impl<Font: FontMetrics + Clone> HigurashiBacklogLayouter<Font> {
         })
     }
 
-    pub fn parse(mut self, text: &str) -> HigurashiBacklogLayout {
+    pub fn parse(self, text: &str) -> HigurashiBacklogLayout {
+        let text = self.0.layouter.font_normal.localize(text);
+        self.parse_raw(&text)
+    }
+
+    /// Preserve authored scenario text in message/choice/checkpoint history.
+    pub fn parse_raw(mut self, text: &str) -> HigurashiBacklogLayout {
         let text = decode_string_fixup(text);
         MessageTextParser::new_higurashi(&text).parse_into(&mut self);
         let voice_count = match self.0.mixin.voice_mode {

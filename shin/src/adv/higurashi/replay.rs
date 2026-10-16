@@ -12,7 +12,7 @@ use super::{
 };
 use anyhow::{Context, Result, bail, ensure};
 use shin_core::{
-    format::scenario::higurashi::{HigurashiScenario, HigurashiVariant},
+    format::scenario::higurashi::HigurashiScenario,
     vm::{
         command::CommandResult,
         higurashi::{HigurashiScripter, command::HigurashiRuntimeCommand as Cmd},
@@ -53,7 +53,7 @@ pub struct ReplaySession {
     fault: Option<String>,
     pub completed_commands: u64,
     pub exit_forks: u64,
-    quiz_score:i32,
+    quiz_score: i32,
 }
 
 struct Services<'a> {
@@ -80,10 +80,6 @@ impl ReplaySession {
     /// The fork owns current progress/globals and the pruned checkpoint archive.
     /// An empty archive starts with the active scenario ID/seed, as109bc does.
     pub fn new(scenario: Arc<HigurashiScenario>, fork: RestoredMemory) -> Result<Self> {
-        ensure!(
-            scenario.variant == HigurashiVariant::Updated,
-            "Replay requires updated Higurashi"
-        );
         let (vm, read, layers) = if let Some(saved) = fork.restored {
             ensure!(
                 saved.vm.matches_scenario(&scenario),
@@ -123,13 +119,15 @@ impl ReplaySession {
             fault: None,
             completed_commands: 0,
             exit_forks: 0,
-            quiz_score:0,
+            quiz_score: 0,
         })
     }
     pub fn status(&self) -> Status {
         self.status
     }
-    pub(crate) fn set_quiz_score(&mut self,score:i32) {self.quiz_score=score;}
+    pub(crate) fn set_quiz_score(&mut self, score: i32) {
+        self.quiz_score = score;
+    }
     pub fn pending_command(&self) -> Option<&Cmd> {
         self.pending.as_ref().map(|p| &p.command)
     }
@@ -137,10 +135,16 @@ impl ReplaySession {
         self.fault.as_deref()
     }
     pub(super) fn check_reconstruction(&self, scenario: &HigurashiScenario) -> Result<()> {
-        ensure!(self.scenario.raw() == scenario.raw(), "Higurashi reconstruction scenario mismatch");
-        ensure!(self.vm.is_some() && self.fault.is_none()
-            && matches!(self.status, Status::CommandBudget | Status::Ready),
-            "Higurashi reconstruction requires a usable replay fork");
+        ensure!(
+            self.scenario.raw() == scenario.raw(),
+            "Higurashi reconstruction scenario mismatch"
+        );
+        ensure!(
+            self.vm.is_some()
+                && self.fault.is_none()
+                && matches!(self.status, Status::CommandBudget | Status::Ready),
+            "Higurashi reconstruction requires a usable replay fork"
+        );
         Ok(())
     }
     pub(super) fn check_publication(&self, scenario: &HigurashiScenario) -> Result<()> {
@@ -279,18 +283,43 @@ impl ReplaySession {
                 _ => {}
             }
             let character = if matches!(command, Cmd::CHARSELECT { .. }) {
-                Some(super::character_selection::command::CharacterCommand::new(&command, &mut self.layers)?)
-            } else { None };
+                Some(super::character_selection::command::CharacterCommand::new(
+                    &command,
+                    &mut self.layers,
+                )?)
+            } else {
+                None
+            };
             let tips_get = if matches!(command, Cmd::TIPSGET { .. }) {
-                Some(super::tips_get::TipsGetCommand::new(&command, &mut self.layers)?)
-            } else { None };
+                Some(super::tips_get::TipsGetCommand::new(
+                    &command,
+                    &mut self.layers,
+                )?)
+            } else {
+                None
+            };
             let notification = if matches!(command, Cmd::OTSUGET { .. } | Cmd::KAKERAGET { .. }) {
-                Some(super::notification_command::NotificationCommand::new(&command, &mut self.layers)?)
-            } else { None };
+                Some(super::notification_command::NotificationCommand::new(
+                    &command,
+                    &mut self.layers,
+                )?)
+            } else {
+                None
+            };
             let autosave = matches!(command, Cmd::AUTOSAVE { .. }).then(AutosaveCommand::new);
-            let kakera=matches!(command,Cmd::KAKERA {}).then(super::kakera::KakeraCommand::new);
-            let scenario_select=if matches!(command,Cmd::SNRSEL {..}) {Some(super::scenario_select::ScenarioSelectCommand::new(&command)?)}else {None};
-            let quiz=if matches!(command,Cmd::QUIZ {..}) {Some(super::quiz::QuizCommand::new(&command)?)}else {None};
+            let kakera = matches!(command, Cmd::KAKERA {}).then(super::kakera::KakeraCommand::new);
+            let scenario_select = if matches!(command, Cmd::SNRSEL { .. }) {
+                Some(super::scenario_select::ScenarioSelectCommand::new(
+                    &command,
+                )?)
+            } else {
+                None
+            };
+            let quiz = if matches!(command, Cmd::QUIZ { .. }) {
+                Some(super::quiz::QuizCommand::new(&command)?)
+            } else {
+                None
+            };
             self.pending = Some(RetainedCommand {
                 command,
                 choice,
@@ -348,37 +377,69 @@ impl ReplaySession {
             let complete = if forward_read_only.is_some() {
                 character.replay_stop() > 0
             } else {
-                character.poll_replay(&mut self.progress, &mut self.read.timeline_mut().boundary,
-                    |dest, value| self.vm.as_mut().unwrap().write_pending_result(dest, value))?
+                character.poll_replay(
+                    &mut self.progress,
+                    &mut self.read.timeline_mut().boundary,
+                    |dest, value| self.vm.as_mut().unwrap().write_pending_result(dest, value),
+                )?
             };
             if complete {
-                self.response = CommandResult::WriteMemory(character.request().destination,
-                    character.result().context("Replayed character command has no response")?);
+                self.response = CommandResult::WriteMemory(
+                    character.request().destination,
+                    character
+                        .result()
+                        .context("Replayed character command has no response")?,
+                );
             }
             complete
         } else if let Some(notification) = pending.notification.as_mut() {
-            if forward_read_only.is_some() { notification.forward_complete() }
-            else { notification.poll_replay() }
-        } else if let Some(tips)=pending.tips_get.as_mut() {
-            if forward_read_only.is_some() { tips.forward_complete() } else {
-                tips.poll_replay(&self.progress, &mut self.read.timeline_mut().boundary,
-                    self.quiz_score as u32)?
+            if forward_read_only.is_some() {
+                notification.forward_complete()
+            } else {
+                notification.poll_replay()
             }
-        } else if let Some(quiz)=pending.quiz.as_mut() {
-            if forward_read_only.is_some() {quiz.forward_complete()}else {
-                let complete=quiz.poll_replay(&mut self.progress,self.read.timeline().boundary,self.quiz_score,
-                    |dest,value|self.vm.as_mut().unwrap().write_pending_result(dest,value))?;
+        } else if let Some(tips) = pending.tips_get.as_mut() {
+            if forward_read_only.is_some() {
+                tips.forward_complete()
+            } else {
+                tips.poll_replay(
+                    &self.progress,
+                    &mut self.read.timeline_mut().boundary,
+                    self.quiz_score as u32,
+                )?
+            }
+        } else if let Some(quiz) = pending.quiz.as_mut() {
+            if forward_read_only.is_some() {
+                quiz.forward_complete()
+            } else {
+                let complete = quiz.poll_replay(
+                    &mut self.progress,
+                    self.read.timeline().boundary,
+                    self.quiz_score,
+                    |dest, value| self.vm.as_mut().unwrap().write_pending_result(dest, value),
+                )?;
                 // The earlier native branch does not change the register. The
                 // VM feedback bridge retires it with its current value.
-                let dest=quiz.request().destination;
-                let value=quiz.result().unwrap_or_else(||self.vm.as_ref().unwrap().read_register(dest));
-                self.response=CommandResult::WriteMemory(dest,value);
+                let dest = quiz.request().destination;
+                let value = quiz
+                    .result()
+                    .unwrap_or_else(|| self.vm.as_ref().unwrap().read_register(dest));
+                self.response = CommandResult::WriteMemory(dest, value);
                 complete
             }
-        } else if let Some(scenario_select)=pending.scenario_select.as_mut() {
-            if forward_read_only.is_some() {scenario_select.forward_complete()} else {scenario_select.poll_replay(self.progress.progress(),self.read.timeline().boundary)?}
-        } else if let Some(kakera)=pending.kakera.as_mut() {
-            if forward_read_only.is_some() {false} else {kakera.poll_replay(self.progress.progress(),self.read.timeline().boundary)?}
+        } else if let Some(scenario_select) = pending.scenario_select.as_mut() {
+            if forward_read_only.is_some() {
+                scenario_select.forward_complete()
+            } else {
+                scenario_select
+                    .poll_replay(self.progress.progress(), self.read.timeline().boundary)?
+            }
+        } else if let Some(kakera) = pending.kakera.as_mut() {
+            if forward_read_only.is_some() {
+                false
+            } else {
+                kakera.poll_replay(self.progress.progress(), self.read.timeline().boundary)?
+            }
         } else if let Some(autosave) = pending.autosave.as_mut() {
             if forward_read_only.is_some() {
                 autosave.flags()[1] != 0
@@ -434,7 +495,7 @@ impl ReplaySession {
                 .memory
                 .fork_for_restore(target, target, &self.progress)?;
             let mut replacement = Self::new(self.scenario.clone(), fork)?;
-            replacement.quiz_score=self.quiz_score;
+            replacement.quiz_score = self.quiz_score;
             replacement.completed_commands = self.completed_commands;
             replacement.exit_forks = self.exit_forks + 1;
             *self = replacement;

@@ -160,7 +160,10 @@ pub(super) struct RowState {
 #[derive(Clone, Debug)]
 pub(super) struct ViewState {
     pub ready: bool,
-    #[allow(dead_code, reason = "Preserve native view mode independently of row layout.")]
+    #[allow(
+        dead_code,
+        reason = "Preserve native view mode independently of row layout."
+    )]
     pub kind: u32,
     pub mask: u32,
     pub selected: i32,
@@ -171,7 +174,10 @@ pub(super) struct ViewState {
 }
 pub(super) struct Model {
     pub data: RuntimeGameData,
-    #[allow(dead_code, reason = "Preserve the native append flag for scene inspection.")]
+    #[allow(
+        dead_code,
+        reason = "Preserve the native append flag for scene inspection."
+    )]
     pub append: bool,
     pub kind: u32,
     pub bgm: i32,
@@ -220,6 +226,9 @@ fn shuffle(count: usize, seed: u32) -> Vec<usize> {
         values.swap(i, j);
     }
     values
+}
+fn art_band_available(band: u32, (width, height): (u32, u32)) -> bool {
+    (band / 15 + 1) * 720 <= width && (band % 15 + 1) * 120 <= height
 }
 impl Model {
     /// The source owns both records and every runtime-only vector. Fresh Origin
@@ -324,6 +333,15 @@ impl Model {
     }
     pub fn base_y(&self) -> f32 {
         (1080. - (self.count as f32) * 60.) * 0.5
+    }
+    /// Artwork is a separate permission from persisted unlocks. A base atlas
+    /// supplies columns0..1; missing labels must never launch invisible rows.
+    pub fn constrain_artwork(&mut self, size: (u32, u32)) {
+        for i in 0..self.count {
+            if !art_band_available(ROWS[self.kind as usize][i].0, size) {
+                self.mask &= !(1 << i);
+            }
+        }
     }
     pub fn publish_resources(&mut self) {
         self.ready = true;

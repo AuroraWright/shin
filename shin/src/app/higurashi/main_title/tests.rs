@@ -395,3 +395,73 @@ fn higurashi_main_title_opening_uses_real_handoff_assets_audio_and_capture() {
         "Higurashi main title opening integration:actual startup/movie handoff,title atlas/default mask,BGM158/title call,global audio/clock/font retention,Top(-1)/Extra(1,1),pending/completed worker retirement and{frames}720p/1080p captured-fade frames pass"
     );
 }
+
+#[test]
+fn patchless_original_snr_uses_native_no_append_save_gate_without_blocking_load() {
+    use shin_core::format::scenario::higurashi::HigurashiVariant::{Original, Updated};
+    assert!(!append_story_available(false, Original));
+    assert!(!append_story_available(true, Original));
+    assert!(!append_story_available(false, Updated));
+    assert!(append_story_available(true, Updated));
+}
+
+#[test]
+#[ignore = "actual mounted base-only/base+append title atlas fallback drawing; offscreen GPU, no audio"]
+fn patchless_title_actual_base_atlas_keeps_common_top_category_and_quiz_artwork() {
+    use crate::adv::higurashi::{reference_gpu_assets, reference_render_to_texture};
+    use crate::asset::system::{AssetLoadContext, AssetServer, LayeredAssetIo};
+    let (device, queue, _) = reference_gpu_assets();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap();
+    for append in [false, true] {
+        let mut io = LayeredAssetIo::new();
+        if append {
+            io.try_with_rom(root.join("higurashi/append.rom")).unwrap();
+        }
+        io.try_with_rom(root.join("higurashi/data.rom")).unwrap();
+        let server = AssetServer::new(
+            io.into(),
+            AssetLoadContext {
+                game: crate::cli::Game::Higurashi,
+                wgpu_device: device.clone(),
+                wgpu_queue: queue.clone(),
+                bustup_cache: crate::asset::system::cache::AssetCache::new(),
+                higurashi_bustup_cache: Default::default(),
+                picture_cache: Default::default(),
+                font_cache: Default::default(),
+            },
+        );
+        let atlas = server.load_sync::<CharacterTextures>("/title.txa").unwrap();
+        assert!(!atlas.contains("o_menu"));
+        assert!(!atlas.contains("logo_plus"));
+        assert!(!atlas.contains("s_menu_plus"));
+        assert!(!atlas.contains("s_menu_lock_plus"));
+        assert!(!atlas.contains("q_menu_plus"));
+        assert_eq!(atlas.get("t_menu").size().height, 1040);
+        for name in ["logo", "s_menu", "s_menu_lock", "q_menu"] {
+            assert!(atlas.contains(name));
+        }
+        let top = top_menu::TopMenu::new(false, false, 8, (1920, 1080));
+        let cat = cat_menu::CatMenu::new(0, 1, 0, (1920, 1080));
+        let gallery = cat_menu::CatMenu::new(1, 0, 5, (1920, 1080));
+        let quiz = quiz_menu::QuizMenu::new((1920, 1080));
+        for size in [(1280, 720), (1920, 1080)] {
+            reference_render_to_texture(&device, &queue, size, |ctx, target| {
+                let mut pass = ctx.begin_pass(
+                    shin_render::shaders::types::texture::TextureTarget {
+                        view: target,
+                        kind:
+                            shin_render::shaders::types::texture::TextureTargetKind::RenderTexture,
+                    },
+                    None,
+                    "Patchless actual title atlas fallbacks",
+                );
+                top.render(&mut pass, &atlas);
+                cat.render(&mut pass, &atlas, append);
+                gallery.render(&mut pass, &atlas, append);
+                quiz.render(&mut pass, &atlas, append);
+            });
+        }
+    }
+}

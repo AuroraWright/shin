@@ -92,7 +92,7 @@ pub(super) fn packets(model: &Model, atlas_present: bool, scrollbar: Scrollbar) 
                 (angle + angle).sin() * f32::from_bits(0x3e4ccccd) + f32::from_bits(0x3ecccccd);
             out.push(quad("cur", rect, FULL, alpha(opacity)));
         }
-        if row.status == 1 {
+        if row.status == 1 && row.artwork_available {
             out.push(quad(
                 "new",
                 [x, y + 26.0, x + 108.0, y + 62.0],
@@ -100,7 +100,11 @@ pub(super) fn packets(model: &Model, atlas_present: bool, scrollbar: Scrollbar) 
                 u32::MAX,
             ));
         }
-        let id = if row.status > 0 { row.atlas_id } else { 0 };
+        let id = if row.status > 0 && row.artwork_available {
+            row.atlas_id
+        } else {
+            0
+        };
         let v = f32::from(id & 31) * 64.0 * f32::from_bits(0x3a000000);
         out.push(quad(
             format!("title{}", id >> 5),
@@ -142,7 +146,10 @@ pub(super) fn packets(model: &Model, atlas_present: bool, scrollbar: Scrollbar) 
     let mut right = 1872.0;
     for id in [1, 2, 0] {
         let (key, second, row, width) = HINTS[id];
-        let color = if id == 2 && model.rows[model.selected].status == 0 {
+        let color = if id == 2
+            && (model.rows[model.selected].status == 0
+                || !model.rows[model.selected].artwork_available)
+        {
             0xff808080
         } else {
             u32::MAX

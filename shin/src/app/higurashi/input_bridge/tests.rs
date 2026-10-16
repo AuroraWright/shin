@@ -555,3 +555,58 @@ fn temporary_ctrl_skip_is_separate_and_quarantined_until_physical_release() {
     assert_eq!(words(input.update(FRAME)), [0; 4]);
     assert!(!input.temporary_skip_held());
 }
+
+#[test]
+fn higurashi_wheel_is_fractional_frame_displacement_and_never_a_button_or_stick() {
+    let mut input = Input::default();
+    let mut raw = RawInputState::new();
+    raw.mouse.scroll_amount = -3.015625;
+    input.raw_input(&raw);
+    input.raw_input(&raw); // replacement, not a second packet
+    assert_eq!(input.analog().wheel_scroll, 0.);
+    assert_eq!(words(input.update(FRAME)), [0; 4]);
+    assert_eq!(input.analog().wheel_scroll, 3.015625);
+    assert_eq!(input.analog().wheel_scroll, 3.015625); // cached frame getter
+    assert_eq!(input.analog().axes, [0; 4]);
+    assert_eq!(words(input.update(FRAME)), [0; 4]);
+    assert_eq!(input.analog().wheel_scroll, 0.); // consumed even without a new raw sample
+    raw.keyboard.insert(KeyCode::KeyK);
+    raw.mouse.scroll_amount = 0.125;
+    input.raw_input(&raw);
+    input.update(FRAME);
+    assert_eq!(input.analog().wheel_scroll, -0.125);
+    assert_eq!(input.analog().axes[3], -127); // keyboard keeps its native byte
+    for invalid in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        raw.mouse.scroll_amount = invalid;
+        input.raw_input(&raw);
+        input.update(FRAME);
+        assert_eq!(input.analog().wheel_scroll, 0.);
+    }
+}
+
+#[test]
+fn higurashi_wheel_flush_and_focus_discard_pending_and_published_motion() {
+    let mut input = Input::default();
+    let mut raw = RawInputState::new();
+    raw.mouse.scroll_amount = -0.5;
+    for published in [false, true] {
+        input.raw_input(&raw);
+        if published {
+            input.update(FRAME);
+        }
+        input.flush();
+        assert_eq!(input.analog().wheel_scroll, 0.);
+        input.update(FRAME);
+        assert_eq!(input.analog().wheel_scroll, 0.);
+    }
+    input.raw_input(&raw);
+    input.set_focused(false);
+    input.raw_input(&raw); // background callbacks may still arrive
+    input.update(FRAME);
+    input.set_focused(true);
+    input.update(FRAME);
+    assert_eq!(input.analog().wheel_scroll, 0.);
+    input.raw_input(&raw); // a fresh focused displacement is immediately usable
+    input.update(FRAME);
+    assert_eq!(input.analog().wheel_scroll, 0.5);
+}

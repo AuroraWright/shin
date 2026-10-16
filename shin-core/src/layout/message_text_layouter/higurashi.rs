@@ -3,7 +3,9 @@
 //! Share glyph metrics, ruby, line breaking and command clocks with Umineko;
 //! select the older color encoding, parser dialect and first-line policy here.
 mod backlog;
-pub use backlog::{HigurashiBacklogLayout, HigurashiBacklogLayouter, HigurashiBacklogVoice, HigurashiBacklogVoices};
+pub use backlog::{
+    HigurashiBacklogLayout, HigurashiBacklogLayouter, HigurashiBacklogVoice, HigurashiBacklogVoices,
+};
 
 use glam::Vec2;
 
@@ -116,15 +118,21 @@ impl<Font: FontMetrics + Clone> HigurashiTextLayouter<Font> {
         })
     }
     pub fn parse(mut self, text: &str) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
-        let text = decode_string_fixup(text);
+        let text = self.0.layouter.font_normal.localize(text);
+        let text = decode_string_fixup(&text);
         MessageTextParser::new_higurashi(&text).parse_into(&mut self.0);
         self.0.finish()
     }
     /// Older9b7a4 SimpleText source emits literal UTF-8 characters, skips
     /// control characters and optionally ignores newlines. Question labels
     /// use this source rather than the script-command parser.
-    pub fn parse_plain(mut self, text: &str, ignore_newlines: bool) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
+    pub fn parse_plain(
+        mut self,
+        text: &str,
+        ignore_newlines: bool,
+    ) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
         use crate::layout::text_layouter::TextLayouter;
+        let text = self.0.layouter.font_normal.localize(text);
         self.0.on_message_start();
         for c in text.chars() {
             if c > '\u{1f}' {
@@ -201,6 +209,7 @@ impl<Font: FontMetrics + Clone> HigurashiMessageLayouter<Font> {
     pub fn parse(mut self, message: &str) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
         // Native parser fixes both literal characters and string arguments. SNR
         // text is already fixed by the bytecode reader; this operation is idempotent.
+        // Scenario dialogue is authored data, outside code-defined UI overrides.
         let text = decode_string_fixup(message);
         MessageTextParser::new_higurashi(&text).parse_into(&mut self.0);
         self.0.finish()

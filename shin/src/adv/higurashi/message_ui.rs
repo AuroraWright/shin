@@ -17,28 +17,76 @@ use super::{
     message_playback::{HigurashiMessagePlayback, OutgoingWindow, WaitKind},
 };
 use crate::{
-    asset::{system::AssetServer, texture_archive::TextureArchive},
+    asset::{
+        system::AssetServer,
+        texture_archive::{TextureArchive, TextureArchiveBuilder},
+    },
     layer::render_params::higurashi::HigurashiTransform,
 };
 
-#[derive(TextureArchive)]
+/// Base archives omit only the updated wait-cursor sprites.
 pub struct HigurashiMessageTextures {
-    #[txa(name = "msgwnd")]
     pub window: GpuTexture,
-    #[txa(name = "cursor0")]
-    pub cursor_regular: GpuTexture,
-    #[txa(name = "cursor1")]
-    pub cursor_last: GpuTexture,
-    #[txa(name = "keywait")]
+    pub cursor_regular: Option<GpuTexture>,
+    pub cursor_last: Option<GpuTexture>,
     pub key_wait: GpuTexture,
-    #[txa(name = "select")]
     pub selection: GpuTexture,
-    #[txa(name = "fselect")]
     pub focused_selection: GpuTexture,
-    #[txa(name = "navi_icon")]
     pub navigation_icons: GpuTexture,
-    #[txa(name = "navi_arrow")]
     pub navigation_arrows: GpuTexture,
+}
+#[derive(Default)]
+pub struct HigurashiMessageTexturesBuilder {
+    window: Option<GpuTexture>,
+    cursor_regular: Option<GpuTexture>,
+    cursor_last: Option<GpuTexture>,
+    key_wait: Option<GpuTexture>,
+    selection: Option<GpuTexture>,
+    focused_selection: Option<GpuTexture>,
+    navigation_icons: Option<GpuTexture>,
+    navigation_arrows: Option<GpuTexture>,
+}
+impl TextureArchive for HigurashiMessageTextures {
+    type Builder = HigurashiMessageTexturesBuilder;
+}
+impl TextureArchiveBuilder for HigurashiMessageTexturesBuilder {
+    type Output = HigurashiMessageTextures;
+    fn new() -> Self {
+        Self::default()
+    }
+    fn add_texture(&mut self, name: &str, texture: GpuTexture) {
+        let slot = match name {
+            "msgwnd" => &mut self.window,
+            "cursor0" => &mut self.cursor_regular,
+            "cursor1" => &mut self.cursor_last,
+            "keywait" => &mut self.key_wait,
+            "select" => &mut self.selection,
+            "fselect" => &mut self.focused_selection,
+            "navi_icon" => &mut self.navigation_icons,
+            "navi_arrow" => &mut self.navigation_arrows,
+            _ => panic!("Unknown message texture: {name}"),
+        };
+        assert!(slot.is_none(), "Duplicate message texture: {name}");
+        *slot = Some(texture);
+    }
+    fn build(self) -> Self::Output {
+        HigurashiMessageTextures {
+            window: self.window.expect("Missing message texture: msgwnd"),
+            cursor_regular: self.cursor_regular,
+            cursor_last: self.cursor_last,
+            key_wait: self.key_wait.expect("Missing message texture: keywait"),
+            selection: self.selection.expect("Missing message texture: select"),
+            focused_selection: self
+                .focused_selection
+                .expect("Missing message texture: fselect"),
+            navigation_icons: self
+                .navigation_icons
+                .expect("Missing message texture: navi_icon"),
+            navigation_arrows: self
+                .navigation_arrows
+                .expect("Missing message texture: navi_arrow"),
+        }
+    }
 }
 impl HigurashiMessageTextures {
     pub async fn load(assets: &AssetServer) -> Result<Arc<Self>> {
@@ -87,13 +135,15 @@ impl MessageUiDraw {
         let transform = HigurashiTransform::convert_clip_depth(self.native_transform);
         match self.texture {
             Some(texture) => {
-                let texture = match texture {
-                    UiTexture::Window => &textures.window,
-                    UiTexture::CursorRegular => &textures.cursor_regular,
-                    UiTexture::CursorLast => &textures.cursor_last,
-                    UiTexture::KeyWait => &textures.key_wait,
-                }
-                .as_source();
+                let Some(texture) = (match texture {
+                    UiTexture::Window => Some(&textures.window),
+                    UiTexture::CursorRegular => textures.cursor_regular.as_ref(),
+                    UiTexture::CursorLast => textures.cursor_last.as_ref(),
+                    UiTexture::KeyWait => Some(&textures.key_wait),
+                }) else {
+                    return;
+                };
+                let texture = texture.as_source();
                 let vertices = if self.indices.is_empty() {
                     VertexSource::VertexData {
                         vertices: &self.vertices,

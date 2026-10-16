@@ -35,6 +35,7 @@ pub(super) mod bonus;
 mod controls;
 mod exit;
 pub(super) mod kakera;
+mod music_title;
 mod navigation;
 mod notification;
 mod notification_get;
@@ -81,6 +82,7 @@ pub(super) struct Gameplay {
     screens: Option<HigurashiSceneTextures>,
     seeds: Seeds,
     notification: notification::Notification,
+    music_title: music_title::MusicTitle,
     controls: controls::Controls,
     navigation: navigation::Navigation,
     selection: selection::Selection,
@@ -223,6 +225,7 @@ impl Gameplay {
             screens: Some(screens),
             seeds,
             notification: Default::default(),
+            music_title: Default::default(),
             controls: Default::default(),
             navigation: Default::default(),
             selection: Default::default(),
@@ -267,6 +270,21 @@ impl Gameplay {
     #[cfg(test)]
     pub(super) fn reference_effective_play_modes(&self) -> u32 {
         self.controls.read_policy(false).modes
+    }
+    #[cfg(test)]
+    pub(super) fn reference_fake_select_state(
+        &self,
+    ) -> Option<(u32, u32, i32, u32, [u32; 2], u32)> {
+        let ui = self.selection.fake.ui.as_ref()?.0.lock();
+        let m = &ui.model;
+        Some((
+            m.phase,
+            m.remaining,
+            m.selected,
+            m.countdown.to_bits(),
+            m.rows.each_ref().map(|r| r.alpha.value().to_bits()),
+            m.seed,
+        ))
     }
     #[cfg(test)]
     pub(super) fn reference_story_choice(&self) -> Option<(u32, i32, Vec<(usize, String)>)> {
@@ -432,6 +450,7 @@ impl Gameplay {
         Ok(())
     }
     pub fn cancel_input(&mut self) -> Result<()> {
+        self.chart_input = None;
         self.controls.desktop_mouse_release = None;
         self.controls.desktop_held_skip = false;
         self.controls.allow_temporary_skip(false);
@@ -612,6 +631,10 @@ impl Gameplay {
         audio_policy: AudioFramePolicy,
     ) -> Result<Status> {
         let mut constructed = false;
+        // Runtime supplies a fresh snapshot each frame. Consume it even when
+        // First/a different modal owns this update, so wheel motion cannot wait
+        // for a future Chart or replay as a held control.
+        let chart_input = self.chart_input.take();
         if let Some(host) = &self.host {
             host.runner
                 .set_movie_preferences(crate::layer::user::higurashi::movie::percentages(
@@ -691,7 +714,7 @@ impl Gameplay {
                     config: &mut self.config_menu,
                     manual: &mut self.help_menu,
                     chart: &mut self.chart_menu,
-                    chart_input: self.chart_input,
+                    chart_input,
                     chart_seed: self.chart_seed.clone(),
                     chart_adv: &mut self.chart_adv,
                     bindings: &self.bindings,
@@ -959,6 +982,7 @@ impl Gameplay {
             .set_layer_route_navigation(settings.v14_showroutenavi);
         let seeds = self.seeds.clone();
         let notice = &mut self.notification;
+        let music_title = &mut self.music_title;
         let saved = &mut self.globals.data;
         let clock = &mut self.clock_source;
         let font = self.globals.common.font.clone();
@@ -1039,6 +1063,7 @@ impl Gameplay {
                     )
                 },
                 |runner, audio, ui, reads| {
+                    music_title.consume(audio, &mut ui.menu, reads.saved, &font, context)?;
                     // Command polling can publish a new generic Character11.
                     // Supply its current setting before the eager cache pass.
                     runner.set_layer_route_navigation(
@@ -1163,6 +1188,11 @@ impl Gameplay {
                 Some(1.0),
             );
             host.render_adv(pass, screens)?;
+            self.music_title.render(
+                pass,
+                &host.ui.menu,
+                self.globals.data.settings.common.v18_showsongtitle,
+            );
             self.notification.render(
                 pass,
                 &host.ui.indicator,

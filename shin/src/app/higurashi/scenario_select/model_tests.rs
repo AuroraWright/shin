@@ -591,3 +591,104 @@ fn reference_updated_scenario_select_frozen_original_reexecution() {
     );
     assert_eq!(out.stdout, OUTPUT.as_bytes());
 }
+
+#[test]
+fn patchless_picker_standard_art_bands_and_missing_origin_rows_cannot_activate() {
+    for kind in 0..6 {
+        let mut model = Model::new(
+            kind,
+            0,
+            true,
+            &full_data(0, 3),
+            &settings(3),
+            Some(221),
+            false,
+        )
+        .unwrap();
+        let before = model.mask;
+        model.constrain_artwork((1440, 1800));
+        assert_eq!(model.mask, if kind == 5 { 0 } else { before });
+        if kind == 5 {
+            model.publish_resources();
+            for row in 0..model.count {
+                model.selected = row as i32;
+                model.controls(
+                    true,
+                    false,
+                    Buttons {
+                        pressed: 1 << 24,
+                        ..Default::default()
+                    },
+                    &mut || 19,
+                );
+                assert!(!model.closing);
+                assert!(
+                    model
+                        .take_pending_tasks()
+                        .into_iter()
+                        .all(|task| !matches!(task.kind, Kind::DecideWait(_)))
+                );
+                assert_eq!(model.take_actions(), vec![Action::Cue("error")]);
+            }
+        }
+    }
+    assert!(art_band_available(29, (1440, 1800)));
+    assert!(!art_band_available(30, (1440, 1800)));
+    assert!(!art_band_available(29, (1439, 1800)));
+    assert!(!art_band_available(29, (1440, 1799)));
+}
+
+#[test]
+fn patchless_original_snr_standard_picker_preflight_keeps_append_and_origin_unavailable() {
+    use shin_core::format::scenario::higurashi::{HigurashiScenario, HigurashiVariant};
+    use std::io::{Read, Seek, SeekFrom};
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap();
+    let mut rom = std::fs::File::open(root.join("higurashi/data.rom")).unwrap();
+    rom.seek(SeekFrom::Start(24_366_080)).unwrap();
+    let mut bytes = vec![0; 17_412_704];
+    rom.read_exact(&mut bytes).unwrap();
+    let scenario = HigurashiScenario::new(bytes.into()).unwrap();
+    assert_eq!(scenario.variant, HigurashiVariant::Original);
+    for (kind, count) in [(0, 9), (1, 6), (2, 6), (3, 9), (4, 4)] {
+        for selected in 0..count {
+            assert!(
+                opening::Prepared::new(
+                    &scenario,
+                    &settings(3),
+                    true,
+                    full_data(0, 3),
+                    kind,
+                    selected,
+                    (1920, 1080)
+                )
+                .is_ok()
+            );
+        }
+    }
+    assert!(
+        opening::Prepared::new(
+            &scenario,
+            &settings(3),
+            true,
+            full_data(0, 3),
+            4,
+            4,
+            (1920, 1080)
+        )
+        .is_err()
+    );
+    assert!(
+        opening::Prepared::new(
+            &scenario,
+            &settings(3),
+            true,
+            full_data(0, 3),
+            5,
+            0,
+            (1920, 1080)
+        )
+        .is_err()
+    );
+}

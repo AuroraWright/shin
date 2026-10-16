@@ -723,3 +723,49 @@ fn live_temporary_retained_input_shares_widget_but_scene_copy_is_independent() {
     assert_eq!(retained.phase(), 1);
     assert_eq!(independent.phase(), 0);
 }
+
+
+#[test]
+#[ignore = "actual base/updated notification title banks; Metal asset upload, no audio or savedata files"]
+fn patchless_notification_missing_title_banks_keep_acquisition_and_common_rows() {
+    use crate::asset::system::{AssetLoadContext, AssetServer, LayeredAssetIo};
+    let (device, queue, _) = crate::adv::higurashi::reference_gpu_assets();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap().join("higurashi");
+    for patch in [false, true] {
+        let mut io = LayeredAssetIo::new();
+        if patch { io.try_with_rom(root.join("patch.rom")).unwrap(); }
+        io.try_with_rom(root.join("data.rom")).unwrap();
+        let server = AssetServer::new(io.into(), AssetLoadContext {
+            game: crate::cli::Game::Higurashi,
+            wgpu_device: device.clone(), wgpu_queue: queue.clone(),
+            bustup_cache: crate::asset::system::cache::AssetCache::new(),
+            higurashi_bustup_cache: Default::default(), picture_cache: Default::default(), font_cache: Default::default(),
+        });
+        for content in [
+            Content::Tips { rows: vec![TipDescriptor { id: 0, atlas_word: 191 }, TipDescriptor { id: 1, atlas_word: 192 }], alternate: false },
+            Content::Kakera { ids: vec![127, 128] },
+        ] {
+            let atlas: Arc<CharacterTextures> = server.load_sync(content.archive()).unwrap();
+            let tips = matches!(content, Content::Tips { .. });
+            let mut bits = Bits([0; 20]);
+            let mut owner = Prepared::Notification { atlas, content }.construct(&mut bits, false).unwrap();
+            if tips { assert!(bits.acquired(0) && bits.acquired(1)); }
+            let acquired = bits.0;
+            owner.refresh();
+            let before = owner.reference_native_words();
+            {
+                let State::Notification(n) = &owner.state else { unreachable!() };
+                let n = n.lock();
+                assert_eq!(n.rows.len(), 2, "presentation must retain both acquisition rows");
+                let packets = n.packets_for_artwork(PassKind::Transparent, true);
+                let names: Vec<_> = packets.iter().filter_map(|p| p.texture.as_deref()).collect();
+                assert_eq!(names.iter().filter(|&&name| name == "plate").count(), if patch { 2 } else { 1 });
+                assert!(names.contains(&if tips { "title_005" } else { "title_003" }));
+                assert_eq!(names.contains(&if tips { "title_006" } else { "title_004" }), patch);
+                assert!(names.iter().all(|name| n.atlas.contains(name)));
+            }
+            assert_eq!(owner.reference_native_words(), before, "drawing must preserve all clocks/rows");
+            assert_eq!(bits.0, acquired, "missing artwork must not discard unlocks");
+        }
+    }
+}

@@ -22,6 +22,8 @@ use std::{
     time::{Duration, Instant},
 };
 
+mod roster_eof;
+
 #[derive(Default)]
 struct Events {
     accepted: Vec<Action>,

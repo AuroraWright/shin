@@ -214,6 +214,66 @@ fn versions_zero_one_and_unsupported_match_updated_native_reader() {
 }
 
 #[test]
+fn supplied_old_save_migrates_all_fields_to_updated_native_v2_output() {
+    // The supplied file is retained byte-for-byte. The expected migration was
+    // produced by the updated executable's actual crypto, CRC, reader and writer
+    // at both O0 and O3; see old-save-20261015/native/validation.json.
+    let old = include_bytes!(
+        "../../../../../reverse-engineering/higurashi/old-save-20261015/supplied-v1.dat"
+    );
+    let expected = include_bytes!(
+        "../../../../../reverse-engineering/higurashi/old-save-20261015/native/updated-O0-v2.bin"
+    );
+    let raw = super::super::obfuscation::decode(old, GAME_KEY).unwrap();
+    assert_eq!(old.len(), 29_700);
+    assert_eq!(raw[0], 1);
+    let mut reader = BitBuffer::with_data(raw, 0);
+    let decoded = SaveData::read(&mut reader).unwrap();
+    assert_eq!(reader.bit_position(), 233_475);
+    assert_eq!(decoded.encode_raw().unwrap(), expected.as_slice());
+    assert_eq!(
+        SaveData::decode(old).unwrap().encode_raw().unwrap(),
+        expected.as_slice()
+    );
+
+    assert_eq!(decoded.play_seconds, 370_810);
+    assert_eq!(decoded.persist_data.0.len(), 192);
+    assert_eq!(decoded.save_vectors.seen_messages.len(), 5_120);
+    assert_eq!(decoded.save_vectors.select_seen_choices.len(), 256);
+    assert_eq!(decoded.save_vectors.select_last_choices.len(), 64);
+    assert_eq!(decoded.settings.common.v0_bgmvol, 15);
+    assert_eq!(decoded.settings.common.v1_sfxvol, 100);
+    assert_eq!(decoded.settings.common.v18_showsongtitle, true);
+    assert!(!decoded.settings.extra_flag);
+    assert_eq!(decoded.settings.extra_percentage, 80);
+    let auto = decoded.auto_save_slot.as_ref().unwrap();
+    assert_eq!((auto.entry.scenario_id, auto.entry.save_position), (0, 1));
+    let manual = decoded.manual_save_slots[0].as_ref().unwrap();
+    assert_eq!(
+        (manual.entry.scenario_id, manual.entry.save_position),
+        (201, 730)
+    );
+    assert!(decoded.manual_save_slots[1..].iter().all(Option::is_none));
+    for slot in [auto, manual] {
+        assert!(slot.primary_entry.is_none());
+        assert!(slot.trailing_values.is_empty());
+        assert!(slot.byte_variables.is_empty());
+        assert_eq!(slot.entry.replay_target, slot.entry.save_position);
+    }
+    // A subsequent ordinary save upgrades the format; decode it through the
+    // same public entry point used by LoadGame and preserve the complete payload.
+    let upgraded = decoded.encode().unwrap();
+    assert_eq!(
+        super::super::obfuscation::decode(&upgraded, GAME_KEY).unwrap(),
+        expected.as_slice()
+    );
+    assert_eq!(
+        SaveData::decode(&upgraded).unwrap().encode_raw().unwrap(),
+        expected.as_slice()
+    );
+}
+
+#[test]
 fn malformed_crc_truncated_payloads_and_unrepresentable_values_return_errors() {
     let encoded = SaveData::default().encode().unwrap();
     for length in 0..4 {

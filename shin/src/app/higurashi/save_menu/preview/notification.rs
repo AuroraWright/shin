@@ -5,6 +5,7 @@ use std::sync::Arc;
 use crate::{
     adv::character_view::CharacterTextures,
     asset::system::AssetServer,
+    layer::user::higurashi::temporary::optional_patch_banner,
     layer::{
         higurashi_properties::HigurashiProperties,
         render_params::{higurashi::HigurashiTransform, multiply_transforms as multiply},
@@ -166,6 +167,9 @@ impl Prepared {
         let atlas: Arc<CharacterTextures> = server.load(content.archive()).await?;
         for packet in content.packets(PassKind::Transparent) {
             if let Some(name) = packet.texture {
+                if !atlas.contains(&name) && optional_patch_banner(content.archive(), &name) {
+                    continue;
+                }
                 ensure!(
                     atlas.contains(&name),
                     "Saved notification native {} has no texture{name}",
@@ -264,6 +268,10 @@ impl View {
                     ColorBlendType::Layer1
                 });
             if let Some(name) = &packet.texture {
+                if !self.atlas.contains(name) && optional_patch_banner(self.content.archive(), name)
+                {
+                    continue;
+                }
                 let vertices = packet.sprites();
                 pass.run(builder.build(
                     RenderProgramWithArguments::Sprite {

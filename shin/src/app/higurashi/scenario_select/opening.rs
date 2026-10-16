@@ -33,10 +33,15 @@ impl Prepared {
         extent: (u16, u16),
     ) -> Result<Self> {
         ensure!(extent.0 > 0 && extent.1 > 0, "Invalid picker input extent");
+        // Original supplies the same standard art-band table and all normal
+        // dispatcher IDs. Its script has no append/Origin dispatchers.
         ensure!(
-            scenario.variant == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
-            "ScenarioSelect requires updated Higurashi"
+            kind != 5
+                || scenario.variant
+                    == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
+            "Origin ScenarioSelect requires updated Higurashi"
         );
+        let append = super::super::main_title::append_story_available(append, scenario.variant);
         ensure!(
             (0..6).contains(&kind),
             "Unsupported ScenarioSelect kind {kind}"
@@ -153,7 +158,6 @@ impl Opening {
         self.owner.as_ref().unwrap().has_save_task()
     }
 
-
     pub fn take_scene_request(&mut self) -> Option<SceneRequest> {
         self.owner.as_mut().unwrap().take_request()
     }
@@ -163,7 +167,10 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(in crate::app::higurashi) fn reference_owner(&self) -> &Owner {
         self.owner.as_ref().unwrap()
     }

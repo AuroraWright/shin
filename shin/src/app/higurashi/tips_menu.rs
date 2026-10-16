@@ -26,11 +26,18 @@ pub(super) mod view;
 
 pub(super) struct Row {
     /// Unlock bits and GameData's acquired list use the unfiltered SNR index.
-    #[allow(dead_code, reason = "Retain the unfiltered source index for native metadata validation.")]
+    #[allow(
+        dead_code,
+        reason = "Retain the unfiltered source index for native metadata validation."
+    )]
     pub source_index: usize,
     pub atlas_id: u16,
+    pub artwork_available: bool,
     pub scenario_id: u16,
-    #[allow(dead_code, reason = "Retain the resolved native row texture path for resource inspection.")]
+    #[allow(
+        dead_code,
+        reason = "Retain the resolved native row texture path for resource inspection."
+    )]
     pub texture_path: String,
     pub current: bool,
     pub status: u32,
@@ -70,6 +77,15 @@ pub(in crate::app::higurashi) struct Model {
     pending: Option<Pending>,
     actions: Vec<Action>,
 }
+/// Original SNR178494 subtracts1000 and dispatches exactly188 source rows.
+/// Updated SNR stores each destination explicitly, including Origin entries.
+pub(super) fn script_id(scenario: &HigurashiScenario, index: usize) -> Option<u16> {
+    let tip = scenario.tips_info.get(index)?;
+    match scenario.variant {
+        HigurashiVariant::Updated => tip.updated_field,
+        HigurashiVariant::Original => (index < 188).then_some(1000 + index as u16),
+    }
+}
 fn bit(words: &[u32], at: usize) -> bool {
     words
         .get(at / 32)
@@ -95,18 +111,17 @@ impl Model {
         alternate_flag: u32,
         vectors: &SaveVectors,
     ) -> Result<Self> {
-        ensure!(
-            scenario.variant == HigurashiVariant::Updated,
-            "TIPS requires the updated Higurashi scenario"
-        );
-        let alternate = data.as_ref().map_or(alternate_flag & 1 != 0, |d| {
-            d.progress.active_entry().scenario_id > 9999
-        });
+        let alternate = scenario.variant == HigurashiVariant::Updated
+            && data.as_ref().map_or(alternate_flag & 1 != 0, |d| {
+                d.progress.active_entry().scenario_id > 9999
+            });
         let mut selected_row = 0;
         let mut unlocked = 0;
         let mut rows = Vec::new();
         for (source_index, tip) in scenario.tips_info.iter().enumerate() {
-            let scenario_id = tip.updated_field.expect("Updated TIPS scenario ID");
+            let scenario_id = script_id(scenario, source_index).ok_or_else(|| {
+                anyhow::anyhow!("TIPS source index has no supported script entry")
+            })?;
             if (scenario_id > 9999) != alternate {
                 continue;
             }
@@ -125,6 +140,7 @@ impl Model {
             rows.push(Row {
                 source_index,
                 atlas_id: tip.id,
+                artwork_available: true,
                 scenario_id,
                 texture_path: tip.texture_path.as_ref().to_owned(),
                 current,
@@ -160,6 +176,13 @@ impl Model {
             pending: None,
             actions: vec![],
         })
+    }
+    fn apply_artwork(&mut self, atlas: &crate::adv::character_view::CharacterTextures) {
+        for row in &mut self.rows {
+            let name = format!("title{}", row.atlas_id >> 5);
+            row.artwork_available = atlas.contains(&name)
+                && atlas.get(&name).size_vec().y >= f32::from((row.atlas_id & 31) + 1) * 64.;
+        }
     }
     pub fn take_actions(&mut self) -> Vec<Action> {
         std::mem::take(&mut self.actions)
@@ -348,7 +371,7 @@ impl Model {
             f32::from_bits(0x3f333333),
             true,
         );
-        if self.rows[selected].status == 0 {
+        if self.rows[selected].status == 0 || !self.rows[selected].artwork_available {
             self.actions.push(Action::Cue("error"));
         } else {
             self.actions.push(Action::Cue("decide"));

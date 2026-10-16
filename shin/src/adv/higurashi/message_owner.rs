@@ -64,7 +64,10 @@ impl HigurashiMessageOwner {
             HigurashiMessageTextures::load(assets).await?,
         ))
     }
-    pub(crate) fn from_common_resources(font: Arc<GpuFontLazy>, textures: Arc<HigurashiMessageTextures>) -> Self {
+    pub(crate) fn from_common_resources(
+        font: Arc<GpuFontLazy>,
+        textures: Arc<HigurashiMessageTextures>,
+    ) -> Self {
         Self {
             playback: Default::default(),
             settings: Default::default(),
@@ -86,7 +89,10 @@ impl HigurashiMessageOwner {
     }
     ///839ec(message,1):close with its existing slide,independent of skip.
     pub(crate) fn close_for_exit(&mut self) -> Result<()> {
-        ensure!(self.pending.is_none(), "EXIT cannot replace a pending message command");
+        ensure!(
+            self.pending.is_none(),
+            "EXIT cannot replace a pending message command"
+        );
         self.playback.close(true);
         self.glyphs = None;
         Ok(())
@@ -164,11 +170,11 @@ impl HigurashiMessageOwner {
                 }
             }
             HigurashiRuntimeCommand::MSGFACE { original_argument } => {
-                ensure!(
-                    original_argument.is_none(),
-                    "Original Higurashi MSGFACE callback is not implemented"
-                );
-                self.playback.block_input();
+                // Original MSGFACE forwards its argument to 7fd34, a RET.
+                // Updated opcode8b is MSGHIDE and calls 83a00 instead.
+                if original_argument.is_none() {
+                    self.playback.block_input();
+                }
             }
             _ => return Ok(None),
         }

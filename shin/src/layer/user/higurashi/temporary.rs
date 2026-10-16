@@ -76,6 +76,31 @@ impl Content {
         }
     }
 }
+/// Updated-only notification artwork may be omitted without affecting the
+/// authored acquisition, clocks, Question or command retirement.
+pub(crate) fn optional_patch_banner(archive: &str, name: &str) -> bool {
+    if let Some(id) = name
+        .strip_prefix("title_")
+        .and_then(|s| s.parse::<u16>().ok())
+    {
+        return match archive {
+            "/tipsget.txa" => (6..=9).contains(&id),
+            "/kakeraget.txa" => id == 4,
+            _ => false,
+        };
+    }
+    if archive == "/otsuget.txa"
+        && let Some(id) = name.strip_prefix("snrget_")
+    {
+        if let Some(id) = id.strip_suffix('_').and_then(|s| s.parse::<u16>().ok()) {
+            return (20..=24).contains(&id);
+        }
+        return id
+            .parse::<u16>()
+            .is_ok_and(|id| id == 24 || (50..=60).contains(&id));
+    }
+    false
+}
 #[derive(Debug, Clone)]
 pub(crate) enum Prepared {
     Character(CharacterView),
@@ -86,7 +111,13 @@ pub(crate) enum Prepared {
 }
 impl Prepared {
     pub fn requires_settings(&self) -> bool {
-        matches!(self, Self::Notification { content: Content::Tips { .. }, .. })
+        matches!(
+            self,
+            Self::Notification {
+                content: Content::Tips { .. },
+                ..
+            }
+        )
     }
     pub async fn load(
         server: &AssetServer,
@@ -547,13 +578,12 @@ impl Owner {
         } else {
             if n.phase == 0 {
                 control(&mut n.black, 0., 60., 0);
-                let header_target = if matches!(n.content, Content::Otsu { .. }) {0.} else {240.};
-                control(
-                    &mut n.header,
-                    header_target,
-                    50.,
-                    2,
-                );
+                let header_target = if matches!(n.content, Content::Otsu { .. }) {
+                    0.
+                } else {
+                    240.
+                };
+                control(&mut n.header, header_target, 50., 2);
                 for (i, r) in n.rows.iter_mut().enumerate() {
                     control(&mut r.alpha, 0., 50. + 10. * i as f32, 0x80);
                     control(&mut r.alpha, 1., 40., 0);
@@ -711,7 +741,7 @@ impl Owner {
             Mat4::from_scale(vec3(2. / 3., 2. / 3., 0.)),
         );
         let transform = HigurashiTransform::convert_clip_depth(matrix);
-        for packet in n.packets(kind) {
+        for packet in n.packets_for_artwork(kind, true) {
             let builder = RenderRequestBuilder::new()
                 .depth_stencil_shorthand(stencil, true, false)
                 .color_blend_type(if packet.opaque {
@@ -720,6 +750,9 @@ impl Owner {
                     ColorBlendType::Layer1
                 });
             if let Some(name) = &packet.texture {
+                if !n.atlas.contains(name) && optional_patch_banner(n.content.archive(), name) {
+                    continue;
+                }
                 ensure!(
                     n.atlas.contains(&name),
                     "Live temporary {} has no texture{name}",
@@ -805,7 +838,12 @@ impl Packet {
     }
 }
 impl Notification {
+    #[cfg(test)]
     fn packets(&self, kind: PassKind) -> Vec<Packet> {
+        // The native CPU fixture deliberately supplies an empty GPU atlas.
+        self.packets_for_artwork(kind, false)
+    }
+    fn packets_for_artwork(&self, kind: PassKind, check_artwork: bool) -> Vec<Packet> {
         if kind == PassKind::Opaque {
             return vec![Packet::fill(1., true)];
         }
@@ -835,13 +873,28 @@ impl Notification {
                     uv,
                     1.,
                 ));
+                let visible: Vec<_> = self
+                    .rows
+                    .iter()
+                    .filter(|row| {
+                        let bank = if tips {
+                            i32::from(row.atlas_word >> 5)
+                        } else {
+                            row.id / 32
+                        };
+                        let name = format!("title_{bank:03}");
+                        !check_artwork
+                            || self.atlas.contains(&name)
+                            || !optional_patch_banner(self.content.archive(), &name)
+                    })
+                    .collect();
                 let mut y = if tips {
-                    738. - 48. * self.rows.len() as f32
+                    738. - 48. * visible.len() as f32
                 } else {
-                    (576u64.wrapping_sub((self.rows.len() as u64).wrapping_mul(96)) >> 1) as f32
+                    (576u64.wrapping_sub((visible.len() as u64).wrapping_mul(96)) >> 1) as f32
                         + 450.
                 };
-                for row in &self.rows {
+                for row in visible {
                     let alpha = row.alpha.value();
                     out.push(Packet::sprite(
                         "plate",

@@ -41,7 +41,10 @@ enum Phase {
 #[derive(Clone, Debug)]
 pub(super) struct Frame {
     pub background_offset: f32,
-    #[allow(dead_code, reason = "Preserve the native caption tween in frame inspection data.")]
+    #[allow(
+        dead_code,
+        reason = "Preserve the native caption tween in frame inspection data."
+    )]
     pub caption_alpha: f32,
     pub logo_alpha: f32,
     pub logo_offset: f32,
@@ -204,7 +207,10 @@ pub(super) struct Opening {
     chart_adv: Option<(super::runtime_game_data::RuntimeGameData, u32)>,
     manual_load: Option<(super::runtime_game_data::RuntimeGameData, u32)>,
     menu_extent: (u16, u16),
-    #[allow(dead_code, reason = "Retained native input-frame state for title input integration.")]
+    #[allow(
+        dead_code,
+        reason = "Retained native input-frame state for title input integration."
+    )]
     input_frame: u32,
     destinations: std::collections::VecDeque<top_menu::Destination>,
     idle_gate: bool,
@@ -212,7 +218,20 @@ pub(super) struct Opening {
     story_gate: Option<shin_core::format::save::higurashi::GameData>,
     category_scenes: std::collections::VecDeque<CategorySceneRequest>,
 }
+pub(super) fn append_story_available(
+    append: bool,
+    variant: shin_core::format::scenario::higurashi::HigurashiVariant,
+) -> bool {
+    append && variant == shin_core::format::scenario::higurashi::HigurashiVariant::Updated
+}
 impl Opening {
+    fn origin_available(&self) -> bool {
+        append_story_available(self.plus, self.globals.common.scenario.variant)
+            && self
+                .atlas
+                .as_ref()
+                .is_some_and(|atlas| atlas.contains("o_menu"))
+    }
     /// Report actual retained owners used by the bounded normal-window journey.
     pub(super) fn touch_diagnostic_phase(&self) -> Option<&'static str> {
         if self.fault.is_some() || !self.ready || self.motion.phase != Phase::Menu {
@@ -323,6 +342,7 @@ impl Opening {
         buttons: crate::adv::higurashi::input::Buttons,
         pointer: &crate::adv::input_area::PointerFrame<'_>,
     ) -> Result<()> {
+        let chart_input = self.chart_input.take();
         ensure!(
             delta.as_f32().is_finite() && delta.as_f32() >= 0.0,
             "Invalid title opening delta"
@@ -394,7 +414,7 @@ impl Opening {
                 && self.config.is_none()
                 && self.manual.is_none()
                 && self.chart.is_none();
-            self.poll_chart(delta, permission, buttons, pointer)?;
+            self.poll_chart(delta, permission, buttons, chart_input, pointer)?;
             let manual_requests = if let Some((_, menu)) = &mut self.manual {
                 menu.poll(delta, permission, buttons, pointer)?;
                 menu.take_requests()
@@ -405,7 +425,7 @@ impl Opening {
                 if stage == 1 {
                     let selected = self.manual.as_ref().unwrap().0;
                     self.top = Some(top_menu::TopMenu::new(
-                        self.plus,
+                        self.origin_available(),
                         self.globals.data.auto_save_slot.is_some(),
                         selected,
                         self.menu_extent,
@@ -435,7 +455,7 @@ impl Opening {
                 if stage == 1 {
                     let selected = self.config.as_ref().unwrap().0;
                     self.top = Some(top_menu::TopMenu::new(
-                        self.plus,
+                        self.origin_available(),
                         self.globals.data.auto_save_slot.is_some(),
                         selected,
                         self.menu_extent,
@@ -470,7 +490,7 @@ impl Opening {
                         // deec0 appends the new Top first,then controls blackout.
                         let selected = self.save.as_ref().unwrap().0;
                         self.top = Some(top_menu::TopMenu::new(
-                            self.plus,
+                            self.origin_available(),
                             self.globals.data.auto_save_slot.is_some(),
                             selected,
                             self.menu_extent,
@@ -557,7 +577,10 @@ impl Opening {
                                 None,
                                 &self.globals.data,
                                 slots,
-                                self.plus,
+                                append_story_available(
+                                    self.plus,
+                                    self.globals.common.scenario.variant,
+                                ),
                                 self.menu_extent,
                             )?;
                             self.save = Some((
@@ -632,7 +655,7 @@ impl Opening {
                     cat_menu::Action::Destination(destination) => match destination {
                         cat_menu::Destination::Top(selected) => {
                             self.top = Some(top_menu::TopMenu::new(
-                                self.plus,
+                                self.origin_available(),
                                 self.globals.data.auto_save_slot.is_some(),
                                 selected,
                                 self.menu_extent,
@@ -687,7 +710,7 @@ impl Opening {
                     ),
                     quiz_menu::Action::Destination(quiz_menu::Destination::Top) => {
                         self.top = Some(top_menu::TopMenu::new(
-                            self.plus,
+                            self.origin_available(),
                             self.globals.data.auto_save_slot.is_some(),
                             7,
                             self.menu_extent,
@@ -743,7 +766,7 @@ impl Opening {
                 match self.motion.pending {
                     Some(MenuRequest::Top { selected }) => {
                         self.top = Some(top_menu::TopMenu::new(
-                            self.plus,
+                            self.origin_available(),
                             self.globals.data.auto_save_slot.is_some(),
                             selected,
                             self.menu_extent,
@@ -824,7 +847,11 @@ impl Opening {
         );
         for packet in view::packets(
             self.atlas.is_some(),
-            self.plus,
+            self.plus
+                && self
+                    .atlas
+                    .as_ref()
+                    .is_some_and(|atlas| atlas.contains("logo_plus")),
             &self.frame(),
             &self.particles,
         ) {
@@ -935,6 +962,7 @@ impl Opening {
         }
     }
     pub fn cancel_input(&mut self) -> Result<()> {
+        self.chart_input = None;
         if let Some(top) = &mut self.top {
             top.cancel_input();
         }
@@ -977,7 +1005,10 @@ impl Opening {
         Ok(())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_menu_state(&self) -> Option<(&'static str, i32)> {
         if self.chart_visible {
             return self
@@ -1012,7 +1043,10 @@ impl Opening {
         None
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_config(&self) -> Option<(u32, usize, bool, u8)> {
         self.config.as_ref().map(|(_, menu)| menu.reference_state())
     }
@@ -1025,12 +1059,18 @@ impl Opening {
                 .is_some_and(|(_, menu)| menu.reference_input_ready())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_manual(&self) -> Option<(usize, i32, bool, u32, i32)> {
         self.manual.as_ref().map(|(_, menu)| menu.reference_state())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_top_selection(&self) -> Option<i32> {
         self.top.as_ref().map(|top| top.reference_selection())
     }
@@ -1051,7 +1091,10 @@ impl Opening {
         self.save.as_ref().map(|(_, menu)| menu)
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_config_question(&self) -> Option<(i32, i32)> {
         self.config
             .as_ref()
@@ -1065,14 +1108,20 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_category(&self) -> Option<(u32, i32, i32)> {
         self.cat
             .as_ref()
             .map(cat_menu::CatMenu::reference_selection)
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(super) fn reference_initial_selection(&self) -> (i32, u32) {
         (self.motion.selected, self.motion.mode)
     }

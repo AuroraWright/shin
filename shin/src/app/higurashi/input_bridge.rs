@@ -101,11 +101,14 @@ fn snapshot(states: &EnumMap<NativeAction, ActionState>) -> Buttons {
 }
 
 /// Magnitude-sensitive consumers use real D-pad holds and all four native
-/// signed bytes. Other menus retain the approved first-stick aliases.
+/// signed bytes. Desktop wheel displacement stays separate from those bytes.
+/// Other menus retain the approved first-stick aliases.
 #[derive(Debug, Default, Clone, Copy)]
 pub(super) struct Analog {
     pub axes: [i8; 4],
     pub dpad_held: u32,
+    /// Down-positive wheel lines, sampled once per update; never a held axis.
+    pub wheel_scroll: f32,
 }
 impl Analog {
     pub fn buttons(self, mut buttons: Buttons) -> Buttons {
@@ -134,6 +137,8 @@ pub(super) struct Input {
     raw_dpad: u32,
     blocked_dpad: u32,
     dpad_held: u32,
+    pending_wheel_scroll: f32,
+    wheel_scroll: f32,
 }
 impl Default for Input {
     fn default() -> Self {
@@ -155,6 +160,8 @@ impl Default for Input {
             raw_dpad: 0,
             blocked_dpad: 0,
             dpad_held: 0,
+            pending_wheel_scroll: 0.,
+            wheel_scroll: 0.,
         }
     }
 }
@@ -178,6 +185,15 @@ impl Input {
         }
         self.pointer = mapped.mouse.position;
         self.mouse_left = mapped.mouse.buttons[MouseButton::Left];
+        // Reuse Umineko's shared LineDelta/Retina PixelDelta normalization.
+        // Raw callbacks replace the frame snapshot, rather than accumulating
+        // it again. OS momentum packets follow this same displacement path.
+        let wheel = mapped.mouse.scroll_amount;
+        self.pending_wheel_scroll = if self.focused && wheel.is_finite() {
+            -wheel
+        } else {
+            0.
+        };
         self.left_stick = Vec2::new(
             mapped.gamepads.unified.axes[GamepadAxis::LeftStickX],
             mapped.gamepads.unified.axes[GamepadAxis::LeftStickY],
@@ -200,11 +216,13 @@ impl Input {
     }
 
     pub fn update(&mut self, elapsed: Duration) -> Buttons {
+        self.wheel_scroll = std::mem::take(&mut self.pending_wheel_scroll);
         if !self.focused {
             // shin-window substitutes blank raw samples while unfocused.
             // Those samples are not physical releases of quarantined holds.
             self.buttons = Buttons::default();
             self.dpad_held = 0;
+            self.wheel_scroll = 0.;
             return self.buttons;
         }
         let mut held = EnumMap::from_fn(|action| {
@@ -313,6 +331,7 @@ impl Input {
                 }
             }),
             dpad_held: self.dpad_held,
+            wheel_scroll: self.wheel_scroll,
         }
     }
     #[cfg(test)]
@@ -327,6 +346,8 @@ impl Input {
     /// Desktop replacement/modal flush: a previously held control cannot
     /// create a new edge/repeat in its replacement until it is released.
     pub fn flush(&mut self) {
+        self.pending_wheel_scroll = 0.;
+        self.wheel_scroll = 0.;
         self.temporary_skip_blocked |= self.temporary_skip;
         for (action, blocked) in &mut self.blocked {
             *blocked |= self.raw[action];

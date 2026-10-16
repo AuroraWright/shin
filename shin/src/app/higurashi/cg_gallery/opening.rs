@@ -13,10 +13,7 @@ use crate::{
     render::PreRenderContext,
 };
 use anyhow::{Context, Result, ensure};
-use shin_core::{
-    format::scenario::higurashi::HigurashiVariant, primitives::color::UnormColor, time::Ticks,
-    vm::command::types::Volume,
-};
+use shin_core::{primitives::color::UnormColor, time::Ticks, vm::command::types::Volume};
 use shin_render::{render_pass::RenderPass, render_texture::RenderTexture};
 
 struct Frame<'a, 'device, 'pipeline, 'buffer, 'encoder> {
@@ -85,10 +82,6 @@ pub(in crate::app::higurashi) struct Opening {
 impl Opening {
     pub fn preflight(globals: &Globals, extent: (u16, u16)) -> Result<()> {
         ensure!(extent.0 > 0 && extent.1 > 0, "Invalid CG input extent");
-        ensure!(
-            globals.common.scenario.variant == HigurashiVariant::Updated,
-            "CG requires updated Higurashi"
-        );
         Model::new(
             &globals.common.scenario.picture_box_info,
             &globals.data,
@@ -197,7 +190,10 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_owner(&self) -> &Owner {
         self.owner.as_ref().unwrap()
     }

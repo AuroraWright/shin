@@ -380,7 +380,18 @@ impl View {
         );
         for draw in packets(state, button_layout_swapped) {
             match draw {
-                Draw::Quad(packet) => packet.render(pass, atlas),
+                Draw::Quad(mut packet) => {
+                    if packet.texture == "slider" {
+                        if let Some(atlas) = atlas {
+                            let height = atlas.get("slider").size_vec().y;
+                            if height != 256. {
+                                packet.uv[1] = packet.uv[1] * 256. / height;
+                                packet.uv[3] = packet.uv[3] * 256. / height;
+                            }
+                        }
+                    }
+                    packet.render(pass, atlas);
+                }
                 Draw::Scrollbar { matrix, vertices } => pass.run(
                     RenderRequestBuilder::new()
                         .color_blend_type(ColorBlendType::Layer1)

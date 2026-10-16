@@ -11,6 +11,7 @@ mod command_tail;
 mod exit;
 mod kakera;
 mod message_copy;
+mod prologue_bars;
 mod quiz;
 mod retained_cache;
 mod scenario_select;

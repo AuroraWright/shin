@@ -126,8 +126,14 @@ fn higurashi_message_windows_cursors_and_owner_match_native_packets() {
     let (device, queue, assets) = gpu_assets();
     let textures = shin_tasks::block_on(HigurashiMessageTextures::load(&assets)).unwrap();
     assert_eq!(textures.window.size_vec(), vec2(1648.0, 288.0));
-    assert_eq!(textures.cursor_regular.size_vec(), vec2(120.0, 40.0));
-    assert_eq!(textures.cursor_last.size_vec(), vec2(120.0, 40.0));
+    assert_eq!(
+        textures.cursor_regular.as_ref().unwrap().size_vec(),
+        vec2(120.0, 40.0)
+    );
+    assert_eq!(
+        textures.cursor_last.as_ref().unwrap().size_vec(),
+        vec2(120.0, 40.0)
+    );
     assert_eq!(textures.key_wait.size_vec(), vec2(80.0, 40.0));
     let capture =
         std::path::PathBuf::from(std::env::var("SHIN_HIGURASHI_MESSAGE_UI_CAPTURES").unwrap());
@@ -313,4 +319,86 @@ fn higurashi_message_windows_cursors_and_owner_match_native_packets() {
         }
     }
     println!("Higurashi message UI: {frames} whole RGBA frames match native packets at720p/1080p");
+}
+
+#[test]
+#[ignore = "real message owner/font on Metal; Original MSGFACE no-op versus updated MSGHIDE; no audio/saves"]
+fn patchless_original_msgface_preserves_input_while_updated_msghide_blocks() {
+    use crate::adv::higurashi::scene::CommandStatus;
+    let (device, queue, assets) = gpu_assets();
+    let mut owner = shin_tasks::block_on(HigurashiMessageOwner::load(&assets)).unwrap();
+    owner
+        .dispatch(
+            &Cmd::MSGINIT {
+                style: 3,
+                updated_options: None,
+            },
+            &device,
+            &queue,
+            false,
+            0,
+            100,
+            0,
+            &Voice,
+        )
+        .unwrap();
+    owner
+        .dispatch(
+            &Cmd::MSGSET {
+                msg_id: MessageId(0),
+                auto_wait: 0,
+                argument: 0,
+                text: "@r本文".into(),
+            },
+            &device,
+            &queue,
+            false,
+            0,
+            100,
+            0,
+            &Voice,
+        )
+        .unwrap();
+    let slide = owner.playback.natural_slide;
+    for value in [i32::MIN, -1, 0, 1, i32::MAX] {
+        assert!(!owner.playback.input_blocked);
+        assert_eq!(
+            owner
+                .dispatch(
+                    &Cmd::MSGFACE {
+                        original_argument: Some(value)
+                    },
+                    &device,
+                    &queue,
+                    false,
+                    0,
+                    100,
+                    0,
+                    &Voice
+                )
+                .unwrap(),
+            Some(CommandStatus::Complete)
+        );
+        assert!(!owner.playback.input_blocked);
+        assert_eq!(owner.playback.style, 3);
+        assert_eq!(owner.playback.natural_slide, slide);
+    }
+    assert_eq!(
+        owner
+            .dispatch(
+                &Cmd::MSGFACE {
+                    original_argument: None
+                },
+                &device,
+                &queue,
+                false,
+                0,
+                100,
+                0,
+                &Voice
+            )
+            .unwrap(),
+        Some(CommandStatus::Complete)
+    );
+    assert!(owner.playback.input_blocked);
 }

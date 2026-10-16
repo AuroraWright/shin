@@ -338,3 +338,183 @@ fn higurashi_kakera_catalog_pages_details_and_grid_match_native_menu() {
         expected.len()
     );
 }
+
+#[test]
+fn patchless_kakera_sparse_artwork_skips_missing_pages_and_cells_with_bounded_navigation() {
+    let mut model = Model::new(source(400, 0, 2, 64, 0), 0, &persistent(2, 0, 0));
+    let statuses = model.statuses.clone();
+    let pages = model.pages.clone();
+    let mut artwork = model
+        .pages
+        .iter()
+        .map(|rows| vec![false; rows.len()])
+        .collect::<Vec<_>>();
+    artwork[0][1] = true;
+    artwork[0][4] = true;
+    artwork[2][5] = true;
+    artwork[16][0] = true;
+    model.artwork = Some(artwork);
+    model.selected = 1;
+    assert!(model.any_artwork());
+    for direction in [1, -1] {
+        for expected in if direction == 1 {
+            [2, 16, 0]
+        } else {
+            [16, 2, 0]
+        } {
+            model.turn_page(direction);
+            assert_eq!(model.page, expected);
+            assert!(model.cell_available(model.page, model.selected));
+            for repeat in [
+                1 << 4,
+                1 << 5,
+                1 << 6,
+                1 << 7,
+                (1 << 4) | (1 << 6),
+                (1 << 5) | (1 << 7),
+            ] {
+                for _ in 0..16 {
+                    model.navigate(repeat);
+                    assert!(model.selected < model.pages[model.page].len());
+                    assert!(model.cell_available(model.page, model.selected));
+                }
+            }
+            for (cell, &(x, y)) in catalog::CELLS
+                .iter()
+                .take(model.pages[model.page].len())
+                .enumerate()
+            {
+                assert_eq!(
+                    model.cell_at(x as f32 + 1., y as f32 + 1.),
+                    model.cell_available(model.page, cell).then_some(cell)
+                );
+            }
+        }
+    }
+    assert_eq!(model.statuses, statuses);
+    assert_eq!(model.pages, pages);
+    model
+        .artwork
+        .as_mut()
+        .unwrap()
+        .iter_mut()
+        .flatten()
+        .for_each(|cell| *cell = false);
+    let position = (model.page, model.selected);
+    for direction in [-1, 1] {
+        model.turn_page(direction);
+    }
+    for bit in [4, 5, 6, 7] {
+        assert!(!model.navigate(1 << bit));
+    }
+    assert_eq!((model.page, model.selected), position);
+    assert!(model.details().is_empty());
+}
+
+#[test]
+#[ignore = "actual base-only Kakera atlas capability, normal cards and unavailable Origin input; offscreen GPU, no audio"]
+fn patchless_kakera_actual_base_atlas_keeps_normal_cards_and_allows_escape_from_missing_origin() {
+    use crate::{
+        adv::{
+            character_view::CharacterTextures,
+            higurashi::{input::Buttons, reference_gpu_assets},
+            input_area::InputAreaTarget,
+        },
+        asset::system::{AssetLoadContext, AssetServer, LayeredAssetIo},
+    };
+    let (device, queue, _) = reference_gpu_assets();
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap();
+    let mut io = LayeredAssetIo::new();
+    io.try_with_rom(root.join("higurashi/data.rom")).unwrap();
+    let server = AssetServer::new(
+        io.into(),
+        AssetLoadContext {
+            game: crate::cli::Game::Higurashi,
+            wgpu_device: device,
+            wgpu_queue: queue,
+            bustup_cache: crate::asset::system::cache::AssetCache::new(),
+            higurashi_bustup_cache: Default::default(),
+            picture_cache: Default::default(),
+            font_cache: Default::default(),
+        },
+    );
+    let atlas = server
+        .load_sync::<CharacterTextures>("/kakera.txa")
+        .unwrap();
+    let mut normal = Model::new(source(400, 0, 2, 64, 0), 0, &persistent(2, 0, 0));
+    let statuses = normal.statuses.clone();
+    normal.apply_artwork(&atlas);
+    assert_eq!(normal.pages.len(), 17);
+    assert_eq!(normal.pages.iter().map(Vec::len).sum::<usize>(), 100);
+    for (page, rows) in normal.pages.iter().enumerate() {
+        for cell in 0..rows.len() {
+            assert!(normal.cell_available(page, cell));
+        }
+    }
+    assert!(normal.any_artwork());
+    assert!(normal.can_exit());
+    assert_eq!(normal.statuses, statuses);
+    let mut alternate = Model::new(source(10008, 0, 2, 64, 0), 0, &persistent(2, 0, 0));
+    let statuses = alternate.statuses.clone();
+    alternate.apply_artwork(&atlas);
+    assert!(!alternate.any_artwork());
+    assert!(alternate.can_exit());
+    for page in 0..alternate.pages.len() {
+        alternate.page = page;
+        for cell in 0..alternate.pages[page].len() {
+            assert!(!alternate.cell_available(page, cell));
+        }
+        for &(x, y) in &catalog::CELLS {
+            assert_eq!(alternate.cell_at(x as f32 + 1., y as f32 + 1.), None);
+        }
+        assert!(alternate.details().is_empty());
+    }
+    assert_eq!(alternate.statuses, statuses);
+    let mut state = motion::Motion::new(alternate, false);
+    let position = (state.model.page, state.model.selected);
+    for bit in [4, 5, 6, 7] {
+        state.controls(
+            true,
+            false,
+            Buttons {
+                repeat: 1 << bit,
+                ..Default::default()
+            },
+        );
+    }
+    state.controls(
+        true,
+        false,
+        Buttons {
+            pressed: 1 << 24,
+            ..Default::default()
+        },
+    );
+    assert_eq!((state.model.page, state.model.selected), position);
+    assert!(
+        state
+            .tasks()
+            .all(|(_, kind, _)| !matches!(kind, motion::Kind::DecideShake(_)))
+    );
+    assert!(state.actions.contains(&motion::Action::Cue("error")));
+    state.probe(glam::vec2(251., 285.));
+    assert_eq!(state.pointer_cell, -1);
+    state.release(glam::vec2(251., 285.));
+    assert!(state.request.is_none());
+    state.controls(
+        true,
+        false,
+        Buttons {
+            pressed: 1 << 25,
+            ..Default::default()
+        },
+    );
+    assert!(state.actions.contains(&motion::Action::Cue("cancel")));
+    assert!(
+        state
+            .tasks()
+            .any(|(_, kind, _)| kind == motion::Kind::ExitShake)
+    );
+}

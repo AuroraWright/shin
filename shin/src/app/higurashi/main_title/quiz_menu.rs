@@ -294,7 +294,7 @@ impl QuizMenu {
             .collect()
     }
     pub fn render(&self, pass: &mut RenderPass, atlas: &CharacterTextures, plus: bool) {
-        for p in self.packets(plus) {
+        for p in self.packets(plus && atlas.contains("q_menu_plus")) {
             p.render(pass, Some(atlas));
         }
     }

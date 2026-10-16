@@ -10,7 +10,6 @@ use crate::{
         character_view::CharacterTextures,
         higurashi::{
             browser_controls::Scrollbar,
-            input::Buttons,
             mode_stack::{Mode, ModePush, ModeStack},
             question::{self, Question, view::View as QuestionView},
         },
@@ -495,8 +494,7 @@ impl Owner {
         &mut self,
         delta: Ticks,
         permission: bool,
-        buttons: Buttons,
-        axes: [i8; 4],
+        input: model::Input,
         pointer: &PointerFrame<'_>,
     ) -> Result<()> {
         ensure!(
@@ -520,7 +518,7 @@ impl Owner {
                         area: &mut self.area,
                         loader: &mut self.loader,
                         extent: self.extent,
-                        input: model::Input { buttons, axes },
+                        input,
                         pointer,
                         requests: &mut self.requests,
                         next_seed: &self.next_seed,
@@ -594,7 +592,10 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_state(&self) -> (bool, bool, bool, u32, i32, i32) {
         let m = self.model();
         (
@@ -626,7 +627,10 @@ impl Owner {
         ))
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_cursor(&self) -> (u32, u32, u32) {
         let m = self.model();
         let g = &m.groups[m.current_group as usize];
@@ -637,7 +641,10 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_question(&self) -> Option<(i32, i32, i32)> {
         self.scope.iter().find_map(|v| {
             if let Owned::Question(d) = v {

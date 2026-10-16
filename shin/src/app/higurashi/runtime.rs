@@ -404,13 +404,6 @@ impl Runtime {
                     &self.pointer.frame(),
                     native.queue,
                 )?;
-                if let Some(globals) = bootstrap.globals() {
-                    ensure!(
-                        globals.common.scenario.variant
-                            == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
-                        "Normal Higurashi launch requires the updated scenario"
-                    );
-                }
                 if let Some(transition) = transition {
                     let capture = Some(
                         composition

@@ -376,6 +376,15 @@ fn catalog() -> Arc<Catalog> {
 }
 #[test]
 fn higurashi_chart_model_matches_actual_authored_native_owners() {
+    compare_chart_capture(false);
+}
+
+#[test]
+fn higurashi_chart_wheel_matches_original_scroll_steps_and_following_state() {
+    compare_chart_capture(true);
+}
+
+fn compare_chart_capture(wheel: bool) {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .join("../reverse-engineering/higurashi/chart-catalog-model-capture");
     let input = std::fs::read_to_string(root.join("input.txt")).unwrap();
@@ -432,7 +441,17 @@ fn higurashi_chart_model_matches_actual_authored_native_owners() {
                             rapid_repeat: buttons[3],
                         },
                         axes: std::array::from_fn(|_| w.next().unwrap().parse().unwrap()),
+                        ..Default::default()
                     };
+                    if wheel {
+                        let axis = i32::from(f.events.input.axes[3]);
+                        f.events.input.wheel_scroll = if !(-15..=15).contains(&axis) {
+                            ((axis / 16) * 4) as f32 / 32.
+                        } else {
+                            0.
+                        };
+                        f.events.input.axes[3] = 0;
+                    }
                     f.frame(delta, permission);
                 }
                 "V" | "P" | "R" => {
@@ -492,4 +511,134 @@ fn higurashi_chart_model_matches_actual_authored_native_owners() {
     println!(
         "Chart49 authored native owners/757 exact snapshots,full nodes/clocks/contacts/Question/stages/fresh complete ADV payloads"
     );
+}
+
+#[test]
+fn higurashi_chart_fractional_wheel_preserves_cursor_bounds_and_input_priority() {
+    fn fresh(catalog: Arc<Catalog>) -> Model {
+        let mut m = Model::new(catalog, 0, 31, &[u32::MAX; 128], &[]).unwrap();
+        assert!(m.group().max_y - m.group().min_y > 20);
+        let g = m.group_mut();
+        g.scroll.fast_forward_to(100.);
+        g.x.fast_forward_to((g.min_x * 36) as f32);
+        g.y.fast_forward_to((g.min_y * 56) as f32 + 400.);
+        m.take_actions();
+        m
+    }
+    let c = catalog();
+    let mut m = fresh(c.clone());
+    let cursor = m.group().y.value();
+    // A half-pixel trackpad movement survives the byte-axis boundary.
+    m.speed = 7.;
+    m.poll_controls(
+        true,
+        false,
+        Input {
+            wheel_scroll: 1. / 64.,
+            ..Default::default()
+        },
+    );
+    assert_eq!(m.group().scroll.value(), 100.5);
+    assert_eq!(m.group().y.value(), cursor + 0.5);
+    assert_eq!(m.speed, 0.);
+    assert!(m.take_actions().is_empty());
+    // Wheel displacement sums with genuine stick motion before XY panning.
+    m.poll_controls(
+        true,
+        false,
+        Input {
+            axes: [0, 10, 0, 127],
+            wheel_scroll: -0.125,
+            ..Default::default()
+        },
+    );
+    assert_eq!(m.group().scroll.value(), 124.5);
+    assert_eq!(m.group().y.value(), cursor + 25.5);
+    // Large finite packets reach the bounds without being clamped to a stick.
+    m.poll_controls(
+        true,
+        false,
+        Input {
+            wheel_scroll: f32::MAX,
+            ..Default::default()
+        },
+    );
+    let end = (((m.group().max_y - m.group().min_y) * 56) as f32 - 819.).max(0.);
+    assert_eq!(m.group().scroll.value(), end);
+    let at_end = m.group().y.value();
+    m.speed = 3.;
+    m.poll_controls(
+        true,
+        false,
+        Input {
+            wheel_scroll: 1.,
+            ..Default::default()
+        },
+    );
+    assert_eq!(
+        (m.group().scroll.value(), m.group().y.value(), m.speed),
+        (end, at_end, 0.)
+    );
+    m.poll_controls(
+        true,
+        false,
+        Input {
+            wheel_scroll: -f32::MAX,
+            ..Default::default()
+        },
+    );
+    assert_eq!(m.group().scroll.value(), 0.);
+    assert_eq!(m.group().y.value(), at_end - end);
+    for invalid in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY] {
+        m.poll_controls(
+            true,
+            false,
+            Input {
+                wheel_scroll: invalid,
+                ..Default::default()
+            },
+        );
+        assert_eq!(m.group().scroll.value(), 0.);
+    }
+    // No buffered motion after capture, denied permission or busy tweens.
+    for gate in 0..5 {
+        let mut m = fresh(c.clone());
+        match gate {
+            2 => control(&mut m.group_mut().scroll, 200., 4., 0),
+            3 => control(&mut m.group_mut().x, 200., 4., 0),
+            4 => control(&mut m.group_mut().y, 800., 4., 0),
+            _ => {}
+        }
+        let before = (m.group().scroll.value(), m.group().y.value());
+        m.poll_controls(
+            gate != 0,
+            gate == 1,
+            Input {
+                wheel_scroll: 4.,
+                ..Default::default()
+            },
+        );
+        assert_eq!(
+            (m.group().scroll.value(), m.group().y.value()),
+            before,
+            "gate{gate}"
+        );
+    }
+    // The native first matching shoulder/confirm/cancel keeps precedence.
+    for bit in [10, 11, 24, 25] {
+        let mut m = fresh(c.clone());
+        m.poll_controls(
+            true,
+            false,
+            Input {
+                buttons: Buttons {
+                    pressed: 1 << bit,
+                    ..Default::default()
+                },
+                wheel_scroll: 4.,
+                ..Default::default()
+            },
+        );
+        assert_eq!(m.groups[0].scroll.value(), 100., "button{bit}");
+    }
 }

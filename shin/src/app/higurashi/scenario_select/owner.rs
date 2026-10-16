@@ -479,6 +479,12 @@ impl Owner {
             extent.0 > 0 && extent.1 > 0,
             "ScenarioSelect requires a nonzero input extent"
         );
+        ensure!(
+            kind != 5
+                || env.common.scenario.variant
+                    == shin_core::format::scenario::higurashi::HigurashiVariant::Updated,
+            "Origin ScenarioSelect requires updated Higurashi"
+        );
         let origin_bgm = env
             .common
             .scenario
@@ -488,6 +494,8 @@ impl Owner {
             .map(|index| index as i32);
         // All fallible input/schema checks precede ownership transfer or jobs.
         // Missing Origin BGM is the native -1/stop branch, never a fallback ID.
+        let append =
+            super::super::main_title::append_story_available(append, env.common.scenario.variant);
         let mut model = Model::new(
             kind,
             selected,
@@ -580,7 +588,9 @@ impl Owner {
         }
         let result = (|| {
             let model = self.model.as_mut().unwrap();
-            if self.published.lock().is_some() {
+            if let Some(atlas) = self.published.lock().as_ref() {
+                let size = atlas.get("sce_menu").size();
+                model.constrain_artwork((size.width, size.height));
                 model.publish_resources();
             }
             self.scope.poll(
@@ -673,7 +683,10 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_state(&self) -> (bool, bool, bool, Option<i32>, i32) {
         let mut completed = false;
         let mut phase = None;
@@ -699,7 +712,10 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_model(&self) -> &Model {
         self.model.as_ref().unwrap()
     }

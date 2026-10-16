@@ -7,10 +7,7 @@ use crate::{
     layer::user::higurashi::HigurashiUserLayer,
 };
 use anyhow::{Result, ensure};
-use shin_core::{
-    format::scenario::higurashi::{HigurashiScenario, HigurashiVariant},
-    vm::command::types::LayerType,
-};
+use shin_core::{format::scenario::higurashi::HigurashiScenario, vm::command::types::LayerType};
 use std::sync::{Arc, mpsc};
 
 pub(super) const BUSTUP_IDS: [[i32; 11]; 9] = [
@@ -31,10 +28,6 @@ pub(in crate::app::higurashi) struct Plan {
 }
 impl Plan {
     pub fn bustups(scenario: &HigurashiScenario, context: i32) -> Result<[i32; 11]> {
-        ensure!(
-            scenario.variant == HigurashiVariant::Updated,
-            "Quiz requires updated scenario"
-        );
         let context = usize::try_from(context)?;
         let bustups = *BUSTUP_IDS
             .get(context)

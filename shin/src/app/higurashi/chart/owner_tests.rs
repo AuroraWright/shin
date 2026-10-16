@@ -184,8 +184,11 @@ impl Frames {
             .poll(
                 Ticks::from_f32(delta),
                 permission,
-                buttons,
-                axes,
+                super::model::Input {
+                    buttons,
+                    axes,
+                    ..Default::default()
+                },
                 &PointerFrame {
                     number: self.number,
                     time_seconds: self.number as f64 / 60.,

@@ -35,21 +35,28 @@ impl Opening {
         delta: Ticks,
         permission: bool,
         buttons: crate::adv::higurashi::input::Buttons,
+        input: Option<Analog>,
         pointer: &crate::adv::input_area::PointerFrame<'_>,
     ) -> Result<()> {
+        let origin_available = self.origin_available();
         let Some((return_id, owner)) = &mut self.chart else {
             return Ok(());
         };
-        let (buttons, axes) = self
-            .chart_input
-            .map(|input| (input.buttons(buttons), input.axes))
-            .unwrap_or((buttons, [0; 4]));
-        owner.poll(delta, permission, buttons, axes, pointer)?;
+        owner.poll(
+            delta,
+            permission,
+            super::super::chart::model::Input {
+                buttons: input.map_or(buttons, |input| input.buttons(buttons)),
+                axes: input.map_or([0; 4], |input| input.axes),
+                wheel_scroll: input.map_or(0., |input| input.wheel_scroll),
+            },
+            pointer,
+        )?;
         while let Some(request) = owner.take_request() {
             match request {
                 Request::ReturnSource(1) => {
                     self.top = Some(top_menu::TopMenu::new(
-                        self.plus,
+                        origin_available,
                         self.globals.data.auto_save_slot.is_some(),
                         *return_id,
                         self.menu_extent,
@@ -78,7 +85,10 @@ impl Opening {
         self.chart_adv.take()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(in crate::app::higurashi) fn reference_chart(
         &self,
     ) -> Option<(bool, bool, bool, u32, i32, i32)> {
@@ -87,7 +97,10 @@ impl Opening {
             .map(|(_, owner)| owner.reference_state())
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub(in crate::app::higurashi) fn reference_chart_owner(&self) -> Option<&Owner> {
         self.chart.as_ref().map(|(_, owner)| owner)
     }

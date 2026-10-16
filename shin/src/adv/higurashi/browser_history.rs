@@ -7,10 +7,7 @@ use super::{
 };
 use anyhow::{Context, Result, ensure};
 use shin_core::{
-    format::scenario::{
-        higurashi::{HigurashiScenario, HigurashiVariant},
-        instruction_elements::CodeAddress,
-    },
+    format::scenario::{higurashi::HigurashiScenario, instruction_elements::CodeAddress},
     vm::{
         command::CommandResult,
         higurashi::{HigurashiScripter, command::HigurashiRuntimeCommand as Cmd},
@@ -345,8 +342,9 @@ impl LogBuilder {
             source.persistent().clone(),
             self.progress,
             self.variables.bytes().to_vec(),
-        ).with_trailing_bytes(source.trailing_bytes().to_vec())
-            .with_chart_unlocks(source.chart_unlocks.clone());
+        )
+        .with_trailing_bytes(source.trailing_bytes().to_vec())
+        .with_chart_unlocks(source.chart_unlocks.clone());
         let current_row =
             (!self.rows.is_empty()).then(|| (self.current_row as usize).min(self.rows.len() - 1));
         BrowserHistory {
@@ -396,10 +394,6 @@ impl BrowserHistory {
         probe: bool,
         mut cancelled: impl FnMut() -> bool,
     ) -> Result<LogBuilder> {
-        ensure!(
-            scenario.variant == HigurashiVariant::Updated,
-            "Browser requires updated Higurashi"
-        );
         let active = source.progress().active_entry();
         let mut builder = LogBuilder::new(source)?;
         let mut vm = HigurashiScripter::new(scenario, active.scenario_id, active.random_seed)?;

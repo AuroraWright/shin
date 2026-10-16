@@ -305,3 +305,31 @@ fn higurashi_scenario_select_real_assets_pixels_match_literal_native_shaders() {
     }
     assert_eq!(tested, 72);
 }
+
+#[test]
+fn patchless_scenario_labels_normalize_both_columns_to_actual_atlas_width() {
+    for band in 0..30 {
+        let base = label_uv(band, (1440, 1800));
+        let updated = label_uv(band, (2160, 1800));
+        let x = (band / 15 * 720) as f32;
+        let y = (band % 15 * 120) as f32;
+        assert_eq!(
+            base,
+            [
+                x / 1440.,
+                y / 1800.,
+                x / 1440. + 0.5,
+                y / 1800. + f32::from_bits(0x3d888889)
+            ]
+        );
+        assert_eq!(
+            updated,
+            [
+                x / 2160.,
+                y / 1800.,
+                x / 2160. + f32::from_bits(0x3eaaaaab),
+                y / 1800. + f32::from_bits(0x3d888889)
+            ]
+        );
+    }
+}

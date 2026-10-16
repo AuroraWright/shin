@@ -259,6 +259,8 @@ impl Opening {
                     }
                 }
             }
+            while let Ok(atlas) = self.received.try_recv() { self.atlas = Some(atlas); }
+            if let Some(atlas) = &self.atlas { self.motion.model.apply_artwork(atlas); }
             self.motion.advance(
                 if self.ready { 2 } else { 1 },
                 delta,

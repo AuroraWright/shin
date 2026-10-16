@@ -518,6 +518,11 @@ impl Owner {
         }
         let result = (|| {
             let first_completed = self.loader.poll()?;
+            if let Some(atlas) = self.loader.atlas() {
+                self.model.set_extra_artwork(
+                    atlas.contains("slider") && atlas.get("slider").size_vec().y >= 240.,
+                );
+            }
             self.scope.poll(
                 delta,
                 u32::from(permission),
@@ -611,7 +616,10 @@ impl Owner {
             })
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_state(&self) -> (u32, usize, bool, u8) {
         (
             self.model.flags,
@@ -630,7 +638,10 @@ impl Owner {
         )
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_question(&self) -> Option<(i32, i32)> {
         self.scope.iter().find_map(|child| match child {
             Owned::Question(dialog) => dialog

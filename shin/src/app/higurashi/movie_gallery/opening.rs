@@ -12,10 +12,7 @@ use crate::{
     render::PreRenderContext,
 };
 use anyhow::{Context, Result, bail, ensure};
-use shin_core::{
-    format::scenario::higurashi::HigurashiVariant, primitives::update::FrameId, time::Ticks,
-    vm::command::types::Volume,
-};
+use shin_core::{primitives::update::FrameId, time::Ticks, vm::command::types::Volume};
 use shin_render::{render_pass::RenderPass, render_texture::RenderTexture};
 
 struct Frame<'a> {
@@ -79,10 +76,6 @@ pub(in crate::app::higurashi) struct Opening {
 impl Opening {
     pub fn preflight(globals: &Globals, extent: (u16, u16)) -> Result<()> {
         ensure!(extent.0 > 0 && extent.1 > 0, "Invalid Movie input extent");
-        ensure!(
-            globals.common.scenario.variant == HigurashiVariant::Updated,
-            "Movie requires updated Higurashi"
-        );
         let model = Model::new(
             &globals.common.scenario.movie_info,
             &globals.data.save_vectors.unlocked_movies,
@@ -200,12 +193,18 @@ impl Opening {
         self.globals
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_owner(&self) -> &Owner {
         self.owner.as_ref().unwrap()
     }
     #[cfg(any(test, feature = "higurashi-window-probe"))]
-    #[allow(dead_code, reason = "Inspection hook shared by native tests and optional window probes.")]
+    #[allow(
+        dead_code,
+        reason = "Inspection hook shared by native tests and optional window probes."
+    )]
     pub fn reference_cues(&self) -> [u64; 4] {
         self.cues
     }

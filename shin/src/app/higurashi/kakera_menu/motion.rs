@@ -112,6 +112,9 @@ impl Motion {
         self.tasks.iter().map(|t| (t.id, t.kind, t.done))
     }
     fn confirm(&mut self) {
+        if !self.model.cell_available(self.model.page, self.model.selected) {
+            self.actions.push(Action::Cue("error")); return;
+        }
         self.actions.push(Action::Cue("decide"));
         let cell = self.model.selected;
         self.clocks[1 + cell].fast_forward_to(self.clocks[1 + cell].value());
@@ -141,6 +144,7 @@ impl Motion {
         self.append(Kind::ExitShake);
     }
     fn page(&mut self, direction: i32) {
+        if !self.model.any_artwork() { return; }
         control(
             &mut self.clocks[7],
             if direction < 0 { 1920.0 } else { -1920.0 },
@@ -171,7 +175,7 @@ impl Motion {
             }
             return;
         }
-        if !self.model.alternate && buttons.pressed & (1 << 25) != 0 {
+        if self.model.can_exit() && buttons.pressed & (1 << 25) != 0 {
             self.actions.push(Action::Cue("cancel"));
             self.exit();
         } else if buttons.pressed & (1 << 24) != 0 {
@@ -216,13 +220,7 @@ impl Motion {
                 }
                 Kind::PageOut(direction) => {
                     if self.clocks[7].is_idle() {
-                        self.model.page = (self.model.page as i32 + direction)
-                            .rem_euclid(self.model.pages.len() as i32)
-                            as usize;
-                        self.model.selected = self
-                            .model
-                            .selected
-                            .min(self.model.pages[self.model.page].len() - 1);
+                        self.model.turn_page(direction);
                         self.clocks[7].fast_forward_to(if direction < 0 {
                             -1920.0
                         } else {
@@ -323,7 +321,7 @@ impl InputAreaTarget for Motion {
             return true;
         }
         self.pointer_kind =
-            if !self.model.alternate && p.y >= 30.0 && p.y < 114.0 && p.x >= 1764.0 && p.x < 1848.0
+            if self.model.can_exit() && p.y >= 30.0 && p.y < 114.0 && p.x >= 1764.0 && p.x < 1848.0
             {
                 1
             } else if p.y >= 150.0 && p.y < 992.0 {
