@@ -130,6 +130,7 @@ impl HigurashiMessageOwner {
                 text,
             } => {
                 ensure!(read_flags & !3 == 0, "Unsupported Higurashi message flags");
+                crate::text_stream::message(text, crate::text_stream::Markup::Higurashi, msg_id.0);
                 let glyphs = HigurashiMessageGlyphs::prepare(
                     device,
                     queue,

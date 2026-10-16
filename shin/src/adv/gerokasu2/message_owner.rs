@@ -191,6 +191,11 @@ impl Gerokasu2MessageOwner {
             let Gerokasu2RuntimeCommand::MessageSet { text, .. } = command else {
                 unreachable!()
             };
+            crate::text_stream::message(
+                text,
+                crate::text_stream::Markup::Standard,
+                install.params.message_id,
+            );
             let text = Gerokasu2MessageText::layout_and_prepare(
                 device,
                 queue,

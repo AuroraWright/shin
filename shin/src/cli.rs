@@ -23,7 +23,7 @@ pub struct Cli {
     #[clap(skip)]
     pub(crate) higurashi_launch: Option<crate::app::PreparedLaunch>,
     /// Inspect scenario metadata and asset references without opening a window or writing saves.
-    #[clap(long, conflicts_with_all = ["save_file", "load_save", "unsafe_entry_point", "fast_forward_to", "loopback_audio"])]
+    #[clap(long, conflicts_with_all = ["save_file", "load_save", "unsafe_entry_point", "fast_forward_to", "loopback_audio", "text_websocket"])]
     pub inspect_assets: bool,
     /// Route audio to the Loopback Audio system device for testing.
     #[clap(long)]
@@ -53,6 +53,12 @@ pub struct Cli {
     /// But in lieu of proper scene loading this helps a lot with testing later parts of the episodes.
     #[clap(long, value_parser=maybe_hex::<u32>)]
     pub unsafe_entry_point: Option<u32>,
+    /// Serve displayed text over WebSocket at HOST:PORT (e.g. 127.0.0.1:6677)
+    ///
+    /// Every connected client receives each message box text as plain text (all games), plus
+    /// Umineko's character, tip and purple-statement descriptions.
+    #[clap(long, value_name = "HOST:PORT")]
+    pub text_websocket: Option<String>,
 }
 
 #[cfg(test)]
@@ -74,6 +80,13 @@ mod tests {
             assert!(Cli::try_parse_from(["shin", "--inspect-assets", option, "1"]).is_err());
         }
         assert!(Cli::try_parse_from(["shin", "--inspect-assets", "--loopback-audio"]).is_err());
+        let cli = Cli::try_parse_from(["shin", "--text-websocket", "127.0.0.1:9001"]).unwrap();
+        assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
+        assert_eq!(Cli::try_parse_from(["shin"]).unwrap().text_websocket, None);
+        assert!(
+            Cli::try_parse_from(["shin", "--inspect-assets", "--text-websocket", "127.0.0.1:9001"])
+                .is_err()
+        );
     }
     #[test]
     fn selects_game_and_keeps_inspection_separate_from_save_launches() {

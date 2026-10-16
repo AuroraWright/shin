@@ -1150,6 +1150,9 @@ impl AdvUpdatable for MurdererAccusationImpl {
             context.are_animations_allowed,
             context.frame_id,
         );
+        if let Some(text) = model.take_purple_page_change() {
+            crate::text_stream::page(text);
+        }
         drop(model);
         if self.model.lock().unwrap().wipe.is_none() {
             self.transition.lock().finish_wipe();

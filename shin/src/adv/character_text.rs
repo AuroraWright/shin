@@ -144,6 +144,7 @@ pub struct CharacterText {
 impl CharacterText {
     pub fn load(server: &AssetServer, state: &CharacterState) -> Self {
         let font: Arc<GpuFontLazy> = server.load_sync("/system.fnt").unwrap();
+        crate::text_stream::description(&state.name, &state.description);
         let layout = CharacterTextLayout::new(&state.name, &state.description, font.as_ref());
         Self::from_layout(server, font, layout)
     }

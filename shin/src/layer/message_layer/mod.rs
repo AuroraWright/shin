@@ -484,6 +484,14 @@ impl MessageLayer {
             self.height.set_target(357.0);
         }
 
+        // NoText boxes draw no text.
+        if self.messagebox_type != MessageboxType::NoText {
+            crate::text_stream::message(
+                message,
+                crate::text_stream::Markup::Standard,
+                params.message_id.0,
+            );
+        }
         self.set_message(ctx, message);
         self.rebuild_vertices(ctx);
 

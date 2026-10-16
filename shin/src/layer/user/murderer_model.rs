@@ -343,6 +343,8 @@ pub struct MurdererModel {
     purple_person_flash: [Tweener; 17],
     hint_focus: [Tweener; 21],
     hint_row_flash: [Tweener; 21],
+    /// The purple page last sent to the text stream: (by chapter, index).
+    streamed_purple: Option<(bool, usize)>,
     back_feedback: Tweener,
     top_row_focus: [Tweener; 6],
     top_phase: TopPhase,
@@ -549,6 +551,7 @@ impl MurdererModel {
             purple_person_flash: std::array::from_fn(|_| Tweener::new(0.0)),
             hint_focus: std::array::from_fn(|_| Tweener::new(0.0)),
             hint_row_flash: std::array::from_fn(|_| Tweener::new(0.0)),
+            streamed_purple: None,
             back_feedback: Tweener::new(0.0),
             top_row_focus: std::array::from_fn(|i| Tweener::new(if i == 0 { 1.0 } else { 0.0 })),
             top_phase: TopPhase::Waiting,
@@ -1413,6 +1416,23 @@ impl MurdererModel {
 
     /// Native chapter browser includes 29 rows but headings are not selectable.
     /// Return the native chapter/person index, rather than the packed menu row.
+    /// The newly shown purple-statement page text, once per page change.
+    pub(crate) fn take_purple_page_change(&mut self) -> Option<&'static str> {
+        let chapter = self.menu == MurdererMenu::PurpleByChapter;
+        let shown = self.purple_original_index().map(|index| (chapter, index));
+        if shown == self.streamed_purple {
+            return None;
+        }
+        self.streamed_purple = shown;
+        let (chapter, index) = shown?;
+        // The same pages `render_purple` draws.
+        if chapter {
+            CHAPTERS.get(index).map(|entry| entry.text)
+        } else {
+            PERSON_TEXT.get(index).copied()
+        }
+    }
+
     pub fn purple_original_index(&self) -> Option<usize> {
         match self.menu {
             MurdererMenu::PurpleByChapter => CHAPTERS
@@ -2441,6 +2461,29 @@ mod fast_forward_tests;
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn purple_pages_reach_the_text_stream_once_per_shown_page() {
+        use super::*;
+        let mut model = MurdererModel::new(20);
+        assert_eq!(model.take_purple_page_change(), None, "top menu has no page");
+        assert!(model.open_menu(2));
+        let person = model.menu_focus;
+        assert_eq!(model.take_purple_page_change(), Some(PERSON_TEXT[person]));
+        assert_eq!(model.take_purple_page_change(), None, "unchanged page");
+        model.menu_focus = person + 1;
+        assert_eq!(model.take_purple_page_change(), Some(PERSON_TEXT[person + 1]));
+        model.menu = MurdererMenu::PurpleByChapter;
+        model.menu_focus = 0;
+        let index = model.purple_original_index().unwrap();
+        assert!(CHAPTERS[index].heading().is_none());
+        assert_eq!(model.take_purple_page_change(), Some(CHAPTERS[index].text));
+        // Leaving and reopening the same page sends it again.
+        model.menu = MurdererMenu::Top;
+        assert_eq!(model.take_purple_page_change(), None);
+        model.menu = MurdererMenu::PurpleByChapter;
+        assert_eq!(model.take_purple_page_change(), Some(CHAPTERS[index].text));
+    }
 
     #[test]
     fn completed_murderer_restore_keeps_artwork_separate_from_parent_response() {

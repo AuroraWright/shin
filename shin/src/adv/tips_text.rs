@@ -33,6 +33,7 @@ pub struct TipsText {
 impl TipsText {
     pub fn load(server: &AssetServer, item: &TipsInfoItem) -> Self {
         let font: Arc<GpuFontLazy> = server.load_sync("/system.fnt").unwrap();
+        crate::text_stream::description(item.title.as_str(), item.content.as_str());
         let layout = layout_tip(item, font.as_ref());
         Self {
             text: CharacterText::from_layout(server, font, layout),

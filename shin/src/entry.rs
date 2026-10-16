@@ -15,6 +15,7 @@ mod fps_counter;
 mod game_inspection;
 mod layer;
 mod render;
+mod text_stream;
 mod time;
 #[expect(unused)]
 mod title;
@@ -42,6 +43,12 @@ fn run(window_probe: bool) -> anyhow::Result<()> {
 
     if cli.inspect_assets {
         return game_inspection::inspect(&cli);
+    }
+    // A busy port must not keep the game from starting.
+    if let Some(address) = &cli.text_websocket
+        && let Err(error) = text_stream::start(address)
+    {
+        error!("Text WebSocket server disabled: {error:#}");
     }
     if cli.game == cli::Game::Higurashi {
         app::prepare_higurashi_launch(&mut cli)?;

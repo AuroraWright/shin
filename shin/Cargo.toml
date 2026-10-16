@@ -10,6 +10,7 @@ default-run = "shin"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
+tungstenite = "0.30.0"
 shin-core = { path = "../shin-core" }
 shin-render = { path = "../shin-render" }
 shin-derive = { path = "../shin-derive" }

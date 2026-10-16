@@ -10,6 +10,7 @@ mod quiz;
 mod save_failure;
 mod save_load;
 mod sustained;
+mod text_stream;
 
 struct TemporaryProgress(PathBuf);
 impl Drop for TemporaryProgress {
