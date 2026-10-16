@@ -1002,6 +1002,7 @@ fn codegen_shaders_file(shaders: &[ShaderWithDescriptor]) -> String {
 }
 
 fn main() {
+    println!("cargo:rerun-if-changed=wgsl/gerokasu2_blur.wgsl");
     println!("cargo:rerun-if-changed=wgsl/font_sdf.wgsl");
     println!("cargo:rerun-if-changed=wgsl/dissolve.wgsl");
     println!("cargo:rerun-if-changed=wgsl/mosaic.wgsl");
@@ -1020,6 +1021,7 @@ fn main() {
     println!("cargo:rerun-if-changed=wgsl/character_portrait.wgsl");
     println!("cargo:rerun-if-changed=wgsl/button.wgsl");
     println!("cargo:rerun-if-changed=wgsl/blend.wgsl");
+    println!("cargo:rerun-if-changed=wgsl/window.wgsl");
     println!("cargo:rerun-if-changed=wgsl/screen_curtain.wgsl");
     let manifest_dir = std::env::var("CARGO_MANIFEST_DIR").unwrap();
     let manifest_dir = Path::new(manifest_dir.as_str());

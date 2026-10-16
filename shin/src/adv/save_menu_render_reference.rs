@@ -147,6 +147,10 @@ pub(super) fn reference_save_menu_gpu_window_and_artwork() {
         encoder: &mut encoder,
     };
 
+    if std::env::var_os("SHIN_REFERENCE_POST_MOVIE_TOUCH_ONLY").is_some() {
+        super::post_movie_touch_reference::run(&mut context, &server);
+        return;
+    }
     if std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").is_some() {
         let assets = shin_tasks::block_on(super::AdvAssets::load(&server)).unwrap();
         super::live_save_reference::assert_authored_sequential_load_wipe(&server, &assets, &mut context, &target);
@@ -608,4 +612,15 @@ fn reference_murderer_native_purple_child_draw_gpu() {
 fn reference_murderer_native_accusation_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_ACCUSATION_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
+}
+
+#[test]
+#[ignore = "actual Episode2 movie skip/reveal/post-message contact; offscreen Metal/exact Loopback, no user saves"]
+fn reference_episode2_touch_after_movie_skip() {
+    assert!(std::env::var_os("SHIN_REFERENCE_POST_MOVIE_TOUCH_ONLY").is_some());
+    std::thread::Builder::new()
+        .name("post-movie-touch-reference".into())
+        .stack_size(32 * 1024 * 1024)
+        .spawn(reference_save_menu_gpu_window_and_artwork)
+        .unwrap().join().unwrap();
 }

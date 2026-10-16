@@ -3,6 +3,7 @@ mod audio;
 pub mod bustup;
 pub mod effects;
 pub mod font;
+pub mod localization;
 pub mod mask;
 pub mod movie;
 pub mod picture;

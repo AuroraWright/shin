@@ -134,6 +134,8 @@ impl MessageLayerLayouterMixin {
 }
 
 impl<Font: TextFontMetrics> MessageTextLayouterMixin<Font> for MessageLayerLayouterMixin {
+    const LOCALIZE: bool = false;
+
     fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char) {
         if self.line_index == 0 {
             // the first line if special: it's used for character names

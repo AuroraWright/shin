@@ -33,9 +33,24 @@ pub(super) fn layout_message<Font: FontMetrics>(
     regular: Font,
     bold: Font,
 ) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
+    layout_display_text(text, color, regular, bold, false)
+}
+
+/// Only quiz history labels are defined in code; other rows contain SNR text.
+pub(super) fn localize_item(item: &BacklogItem) -> bool {
+    matches!(item, BacklogItem::Quiz { .. })
+}
+
+pub(super) fn layout_display_text<Font: FontMetrics>(
+    text: &str,
+    color: i32,
+    regular: Font,
+    bold: Font,
+    localize: bool,
+) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
     // a3638..a3660/a5c38..a5c60: raw native LayoutParams, including
     // zero ruby size (base constructor derives 40% of text size).
-    BacklogTextLayouter::new(
+    let layouter = BacklogTextLayouter::new(
         regular,
         bold,
         LayoutParams {
@@ -52,8 +67,12 @@ pub(super) fn layout_message<Font: FontMetrics>(
             draw_speed: 50,
             fade: 200,
         },
-    )
-    .parse(text)
+    );
+    if localize {
+        layouter.parse(text)
+    } else {
+        layouter.parse_raw(text)
+    }
 }
 
 pub(super) struct BacklogText {
@@ -147,7 +166,7 @@ impl BacklogText {
         outline_mode: u8,
     ) -> Option<Self> {
         let (text, color) = display_text(item)?;
-        Some(Self::load_raw(
+        Some(Self::load_with_localization(
             device,
             queue,
             &fonts.medium_font,
@@ -155,6 +174,7 @@ impl BacklogText {
             &text,
             color,
             outline_mode,
+            localize_item(item),
         ))
     }
 
@@ -167,7 +187,30 @@ impl BacklogText {
         color: i32,
         outline_mode: u8,
     ) -> Self {
-        let (commands, _, size) = layout_message(text, color, regular.as_ref(), bold.as_ref());
+        Self::load_with_localization(
+            device,
+            queue,
+            regular,
+            bold,
+            text,
+            color,
+            outline_mode,
+            false,
+        )
+    }
+
+    fn load_with_localization(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        regular: &Arc<GpuFontLazy>,
+        bold: &Arc<GpuFontLazy>,
+        text: &str,
+        color: i32,
+        outline_mode: u8,
+        localize: bool,
+    ) -> Self {
+        let (commands, _, size) =
+            layout_display_text(text, color, regular.as_ref(), bold.as_ref(), localize);
         let mut glyphs = Vec::new();
         let mut handles = Vec::new();
         for command in commands {
@@ -318,6 +361,73 @@ mod tests {
         }
     }
 
+    struct LocalizingMetrics;
+    impl FontMetrics for LocalizingMetrics {
+        fn localize<'a>(&self, _: &'a str) -> std::borrow::Cow<'a, str> {
+            std::borrow::Cow::Owned("English".into())
+        }
+        fn get_ascent(&self) -> u32 {
+            Metrics.get_ascent()
+        }
+        fn get_descent(&self) -> u32 {
+            Metrics.get_descent()
+        }
+        fn get_glyph_info(&self, c: char) -> Option<shin_core::format::font::GlyphInfo> {
+            Metrics.get_glyph_info(c)
+        }
+    }
+    #[test]
+    fn localization_backlog_only_code_defined_quiz_rows_use_ui_overrides() {
+        use shin_core::vm::command::types::MessageboxType;
+        let authored = [
+            BacklogItem::Message {
+                message_id: 0,
+                text: "確認".into(),
+                messagebox_type: MessageboxType::Neutral,
+            },
+            BacklogItem::Choice {
+                title: "確認".into(),
+                text: "確認".into(),
+                response: 0,
+            },
+            BacklogItem::Checkpoint {
+                title: "確認".into(),
+                text: "確認".into(),
+            },
+        ];
+        for item in authored {
+            assert!(!localize_item(&item));
+            let (text, color) = display_text(&item).unwrap();
+            assert_eq!(
+                layout_display_text(
+                    &text,
+                    color,
+                    LocalizingMetrics,
+                    LocalizingMetrics,
+                    localize_item(&item)
+                ),
+                layout_message(&text, color, Metrics, Metrics),
+            );
+        }
+        let item = BacklogItem::Quiz {
+            argument: 0,
+            mode: Some(0),
+            response: 0,
+        };
+        assert!(localize_item(&item));
+        let (text, color) = display_text(&item).unwrap();
+        assert_eq!(
+            layout_display_text(
+                &text,
+                color,
+                LocalizingMetrics,
+                LocalizingMetrics,
+                localize_item(&item)
+            ),
+            layout_message("English", color, Metrics, Metrics),
+        );
+    }
+
     #[test]
     fn quiz_subtype_and_checkpoint_labels_match_native_authored_forms() {
         assert_eq!(quiz_text(0, 0).as_deref(), Some("@r《クイズ》@rＡを選択"));
@@ -458,8 +568,8 @@ mod tests {
         let adapter =
             shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .unwrap();
-        let (device, queue) = shin_tasks::block_on(adapter.request_device(
-            &wgpu::DeviceDescriptor {
+        let (device, queue) =
+            shin_tasks::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
                 required_features: if adapter.get_info().backend == wgpu::Backend::Vulkan {
                     adapter.features() & wgpu::Features::PASSTHROUGH_SHADERS
                 } else {
@@ -467,7 +577,7 @@ mod tests {
                 },
                 ..Default::default()
             }))
-        .unwrap();
+            .unwrap();
         let mut io = LayeredAssetIo::new();
         if let Some(patch) = std::env::var_os("SHIN_REFERENCE_PATCH") {
             io.try_with_rom(patch).unwrap();

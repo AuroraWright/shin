@@ -9,7 +9,7 @@ use super::{
     assets::AdvFonts,
     backlog::Backlog,
     backlog_model::{BacklogModel, VIEW_HEIGHT, voice_paths},
-    backlog_text::{BacklogText, display_text, layout_message},
+    backlog_text::{BacklogText, display_text, layout_display_text, localize_item},
     backlog_view::{BacklogShell, BacklogTextures},
 };
 use crate::render::PreRenderContext;
@@ -180,11 +180,12 @@ impl BacklogScreen {
                     entry.save_position
                 )
             })?;
-            let (_, _, size) = layout_message(
+            let (_, _, size) = layout_display_text(
                 &text,
                 color,
                 fonts.medium_font.as_ref(),
                 fonts.bold_font.as_ref(),
+                localize_item(&entry.item),
             );
             sizes.push((size.y, !voice_paths(&entry.item).is_empty()));
         }

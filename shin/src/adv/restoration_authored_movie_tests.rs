@@ -137,7 +137,7 @@ mod authored_movie_load {
         );
         let source = output.join("main.snr");
         std::fs::write(&source, scenario.raw()).unwrap();
-        let payload = format!("0 0 56 {}\n0 0 57 {}\n", "aa".repeat(128), "aa".repeat(128));
+        let payload = format!("0 0 55 {}\n0 0 57 {}\n", "aa".repeat(128), "aa".repeat(128));
         std::fs::write(output.join("input.txt"), &payload).unwrap();
         let mut child = Command::new(&helper)
             .arg(root.join("umineko_switch_files").join(if updated {
@@ -215,7 +215,11 @@ mod authored_movie_load {
             "{:?}",
             live.saved_scene_load_error()
         );
-        let before_rows = native_state(&text[..split], &live, 56);
+        // The genuine saved worker normalizes event56 to normal dialogue55.
+        // Compare the actual public load target with native replay at55;
+        // Enter below then follows the authored path into the opening Movie.
+        let before_rows = native_state(&text[..split], &live, 55);
+        assert_eq!(live.vm_state.current_event, None);
         assert!(
             live.vm_state
                 .layers
@@ -229,6 +233,7 @@ mod authored_movie_load {
         let mut playback = String::new();
         let mut cancel_sent = false;
         let mut movie_frames = 0;
+        let mut canonical_confirms = 0;
         while live.vm_state.save_position < 57 || live.pending_restore.is_some() {
             assert!(
                 Instant::now() < deadline,
@@ -258,6 +263,9 @@ mod authored_movie_load {
                 movie_frames += 1;
                 playback = movie.reference_playback_status();
             }
+            // get_layer retains a read guard. The normal frame update takes
+            // this owner's write lock, so finish the observation first.
+            drop(layer);
             let mut input = enum_map::EnumMap::<AppAction, shin_input::ActionState>::default();
             if let Some(owner) = &owner {
                 // Require actual decoded-frame publication and CoreAudio clock
@@ -270,6 +278,13 @@ mod authored_movie_load {
                     input[AppAction::Cancel].is_clicked = true;
                     cancel_sent = true;
                 }
+            } else if !live.is_loading_saved_scene()
+                && live.vm_state.current_event.is_none()
+                && matches!(live.current_command, Some(crate::adv::ExecutingCommand::MSGSET(_)))
+            {
+                input[AppAction::Enter].is_clicked = true;
+                canonical_confirms += 1;
+                assert!(canonical_confirms <= 128, "bounded canonical pre-movie dialogue");
             }
             frame.advance();
             live.update(
@@ -306,6 +321,7 @@ mod authored_movie_load {
             context.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
             std::thread::sleep(Duration::from_millis(2));
         }
+        assert!(canonical_confirms > 0, "canonical dialogue must receive gameplay input");
         assert!(
             cancel_sent,
             "Opening must run and receive B before progressing"
@@ -344,7 +360,7 @@ mod authored_movie_load {
         );
         drop(live);
         let summary = format!(
-            "{label}: load56 matches{before_rows} native state rows; actual Movie1/bank1/counter39 frame/audio progress and B skip; boundary57 matches{after_rows} native rows; decoder/voice ownership retired while resumed scenario remains open. Movie frames={movie_frames}; last status={playback}\n"
+            "{label}: load56 -> canonical55 matches{before_rows} native state rows; confirms={canonical_confirms}; actual Movie1/bank1/counter39 frame/audio progress and B skip; boundary57 matches{after_rows} native rows; decoder/voice ownership retired while resumed scenario remains open. Movie frames={movie_frames}; last status={playback}\n"
         );
         std::fs::write(output.join("desktop.txt"), &summary).unwrap();
         eprint!("{summary}");

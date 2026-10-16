@@ -48,6 +48,10 @@ fn pending_status(volume: &Tweener) -> AudioWaitStatus {
 
 impl BgmPlayer {
     #[cfg(test)]
+    pub(crate) fn reference_settings_volume(&self) -> Option<u8> {
+        self.settings_gain.reference_percent()
+    }
+    #[cfg(test)]
     pub(crate) fn reference_focus_gain(&self) -> f32 {
         self.voice_focus.gain
     }
@@ -228,6 +232,12 @@ impl BgmPlayer {
     pub fn update_voice_focus(&mut self, delta: Ticks, enabled: bool, voice_active: bool) {
         self.voice_focus
             .update_track(&mut self.focus_track, delta, enabled, voice_active);
+    }
+    /// Later-engine38720 keeps a latched target and advances by one fused
+    /// multiply-add. Legacy callers retain their existing focus arithmetic.
+    pub(crate) fn update_gerokasu2_focus(&mut self, delta: Ticks, target: f32) {
+        self.voice_focus
+            .update_gerokasu2_track(&mut self.focus_track, delta, target);
     }
 
     /// Native music requests return immediately and reuse an active ID even

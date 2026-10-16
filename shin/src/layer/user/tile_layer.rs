@@ -1,9 +1,10 @@
 use std::fmt::Debug;
 
-use glam::{Vec4, vec3};
+use glam::{Mat4, Vec4, vec3};
 use shin_core::primitives::color::FloatColor4;
 use shin_render::{
-    ColorBlendType, DrawPrimitive, LayerBlendType, PassKind, RenderProgramWithArguments,
+    ColorBlendType, DrawPrimitive, LayerBlendType, LayerFragmentShader, PassKind,
+    RenderProgramWithArguments,
     RenderRequestBuilder,
     render_pass::RenderPass,
     shaders::types::{RenderClone, buffer::VertexSource, vertices::PosColVertex},
@@ -13,7 +14,8 @@ use crate::{
     layer::{
         NewDrawableLayer, NewDrawableLayerWrapper,
         new_drawable_layer::{NewDrawableLayerFastForward, NewDrawableLayerNeedsSeparatePass},
-        render_params::{DrawableClipMode, DrawableClipParams, DrawableParams, TransformParams},
+        native_float::add as native_add,
+        render_params::{DrawableClipParams, DrawableParams, TransformParams},
     },
     update::{AdvUpdatable, AdvUpdateContext},
 };
@@ -63,98 +65,110 @@ impl TileLayer {
 
 impl NewDrawableLayerNeedsSeparatePass for TileLayerImpl {}
 
+impl TileLayerImpl {
+    /// Match original106440/update106d00 before any clip/SDK submission.
+    /// NaN alpha continues into the transparent pass; Gamma's output alpha
+    /// must never reclassify or cull the already selected draw.
+    fn material(
+        &self,
+        drawable: &DrawableParams,
+        requested: PassKind,
+    ) -> Option<(FloatColor4, LayerFragmentShader, ColorBlendType)> {
+        let tinted = drawable.color_multiplier * self.color;
+        let shader = drawable.fragment_shader.simplify(drawable.shader_param);
+        if tinted.a <= 0.0 {
+            return None;
+        }
+        let selected = if drawable.blend_type == LayerBlendType::Type1 && tinted.a >= 1.0 {
+            PassKind::Opaque
+        } else {
+            PassKind::Transparent
+        };
+        if requested != selected {
+            return None;
+        }
+        let blend = match selected {
+            PassKind::Opaque => ColorBlendType::Opaque,
+            PassKind::Transparent => ColorBlendType::from_regular_layer(drawable.blend_type),
+        };
+        Some((tinted, shader, blend))
+    }
+
+    fn vertices(
+        &self,
+        tinted: FloatColor4,
+        shader: LayerFragmentShader,
+        shader_param: Vec4,
+        matrix: Mat4,
+    ) -> [PosColVertex; 4] {
+        let left = self.rect.x;
+        let right = native_add(self.rect.z, left);
+        let top = self.rect.y;
+        let bottom = native_add(self.rect.w, top);
+        let color = if shader == LayerFragmentShader::Gamma {
+            // Original73640's Gamma branch returns its caller's scalar lanes:
+            // Tile's bottom/Y and the uploaded matrix's G12, then fixed +0.
+            // This is caller state, not a texture Gamma/pow operation. Keep
+            // every matrix FMA, including zero terms with nonfinite inputs.
+            FloatColor4::from_vec4(Vec4::new(bottom, top, matrix.w_axis.x, 0.0))
+        } else {
+            shader.evaluate(tinted, shader_param)
+        }
+        .into_unorm();
+        [
+            vec3(left, top, 0.0),
+            vec3(right, top, 0.0),
+            vec3(left, bottom, 0.0),
+            vec3(right, bottom, 0.0),
+        ]
+        .map(|position| PosColVertex { position, color })
+    }
+}
+
 impl NewDrawableLayer for TileLayerImpl {
+    fn handles_direct_clip(&self) -> bool {
+        true
+    }
+
     #[tracing::instrument(skip_all)]
     fn render_drawable_direct(
         &self,
         pass: &mut RenderPass,
         transform: &TransformParams,
-        &DrawableParams {
-            color_multiplier,
-            blend_type,
-            fragment_shader,
-            shader_param,
-        }: &DrawableParams,
+        drawable: &DrawableParams,
         clip: &DrawableClipParams,
         stencil_ref: u8,
         pass_kind: PassKind,
     ) {
-        let tinted_color = color_multiplier * self.color;
-        let fragment_shader = fragment_shader.simplify(shader_param);
-
-        if tinted_color.a <= 0.0 {
+        let Some((tinted, shader, blend)) = self.material(drawable, pass_kind) else {
             return;
-        }
-
-        let target_pass = if blend_type == LayerBlendType::Type1 && tinted_color.a >= 1.0 {
-            PassKind::Opaque
-        } else {
-            PassKind::Transparent
         };
-
-        if pass_kind != target_pass {
-            return;
-        }
-
-        assert_eq!(
-            clip.mode,
-            DrawableClipMode::None,
-            "Clipping effect is not implemented"
-        );
-
-        let blend_type = match pass_kind {
-            PassKind::Opaque => ColorBlendType::Opaque,
-            PassKind::Transparent => ColorBlendType::from_regular_layer(blend_type),
-        };
-
-        let color = fragment_shader
-            .evaluate(tinted_color, shader_param)
-            .into_unorm();
-
-        let transform = transform.compute_final_transform();
-
-        let left = self.rect.x;
-        let right = self.rect.x + self.rect.z;
-        let top = self.rect.y;
-        let bottom = self.rect.y + self.rect.w;
-
-        let vertices = &[
-            PosColVertex {
-                position: vec3(left, top, 0.0),
-                color,
-            },
-            PosColVertex {
-                position: vec3(right, top, 0.0),
-                color,
-            },
-            PosColVertex {
-                position: vec3(left, bottom, 0.0),
-                color,
-            },
-            PosColVertex {
-                position: vec3(right, bottom, 0.0),
-                color,
-            },
-        ];
-
+        clip.begin(pass, transform);
+        let matrix = transform.compute_final_transform();
+        let vertices = self.vertices(tinted, shader, drawable.shader_param, matrix);
         pass.push_debug("TileLayer");
-
         pass.run(
             RenderRequestBuilder::new()
                 .depth_stencil_shorthand(stencil_ref, false, false)
-                .color_blend_type(blend_type)
+                .color_blend_type(blend)
                 .build(
                     RenderProgramWithArguments::Fill {
-                        vertices: VertexSource::VertexData { vertices },
-                        transform,
+                        vertices: VertexSource::VertexData {
+                            vertices: &vertices,
+                        },
+                        transform: matrix,
                     },
                     DrawPrimitive::TrianglesStrip,
                 ),
         );
-
         pass.pop_debug();
+        // Even a rejected zero/NaN clip begin has native cleanup work.
+        clip.end(pass);
     }
 }
+
+#[cfg(test)]
+mod native_gamma_tests;
 
 impl NewDrawableLayerFastForward for TileLayerImpl {
     fn fast_forward(&mut self) {}

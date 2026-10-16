@@ -77,6 +77,7 @@ impl<T> PageLayer<T> {
         self.new_drawable_state.reference_effect_phases()
     }
 
+    #[cfg(test)]
     pub fn new_typed(plane_count: usize) -> Self {
         Self::with_property_policy(plane_count, super::properties::PropertyPolicy::Legacy)
     }
@@ -122,6 +123,7 @@ impl<T> PageLayer<T> {
 }
 
 impl PageLayer {
+    #[cfg(test)]
     pub fn new(plane_count: usize) -> Self {
         Self::new_typed(plane_count)
     }

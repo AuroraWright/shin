@@ -39,6 +39,10 @@ pub use self::{
 };
 
 pub trait Asset: Send + Sync + Sized + 'static {
+    /// Font resources retain the server's presentation overrides. Other asset
+    /// decoders keep their authored data and default to no presentation hook.
+    fn attach_text_overrides(&mut self, _overrides: Arc<crate::asset::localization::TextOverrides>) {}
+
     type Args: Clone + Hash + Eq + Debug + Send + Sync + 'static;
 
     /// Load an asset from the provided data accessor.
@@ -71,6 +75,7 @@ impl<T: Asset> DerefMut for AssetMap<T> {
 
 pub struct AssetServer {
     io: AssetIo,
+    text_overrides: Arc<crate::asset::localization::TextOverrides>,
     context: Arc<AssetLoadContext>,
     loaded_assets: RwLock<anymap3::Map<dyn core::any::Any + Send + Sync>>,
     effects_atlas: crate::asset::effects::EffectsAtlas,
@@ -90,8 +95,10 @@ impl AssetServer {
         &self.context
     }
     pub fn new(io: AssetIo, context: AssetLoadContext) -> Self {
+        let text_overrides = Arc::new(crate::asset::localization::TextOverrides::load(&io));
         Self {
             io,
+            text_overrides,
             context: Arc::new(context),
             loaded_assets: RwLock::new(anymap3::Map::new()),
             effects_atlas: Default::default(),
@@ -211,9 +218,10 @@ impl AssetServer {
         let context = self.context.clone();
 
         // just await the task
-        let asset = T::load(&context, args, &path, data)
+        let mut asset = T::load(&context, args, &path, data)
             .await
             .with_context(|| format!("Loading asset {:?}", path))?;
+        asset.attach_text_overrides(self.text_overrides.clone());
         let asset = Arc::new(asset);
 
         self.loaded_assets
@@ -242,9 +250,11 @@ impl AssetServer {
             .io
             .read_file(path)
             .with_context(|| format!("Reading asset {:?}", path))?;
-        T::load(&self.context, args, path, data)
+        let mut asset = T::load(&self.context, args, path, data)
             .await
-            .with_context(|| format!("Loading asset {:?}", path))
+            .with_context(|| format!("Loading asset {:?}", path))?;
+        asset.attach_text_overrides(self.text_overrides.clone());
+        Ok(asset)
     }
 
     #[cfg(test)]
@@ -327,7 +337,7 @@ impl AssetIo {
         )))
     }
 
-    fn read_file(&self, path: &str) -> Result<AssetDataAccessor> {
+    pub(crate) fn read_file(&self, path: &str) -> Result<AssetDataAccessor> {
         match self {
             AssetIo::Dir(io) => io.read_file(path),
             AssetIo::RomFile(io) => io.read_file(path),
@@ -397,11 +407,18 @@ impl RomAssetIo {
 #[derive(Debug, Default)]
 pub struct LayeredAssetIo {
     io: Vec<AssetIo>,
+    localized_file: Option<PathBuf>,
 }
 
 impl LayeredAssetIo {
     pub fn new() -> Self {
-        Self { io: Vec::new() }
+        Self { io: Vec::new(), localized_file: None }
+    }
+
+    /// The user-editable loose file overrides dictionaries inside archives,
+    /// without exposing the asset root as another general-purpose data layer.
+    pub(crate) fn with_localized_file(&mut self, path: PathBuf) {
+        self.localized_file = Some(path);
     }
 
     pub fn is_empty(&self) -> bool {
@@ -423,6 +440,12 @@ impl LayeredAssetIo {
     }
 
     pub(crate) fn read_file(&self, path: &str) -> Result<AssetDataAccessor> {
+        if path == "/localized.toml"
+            && let Some(file) = &self.localized_file
+            && file.exists()
+        {
+            return Ok(AssetDataAccessor::from_file(file.clone()));
+        }
         let mut errors = Vec::new();
 
         for io in &self.io {

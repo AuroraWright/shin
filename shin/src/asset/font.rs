@@ -25,6 +25,7 @@ use cache::GlyphKey;
 pub struct GpuFontLazy {
     font: FontLazy,
     glyph_cache: Arc<FontGlyphCache>,
+    text_overrides: Arc<crate::asset::localization::TextOverrides>,
 }
 
 impl GpuFontLazy {
@@ -40,7 +41,7 @@ impl GpuFontLazy {
             u32::from(font.get_ascent()) + u32::from(font.get_descent()) != 0,
             "Font line height must be nonzero"
         );
-        Ok(Self { font, glyph_cache })
+        Ok(Self { font, glyph_cache, text_overrides: Arc::default() })
     }
 
     /// Returns handles to an array of glyphs in bulk.
@@ -164,6 +165,10 @@ impl GpuFontLazy {
 }
 
 impl FontMetrics for GpuFontLazy {
+    fn localize<'a>(&self, text: &'a str) -> std::borrow::Cow<'a, str> {
+        self.text_overrides.translate(text)
+    }
+
     fn get_ascent(&self) -> u32 {
         self.font.get_ascent() as u32
     }
@@ -223,6 +228,10 @@ impl GpuFontGlyphHandle {
 pub(crate) mod tests;
 
 impl Asset for GpuFontLazy {
+    fn attach_text_overrides(&mut self, overrides: Arc<crate::asset::localization::TextOverrides>) {
+        self.text_overrides = overrides;
+    }
+
     type Args = ();
 
     async fn load(

@@ -6,6 +6,18 @@ use shin_render::gpu_texture::GpuTexture;
 
 use crate::asset::system::{Asset, AssetDataAccessor, AssetLoadContext};
 
+fn decode_archive(
+    data: &[u8],
+    game: crate::cli::Game,
+) -> Result<shin_core::format::texture_archive::TextureArchive> {
+    use shin_core::format::text::TextEncoding;
+    let encoding = match game {
+        crate::cli::Game::Gerokasu2 => TextEncoding::Utf8,
+        crate::cli::Game::Umineko | crate::cli::Game::Higurashi => TextEncoding::ShiftJis,
+    };
+    shin_core::format::texture_archive::read_texture_archive_with_encoding(data, encoding)
+}
+
 pub trait TextureArchiveBuilder {
     type Output;
 
@@ -37,7 +49,7 @@ impl<T: TextureArchive> Asset for T {
 
         shin_tasks::compute::spawn(move || {
             crate::asset::system::catch_asset_preparation_panic("TXA", || {
-                let archive = shin_core::format::texture_archive::read_texture_archive(&data)?;
+                let archive = decode_archive(&data, context.game)?;
 
                 let mut builder = T::Builder::new();
 
@@ -60,3 +72,6 @@ impl<T: TextureArchive> Asset for T {
         .await
     }
 }
+
+#[cfg(test)]
+mod tests;

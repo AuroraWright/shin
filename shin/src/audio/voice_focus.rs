@@ -12,6 +12,35 @@ impl Default for VoiceFocus {
 }
 
 impl VoiceFocus {
+    pub(crate) fn update_gerokasu2_track(
+        &mut self,
+        track: &mut kira::track::TrackHandle,
+        delta: Ticks,
+        target: f32,
+    ) {
+        if self.update_gerokasu2(delta, target) {
+            track.set_volume(
+                shin_audio::amplitude_to_decibels(self.gain),
+                kira::Tween {
+                    duration: std::time::Duration::ZERO,
+                    ..Default::default()
+                },
+            );
+        }
+    }
+    pub(crate) fn update_gerokasu2(&mut self, delta: Ticks, target: f32) -> bool {
+        let previous = self.gain;
+        self.gain = if previous < target {
+            let next = delta.as_f32().mul_add(0.04, previous);
+            if next > target { target } else { next }
+        } else if previous > target {
+            let next = delta.as_f32().mul_add(-0.04, previous);
+            if next < target { target } else { next }
+        } else {
+            previous
+        };
+        self.gain != previous
+    }
     pub fn update_track(
         &mut self,
         track: &mut kira::track::TrackHandle,
@@ -46,6 +75,107 @@ impl VoiceFocus {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    #[test]
+    #[ignore = "original Ger38720 focus arithmetic; CPU only"]
+    fn ger_focus_matches_original_fused_steps_and_conditional_clamps() {
+        use std::{
+            io::Write,
+            process::{Command, Stdio},
+        };
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .unwrap();
+        let folder = root.join("gerokasu2/.local/adv-title-transition");
+        std::fs::create_dir_all(&folder).unwrap();
+        let binary = folder.join("native-focus-root-test");
+        assert!(
+            Command::new("clang")
+                .args(["-O2", "-std=c11"])
+                .arg(root.join("gerokasu2/native-adv-title-focus.c"))
+                .arg("-o")
+                .arg(&binary)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let mut input = String::new();
+        let mut expected = Vec::new();
+        let mut fused_discriminators = 0;
+        let mut seed = 1u32;
+        for i in 0..1024 {
+            seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);
+            let current = match i {
+                0 => -0.0,
+                1 => 0.,
+                2 => 0.5,
+                3 => 1.,
+                4 => f32::from_bits(0x3effffff),
+                5 => f32::from_bits(0x3f000001),
+                _ => (seed >> 8) as f32 / 16777216.,
+            };
+            for target in [0., 0.5, 1.] {
+                for delta in [0., 0.25, 1., 2.5, 12.5, 1000., 1. / 60.] {
+                    let mut focus = VoiceFocus { gain: current };
+                    focus.update_gerokasu2(Ticks::from_f32(delta), target);
+                    let scalar = if current < target {
+                        (current + delta * 0.04).min(target)
+                    } else {
+                        (current - delta * 0.04).max(target)
+                    };
+                    fused_discriminators += usize::from(scalar.to_bits() != focus.gain.to_bits());
+                    input.push_str(&format!(
+                        "{:08x} {:08x} {:08x}\n",
+                        current.to_bits(),
+                        target.to_bits(),
+                        delta.to_bits()
+                    ));
+                    expected.push([
+                        current.to_bits(),
+                        target.to_bits(),
+                        delta.to_bits(),
+                        focus.gain.to_bits(),
+                    ]);
+                }
+            }
+        }
+        assert!(fused_discriminators > 0);
+        let corpus = folder.join("focus-rust-profiles.txt");
+        std::fs::write(&corpus, &input).unwrap();
+        let output = Command::new(binary)
+            .args([
+                root.join("gerokasu2/uncompressed_executable"),
+                root.join("gerokasu2/.local/newrodin-medium.fnt"),
+                root.join("gerokasu2/.local/system.fnt"),
+            ])
+            .stdin(std::fs::File::open(corpus).unwrap())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::inherit())
+            .output()
+            .unwrap();
+        assert!(output.status.success());
+        let rows: Vec<[u32; 4]> = String::from_utf8(output.stdout.clone())
+            .unwrap()
+            .lines()
+            .map(|line| {
+                line.split_whitespace()
+                    .map(|x| u32::from_str_radix(x, 16).unwrap())
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap()
+            })
+            .collect();
+        assert_eq!(rows, expected);
+        std::fs::File::create(folder.join("focus-rust-verified.output"))
+            .unwrap()
+            .write_all(&output.stdout)
+            .unwrap();
+        eprintln!(
+            "GEROKASU2_FOCUS_NATIVE cases={} fused_discriminators={fused_discriminators} exact_float_bits_signed_zero_and_clamps=verified",
+            rows.len()
+        );
+    }
 
     #[test]
     fn focus_ramps_by_native_ticks_and_clamps_both_targets() {
@@ -100,8 +230,7 @@ mod tests {
             .play(StaticSoundData {
                 sample_rate: 1000,
                 frames: vec![Frame::new(0.25, 0.25); 2000].into(),
-                settings: StaticSoundSettings::new()
-                    .volume(shin_audio::amplitude_to_decibels(0.5)),
+                settings: StaticSoundSettings::new().volume(shin_audio::amplitude_to_decibels(0.5)),
                 slice: None,
             })
             .unwrap();

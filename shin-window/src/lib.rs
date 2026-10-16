@@ -58,6 +58,9 @@ pub trait ShinApp: Sized {
     /// prevents the previous key-up from reaching the frame input state.
     const FULLSCREEN_SHORTCUT: Option<KeyCode> = None;
 
+    /// The window title: the game's own title.
+    const WINDOW_TITLE: &'static str = "shin";
+
     fn init(context: AppContext<Self>, parameters: Self::Parameters) -> anyhow::Result<Self>;
 
     fn map_canvas_size(window_size: PhysicalSize<u32>) -> ViewportParams {
@@ -547,7 +550,7 @@ mod fullscreen_shortcut_tests {
 impl WindowState {
     pub fn new<A: ShinApp>(event_loop: &ActiveEventLoop) -> Self {
         #[allow(unused_mut)]
-        let mut attributes = Window::default_attributes();
+        let mut attributes = Window::default_attributes().with_title(A::WINDOW_TITLE);
 
         #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
         {

@@ -157,7 +157,7 @@ impl PointerSampler {
 
 /// Nonvisual full-canvas tap recognition. Uses the same InputArea contact
 /// classification as TouchEffect's ripple, independently of the effect setting.
-pub(super) struct TapInput {
+pub(crate) struct TapInput {
     area: InputArea,
     target: TapTarget,
     extent: (u16, u16),

@@ -64,6 +64,10 @@ pub trait NewDrawableLayer: NewDrawableLayerNeedsSeparatePass {
     fn renders_pass(&self, _pass_kind: PassKind) -> bool {
         true
     }
+    /// Native Tile selects alpha/pass before beginning its clip work.
+    fn handles_direct_clip(&self) -> bool {
+        false
+    }
     fn update_with_properties(&mut self, context: &AdvUpdateContext, _props: &LayerProperties)
     where
         Self: AdvUpdatable,
@@ -478,6 +482,17 @@ impl NewDrawableLayerState {
         let drawable = props.get_drawable_params();
         let clip = props.get_clip_params();
 
+        if delegate.handles_direct_clip() {
+            delegate.render_drawable_direct(
+                pass,
+                &self_transform,
+                &drawable,
+                &clip,
+                stencil_ref,
+                pass_kind,
+            );
+            return;
+        }
         clip.begin(pass, &self_transform);
         let source_clip = DrawableClipParams {
             mode: DrawableClipMode::None,

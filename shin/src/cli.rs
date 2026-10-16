@@ -29,7 +29,7 @@ pub struct Cli {
     #[clap(long)]
     pub loopback_audio: bool,
     /// Read global progress and write saves to this engine-format file.
-    /// Higurashi otherwise uses the desktop data directory's shin/higurashi/progress.dat.
+    /// Higurashi and Gerokasu2 default to the desktop data directory's shin/<game>/progress.dat.
     #[clap(long)]
     pub save_file: Option<PathBuf>,
     /// Load an engine-format save file when starting Umineko or Gerokasu2.

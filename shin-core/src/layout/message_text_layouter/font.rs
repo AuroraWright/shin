@@ -1,10 +1,16 @@
-use std::sync::Arc;
+use std::{borrow::Cow, sync::Arc};
 
 use crate::format::font::{Font, GlyphInfo, GlyphTrait};
 
 pub mod gerokasu2;
 
 pub trait FontMetrics {
+    /// Presentation-only replacement before parsing. The returned value borrows
+    /// only the input; an owned override must not retain a borrow of the font.
+    fn localize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        Cow::Borrowed(text)
+    }
+
     fn get_ascent(&self) -> u32;
 
     fn get_descent(&self) -> u32;
@@ -15,6 +21,10 @@ pub trait FontMetrics {
 /// Metrics consumed by layout, independent of a font file's glyph record.
 /// FNT6 advances are fractional and its line metrics use signed native loads.
 pub trait TextFontMetrics {
+    /// Presentation-only replacement before parsing (see `FontMetrics`).
+    fn localize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        Cow::Borrowed(text)
+    }
     fn ascent(&self) -> f32;
     fn descent(&self) -> f32;
     fn line_height(&self) -> f32;
@@ -28,6 +38,9 @@ pub trait TextFontMetrics {
 
 /// Existing engine fonts and callers retain their integer API and arithmetic.
 impl<T: FontMetrics + ?Sized> TextFontMetrics for T {
+    fn localize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        FontMetrics::localize(self, text)
+    }
     fn ascent(&self) -> f32 {
         self.get_ascent() as f32
     }
@@ -44,6 +57,10 @@ impl<T: FontMetrics + ?Sized> TextFontMetrics for T {
 }
 
 impl<T: FontMetrics> FontMetrics for Arc<T> {
+    fn localize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        (**self).localize(text)
+    }
+
     fn get_ascent(&self) -> u32 {
         (**self).get_ascent()
     }
@@ -58,6 +75,10 @@ impl<T: FontMetrics> FontMetrics for Arc<T> {
 }
 
 impl<T: FontMetrics> FontMetrics for &T {
+    fn localize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+        (**self).localize(text)
+    }
+
     fn get_ascent(&self) -> u32 {
         (**self).get_ascent()
     }

@@ -151,12 +151,10 @@ impl DrawableClipParams {
         pass: &mut shin_render::render_pass::RenderPass,
         transform: &TransformParams,
     ) {
-        use shin_core::primitives::color::UnormColor;
         use shin_render::{
             ColorBlendType, DrawPrimitive, RenderProgramWithArguments, RenderRequestBuilder,
             StencilFunction, StencilOperation,
-            quad_vertices::build_quad_vertices,
-            shaders::types::{buffer::VertexSource, vertices::PosColVertex},
+            shaders::types::buffer::VertexSource,
         };
         if self.mode == DrawableClipMode::None
             || self.area.to_array().iter().any(|v| v.is_nan())
@@ -170,12 +168,7 @@ impl DrawableClipParams {
             DrawableClipMode::ClipIgnoreTransform => centered_projection_matrix(),
             DrawableClipMode::None => unreachable!(),
         };
-        let vertices = build_quad_vertices(|uv| PosColVertex {
-            position: (Vec2::new(self.area.x, self.area.y)
-                + uv * Vec2::new(self.area.z, self.area.w))
-            .extend(0.0),
-            color: UnormColor::WHITE,
-        });
+        let vertices = self.mask_vertices();
         pass.run(
             RenderRequestBuilder::new()
                 .color_blend_type(ColorBlendType::NoColor)
@@ -200,6 +193,27 @@ impl DrawableClipParams {
             StencilOperation::Replace,
             StencilOperation::Zero,
         );
+    }
+
+    pub(crate) fn mask_vertices(&self) -> [shin_render::shaders::types::vertices::PosColVertex; 4] {
+        use shin_core::primitives::color::UnormColor;
+        use shin_render::shaders::types::vertices::PosColVertex;
+        // Native mask FADD uses x+width/y+height. Direct corners preserve
+        // finite origins with infinite extents (UV interpolation adds 0*Inf).
+        let left = self.area.x;
+        let right = super::native_float::add(left, self.area.z);
+        let top = self.area.y;
+        let bottom = super::native_float::add(top, self.area.w);
+        [
+            vec3(left, top, 0.0),
+            vec3(right, top, 0.0),
+            vec3(left, bottom, 0.0),
+            vec3(right, bottom, 0.0),
+        ]
+        .map(|position| PosColVertex {
+            position,
+            color: UnormColor::WHITE,
+        })
     }
 
     pub fn end(&self, pass: &mut shin_render::render_pass::RenderPass) {

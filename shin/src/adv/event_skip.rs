@@ -333,6 +333,31 @@ pub(super) fn assert_reference_render_and_live<'a>(
         }
     }
     let (entry, globals) = authored_movie_entry(&assets.scenario);
+    let game = shin_core::format::save::GameData::from_entry(entry.clone());
+    let canonical =
+        ReconstructedScene::from_game_data_for_load(&assets.scenario, &game, &globals, 1_000_000)
+            .unwrap();
+    // The saved-worker restart prefix returns event checkpoints to the last
+    // normal chapter. Entry56 is EVBEGIN, not a saved Movie descriptor.
+    assert_eq!(entry.save_position, 56);
+    assert_eq!(canonical.state.save_position, 55);
+    assert_eq!(canonical.state.current_event, None);
+    assert!(matches!(
+        &canonical.stop,
+        super::reconstruction::ReconstructionStop::Command(
+            shin_core::vm::command::RuntimeCommand::MSGSET(_)
+        )
+    ));
+    eprintln!(
+        "Episode1 canonical load: saved{} -> dialogue{} pc{:x} route_bits{} route_first_response{}",
+        entry.save_position,
+        canonical.state.save_position,
+        canonical.scripter.position().0,
+        canonical.state.route.bit_position(),
+        entry.route_data.reader().read_persistent().unwrap(),
+    );
+    let canonical_position = canonical.state.save_position;
+    drop(canonical);
     let expected =
         ReconstructedScene::skip_event(&assets.scenario, &entry, &globals, 1_000_000).unwrap();
     let end_position = expected.state.save_position;
@@ -360,20 +385,65 @@ pub(super) fn assert_reference_render_and_live<'a>(
     };
     for long_tap in [false, true] {
         live.event_skip = EventSkip::new();
-        live.load_saved_scene(&globals, &entry, server.clone())
+        live.load_game_data(&globals, &game, server.clone())
             .unwrap();
         let started = std::time::Instant::now();
-        while !matches!(live.current_command, Some(ExecutingCommand::MOVIEWAIT(_)))
-            || live.is_loading_saved_scene()
-        {
+        while live.is_loading_saved_scene() {
             assert!(
                 started.elapsed().as_secs() < 30,
-                "Movie load timed out: {:?}",
+                "Canonical dialogue load timed out: {:?}",
                 live.saved_scene_load_error()
             );
             step(&mut live, Default::default(), 1.0);
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
+        assert!(live.saved_scene_load_error().is_none());
+        assert_eq!(live.vm_state.save_position, canonical_position);
+        assert_eq!(live.vm_state.current_event, None);
+        assert!(matches!(
+            live.current_command,
+            Some(ExecutingCommand::MSGSET(_))
+        ));
+        assert!(!live.adv_state.playback_modes.skip && !live.adv_state.playback_modes.autoplay);
+        // Demonstrate why an unassisted movie wait is invalid: the canonical
+        // dialogue remains open until real gameplay confirm input advances it.
+        for _ in 0..8 {
+            step(&mut live, Default::default(), 1.0);
+            assert_eq!(live.vm_state.save_position, canonical_position);
+            assert!(matches!(
+                live.current_command,
+                Some(ExecutingCommand::MSGSET(_))
+            ));
+        }
+        let mut confirms = 0;
+        while !matches!(live.current_command, Some(ExecutingCommand::MOVIEWAIT(_)))
+            || live.is_loading_saved_scene()
+        {
+            assert!(
+                started.elapsed().as_secs() < 30,
+                "Movie after canonical dialogue timed out: saved{} pc{:x} {:?}, error{:?}",
+                live.vm_state.save_position,
+                live.scripter.position().0,
+                live.current_command,
+                live.saved_scene_load_error(),
+            );
+            let mut input =
+                enum_map::EnumMap::<crate::app::AppAction, shin_input::ActionState>::default();
+            if !live.is_loading_saved_scene()
+                && live.vm_state.current_event.is_none()
+                && matches!(live.current_command, Some(ExecutingCommand::MSGSET(_)))
+            {
+                input[crate::app::AppAction::Enter].is_clicked = true;
+                confirms += 1;
+                assert!(confirms <= 128, "bounded canonical pre-movie dialogue");
+            }
+            step(&mut live, input, 1.0);
+            std::thread::sleep(std::time::Duration::from_millis(5));
+        }
+        assert!(confirms > 0);
+        eprintln!(
+            "Episode1 canonical dialogue advanced: long_tap{long_tap} confirms{confirms} -> actual MOVIEWAIT"
+        );
         assert!(live.vm_state.current_event.is_some());
         assert_eq!(live.vm_state.save_position, entry.save_position);
         // App::set_suspended -> SceneHost -> Adv uses this cancellation path.

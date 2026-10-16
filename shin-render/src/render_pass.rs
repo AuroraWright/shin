@@ -19,13 +19,14 @@ use shin_render_shaders::{
     Blend, BlendBindings, Blur, BlurBindings, Button, ButtonBindings, CharacterPortrait,
     CharacterPortraitBindings, Clear, ClearBindings, Dissolve, DissolveBindings, Fill,
     FillBindings, Font, FontBindings, FontBorder, FontBorderBindings, FontSdf, FontSdfBindings,
-    HigurashiBlur, HigurashiBlurBindings, HigurashiOverlay, HigurashiOverlayBindings,
-    HigurashiPostprocess, HigurashiPostprocessBindings, HigurashiRaster, HigurashiRasterBindings,
-    Layer, LayerBindings, Mask, MaskBindings, Mosaic, MosaicBindings, Movie, MovieBindings, Raster,
-    RasterBindings, Ripple, RippleBindings, ScreenCurtain, ScreenCurtainBindings, Shader, Sprite,
-    SpriteBindings, TapRipple, TapRippleBindings, WiperDefault, WiperDefaultBindings, WiperGlass,
-    WiperGlassBindings, WiperMask, WiperMaskBindings, WiperRipple, WiperRippleBindings, WiperWave,
-    WiperWaveBindings, WiperWhirl, WiperWhirlBindings, ZoomBlur, ZoomBlurBindings,
+    Gerokasu2Blur, Gerokasu2BlurBindings, HigurashiBlur, HigurashiBlurBindings, HigurashiOverlay,
+    HigurashiOverlayBindings, HigurashiPostprocess, HigurashiPostprocessBindings, HigurashiRaster,
+    HigurashiRasterBindings, Layer, LayerBindings, Mask, MaskBindings, Mosaic, MosaicBindings,
+    Movie, MovieBindings, Raster, RasterBindings, Ripple, RippleBindings, ScreenCurtain,
+    ScreenCurtainBindings, Shader, Sprite, SpriteBindings, TapRipple, TapRippleBindings, Window,
+    WindowBindings, WiperDefault, WiperDefaultBindings, WiperGlass, WiperGlassBindings, WiperMask,
+    WiperMaskBindings, WiperRipple, WiperRippleBindings, WiperWave, WiperWaveBindings, WiperWhirl,
+    WiperWhirlBindings, ZoomBlur, ZoomBlurBindings,
 };
 
 use crate::{
@@ -255,6 +256,22 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                 },
                 vertices,
             ),
+            RenderProgramWithArguments::Window {
+                vertices,
+                border,
+                mask,
+                background,
+                transform,
+            } => self.run_impl::<Window>(
+                key,
+                WindowBindings {
+                    params: &FillUniformParams { transform },
+                    border,
+                    mask,
+                    background,
+                },
+                vertices,
+            ),
             RenderProgramWithArguments::Font {
                 vertices,
                 glyph,
@@ -444,6 +461,26 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
                         color,
                         amplitude_frequency,
                         phase,
+                    },
+                    source: texture,
+                },
+                vertices,
+            ),
+            RenderProgramWithArguments::Gerokasu2Blur {
+                vertices,
+                texture,
+                transform,
+                distances,
+                weights,
+            } => self.run_impl::<Gerokasu2Blur>(
+                key,
+                Gerokasu2BlurBindings {
+                    params: &HigurashiBlurUniformParams {
+                        transform,
+                        distances_first: distances[0],
+                        distances_last: distances[1],
+                        color: glam::Vec4::ONE,
+                        weights,
                     },
                     source: texture,
                 },

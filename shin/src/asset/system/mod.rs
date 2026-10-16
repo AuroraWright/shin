@@ -38,3 +38,5 @@ pub(crate) use server::accessor_io_reference_tests::verify_asset_load_failures;
 pub(crate) use server::accessor_io_reference_tests::{
     IoFault, supplied_payload, supplied_portrait,
 };
+
+pub(crate) use server::AssetIo;

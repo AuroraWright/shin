@@ -4,6 +4,7 @@ pub mod message_layer;
 mod new_drawable_layer;
 #[cfg(test)]
 pub(crate) use new_drawable_layer::EffectPhases;
+mod native_float;
 pub(crate) mod owner;
 mod page_layer;
 mod properties;

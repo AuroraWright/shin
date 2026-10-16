@@ -1056,6 +1056,8 @@ impl<Font: TextFontMetrics> MessageTextLayouterImpl<Font> {
 // Rust doesn't have 1:1 correspondence to inheritance with virtual methods, so we use the next best thing: mixins.
 // This works because the inheritance hierarchy is only 2 classes high. This approach is not scalable to deeper hierarchies as-is.
 pub trait MessageTextLayouterMixin<Font> {
+    /// Live scenario text preserves the authored source even with UI overrides.
+    const LOCALIZE: bool = true;
     fn on_char(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, codepoint: char);
     fn on_newline(&mut self, layouter: &mut MessageTextLayouterImpl<Font>);
     fn on_voice(&mut self, layouter: &mut MessageTextLayouterImpl<Font>, voice_path: String);
@@ -1080,9 +1082,17 @@ impl<Font: TextFontMetrics, M: MessageTextLayouterMixin<Font>>
         self
     }
 
-    pub fn parse(mut self, message: &str) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
-        MessageTextParser::new(message).parse_into(&mut self);
+    pub fn parse(self, message: &str) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
+        if !M::LOCALIZE {
+            return self.parse_raw(message);
+        }
+        let message = self.layouter.font_normal.localize(message);
+        self.parse_raw(&message)
+    }
 
+    /// Parse authored scenario/history text without applying UI overrides.
+    pub fn parse_raw(mut self, message: &str) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
+        MessageTextParser::new(message).parse_into(&mut self);
         self.finish()
     }
 
@@ -1272,3 +1282,166 @@ impl<Font> MessageLayerLayouter<Font> {
 }
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod localization_tests {
+    use super::higurashi::{
+        HigurashiBacklogLayouter, HigurashiBacklogVoices, HigurashiMessageLayouter,
+        HigurashiMessageStyle, HigurashiTextLayouter,
+    };
+    use super::*;
+    use super::font::FontMetrics;
+    use crate::format::font::GlyphInfo;
+    use std::{
+        borrow::Cow,
+        sync::{
+            Arc,
+            atomic::{AtomicUsize, Ordering},
+        },
+    };
+
+    #[derive(Clone)]
+    struct Metrics;
+    impl FontMetrics for Metrics {
+        fn get_ascent(&self) -> u32 {
+            40
+        }
+        fn get_descent(&self) -> u32 {
+            10
+        }
+        fn get_glyph_info(&self, _: char) -> Option<GlyphInfo> {
+            Some(GlyphInfo {
+                bearing_x: 0,
+                bearing_y: 40,
+                advance_width: 20,
+                actual_width: 20,
+                actual_height: 40,
+                texture_width: 32,
+                texture_height: 64,
+            })
+        }
+    }
+    #[derive(Clone)]
+    struct LocalizingMetrics(Arc<AtomicUsize>);
+    impl FontMetrics for LocalizingMetrics {
+        fn localize<'a>(&self, text: &'a str) -> Cow<'a, str> {
+            self.0.fetch_add(1, Ordering::SeqCst);
+            if text == "原文" {
+                Cow::Owned("English".to_owned())
+            } else {
+                Cow::Borrowed(text)
+            }
+        }
+        fn get_ascent(&self) -> u32 {
+            Metrics.get_ascent()
+        }
+        fn get_descent(&self) -> u32 {
+            Metrics.get_descent()
+        }
+        fn get_glyph_info(&self, c: char) -> Option<GlyphInfo> {
+            Metrics.get_glyph_info(c)
+        }
+    }
+    fn parse<Font: FontMetrics + Clone>(
+        route: usize,
+        font: Font,
+        text: &str,
+    ) -> (Vec<Command>, Vec<LineInfo>, Vec2) {
+        let params = LayoutParams::default();
+        let defaults = MessageTextLayouterDefaults {
+            color: 999,
+            draw_speed: 50,
+            fade: 200,
+        };
+        match route {
+            0 => MessageTextLayouter::new(font.clone(), font, params, defaults).parse(text),
+            1 => HigurashiTextLayouter::new(font, params, defaults).parse(text),
+            2 => HigurashiTextLayouter::new(font, params, defaults).parse_plain(text, false),
+            3 => {
+                HigurashiMessageLayouter::new(font, HigurashiMessageStyle::Window, params, defaults)
+                    .parse(text)
+            }
+            4 => {
+                let layout =
+                    HigurashiBacklogLayouter::new(font, 3, 999, HigurashiBacklogVoices::Count(0))
+                        .parse(text);
+                (layout.commands, layout.lines, layout.size)
+            }
+            5 => MessageLayerLayouter::new(
+                font.clone(),
+                font,
+                MessageboxType::Neutral,
+                params,
+                defaults,
+            )
+            .parse(text),
+            6 => BacklogTextLayouter::new(font.clone(), font, params, defaults).parse_raw(text),
+            7 => {
+                let layout =
+                    HigurashiBacklogLayouter::new(font, 3, 999, HigurashiBacklogVoices::Count(0))
+                        .parse_raw(text);
+                (layout.commands, layout.lines, layout.size)
+            }
+            _ => unreachable!(),
+        }
+    }
+    #[test]
+    fn localization_ui_parse_boundaries_forward_arc_and_reference_metrics_once() {
+        let source = "原文";
+        for route in [0, 1, 2, 4] {
+            let expected = parse(route, Metrics, "English");
+            let calls = Arc::new(AtomicUsize::new(0));
+            let font = Arc::new(LocalizingMetrics(calls.clone()));
+            assert_eq!(
+                parse(route, font.clone(), source),
+                expected,
+                "Arc route{route}"
+            );
+            assert_eq!(calls.swap(0, Ordering::SeqCst), 1);
+            assert_eq!(
+                parse(route, &font, source),
+                expected,
+                "reference-to-Arc route{route}"
+            );
+            assert_eq!(calls.load(Ordering::SeqCst), 1);
+            let rendered: String = expected
+                .0
+                .iter()
+                .filter_map(|command| match command {
+                    Command::Char(ch) if ch.codepoint.is_ascii() => Some(ch.codepoint),
+                    _ => None,
+                })
+                .collect();
+            assert_eq!(rendered, "English");
+        }
+        assert_eq!(source, "原文", "presentation must not mutate source text");
+    }
+    #[test]
+    fn localization_live_story_and_raw_backlog_preserve_authored_text() {
+        for route in [3, 5, 6, 7] {
+            let calls = Arc::new(AtomicUsize::new(0));
+            let font = Arc::new(LocalizingMetrics(calls.clone()));
+            let expected = parse(route, Metrics, "原文");
+            assert_eq!(parse(route, font.clone(), "原文"), expected, "route{route}");
+            assert_eq!(
+                parse(route, &font, "原文"),
+                expected,
+                "reference route{route}"
+            );
+            assert_eq!(calls.load(Ordering::SeqCst), 0);
+        }
+    }
+    #[test]
+    fn localization_default_font_metrics_borrows_original_input_and_preserves_layout() {
+        let input = String::from("Original@rtext");
+        assert!(
+            matches!(FontMetrics::localize(&Metrics, &input), Cow::Borrowed(text) if text.as_ptr() == input.as_ptr())
+        );
+        for route in 0..8 {
+            assert_eq!(
+                parse(route, &Metrics, &input),
+                parse(route, Arc::new(Metrics), &input)
+            );
+        }
+    }
+}

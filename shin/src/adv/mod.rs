@@ -55,6 +55,8 @@ mod dialog_view;
 mod ending_reference;
 mod event_skip;
 mod story_touch;
+#[cfg(test)]
+mod post_movie_touch_reference;
 pub(crate) use dialog_view::DialogText;
 mod gallery;
 pub mod gerokasu2;
@@ -593,6 +595,10 @@ impl Adv {
         self.pending_chapter = None;
         self.chapter_dialog = None;
         self.story_touch.close();
+        // Loading/reveal frames bypass both pointer delivery paths. Retire
+        // the source capture now, before its release can be lost there.
+        self.cancel_event_contact();
+        self.modal_pointer.cancel_contact(self.modal_pointer_held);
         self.pending_playback_sound = None;
         self.pending_rollback_position = previous_position;
         self.pending_restore = Some(PendingSceneRestore {

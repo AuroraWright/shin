@@ -8,6 +8,10 @@ pub struct SettingsGain {
 }
 
 impl SettingsGain {
+    #[cfg(test)]
+    pub(crate) fn reference_percent(&self) -> Option<u8> {
+        self.percent
+    }
     pub fn apply(&mut self, track: &mut TrackHandle, percent: u8) {
         if self.percent == Some(percent) {
             return;
@@ -104,14 +108,16 @@ mod tests {
         let mut gain = SettingsGain::default();
         gain.apply(&mut track, 100);
         let mut sound = track
-            .play(data(Frame::new(0.25, 0.25), Volume(0.5))).unwrap();
+            .play(data(Frame::new(0.25, 0.25), Volume(0.5)))
+            .unwrap();
         let reference = advance(&mut manager, 20);
         assert!(reference.left > 0.0);
         gain.apply(&mut track, 70);
         let scaled = advance(&mut manager, 20);
         assert!((scaled.left / reference.left - 0.7).abs() < 0.0001);
-        sound.set_volume(
-            Volume(0.25),
+        sound
+            .set_volume(
+                Volume(0.25),
                 shin_core::time::Tween::linear(shin_core::time::Ticks::from_millis(100.0)),
             )
             .unwrap();

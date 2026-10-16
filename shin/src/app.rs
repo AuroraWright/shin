@@ -100,6 +100,8 @@ pub(crate) fn keyboard_as_controller(raw: &RawInputState) -> RawInputState {
         (KeyCode::Escape, GamepadButton::B),
         (KeyCode::KeyH, GamepadButton::L),
         (KeyCode::KeyJ, GamepadButton::R),
+        (KeyCode::KeyU, GamepadButton::Minus),
+        (KeyCode::KeyI, GamepadButton::Plus),
     ] {
         mapped.gamepads.unified.buttons[button] |= raw.keyboard.contains(&key);
     }
@@ -372,6 +374,7 @@ impl ReferenceApp {
 
 impl ShinApp for App {
     const FULLSCREEN_SHORTCUT: Option<KeyCode> = Some(KeyCode::KeyF);
+    const WINDOW_TITLE: &'static str = "うみねこのなく頃に咲 〜猫箱と夢想の交響曲〜";
     type Parameters = Cli;
     type EventType = ();
     type ActionType = AppAction;
@@ -785,6 +788,8 @@ mod controller_tests {
             (KeyCode::Escape, GamepadButton::B),
             (KeyCode::KeyH, GamepadButton::L),
             (KeyCode::KeyJ, GamepadButton::R),
+            (KeyCode::KeyU, GamepadButton::Minus),
+            (KeyCode::KeyI, GamepadButton::Plus),
         ] {
             let mut keyboard = RawInputState::new();
             keyboard.keyboard.insert(key);
@@ -845,7 +850,6 @@ mod controller_tests {
             KeyCode::End,
             KeyCode::KeyG,
             KeyCode::KeyY,
-            KeyCode::KeyU,
             KeyCode::Delete,
             KeyCode::KeyS,
             KeyCode::KeyA,

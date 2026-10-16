@@ -24,10 +24,16 @@ pub(super) struct DialogInput {
     window_drag: bool,
     velocity: Vec2,
     pointer_scale: Option<Vec2>,
+    button_hit_offset: Option<Vec2>,
     sounds: Vec<&'static str>,
 }
 
 impl DialogInput {
+    /// Later engines retain the same capture policy with a different inset.
+    pub(crate) fn set_button_hit_offset(&mut self, offset: Vec2) {
+        assert!(offset.is_finite());
+        self.button_hit_offset = Some(offset);
+    }
     /// InputArea measures small samples in physical pixels before scaling
     /// callbacks to its1920x1080 canvas. Default matches Switch1280x720.
     pub fn set_pointer_scale(&mut self, scale: Vec2) {
@@ -46,7 +52,15 @@ impl DialogInput {
     }
 
     pub fn button_at(geometry: &DialogGeometry, point: Vec2) -> Option<usize> {
-        let point = point - geometry.origin - BUTTON_HIT_OFFSET;
+        Self::button_at_with_offset(geometry, point, BUTTON_HIT_OFFSET)
+    }
+
+    fn button_at_with_offset(
+        geometry: &DialogGeometry,
+        point: Vec2,
+        offset: Vec2,
+    ) -> Option<usize> {
+        let point = point - geometry.origin - offset;
         geometry.buttons[..geometry.button_count]
             .iter()
             .position(|rect| {
@@ -94,7 +108,11 @@ impl DialogInput {
             self.press_position = position;
             self.previous = position;
             self.displacement = Vec2::ZERO;
-            self.captured = Self::button_at(geometry, position);
+            self.captured = Self::button_at_with_offset(
+                geometry,
+                position,
+                self.button_hit_offset.unwrap_or(BUTTON_HIT_OFFSET),
+            );
             let local = position - geometry.origin;
             self.window_drag = self.captured.is_none()
                 && local.x >= 0.0
@@ -258,6 +276,23 @@ mod tests {
     fn point(g: &DialogGeometry, index: usize) -> Vec2 {
         let r = g.buttons[index];
         g.origin + BUTTON_HIT_OFFSET + Vec2::new(r.x + r.z * 0.5, r.y + r.w * 0.5)
+    }
+    #[test]
+    fn later_question_hit_inset_keeps_legacy_default_and_window_geometry() {
+        for later in [false, true] {
+            let mut input = DialogInput::default();
+            if later {
+                input.set_button_hit_offset(Vec2::splat(30.0));
+            }
+            let mut dialog = open();
+            let mut g = geometry();
+            let origin = g.origin;
+            let p =
+                origin + Vec2::splat(30.0) + g.buttons[0].truncate().truncate() + Vec2::splat(2.0);
+            input.pointer(&mut dialog, &mut g, p, true);
+            assert_eq!(input.captured, later.then_some(0));
+            assert_eq!(g.origin, origin);
+        }
     }
     #[test]
     fn press_during_dialog_loading_cannot_reacquire_on_open_or_release() {

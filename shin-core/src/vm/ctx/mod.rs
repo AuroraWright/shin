@@ -109,6 +109,23 @@ impl VmCtx {
         copy
     }
 
+    /// Test-only state identity for route exploration: registers, both stacks
+    /// and PRNG. Two equal fingerprints continue identically for equal feedback.
+    #[cfg(test)]
+    pub(crate) fn fingerprint(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        self.regular_registers.hash(&mut hasher);
+        for address in &self.call_stack {
+            address.0.hash(&mut hasher);
+        }
+        for frame in &self.arguments_stack {
+            frame.as_slice().hash(&mut hasher);
+        }
+        self.prng_state.hash(&mut hasher);
+        hasher.finish()
+    }
+
     /// Native game-specific stack capacity checks, used before mutating a frame.
     pub(super) fn stack_sizes(&self) -> (usize, usize, usize) {
         (

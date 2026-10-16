@@ -24,6 +24,7 @@ enum Phase {
     Start,
     Opening,
     Open,
+    CancelPending,
     Flash,
     Closing,
     Done,
@@ -43,6 +44,7 @@ pub(super) struct Confirmation {
     cooldown: f32,
     result: Option<Outcome>,
     intermediate: Option<Outcome>,
+    defer_cancel: bool,
 }
 impl Default for Confirmation {
     fn default() -> Self {
@@ -58,10 +60,16 @@ impl Default for Confirmation {
             cooldown: 5.0,
             result: None,
             intermediate: None,
+            defer_cancel: false,
         }
     }
 }
 impl Confirmation {
+    /// Ger21D10's controller cancel skips directly to tween advancement. Its
+    /// intermediate callback is first polled on the following parent update.
+    pub(crate) fn set_deferred_cancel(&mut self, value: bool) {
+        self.defer_cancel = value;
+    }
     /// Generic222d0 confirmation and223a0 single-button information task.
     pub fn new(button_count: usize, selected: usize, cancellable: bool) -> Self {
         assert!((1..=2).contains(&button_count) && selected < button_count);
@@ -179,10 +187,23 @@ impl Confirmation {
         self.fade_focus();
         self.selected = None;
         self.result = Some(Outcome::Cancel);
-        self.phase = Phase::Flash;
+        self.phase = if self.defer_cancel {
+            Phase::CancelPending
+        } else {
+            Phase::Flash
+        };
         true
     }
     pub fn update(&mut self, delta: Ticks) {
+        self.update_with_worker(delta, None);
+    }
+    /// Ger21DC8 polls a notification's worker after its entrance, regardless
+    /// of input permission. Ready selects-2; phase3 runs on the next frame.
+    pub fn update_notification(&mut self, delta: Ticks, mut ready: impl FnMut() -> bool) {
+        assert_eq!(self.button_count, 0);
+        self.update_with_worker(delta, Some(&mut ready));
+    }
+    fn update_with_worker(&mut self, delta: Ticks, mut ready: Option<&mut dyn FnMut() -> bool>) {
         if self.phase == Phase::Start {
             self.scale.enqueue(
                 1.0,
@@ -195,14 +216,20 @@ impl Confirmation {
                 .enqueue(1.0, Tween::linear(Ticks::from_f32(12.0)));
             self.phase = Phase::Opening;
         }
+        if self.phase == Phase::Opening && self.opacity.is_idle() && self.scale.is_idle() {
+            self.phase = Phase::Open;
+        }
+        let worker_closed = self.is_open() && ready.as_mut().is_some_and(|poll| poll());
+        if worker_closed {
+            self.close_notification();
+        }
         match self.phase {
-            Phase::Opening if self.opacity.is_idle() && self.scale.is_idle() => {
-                self.phase = Phase::Open
-            }
+            Phase::CancelPending => self.phase = Phase::Flash,
             Phase::Flash
-                if self
-                    .selected
-                    .is_none_or(|index| self.flashes[index].is_idle()) =>
+                if !worker_closed
+                    && self
+                        .selected
+                        .is_none_or(|index| self.flashes[index].is_idle()) =>
             {
                 //23bbc passes final0 before starting the exit animation.
                 self.intermediate = self.result;

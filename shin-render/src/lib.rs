@@ -24,7 +24,7 @@ use shin_render_shader_types::{
     texture::TextureSource,
     vertices::{
         BlendVertex, GlassVertex, MaskVertex, PosColTexVertex, PosColVertex, PosTexVertex,
-        PosVertex, TextVertex,
+        PosVertex, TextVertex, WindowVertex,
     },
 };
 pub use shin_render_shaders as shaders;
@@ -188,9 +188,13 @@ pub enum RenderProgramWithArguments<'a> {
         blend: Vec4,
         flash: Vec4,
     },
+    /// Later-engine program8: independently sampled border, mask and backdrop.
     Window {
-        // TODO
-        // vertices: VertexSource<NewWindowVertex>,
+        vertices: VertexSource<'a, WindowVertex>,
+        border: TextureSource<'a>,
+        mask: TextureSource<'a>,
+        background: TextureSource<'a>,
+        transform: Mat4,
     },
 
     Layer {
@@ -337,6 +341,13 @@ pub enum RenderProgramWithArguments<'a> {
         amplitude_frequency: Vec4,
         phase: Vec4,
     },
+    Gerokasu2Blur {
+        vertices: VertexSource<'a, PosTexVertex>,
+        texture: TextureSource<'a>,
+        transform: Mat4,
+        distances: [Vec4; 2],
+        weights: Vec4,
+    },
     HigurashiBlur {
         vertices: VertexSource<'a, PosTexVertex>,
         texture: TextureSource<'a>,
@@ -395,6 +406,7 @@ impl RenderProgramWithArguments<'_> {
             RenderProgramWithArguments::Sprite { .. } => ShaderName::Sprite,
             RenderProgramWithArguments::Button { .. } => ShaderName::Button,
             RenderProgramWithArguments::Blend { .. } => ShaderName::Blend,
+            RenderProgramWithArguments::Window { .. } => ShaderName::Window,
             RenderProgramWithArguments::Font { .. } => ShaderName::Font,
             RenderProgramWithArguments::FontSdf { .. } => ShaderName::FontSdf,
             RenderProgramWithArguments::FontBorder { .. } => ShaderName::FontBorder,
@@ -410,6 +422,7 @@ impl RenderProgramWithArguments<'_> {
             RenderProgramWithArguments::Ripple { .. } => ShaderName::Ripple,
             RenderProgramWithArguments::TapRipple { .. } => ShaderName::TapRipple,
             RenderProgramWithArguments::HigurashiBlur { .. } => ShaderName::HigurashiBlur,
+            RenderProgramWithArguments::Gerokasu2Blur { .. } => ShaderName::Gerokasu2Blur,
             RenderProgramWithArguments::HigurashiRaster { .. } => ShaderName::HigurashiRaster,
             RenderProgramWithArguments::Blur { .. } => ShaderName::Blur,
             RenderProgramWithArguments::ZoomBlur { .. } => ShaderName::ZoomBlur,
@@ -727,7 +740,8 @@ pub fn shin_orthographic_projection_matrix(
         0.0, 0.0, 0.5, 1.0,
     ]);
 
-    SHIN_TO_WGPU_MATRIX * glam::camera::rh::proj::opengl::orthographic(left, right, bottom, top, near, far)
+    SHIN_TO_WGPU_MATRIX
+        * glam::camera::rh::proj::opengl::orthographic(left, right, bottom, top, near, far)
 }
 
 #[cfg(test)]
