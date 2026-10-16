@@ -65,8 +65,13 @@ fn read(io: &LayeredAssetIo, path: &str) -> Vec<u8> {
 }
 
 #[test]
-fn mod_rom_priority_and_sparse_fallback_for_both_games() {
-    for (game, version) in [(Game::Umineko, 0x10001), (Game::Higurashi, 1)] {
+fn mod_rom_priority_and_sparse_fallback_for_every_game() {
+    // Gerokasu2's data.rom uses the same ROM2 version as Umineko.
+    for (game, version) in [
+        (Game::Umineko, 0x10001),
+        (Game::Higurashi, 1),
+        (Game::Gerokasu2, 0x10001),
+    ] {
         let assets = Assets::new();
         assets.rom(
             "data.rom",
