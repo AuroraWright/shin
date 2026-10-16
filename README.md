@@ -10,7 +10,7 @@ If you know more - let me know! (`dcnick3` on Discord)
 
 ## Status
 
-The primary local workspace for both games is `/Users/aurora/shin-higurashi`.
+The primary local workspace for both games is `/Users/aurora/shin-gerokasu2`.
 It owns the Git metadata, game inputs, test fonts and current manual package.
 The former `/Users/aurora/shin` path is a compatibility alias; its old workspace
 is retained in the ignored recovery area. See the
@@ -124,13 +124,14 @@ progress at the desktop data directory's `shin/higurashi/progress.dat`;
 through the title or in-game menu. Direct `--load-save`, `--unsafe-entry-point`
 and `--fast-forward-to` launches currently apply to Umineko.
 
-Both games optionally load `mod.rom` from the selected asset directory before
+All three games optionally load `mod.rom` from the selected asset directory before
 all standard archives and loose-file layers. Files absent from `mod.rom` fall
 through to the existing patch/append/base layers. For Higurashi, a modded
 `main.snr` also determines whether Origin/append content is supported.
 The base archive keeps its existing `data.rom` filename. With the manual
-launchers, place the file at `higurashi/mod.rom` or
-`umineko_switch_files/mod.rom`; optional links cover both Umineko versions.
+launchers, place the file at `higurashi/mod.rom`,
+`umineko_switch_files/mod.rom` (optional links cover both Umineko versions) or
+`gerokasu2/mod.rom` (the Gerokasu2 assets link is the whole folder).
 
 All three games accept an optional UTF-8 `localized.toml` in the selected assets
 folder. Restart the game after editing it. Entries are exact, case-sensitive
