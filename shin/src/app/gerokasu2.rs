@@ -1,6 +1,5 @@
 //! Gerokasu2 window adapter; the legacy App keeps its own startup policy.
 use super::AppAction;
-#[cfg(test)]
 use crate::cli::Game;
 use crate::{
     adv::{
@@ -48,6 +47,7 @@ mod system_menu;
 mod title;
 mod title_child;
 mod first_boot;
+mod system_voice;
 mod title_demo;
 mod transitions;
 mod write_wait;
@@ -948,8 +948,16 @@ impl ShinApp for Gerokasu2App {
         } else {
             // 252C8/5C2D0: the first owner is always FirstBoot; its finish
             // runs the DF9B0 TitleDemo/Title gate.
+            let voice = (cli.game == Game::Gerokasu).then(|| {
+                system_voice::SystemVoice::new(
+                    audio.clone(),
+                    assets.clone(),
+                    save_store.as_ref().unwrap().data.settings.v2_voicevol,
+                )
+            });
             first_boot = Some(shin_tasks::block_on(first_boot::FirstBoot::load(
                 assets.clone(),
+                voice,
             ))?);
             None
         };

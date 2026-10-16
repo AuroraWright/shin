@@ -40,6 +40,8 @@ pub(super) struct TitleHost {
     music_path: Option<String>,
     masked_entry: bool,
     pending_settings_volume: Option<u8>,
+    /// Gerokasu's greeting on a negative (boot/story-return) request.
+    voice: Option<super::system_voice::SystemVoice>,
 }
 impl TitleHost {
     pub async fn load(
@@ -56,7 +58,7 @@ impl TitleHost {
         )?;
         atlas.require_names(title::TITLE_ATLAS_PATH, &title::TITLE_TEXTURE_NAMES)?;
         let mut model = TitleController::new(availability(data), requested_item);
-        let mut sounds = SystemSoundPlayer::new(audio);
+        let mut sounds = SystemSoundPlayer::new(audio.clone());
         sounds.set_settings_volume(data.settings.v3_sysvol);
         let id = model.bgm_id();
         let music_path = scenario
@@ -64,6 +66,21 @@ impl TitleHost {
             .get(id as usize)
             .map(|info| format!("/bgm/{}.nxa", info.name.as_str()));
         model.assets_ready();
+        // dbef0: a negative request plays a random `/voice/sys/` greeting
+        // before installing the Start task (Gerokasu only).
+        let voice = (assets.context().game == crate::cli::Game::Gerokasu && requested_item < 0)
+            .then(|| {
+                let mut voice = super::system_voice::SystemVoice::new(
+                    audio.clone(),
+                    assets.clone(),
+                    data.settings.v2_voicevol,
+                );
+                voice.play(&super::system_voice::title_clip(
+                    availability(data).extra_unlocked,
+                    crate::engine_random::next_seed,
+                ));
+                voice
+            });
         let host = Self {
             model,
             atlas,
@@ -76,6 +93,7 @@ impl TitleHost {
             music_path,
             masked_entry: requested_item >= 0,
             pending_settings_volume: Some(data.settings.v0_bgmvol),
+            voice,
         };
         // First's effects run after publication on the application's thread.
         // A canceled background factory must not change the retained source's
@@ -130,6 +148,9 @@ impl TitleHost {
         seconds: f64,
     ) -> Option<TitleAction> {
         self.update_audio();
+        if let Some(voice) = &mut self.voice {
+            voice.update(Ticks::from_f32(delta));
+        }
         for cue in self
             .input
             .update(&mut self.model, input, point, viewport, seconds)

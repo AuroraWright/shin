@@ -29,6 +29,11 @@ pub(super) const STEPS: [(&str, f32); 4] = [
     ("07thExpansion", 120.0),
     ("entergram", 120.0),
 ];
+/// Gerokasu's table 0x17e210 adds a voice suffix to each entry. Update
+/// 5f6c8..5f784 plays `sys/{character}{suffix}` when the 07thExpansion or
+/// entergram entry starts; constructor 5ef90 picks the character with
+/// `rand() & 3`.
+const GEROKASU_VOICE_SUFFIXES: [Option<&str>; 4] = [None, None, Some("_07th"), Some("_entergram")];
 const CROSSFADE: f32 = 60.0;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -49,9 +54,13 @@ pub(super) struct FirstBoot {
     previous: Option<&'static str>,
     overlay: Tweener,
     requested: bool,
+    voice: Option<(super::system_voice::SystemVoice, &'static str)>,
 }
 impl FirstBoot {
-    pub async fn load(assets: Arc<AssetServer>) -> Result<Self> {
+    pub async fn load(
+        assets: Arc<AssetServer>,
+        voice: Option<super::system_voice::SystemVoice>,
+    ) -> Result<Self> {
         let textures: Arc<CharacterTextures> = assets.load(ARCHIVE).await?;
         textures.require_names(ARCHIVE, &STEPS.map(|(name, _)| name))?;
         Ok(Self {
@@ -62,6 +71,10 @@ impl FirstBoot {
             previous: None,
             overlay: Tweener::new_gerokasu2(0.0),
             requested: false,
+            voice: voice.map(|voice| {
+                let character = crate::engine_random::next_seed() & 3;
+                (voice, super::system_voice::CHARACTERS[character as usize])
+            }),
         })
     }
 
@@ -70,6 +83,11 @@ impl FirstBoot {
         if self.state == State::Start {
             self.previous = self.current;
             self.current = STEPS.get(self.index).map(|(name, _)| *name);
+            if let Some((voice, character)) = &mut self.voice
+                && let Some(Some(suffix)) = GEROKASU_VOICE_SUFFIXES.get(self.index)
+            {
+                voice.play(&format!("sys/{character}{suffix}"));
+            }
             self.overlay.fast_forward_to(1.0);
             self.overlay
                 .gerokasu2_control(0.0, Ticks::from_f32(CROSSFADE), 0, Easing::Linear, false);
@@ -92,6 +110,9 @@ impl FirstBoot {
             };
         }
         self.overlay.update(delta);
+        if let Some((voice, _)) = &mut self.voice {
+            voice.update(delta);
+        }
     }
 
     /// One boot-gate publication per owner (5C06C..5C10C).

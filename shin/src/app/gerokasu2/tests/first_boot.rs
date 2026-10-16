@@ -22,6 +22,7 @@ fn ger_app_first_boot_shows_caution_and_logos_then_publishes_title() {
     d.app.host = None;
     let boot = shin_tasks::block_on(crate::app::gerokasu2::first_boot::FirstBoot::load(
         d.app.assets.clone(),
+        None,
     ))
     .unwrap();
     d.app.first_boot = Some(boot);

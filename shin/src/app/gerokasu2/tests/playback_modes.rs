@@ -395,7 +395,7 @@ fn ger_app_real_story_swipe_menu_tap_and_touch_effects() {
     d.app.save_store.as_mut().unwrap().data.settings.v17_showscenetitle = true;
     // 252C8 constructs TouchEffect disabled; 5D0FC enables it after FirstBoot.
     d.app.first_boot = Some(
-        shin_tasks::block_on(super::super::first_boot::FirstBoot::load(d.app.assets.clone()))
+        shin_tasks::block_on(super::super::first_boot::FirstBoot::load(d.app.assets.clone(), None))
             .unwrap(),
     );
     effect(&mut d, Vec2::new(500., 500.), true);
