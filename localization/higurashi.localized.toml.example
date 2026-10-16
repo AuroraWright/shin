@@ -1,0 +1,3481 @@
+# higurashi: identity defaults; copy/edit as localized.toml in the selected asset root.
+# Models, script identities, response indices, texture/voice IDs and save data stay unchanged.
+# Preserve @ markup and format placeholders ({name}, {}, formatting specs) when translating.
+# Exact Japanese keys may contain markup; templates also cover composed/dynamic labels.
+# Repeated keys are emitted once; full path/line occurrences are in reviewer/inventory.json.
+# Code literals only; scenario text and baked image text are outside this example.
+
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2641
+"0問目" = "0問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1951
+"0点" = "0点"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2016
+"1,800円" = "1,800円"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1402
+"1000年" = "1000年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1402
+"100年以上" = "100年以上"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1951
+"100点" = "100点"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1387
+"10円玉" = "10円玉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2681; shin/src/app/higurashi/quiz_scene/catalog.rs:2686
+"10問目" = "10問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2443
+"10月4日未明" = "10月4日未明"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1951
+"10点" = "10点"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2686
+"11問目" = "11問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1322
+"11話" = "11話"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:9
+"12個" = "12個"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1322
+"12話" = "12話"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1402
+"17年" = "17年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:950
+"1969年" = "1969年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:950
+"1970年" = "1970年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:950
+"1971年" = "1971年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:950
+"1972年" = "1972年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2256
+"1人" = "1人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2036
+"1分以内" = "1分以内"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2641; shin/src/app/higurashi/quiz_scene/catalog.rs:2646
+"1問目" = "1問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2508
+"1本" = "1本"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2016
+"2,980円" = "2,980円"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2508
+"2.5本" = "2.5本"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:848
+"2006年" = "2006年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:194; shin/src/app/higurashi/quiz_scene/catalog.rs:496; shin/src/app/higurashi/quiz_scene/catalog.rs:828; +2 more
+"2007年" = "2007年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:194; shin/src/app/higurashi/quiz_scene/catalog.rs:496; shin/src/app/higurashi/quiz_scene/catalog.rs:828; +2 more
+"2008年" = "2008年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:194; shin/src/app/higurashi/quiz_scene/catalog.rs:496; shin/src/app/higurashi/quiz_scene/catalog.rs:828; +2 more
+"2009年" = "2009年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:194; shin/src/app/higurashi/quiz_scene/catalog.rs:496; shin/src/app/higurashi/quiz_scene/catalog.rs:828; +1 more
+"2010年" = "2010年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:778
+"21名" = "21名"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:24
+"25歳" = "25歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:778
+"26名" = "26名"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1200
+"26歳" = "26歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:778
+"27名" = "27名"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1402
+"28年" = "28年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:24; shin/src/app/higurashi/quiz_scene/catalog.rs:1200
+"28歳" = "28歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:24
+"29歳" = "29歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2256
+"2人" = "2人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2641; shin/src/app/higurashi/quiz_scene/catalog.rs:2646; shin/src/app/higurashi/quiz_scene/catalog.rs:2651; +1 more
+"2問目" = "2問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:386
+"2歳" = "2歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2508
+"3.5本" = "3.5本"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:778
+"30名" = "30名"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1200
+"31歳" = "31歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:74
+"3代目" = "3代目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:9
+"3個" = "3個"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2036
+"3分以上" = "3分以上"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2641; shin/src/app/higurashi/quiz_scene/catalog.rs:2646; shin/src/app/higurashi/quiz_scene/catalog.rs:2651; +1 more
+"3問目" = "3問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:386
+"3歳" = "3歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1322
+"3話" = "3話"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1200
+"40歳" = "40歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2016
+"49,800円" = "49,800円"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2256
+"4人" = "4人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:9
+"4個" = "4個"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2646; shin/src/app/higurashi/quiz_scene/catalog.rs:2651; shin/src/app/higurashi/quiz_scene/catalog.rs:2656; +1 more
+"4問目" = "4問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:386
+"4歳" = "4歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1322
+"4話" = "4話"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2256
+"5人" = "5人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:9
+"5個" = "5個"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2036
+"5分以上" = "5分以上"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2651; shin/src/app/higurashi/quiz_scene/catalog.rs:2656; shin/src/app/higurashi/quiz_scene/catalog.rs:2661; +2 more
+"5問目" = "5問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:386
+"5歳" = "5歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2661; shin/src/app/higurashi/quiz_scene/catalog.rs:2666; shin/src/app/higurashi/quiz_scene/catalog.rs:2671; +1 more
+"6問目" = "6問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2443
+"6月22日未明" = "6月22日未明"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2443
+"6月27日未明" = "6月27日未明"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:74
+"7代目" = "7代目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2661; shin/src/app/higurashi/quiz_scene/catalog.rs:2666; shin/src/app/higurashi/quiz_scene/catalog.rs:2671; +2 more
+"7問目" = "7問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2443
+"7月26日未明" = "7月26日未明"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2508
+"7本" = "7本"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:74
+"8代目" = "8代目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2666; shin/src/app/higurashi/quiz_scene/catalog.rs:2671; shin/src/app/higurashi/quiz_scene/catalog.rs:2676; +2 more
+"8問目" = "8問目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2016
+"980円" = "980円"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:74
+"9代目" = "9代目"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2676; shin/src/app/higurashi/quiz_scene/catalog.rs:2681; shin/src/app/higurashi/quiz_scene/catalog.rs:2686
+"9問目" = "9問目"
+# shin/src/adv/higurashi/browser_navigation/labels.rs:57; shin/src/adv/higurashi/browser_navigation/labels.rs:59
+">>謎<<" = ">>謎<<"
+# shin/src/adv/higurashi/browser_history.rs:41
+"@r《{title}》@r{text}" = "@r《{title}》@r{text}"
+# shin/src/adv/higurashi/browser_history.rs:53
+"@r《ヒロイン選択》@r{name}" = "@r《ヒロイン選択》@r{name}"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:8
+"A1 谷河内の採石場" = "A1 谷河内の採石場"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:13
+"A2 定期監査" = "A2 定期監査"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:18
+"A3 一二三四" = "A3 一二三四"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:23
+"A4 サイコロの１" = "A4 サイコロの１"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:28
+"A5 失意" = "A5 失意"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:33
+"A6 デジャヴ" = "A6 デジャヴ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1327
+"AKB48" = "AKB48"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2286
+"Answer" = "Answer"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:38
+"B1 Ｃ１０３投与実験" = "B1 Ｃ１０３投与実験"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:43
+"B2 Ｈ１７０" = "B2 Ｈ１７０"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:48
+"B3 兄の苦悩" = "B3 兄の苦悩"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:53
+"B4 北条兄妹" = "B4 北条兄妹"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:58
+"B5 二番目の「検体」" = "B5 二番目の「検体」"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:63
+"B6 白川公園転落事故" = "B6 白川公園転落事故"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:68
+"C1 研究快調" = "C1 研究快調"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:73
+"C2 女王の母の不信" = "C2 女王の母の不信"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:78
+"C3 女王への協力依頼" = "C3 女王への協力依頼"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:83
+"C4 神主の憂鬱" = "C4 神主の憂鬱"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:88
+"C5 三番目の「検体」" = "C5 三番目の「検体」"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:93
+"C6 古手夫妻怪死事件" = "C6 古手夫妻怪死事件"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:199; shin/src/app/higurashi/quiz_scene/catalog.rs:209; shin/src/app/higurashi/quiz_scene/catalog.rs:451; +4 more
+"Cyua" = "Cyua"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:98
+"D1 ダム計画撤回作戦" = "D1 ダム計画撤回作戦"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:103
+"D2 地元説明会" = "D2 地元説明会"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:108
+"D3 おやっさん" = "D3 おやっさん"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:113
+"D4 バラバラ殺人事件" = "D4 バラバラ殺人事件"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:118
+"D5 最初の「検体」" = "D5 最初の「検体」"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:123
+"D6 戦勝会にて" = "D6 戦勝会にて"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1015
+"DNA鑑定" = "DNA鑑定"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:128
+"E1 休部届け" = "E1 休部届け"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:133
+"E2 四年目の足音" = "E2 四年目の足音"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:138
+"E3 部活結成" = "E3 部活結成"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:143
+"E4 四番目の「検体」" = "E4 四番目の「検体」"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:148
+"E5 北条叔母撲殺事件" = "E5 北条叔母撲殺事件"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:153
+"E6 広報室勤務初日" = "E6 広報室勤務初日"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:158
+"F1 入江の生い立ち" = "F1 入江の生い立ち"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:163
+"F2 入江京介" = "F2 入江京介"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:168
+"F3 富竹ジロウ" = "F3 富竹ジロウ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:173
+"F4 北条悟史" = "F4 北条悟史"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:178
+"F5 山沖薫" = "F5 山沖薫"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:183
+"F6 南井まどか" = "F6 南井まどか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:456; shin/src/app/higurashi/quiz_scene/catalog.rs:808; shin/src/app/higurashi/quiz_scene/catalog.rs:1180; +1 more
+"Friend" = "Friend"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:188
+"G1 分譲地下見" = "G1 分譲地下見"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:193
+"G2 新しい風" = "G2 新しい風"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:198
+"G3 昭和５８年６月" = "G3 昭和５８年６月"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:203
+"G4 終末への誘い" = "G4 終末への誘い"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:208
+"G5 新学期、そして" = "G5 新学期、そして"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:213
+"G6 動き始めた陰謀" = "G6 動き始めた陰謀"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1613; shin/src/app/higurashi/quiz_scene/catalog.rs:1730
+"Gファンタジー" = "Gファンタジー"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:218
+"H1 前原圭一" = "H1 前原圭一"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:223
+"H2 竜宮レナ" = "H2 竜宮レナ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:228
+"H3 園崎魅音" = "H3 園崎魅音"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:233
+"H4 北条沙都子" = "H4 北条沙都子"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:238
+"H5 古手梨花" = "H5 古手梨花"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:243
+"H6 公由夏美" = "H6 公由夏美"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:248
+"J1 暇潰し編のカケラ" = "J1 暇潰し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:253
+"J2 鬼隠し編のカケラ" = "J2 鬼隠し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:258
+"J3 綿流し編のカケラ" = "J3 綿流し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:263
+"J4 祟殺し編のカケラ" = "J4 祟殺し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:268
+"J5 染伝し編のカケラ" = "J5 染伝し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:273
+"J6 昼壊し編のカケラ" = "J6 昼壊し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:278
+"K1 罪滅し編のカケラ" = "K1 罪滅し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:283
+"K2 目明し編のカケラ" = "K2 目明し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:288
+"K3 皆殺し編のカケラ" = "K3 皆殺し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:293
+"K4 影紡し編のカケラ" = "K4 影紡し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:298
+"K5 宵越し編のカケラ" = "K5 宵越し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:303
+"K6 解々し編のカケラ" = "K6 解々し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:308
+"L1 祭囃し編のカケラ" = "L1 祭囃し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:313
+"L2 カケラ屑" = "L2 カケラ屑"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:318
+"L3 澪尽し編のカケラ" = "L3 澪尽し編のカケラ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:323
+"L4 逆回りの歯車" = "L4 逆回りの歯車"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:328
+"L5 お子様ランチの旗" = "L5 お子様ランチの旗"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:333
+"L6 禁宝「鬼狩柳桜」" = "L6 禁宝「鬼狩柳桜」"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:511
+"Lato" = "Lato"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:338
+"M1 赤いカプセル薬" = "M1 赤いカプセル薬"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:343
+"M2 事件報告1" = "M2 事件報告1"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:348
+"M3 事件報告2" = "M3 事件報告2"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:353
+"M4 失敗の報復" = "M4 失敗の報復"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:358
+"M5 コピー薬" = "M5 コピー薬"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:363
+"M6 臨床試験開始" = "M6 臨床試験開始"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1327
+"NGT48" = "NGT48"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:511
+"RATO" = "RATO"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:511
+"Rato" = "Rato"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1327
+"SKE48" = "SKE48"
+# shin/src/adv/higurashi/temporary_wrapper.rs:23; shin/src/layer/user/higurashi/temporary.rs:696
+"TIPSを見る" = "TIPSを見る"
+# shin/src/adv/higurashi/host/system_menu/tips.rs:12
+"TIPSメニューに戻ります。@rよろしいですか？" = "TIPSメニューに戻ります。@rよろしいですか？"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:368
+"V1 酔いどれ上司の正体" = "V1 酔いどれ上司の正体"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:373
+"V2 灰とともに去りぬ" = "V2 灰とともに去りぬ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:378
+"V3 レシートと切符" = "V3 レシートと切符"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:383
+"V4 ぬるい缶コーヒー" = "V4 ぬるい缶コーヒー"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:388
+"V5 本名はともえ" = "V5 本名はともえ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:393
+"V6 サイコロの６" = "V6 サイコロの６"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:398
+"W1 しらかば山荘篭城事件" = "W1 しらかば山荘篭城事件"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:403
+"W2 ローウェル疑獄事件" = "W2 ローウェル疑獄事件"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:408
+"W3 公安刑事夫妻の死" = "W3 公安刑事夫妻の死"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:413
+"W4 厚生省官僚の逮捕" = "W4 厚生省官僚の逮捕"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:418
+"W5 退部届け" = "W5 退部届け"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:423
+"W6 捜査打ち切り" = "W6 捜査打ち切り"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:428
+"X1 事件報告3" = "X1 事件報告3"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:433
+"X2 事件報告4" = "X2 事件報告4"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:438
+"X3 事件報告5" = "X3 事件報告5"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:443
+"X4 フレデリカから、あなたへ" = "X4 フレデリカから、あなたへ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:448
+"Y1 ヒントⅠ" = "Y1 ヒントⅠ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:453
+"Y2 ヒントⅡ" = "Y2 ヒントⅡ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:458
+"Y3 ヒントⅢ" = "Y3 ヒントⅢ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:463
+"Y4 ヒントⅣ" = "Y4 ヒントⅣ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:468
+"Y5 ヒントＶ" = "Y5 ヒントＶ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:473
+"Y6 ヒントⅥ" = "Y6 ヒントⅥ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:478
+"Z1 ヒントⅦ" = "Z1 ヒントⅦ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:483
+"Z2 ヒントⅧ" = "Z2 ヒントⅧ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:488
+"Z3 ヒントⅨ" = "Z3 ヒントⅨ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:493
+"Z4 ヒントⅩ" = "Z4 ヒントⅩ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:498
+"Z5 ヒントⅩⅠ" = "Z5 ヒントⅩⅠ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:503
+"Z6 ヒントⅩⅡ" = "Z6 ヒントⅩⅡ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1537
+"anNina" = "anNina"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:461
+"bai" = "bai"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:461
+"boi" = "boi"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1639
+"cry" = "cry"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:461
+"dai" = "dai"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1639
+"die" = "die"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:461
+"doi" = "doi"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:456; shin/src/app/higurashi/quiz_scene/catalog.rs:808; shin/src/app/higurashi/quiz_scene/catalog.rs:1180; +1 more
+"escape" = "escape"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2286
+"hope" = "hope"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1639
+"laugh" = "laugh"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2286
+"me" = "me"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:511
+"rato" = "rato"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1639
+"sleep" = "sleep"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:456; shin/src/app/higurashi/quiz_scene/catalog.rs:808; shin/src/app/higurashi/quiz_scene/catalog.rs:1180; +3 more
+"you" = "you"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1442
+"your" = "your"
+# shin/src/adv/higurashi/system_menu.rs:409; shin/src/adv/system_menu_view.rs:59
+"{minutes}分" = "{minutes}分"
+# shin/src/adv/higurashi/system_menu.rs:411; shin/src/adv/system_menu_view.rs:61
+"{}時間 {}分" = "{}時間 {}分"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:513
+"「澪尽し編・表」終了" = "「澪尽し編・表」終了"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:508; shin/src/app/higurashi/kakera_menu/catalog.rs:800
+"「祭囃し編」終了" = "「祭囃し編」終了"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:518
+"「罰恋し編」終了" = "「罰恋し編」終了"
+# shin/src/app/higurashi/chart/model.rs:450
+"『{text}』へのショートカットを実行します。@rよろしいですか？" = "『{text}』へのショートカットを実行します。@rよろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:426
+"あおい" = "あおい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1482
+"あったか寄せ鍋" = "あったか寄せ鍋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2041
+"あにぃ" = "あにぃ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2041
+"あにしゃん" = "あにしゃん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2281
+"あの日ね" = "あの日ね"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2281
+"あの日へ" = "あの日へ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1794
+"あら、詩音ちゃん" = "あら、詩音ちゃん"
+# shin/src/adv/backlog_rollback.rs:14; shin/src/adv/config_dialog.rs:30; shin/src/adv/higurashi/browser_lifecycle.rs:18; +6 more
+"いいえ" = "いいえ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:199; shin/src/app/higurashi/quiz_scene/catalog.rs:209; shin/src/app/higurashi/quiz_scene/catalog.rs:451; +4 more
+"いとうかなこ" = "いとうかなこ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1899
+"いりすい" = "いりすい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1899
+"いりみず" = "いりみず"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2001
+"うどんの出汁" = "うどんの出汁"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1432
+"うりゅー" = "うりゅー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2363
+"おかわりした" = "おかわりした"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:214
+"おきのみや" = "おきのみや"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:858
+"おこのぎ" = "おこのぎ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:683
+"おっさん" = "おっさん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1752
+"おでんありがとう" = "おでんありがとう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1982
+"おととい来やがれ" = "おととい来やがれ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1362; shin/src/app/higurashi/quiz_scene/catalog.rs:1956; shin/src/app/higurashi/quiz_scene/catalog.rs:2558
+"おはぎ" = "おはぎ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:431
+"おもちゃ屋" = "おもちゃ屋"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:650
+"おやっさん" = "おやっさん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1240
+"お京" = "お京"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2066
+"お便所" = "お便所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2171
+"お兄さん" = "お兄さん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2305
+"お姉と分けっこ" = "お姉と分けっこ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:790
+"お子様ランチの旗" = "お子様ランチの旗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2129
+"お寿司食べ放題" = "お寿司食べ放題"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2558
+"お弁当" = "お弁当"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2318
+"お月様" = "お月様"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1240
+"お梅" = "お梅"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1750
+"お漬物ありがとう" = "お漬物ありがとう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:59
+"お米" = "お米"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1240
+"お菊" = "お菊"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1240
+"お魎" = "お魎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:294
+"かかみいな" = "かかみいな"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1834
+"かき氷" = "かき氷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:219
+"かこつ" = "かこつ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1894
+"かしゃく" = "かしゃく"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1894
+"かせき" = "かせき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1894
+"かっせき" = "かっせき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:294
+"かないみか" = "かないみか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:64
+"かぼちゃ" = "かぼちゃ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2478
+"かまいたち" = "かまいたち"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:294
+"かみいなか" = "かみいなか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:294
+"かみなかい" = "かみなかい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1941
+"がおー" = "がおー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1336
+"が鳴き止まない" = "が鳴き止まない"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:287; shin/src/app/higurashi/quiz_scene/catalog.rs:599
+"きみざわさつき" = "きみざわさつき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:898
+"きょうこ" = "きょうこ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:214
+"きょうみや" = "きょうみや"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1784
+"くすぐり" = "くすぐり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1909
+"くず" = "くず"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1904
+"けむしろ" = "けむしろ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1552
+"けんこう" = "けんこう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:214
+"こうぐう" = "こうぐう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1552
+"こうふん" = "こうふん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:214
+"こうみや" = "こうみや"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1552
+"こうよう" = "こうよう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:853
+"こくそう" = "こくそう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:853
+"こくら" = "こくら"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:858
+"ここぎ" = "ここぎ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:858
+"ここのぎ" = "ここのぎ"
+# shin/src/adv/persistence.rs:57; shin/src/app/higurashi/load_game.rs:52
+"このセーブデータを使用するためには、ソフトをアップデートする必要があります。@rこのままゲームをはじめることもできますが、その場合は現在のセーブデータは削除されます。" = "このセーブデータを使用するためには、ソフトをアップデートする必要があります。@rこのままゲームをはじめることもできますが、その場合は現在のセーブデータは削除されます。"
+# shin/src/adv/higurashi/save_menu/model.rs:47; shin/src/adv/save_menu.rs:42
+"このセーブデータを削除します。よろしいですか？" = "このセーブデータを削除します。よろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:858
+"こひぎ" = "こひぎ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1794
+"こんにちは" = "こんにちは"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1794
+"こんばんは" = "こんばんは"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:853
+"ごくら" = "ごくら"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:853
+"ごぐら" = "ごぐら"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2261
+"ごめんなさい" = "ごめんなさい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1739
+"さくたろう" = "さくたろう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:898
+"さやか" = "さやか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:471
+"さンゴ" = "さンゴ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:346
+"しいたけ" = "しいたけ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:219
+"しかほね" = "しかほね"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1557
+"しかん" = "しかん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1367
+"しげっるチー" = "しげっるチー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:219
+"ししぼね" = "ししぼね"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1784
+"しっぺ" = "しっぺ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:693
+"しま" = "しま"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2186
+"しもべ" = "しもべ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:718
+"しゃもじ" = "しゃもじ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1557
+"しゆる" = "しゆる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1562
+"じゅうそく" = "じゅうそく"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1904
+"じゅうたん" = "じゅうたん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1904
+"じゅうだん" = "じゅうだん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1562
+"じゅうりん" = "じゅうりん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1899
+"じゅすい" = "じゅすい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1779
+"すずり" = "すずり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1769
+"すったて鍋合戦" = "すったて鍋合戦"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1654
+"すったらん" = "すったらん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2066
+"せっちん" = "せっちん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1904
+"せんい" = "せんい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1562
+"そくそく" = "そくそく"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1114
+"その場を動かない" = "その場を動かない"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2046
+"そぼろ弁当" = "そぼろ弁当"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:456; shin/src/app/higurashi/quiz_scene/catalog.rs:808; shin/src/app/higurashi/quiz_scene/catalog.rs:1180; +1 more
+"そらのむこう" = "そらのむこう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1834
+"たこ焼き" = "たこ焼き"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:521
+"たにかわち" = "たにかわち"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:521
+"たにこうち" = "たにこうち"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:521
+"たにごうち" = "たにごうち"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:693
+"たま" = "たま"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1557
+"たるむ" = "たるむ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1357
+"たんぽぽ" = "たんぽぽ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:471
+"たワバ" = "たワバ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2111
+"ちゃんこ鍋" = "ちゃんこ鍋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:693
+"つま" = "つま"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:693
+"てま" = "てま"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1854
+"てるてる坊主" = "てるてる坊主"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1562
+"とうしゅう" = "とうしゅう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2306
+"とっても可愛い！！" = "とっても可愛い！！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1487
+"ともぞ" = "ともぞ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1894
+"どなりぜめ" = "どなりぜめ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2041
+"にいや" = "にいや"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1899
+"にゅうすい" = "にゅうすい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1941
+"にょろにょろ" = "にょろにょろ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2041
+"にーにー" = "にーにー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1699; shin/src/app/higurashi/quiz_scene/catalog.rs:2251
+"ぬいぐるみ" = "ぬいぐるみ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1120
+"ぬらりひょん" = "ぬらりひょん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1995
+"ねこ耳の重要性" = "ねこ耳の重要性"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1739
+"ねこ耳スク水" = "ねこ耳スク水"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1552
+"のきあがり" = "のきあがり"
+# shin/src/adv/backlog_rollback.rs:14; shin/src/adv/config_dialog.rs:30; shin/src/adv/higurashi/browser_lifecycle.rs:18; +6 more
+"はい" = "はい"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1432
+"はにゅん" = "はにゅん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1367
+"ひぐしげ" = "ひぐしげ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1362; shin/src/app/higurashi/quiz_scene/catalog.rs:1367
+"ひぐ夫" = "ひぐ夫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2091
+"ひげそり投法" = "ひげそり投法"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1909
+"ひじゃくかん" = "ひじゃくかん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1909
+"ひれつおとこ" = "ひれつおとこ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1909
+"ひれつかん" = "ひれつかん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:471
+"ひデブ" = "ひデブ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1420
+"びっくりモンキー" = "びっくりモンキー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:678
+"ぶどうジュース" = "ぶどうジュース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:898
+"ほむら" = "ほむら"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1447
+"まきびし" = "まきびし"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:898; shin/src/app/higurashi/quiz_scene/catalog.rs:908
+"まどか" = "まどか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:259
+"みちる" = "みちる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:366
+"みゆき" = "みゆき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1432
+"むぅ…" = "むぅ…"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:254
+"むろみ" = "むろみ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:521
+"やごうち" = "やごうち"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:648
+"やり投げ" = "やり投げ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1719
+"ゆかり" = "ゆかり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:288; shin/src/app/higurashi/quiz_scene/catalog.rs:600
+"ゆきのかなめ" = "ゆきのかなめ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:285; shin/src/app/higurashi/quiz_scene/catalog.rs:597; shin/src/app/higurashi/quiz_scene/catalog.rs:843
+"ゆきのさつき" = "ゆきのさつき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:286; shin/src/app/higurashi/quiz_scene/catalog.rs:598
+"ゆきのむつき" = "ゆきのむつき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1557
+"ゆるゆる" = "ゆるゆる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1934
+"ゆるキャン" = "ゆるキャン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:249
+"ようこ" = "ようこ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:678
+"りんごジュース" = "りんごジュース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1352
+"れな" = "れな"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:219
+"ろっこつ" = "ろっこつ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1432
+"わにゃん" = "わにゃん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2598
+"わんこそば対決" = "わんこそば対決"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1105
+"アイス" = "アイス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2001
+"アイスコーヒー" = "アイスコーヒー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2105
+"アイドル握手会" = "アイドル握手会"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1235
+"アウアウローラ" = "アウアウローラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1512
+"アウトブレイク" = "アウトブレイク"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1334
+"アウトブレイク！" = "アウトブレイク！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:787
+"アクロバティック" = "アクロバティック"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2538
+"アスパラガス" = "アスパラガス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1527
+"アドベンチャー" = "アドベンチャー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:763
+"アナウンサー" = "アナウンサー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2007
+"アバンチュール" = "アバンチュール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:49
+"アフィリアーズ" = "アフィリアーズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1105
+"アフロ" = "アフロ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1472
+"アラン" = "アラン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2208
+"アルセーヌ前原" = "アルセーヌ前原"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2467
+"アンテナを張れ" = "アンテナを張れ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:995; shin/src/app/higurashi/quiz_scene/catalog.rs:1235
+"イェアソムール" = "イェアソムール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2488
+"イカサマ" = "イカサマ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2293
+"イカリング" = "イカリング"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1689
+"イケメン" = "イケメン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1577
+"イネ" = "イネ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1467
+"イリー" = "イリー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1839
+"イルカ" = "イルカ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2473
+"イロハ" = "イロハ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1708
+"インドに帰れ" = "インドに帰れ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1457
+"ウェイン" = "ウェイン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1946
+"ウスターソース" = "ウスターソース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1050
+"ウナギ" = "ウナギ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1577
+"ウネ" = "ウネ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2200
+"エジプト旅行中" = "エジプト旅行中"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1946
+"エビフライ" = "エビフライ"
+# shin/src/app/higurashi/load_game.rs:47
+"エラーはありません。ゲームを開始します。" = "エラーはありません。ゲームを開始します。"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1418; shin/src/app/higurashi/quiz_scene/catalog.rs:1799
+"エンジェルモート" = "エンジェルモート"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:785
+"オカルティック" = "オカルティック"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:703
+"オカルト" = "オカルト"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1839; shin/src/app/higurashi/quiz_scene/catalog.rs:1849
+"オットセイ" = "オットセイ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2216
+"オニカクシ" = "オニカクシ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2076
+"オフ会" = "オフ会"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1185; shin/src/app/higurashi/quiz_scene/catalog.rs:2001; shin/src/app/higurashi/quiz_scene/catalog.rs:2631
+"オムライス" = "オムライス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2388
+"オヤシロさま" = "オヤシロさま"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2216
+"オヤシロサマ" = "オヤシロサマ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2551
+"オヤシロステッキ" = "オヤシロステッキ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1367
+"オヤシロリカ" = "オヤシロリカ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1457
+"オリバー" = "オリバー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1935
+"オートキャンプ" = "オートキャンプ"
+# shin/src/adv/config_widgets.rs:173
+"オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。" = "オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:786
+"カオティック" = "カオティック"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:785
+"カケラ屑" = "カケラ屑"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:501
+"カケラ弾き" = "カケラ弾き"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:501
+"カケラ紡ぎ" = "カケラ紡ぎ"
+# shin/src/adv/higurashi/host/system_menu/returns.rs:26
+"カケラ紡ぎのメニューに戻ります。@rよろしいですか？" = "カケラ紡ぎのメニューに戻ります。@rよろしいですか？"
+# shin/src/app/higurashi/kakera_menu/motion.rs:14
+"カケラ紡ぎを終了して、タイトル画面に戻ります。@rよろしいですか？" = "カケラ紡ぎを終了して、タイトル画面に戻ります。@rよろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:501
+"カケラ結び" = "カケラ結び"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:501
+"カケラ遊び" = "カケラ遊び"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2558
+"カップケーキ" = "カップケーキ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1956
+"カップ麺" = "カップ麺"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1827
+"カツカレー" = "カツカレー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1789
+"カメラマン" = "カメラマン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:64
+"カリフラワー" = "カリフラワー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:14; shin/src/app/higurashi/quiz_scene/catalog.rs:59; shin/src/app/higurashi/quiz_scene/catalog.rs:1185; +1 more
+"カレー" = "カレー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1751
+"カレーありがとう" = "カレーありがとう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1705
+"カレー独身貴族" = "カレー独身貴族"
+# shin/src/adv/backlog_jump.rs:24; shin/src/adv/higurashi/browser_navigation/labels.rs:42
+"カーソル位置" = "カーソル位置"
+# shin/src/adv/backlog_jump.rs:26; shin/src/adv/higurashi/browser_navigation/labels.rs:44
+"カーソル位置/ゲーム内現在位置" = "カーソル位置/ゲーム内現在位置"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1649
+"カーテンのシャー" = "カーテンのシャー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2573
+"カーナビ" = "カーナビ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:955
+"カーレース" = "カーレース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1447; shin/src/app/higurashi/quiz_scene/catalog.rs:2613
+"ガソリン" = "ガソリン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2086
+"ガソリンスタンド" = "ガソリンスタンド"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1472
+"ガブリエル" = "ガブリエル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1612
+"ガンガンJOKER" = "ガンガンJOKER"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1120
+"キジムナー" = "キジムナー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:659
+"キッチンタイマー" = "キッチンタイマー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:673
+"キムチ" = "キムチ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1477
+"キャット" = "キャット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1095
+"キャップ" = "キャップ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:431
+"キャバクラ" = "キャバクラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:818
+"キャラが増えた" = "キャラが増えた"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:351
+"キャリア" = "キャリア"
+# shin/src/adv/storage_retry_dialog.rs:32
+"キャンセル" = "キャンセル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2483
+"キャンプ" = "キャンプ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1472
+"キース" = "キース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2488
+"クシャミ" = "クシャミ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2558
+"クッキー" = "クッキー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1577
+"クネ" = "クネ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1849
+"クマ" = "クマ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1407; shin/src/app/higurashi/quiz_scene/catalog.rs:1457
+"クラウド" = "クラウド"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:813
+"クーデレ" = "クーデレ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1654
+"クール" = "クール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2266
+"グレー" = "グレー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1462
+"ケイレブ" = "ケイレブ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2091
+"ケンカ投法" = "ケンカ投法"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1377
+"ケンタ君人形" = "ケンタ君人形"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1941
+"ゲロゲロ" = "ゲロゲロ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:376
+"ゲートボール" = "ゲートボール"
+# shin/src/adv/higurashi/host/system_menu/returns.rs:25; shin/src/adv/title_return.rs:11; shin/src/app/higurashi/scenario_select.rs:15
+"ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？" = "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？"
+# shin/src/adv/backlog_jump.rs:25; shin/src/adv/higurashi/browser_navigation/labels.rs:43
+"ゲーム内現在位置" = "ゲーム内現在位置"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1699
+"ゲーム機" = "ゲーム機"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1095
+"コイン" = "コイン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1120
+"コロポックル" = "コロポックル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1604; shin/src/app/higurashi/quiz_scene/catalog.rs:1732
+"コンプエース" = "コンプエース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2081; shin/src/app/higurashi/quiz_scene/catalog.rs:2251
+"ゴルフクラブ" = "ゴルフクラブ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:655
+"サイコロの１" = "サイコロの１"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1387
+"サイフ" = "サイフ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1462
+"サイラス" = "サイラス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:718
+"サインペン" = "サインペン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:611
+"サシャ・葛城" = "サシャ・葛城"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2096
+"サッカー" = "サッカー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:361
+"サトさん" = "サトさん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:269
+"サナリィ" = "サナリィ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2046
+"サンドイッチ" = "サンドイッチ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:943
+"シエル・南野" = "シエル・南野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1719
+"シスターマリア" = "シスターマリア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1185
+"シチュー" = "シチュー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1654
+"シット" = "シット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:314
+"シフォン・うさだ" = "シフォン・うさだ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1941
+"シャアアア" = "シャアアア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2207
+"シャーロック前原" = "シャーロック前原"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1532
+"ショック" = "ショック"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1421
+"シルバーパロット" = "シルバーパロット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:995
+"シーツェン" = "シーツェン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1828
+"シーフードカレー" = "シーフードカレー"
+# shin/src/adv/storage_retry_dialog.rs:54
+"シーンを読み込めませんでした。@rゲームデータをご確認ください。" = "シーンを読み込めませんでした。@rゲームデータをご確認ください。"
+# shin/src/adv/backlog_rollback.rs:13; shin/src/adv/higurashi/browser_lifecycle.rs:17
+"シーンジャンプを実行します。@rよろしいですか？" = "シーンジャンプを実行します。@rよろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:995; shin/src/app/higurashi/quiz_scene/catalog.rs:1235
+"ジェダ" = "ジェダ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1834
+"ジャガバター" = "ジャガバター"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1885
+"ジャンクフード" = "ジャンクフード"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1467
+"ジャンヌ" = "ジャンヌ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1357
+"ジャーキー" = "ジャーキー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1041
+"ジュネーブ" = "ジュネーブ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2010
+"ジョリフィーユ" = "ジョリフィーユ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1809
+"スイーツ" = "スイーツ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2104
+"スイーツ食い放題" = "スイーツ食い放題"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2130
+"スイーツ食べ放題" = "スイーツ食べ放題"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2618
+"スクール水着" = "スクール水着"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:361
+"スズさん" = "スズさん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:179; shin/src/app/higurashi/quiz_scene/catalog.rs:1382; shin/src/app/higurashi/quiz_scene/catalog.rs:2543
+"スタンガン" = "スタンガン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1744
+"スニーカー文庫" = "スニーカー文庫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:703
+"スポーツ" = "スポーツ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1976
+"スポーツカー" = "スポーツカー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2009
+"スリール" = "スリール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1886
+"スローフード" = "スローフード"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2086
+"スーパー" = "スーパー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1799
+"セブンスマート" = "セブンスマート"
+# shin/src/adv/higurashi/save_menu/model.rs:45; shin/src/adv/save_menu.rs:38
+"セーブを行います。@r内容は上書きされますが、よろしいですか？" = "セーブを行います。@r内容は上書きされますが、よろしいですか？"
+# shin/src/adv/higurashi/save_menu/model.rs:44; shin/src/adv/save_menu.rs:40
+"セーブを行います。よろしいですか？" = "セーブを行います。よろしいですか？"
+# shin/src/adv/persistence.rs:54; shin/src/app/higurashi/load_game.rs:49
+"セーブデータが壊れているため、ロードできません。@rはじめからゲームを開始します。" = "セーブデータが壊れているため、ロードできません。@rはじめからゲームを開始します。"
+# shin/src/adv/save_game.rs:19
+"セーブデータを保存できませんでした。@r保存先をご確認ください。" = "セーブデータを保存できませんでした。@r保存先をご確認ください。"
+# shin/src/adv/higurashi/save_game/recovery.rs:11; shin/src/adv/storage_retry_dialog.rs:31; shin/src/app/higurashi/shutdown.rs:62
+"セーブデータを保存できませんでした。@r保存先をご確認のうえ、再試行してください。" = "セーブデータを保存できませんでした。@r保存先をご確認のうえ、再試行してください。"
+# shin/src/adv/higurashi/save_game.rs:45; shin/src/adv/save_game.rs:17
+"セーブデータを更新中です。@r電源を切ったり、ソフトを終了したりしないでください。" = "セーブデータを更新中です。@r電源を切ったり、ソフトを終了したりしないでください。"
+# shin/src/adv/storage_retry_dialog.rs:64; shin/src/app/higurashi/load_game.rs:57
+"セーブデータを読み込めませんでした。@r保存先をご確認のうえ、再試行してください。" = "セーブデータを読み込めませんでした。@r保存先をご確認のうえ、再試行してください。"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1888
+"ソウルフード" = "ソウルフード"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:361
+"ソトさん" = "ソトさん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:331
+"ソレント" = "ソレント"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:81
+"ゾウの子ども" = "ゾウの子ども"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:174
+"ゾンビ鬼" = "ゾンビ鬼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:49
+"タイガース" = "タイガース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1005
+"タックル" = "タックル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1437
+"タッチペン" = "タッチペン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2246
+"タッパー" = "タッパー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2378
+"タマゴタケ" = "タマゴタケ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2293
+"タマネギ" = "タマネギ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2378
+"タラの芽" = "タラの芽"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:575
+"ダム計画撤回作戦" = "ダム計画撤回作戦"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1457
+"チャールズ" = "チャールズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2061
+"チースー飯" = "チースー飯"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1467
+"ツェル" = "ツェル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:813
+"ツンデレ" = "ツンデレ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2266
+"ツートン" = "ツートン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2120
+"ツーベースヒット" = "ツーベースヒット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1407
+"ティーダ" = "ティーダ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1392
+"テスト答案" = "テスト答案"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1774
+"テレビゲーム" = "テレビゲーム"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1387
+"テレホンカード" = "テレホンカード"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1932
+"デイキャンプ" = "デイキャンプ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2103
+"デカ盛り食堂" = "デカ盛り食堂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1784
+"デコピン" = "デコピン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:763
+"デザイナー" = "デザイナー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1769
+"デザートフェスタ" = "デザートフェスタ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:635
+"デジャヴ" = "デジャヴ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:723
+"デス" = "デス"
+# shin/src/adv/higurashi/save_menu/view.rs:502; shin/src/adv/save_menu_text.rs:15
+"データがありません" = "データがありません"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:471
+"トさカ" = "トさカ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2066
+"トイレ" = "トイレ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1050
+"トビウオ" = "トビウオ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2538
+"トマト" = "トマト"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1462
+"トミー" = "トミー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:169
+"トランプ" = "トランプ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2378
+"トリュフ" = "トリュフ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1275
+"ドモン・骨川" = "ドモン・骨川"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1477
+"ドラゴン" = "ドラゴン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1105
+"ナイフ" = "ナイフ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:269
+"ナサ" = "ナサ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2632
+"ナポリタン" = "ナポリタン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2552
+"ニパニパワー" = "ニパニパワー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:144
+"ニワトリ" = "ニワトリ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1467
+"ニーナ" = "ニーナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2021
+"ヌギヌギ！" = "ヌギヌギ！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1407
+"ノクティス" = "ノクティス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1372
+"ハッタリ" = "ハッタリ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:673
+"ハバネロ" = "ハバネロ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1419
+"ハンナミラーズ" = "ハンナミラーズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2513
+"ハンバーガー" = "ハンバーガー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1946
+"ハンバーグ" = "ハンバーグ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1976
+"バイク" = "バイク"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1779
+"バケツ" = "バケツ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:768
+"バケモノ" = "バケモノ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2096
+"バスケットボール" = "バスケットボール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2438
+"バスタオル" = "バスタオル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1649; shin/src/app/higurashi/quiz_scene/catalog.rs:2251; shin/src/app/higurashi/quiz_scene/catalog.rs:2543
+"バット" = "バット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:818
+"バッドエンド" = "バッドエンド"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:371
+"バナナ" = "バナナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:59
+"バニラアイス" = "バニラアイス"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:595
+"バラバラ殺人事件" = "バラバラ殺人事件"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2051
+"バランス" = "バランス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2127
+"バーベキュー大会" = "バーベキュー大会"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2438
+"パジャマ" = "パジャマ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:169; shin/src/app/higurashi/quiz_scene/catalog.rs:728
+"パチンコ" = "パチンコ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1706
+"パン屋の小娘" = "パン屋の小娘"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2076
+"パーティー" = "パーティー"
+# shin/src/adv/higurashi/browser_navigation/labels.rs:56
+"ヒロイン選択" = "ヒロイン選択"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1492
+"ビギニング" = "ビギニング"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1610; shin/src/app/higurashi/quiz_scene/catalog.rs:1733
+"ビッグガンガン" = "ビッグガンガン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1825
+"ビーフカレー" = "ビーフカレー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:83
+"ピエロみたいな男" = "ピエロみたいな男"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1050
+"ピラニア" = "ピラニア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2159
+"ピンチヒッター" = "ピンチヒッター"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1477
+"ファイター" = "ファイター"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:49
+"ファイターズ" = "ファイターズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:431
+"ファミレス" = "ファミレス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1887
+"ファーストフード" = "ファーストフード"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2091
+"フォークの神様" = "フォークの神様"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2021
+"フキフキ！" = "フキフキ！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1577
+"フネ" = "フネ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:506
+"フラグ" = "フラグ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:411
+"フラワズ" = "フラワズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1789
+"フリーター" = "フリーター"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1674
+"フレデリカ" = "フレデリカ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:411
+"フワラズ" = "フワラズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2549
+"フワラズの勾玉" = "フワラズの勾玉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:661
+"フーコーの振り子" = "フーコーの振り子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1043
+"ブエノスアイレス" = "ブエノスアイレス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2021
+"ブギウギ！" = "ブギウギ！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1477
+"ブラザー" = "ブラザー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1044
+"ブラジリア" = "ブラジリア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2021
+"ブリキー！" = "ブリキー！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:723
+"ブルー" = "ブルー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1333
+"ブレイクアウト！" = "ブレイクアウト！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1335
+"ブレイクスルー！" = "ブレイクスルー！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:64; shin/src/app/higurashi/quiz_scene/catalog.rs:2538
+"ブロッコリー" = "ブロッコリー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1933
+"ブートキャンプ" = "ブートキャンプ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1260
+"プリニー・稲穂" = "プリニー・稲穂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:411
+"プリホル" = "プリホル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1015
+"プロファイル" = "プロファイル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2608
+"プロポーズ" = "プロポーズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:174
+"ベーゴマ" = "ベーゴマ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2372
+"ペットボトル" = "ペットボトル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1050; shin/src/app/higurashi/quiz_scene/catalog.rs:1849
+"ペンギン" = "ペンギン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2573
+"ペンデュラム" = "ペンデュラム"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1654
+"ホット" = "ホット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2117
+"ホームラン" = "ホームラン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1956
+"ホールケーキ" = "ホールケーキ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1774
+"ボードゲーム" = "ボードゲーム"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1437
+"ボールペン" = "ボールペン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2096
+"ポケバイレース" = "ポケバイレース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2588
+"ポニーテール" = "ポニーテール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1826
+"ポークカレー" = "ポークカレー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2146
+"マスコット" = "マスコット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2171
+"マネージャー" = "マネージャー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:259
+"マミ" = "マミ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:648
+"マラソン" = "マラソン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:34
+"ミタ" = "ミタ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:361
+"ミチさん" = "ミチさん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:918
+"ミルフィ・桜木" = "ミルフィ・桜木"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1105
+"ミント" = "ミント"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1482
+"ミートソース" = "ミートソース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1819
+"メイシェ" = "メイシェ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2581
+"メイドマガジン" = "メイドマガジン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1739; shin/src/app/higurashi/quiz_scene/catalog.rs:2618
+"メイド服" = "メイド服"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1994
+"メイド服の重要性" = "メイド服の重要性"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2582
+"メイド＆タイツ" = "メイド＆タイツ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1649
+"メガホン" = "メガホン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1265
+"メリル・田無" = "メリル・田無"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:763
+"モデル" = "モデル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:169
+"モデルガン" = "モデルガン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2298
+"モーリタニア" = "モーリタニア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1604
+"ヤングエース" = "ヤングエース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1604; shin/src/app/higurashi/quiz_scene/catalog.rs:1611; shin/src/app/higurashi/quiz_scene/catalog.rs:1731
+"ヤングガンガン" = "ヤングガンガン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:813
+"ヤンデレ" = "ヤンデレ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1849
+"ライオン" = "ライオン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:49
+"ライオンズ" = "ライオンズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1497
+"ラストシーズン" = "ラストシーズン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2246
+"ラップ" = "ラップ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1230
+"ラムダデルタ" = "ラムダデルタ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:309
+"ラル・ジャクソン" = "ラル・ジャクソン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1809
+"ランチ" = "ランチ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2328
+"ランディ君人形" = "ランディ君人形"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1699
+"ランドセル" = "ランドセル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1042
+"リオデジャネイロ" = "リオデジャネイロ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:928
+"リカルド・早乙女" = "リカルド・早乙女"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:269; shin/src/app/higurashi/quiz_scene/catalog.rs:1819
+"リサ" = "リサ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1819
+"リタ" = "リタ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1462
+"リチャード" = "リチャード"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:723
+"リトル" = "リトル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:269; shin/src/app/higurashi/quiz_scene/catalog.rs:1819
+"リナ" = "リナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2608
+"リベンジ宣言" = "リベンジ宣言"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:718
+"リモコン" = "リモコン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:995
+"リューン" = "リューン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:923
+"リリカ・高槻" = "リリカ・高槻"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:371
+"リンゴ" = "リンゴ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:784
+"ルナティック" = "ルナティック"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2438
+"レインコート" = "レインコート"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:154; shin/src/app/higurashi/quiz_scene/catalog.rs:960
+"レストラン" = "レストラン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2008
+"レッセフェール" = "レッセフェール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:723
+"レッド" = "レッド"
+# shin/src/adv/higurashi/browser_history.rs:50; shin/src/app/higurashi/quiz_scene/catalog.rs:94; shin/src/app/higurashi/quiz_scene/catalog.rs:99; +22 more
+"レナ" = "レナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2031
+"レナと魅音" = "レナと魅音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2603
+"レナの勝利" = "レナの勝利"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:346
+"レモン" = "レモン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2538
+"レンコン" = "レンコン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1255
+"レールガン・御坂" = "レールガン・御坂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:64
+"ロマネスコ" = "ロマネスコ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2111
+"ロース" = "ロース"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1946
+"ロースカツ" = "ロースカツ"
+# shin/src/adv/higurashi/save_menu/model.rs:46; shin/src/adv/save_menu.rs:41
+"ロードします。よろしいですか？" = "ロードします。よろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1971
+"ローラースケート" = "ローラースケート"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:673
+"ワサビ" = "ワサビ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:411
+"ワラフズ" = "ワラフズ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2338
+"ワンワン" = "ワンワン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1407
+"ヴァン" = "ヴァン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2071
+"一ヶ月" = "一ヶ月"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1100
+"一二三" = "一二三"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:640
+"一二三四" = "一二三四"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1100
+"一八" = "一八"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1844
+"一日市民" = "一日市民"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1599
+"一時停止" = "一時停止"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:326; shin/src/app/higurashi/quiz_scene/catalog.rs:576
+"一美" = "一美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:351
+"一般採用" = "一般採用"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:883
+"一重" = "一重"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:426
+"一馬" = "一馬"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2071
+"七日" = "七日"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1412
+"三佐" = "三佐"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2298
+"三原" = "三原"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:565
+"三番目の「検体」" = "三番目の「検体」"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2076
+"三者面談" = "三者面談"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:713
+"三船" = "三船"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:39; shin/src/app/higurashi/quiz_scene/catalog.rs:44; shin/src/app/higurashi/quiz_scene/catalog.rs:643; +1 more
+"三郎" = "三郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1000
+"三鷹" = "三鷹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1492
+"上巻" = "上巻"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1619
+"上間江望" = "上間江望"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1497
+"下巻" = "下巻"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:933
+"下田麻実" = "下田麻実"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:933
+"下田麻美" = "下田麻美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:913
+"不二咲照文" = "不二咲照文"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:960
+"不動産屋" = "不動産屋"
+# shin/src/app/higurashi/load_game.rs:54
+"不明なエラーです。" = "不明なエラーです。"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2403
+"両親" = "両親"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:279
+"中原真衣" = "中原真衣"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:279; shin/src/app/higurashi/quiz_scene/catalog.rs:843
+"中原麻衣" = "中原麻衣"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:928
+"中村悠一" = "中村悠一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:823; shin/src/app/higurashi/quiz_scene/catalog.rs:1195
+"中村慎介" = "中村慎介"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:928
+"中村裕一" = "中村裕一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:336
+"中毒死" = "中毒死"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1000
+"中野" = "中野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:823; shin/src/app/higurashi/quiz_scene/catalog.rs:1195
+"中野麻衣" = "中野麻衣"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:326
+"丸美" = "丸美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1327
+"乃木坂46" = "乃木坂46"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:878
+"乙吉" = "乙吉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:733; shin/src/app/higurashi/quiz_scene/catalog.rs:878
+"乙部" = "乙部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:566; shin/src/app/higurashi/quiz_scene/catalog.rs:1297
+"亀田" = "亀田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2141
+"事故死" = "事故死"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1100
+"二三也" = "二三也"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:923
+"二五真耶子" = "二五真耶子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1412
+"二尉" = "二尉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2071
+"二晩" = "二晩"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:560
+"二番目の「検体」" = "二番目の「検体」"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:883
+"二重" = "二重"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2383
+"五百円" = "五百円"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2061
+"五目うま煮ご飯" = "五目うま煮ご飯"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:616
+"井ノ上奈々" = "井ノ上奈々"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:616
+"井上七" = "井上七"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:184; shin/src/app/higurashi/quiz_scene/catalog.rs:441; shin/src/app/higurashi/quiz_scene/catalog.rs:1150; +1 more
+"井上麻里奈" = "井上麻里奈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:933
+"亜美真美" = "亜美真美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2433
+"交通事故" = "交通事故"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:144
+"人" = "人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:923
+"人御摩耶子" = "人御摩耶子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2478
+"人食い鬼" = "人食い鬼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:918
+"仁井谷良子" = "仁井谷良子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:923
+"仁後真耶子" = "仁後真耶子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:616
+"仙堂奈々" = "仙堂奈々"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:279
+"仲原舞" = "仲原舞"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:928
+"仲村悠一" = "仲村悠一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:159
+"伊織" = "伊織"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:244
+"伊豆湖" = "伊豆湖"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:685
+"休部届け" = "休部届け"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1859
+"住職" = "住職"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1255
+"佐藤利奈" = "佐藤利奈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1255
+"佐藤縁寿" = "佐藤縁寿"
+# shin/src/app/higurashi/load_game.rs:55
+"体験版のセーブデータが見つかりました。@r引き継ぎますか？" = "体験版のセーブデータが見つかりました。@r引き継ぎますか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:159
+"佳織" = "佳織"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2186
+"使い" = "使い"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:556
+"保坂" = "保坂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:274; shin/src/app/higurashi/quiz_scene/catalog.rs:843
+"保志総一朗" = "保志総一朗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:274
+"保志総次郎" = "保志総次郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2171
+"保護者" = "保護者"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1015
+"保険証" = "保険証"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1547
+"信念を貫くこと" = "信念を貫くこと"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2261
+"俺じゃない…" = "俺じゃない…"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2166
+"側溝の奥" = "側溝の奥"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:124
+"傷害" = "傷害"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2275
+"僕はきっと知ってる" = "僕はきっと知ってる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2274
+"僕らの雛見沢" = "僕らの雛見沢"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2272
+"僕達はもう知ってる" = "僕達はもう知ってる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:29
+"優子" = "優子"
+# shin/src/adv/storage_retry_dialog.rs:100
+"元のセーブデータを保護できませんでした。@r保存先をご確認のうえ、再試行してください。" = "元のセーブデータを保護できませんでした。@r保存先をご確認のうえ、再試行してください。"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2403; shin/src/app/higurashi/quiz_scene/catalog.rs:2408
+"兄" = "兄"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:670
+"兄の苦悩" = "兄の苦悩"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:406
+"充" = "充"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1437
+"充電器" = "充電器"
+# shin/src/adv/backlog_jump.rs:22; shin/src/adv/higurashi/browser_navigation/labels.rs:41
+"先頭" = "先頭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2281
+"光へ" = "光へ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:878
+"光希" = "光希"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1302
+"光線銃" = "光線銃"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:965
+"児島" = "児島"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2136
+"入山" = "入山"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2136
+"入岡" = "入岡"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2136
+"入川" = "入川"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:69; shin/src/app/higurashi/quiz_scene/catalog.rs:903; shin/src/app/higurashi/quiz_scene/catalog.rs:1624; +2 more
+"入江" = "入江"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:615
+"入江の生い立ち" = "入江の生い立ち"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:620; shin/src/app/higurashi/quiz_scene/catalog.rs:1160
+"入江京介" = "入江京介"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1594
+"入江診療所" = "入江診療所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2136
+"入谷" = "入谷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2141
+"入院" = "入院"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2493
+"八丁堀" = "八丁堀"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:883
+"八重" = "八重"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1125
+"公安課長" = "公安課長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1282
+"公由アキ" = "公由アキ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1282
+"公由冬司" = "公由冬司"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1874
+"公由家" = "公由家"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1282
+"公由春子" = "公由春子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1282
+"公由真由美" = "公由真由美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1427
+"兵吾" = "兵吾"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1030
+"内科" = "内科"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1297
+"内藤" = "内藤"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:326
+"円美" = "円美"
+# shin/src/adv/higurashi/save_game/recovery.rs:32; shin/src/adv/higurashi/save_game/recovery.rs:34; shin/src/adv/storage_retry_dialog.rs:32; +4 more
+"再試行" = "再試行"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1984
+"凄い漢だ" = "凄い漢だ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:351
+"出向" = "出向"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:668
+"出木杉" = "出木杉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1492
+"出題編" = "出題編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2241
+"分校の先生" = "分校の先生"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2500
+"分校の資材置き場" = "分校の資材置き場"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:695
+"分譲地下見" = "分譲地下見"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1095
+"切手" = "切手"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1125
+"刑事課長" = "刑事課長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1919
+"利香" = "利香"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1809
+"制服" = "制服"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:401
+"刺青" = "刺青"
+# shin/src/adv/chapter_navigation.rs:19; shin/src/adv/higurashi/navigation.rs:16
+"前のチャプターに戻ります。@rよろしいですか？" = "前のチャプターに戻ります。@rよろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1587
+"前原" = "前原"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2209
+"前原コゴロウ" = "前原コゴロウ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2176
+"前原ホテル" = "前原ホテル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1659
+"前原佳一" = "前原佳一"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:710; shin/src/app/higurashi/quiz_scene/catalog.rs:1659
+"前原圭一" = "前原圭一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2176
+"前原屋敷" = "前原屋敷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2176
+"前原庭園" = "前原庭園"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2176
+"前原豪邸" = "前原豪邸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1659
+"前原Ｋ" = "前原Ｋ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:743
+"前田" = "前田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:184; shin/src/app/higurashi/quiz_scene/catalog.rs:441; shin/src/app/higurashi/quiz_scene/catalog.rs:1150; +1 more
+"前田愛" = "前田愛"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1492
+"前編" = "前編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1080
+"前野" = "前野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:54
+"剛" = "剛"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1542
+"副作用" = "副作用"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:713
+"加山" = "加山"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:938
+"加賀桃太郎" = "加賀桃太郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:406
+"勝也" = "勝也"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2608
+"勝利宣言" = "勝利宣言"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2543
+"包丁" = "包丁"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2246
+"包装紙" = "包装紙"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1669
+"北城沙都子" = "北城沙都子"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:675
+"北条兄妹" = "北条兄妹"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:610
+"北条叔母撲殺事件" = "北条叔母撲殺事件"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:476; shin/src/app/higurashi/quiz_scene/catalog.rs:481; shin/src/app/higurashi/quiz_scene/catalog.rs:486; +1 more
+"北条夫妻" = "北条夫妻"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:680; shin/src/app/higurashi/quiz_scene/catalog.rs:1659
+"北条悟史" = "北条悟史"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:725; shin/src/app/higurashi/quiz_scene/catalog.rs:1669
+"北条沙都子" = "北条沙都子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:476; shin/src/app/higurashi/quiz_scene/catalog.rs:481; shin/src/app/higurashi/quiz_scene/catalog.rs:486; +1 more
+"北条玉枝" = "北条玉枝"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1669
+"北条聡子" = "北条聡子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1669
+"北條紗都子" = "北條紗都子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:698
+"匠" = "匠"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:773; shin/src/app/higurashi/quiz_scene/catalog.rs:1025
+"医師" = "医師"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1100
+"十三" = "十三"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:446
+"十和田八重" = "十和田八重"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:668
+"千年杉" = "千年杉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:733
+"千秋" = "千秋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2071
+"半日" = "半日"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:698
+"卓" = "卓"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:446
+"南井まどか" = "南井まどか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1522
+"厄醒し編" = "厄醒し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2066
+"厠" = "厠"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:341
+"又一郎" = "又一郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1951
+"及第点" = "及第点"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1080; shin/src/app/higurashi/quiz_scene/catalog.rs:1724
+"反町" = "反町"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1165
+"反町美雪" = "反町美雪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2403
+"叔母" = "叔母"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2403; shin/src/app/higurashi/quiz_scene/catalog.rs:2408
+"叔父" = "叔父"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1372
+"口先" = "口先"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1674
+"古出梨花" = "古出梨花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1679
+"古出羽生" = "古出羽生"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1679
+"古手ハイリューン" = "古手ハイリューン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1674
+"古手利花" = "古手利花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:476; shin/src/app/higurashi/quiz_scene/catalog.rs:481; shin/src/app/higurashi/quiz_scene/catalog.rs:486; +1 more
+"古手夫妻" = "古手夫妻"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:605
+"古手夫妻怪死事件" = "古手夫妻怪死事件"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:730; shin/src/app/higurashi/quiz_scene/catalog.rs:1674
+"古手梨花" = "古手梨花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1594; shin/src/app/higurashi/quiz_scene/catalog.rs:1799; shin/src/app/higurashi/quiz_scene/catalog.rs:1874
+"古手神社" = "古手神社"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1679
+"古手羽入" = "古手羽入"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1679
+"古手羽生" = "古手羽生"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1452
+"叫" = "叫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2151
+"可憐なメイド" = "可憐なメイド"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:149
+"台所" = "台所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1587
+"右代宮" = "右代宮"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:591
+"右代宮大輔" = "右代宮大輔"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:19
+"右腕" = "右腕"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2413
+"各務" = "各務"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:134
+"合唱" = "合唱"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:134
+"合従" = "合従"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:134
+"合掌" = "合掌"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1924
+"吉岡" = "吉岡"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1924
+"吉村" = "吉村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1317
+"吉沢亮" = "吉沢亮"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1000
+"吉祥寺" = "吉祥寺"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2423
+"吊り橋" = "吊り橋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1532
+"吊り橋効果" = "吊り橋効果"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:89
+"同人作家" = "同人作家"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1844
+"名誉市民" = "名誉市民"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2273
+"君は何も知らない" = "君は何も知らない"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1512
+"君恋し編" = "君恋し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:833
+"吸血欲求" = "吸血欲求"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:738
+"吹奏楽部" = "吹奏楽部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:391
+"和歌山" = "和歌山"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1487
+"和遥キナ" = "和遥キナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1719
+"咲" = "咲"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1427
+"啓一" = "啓一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:39; shin/src/app/higurashi/quiz_scene/catalog.rs:44; shin/src/app/higurashi/quiz_scene/catalog.rs:643; +1 more
+"善郎" = "善郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2261
+"喉が痒い…" = "喉が痒い…"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:833
+"喉が痒くなる" = "喉が痒くなる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:341
+"喜一郎" = "喜一郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:341
+"喜八" = "喜八"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:754
+"喫茶店で立ち聞き" = "喫茶店で立ち聞き"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2499
+"営林署の器材小屋" = "営林署の器材小屋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:561; shin/src/app/higurashi/quiz_scene/catalog.rs:571
+"嘉音" = "嘉音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1292
+"嘘だぁ！！！" = "嘘だぁ！！！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1292
+"嘘だっちゃ！" = "嘘だっちゃ！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1292
+"嘘だッ！" = "嘘だッ！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2261
+"嘘だ！" = "嘘だ！"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:690
+"四年目の足音" = "四年目の足音"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:570
+"四番目の「検体」" = "四番目の「検体」"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:431
+"図書館" = "図書館"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:144
+"国旗" = "国旗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1644
+"園崎お魎" = "園崎お魎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1799; shin/src/app/higurashi/quiz_scene/catalog.rs:1874
+"園崎家" = "園崎家"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2502
+"園崎家の地下" = "園崎家の地下"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1594
+"園崎組事務所" = "園崎組事務所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1644
+"園崎茜" = "園崎茜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1644
+"園崎詩音" = "園崎詩音"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:720; shin/src/app/higurashi/quiz_scene/catalog.rs:1165; shin/src/app/higurashi/quiz_scene/catalog.rs:1644
+"園崎魅音" = "園崎魅音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:738
+"園芸部" = "園芸部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1025
+"土建職人" = "土建職人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:633
+"土浦大" = "土浦大"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:69; shin/src/app/higurashi/quiz_scene/catalog.rs:234; shin/src/app/higurashi/quiz_scene/catalog.rs:436; +6 more
+"圭一" = "圭一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2603
+"圭一の勝利" = "圭一の勝利"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:418
+"圭一の固有結界" = "圭一の固有結界"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1804
+"圭一の父" = "圭一の父"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:660
+"地元説明会" = "地元説明会"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1764
+"垣内" = "垣内"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1307
+"埼玉県" = "埼玉県"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:893
+"塚田" = "塚田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:14
+"塩味" = "塩味"
+# shin/src/adv/higurashi/browser_history.rs:50; shin/src/app/higurashi/quiz_scene/catalog.rs:69; shin/src/app/higurashi/quiz_scene/catalog.rs:254; +6 more
+"夏美" = "夏美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2522
+"外来の自己負担額" = "外来の自己負担額"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2433
+"多臓器不全" = "多臓器不全"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1522
+"夜更し編" = "夜更し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2333
+"夢の国" = "夢の国"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:189; shin/src/app/higurashi/quiz_scene/catalog.rs:1517
+"夢交し編" = "夢交し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2473
+"大中小" = "大中小"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2328
+"大人向けの雑誌" = "大人向けの雑誌"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:683
+"大公爵" = "大公爵"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:174
+"大富豪" = "大富豪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:668
+"大杉" = "大杉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:321
+"大江戸捜査網" = "大江戸捜査網"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1265
+"大浦冬華" = "大浦冬華"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:581; shin/src/app/higurashi/quiz_scene/catalog.rs:708; shin/src/app/higurashi/quiz_scene/catalog.rs:903; +4 more
+"大石" = "大石"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2623
+"大石と富竹" = "大石と富竹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2313
+"大石と熊谷" = "大石と熊谷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1160
+"大石蔵人" = "大石蔵人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:743
+"大谷" = "大谷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:793
+"大阪府警" = "大阪府警"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1312
+"大高" = "大高"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1629
+"天弄御魂" = "天弄御魂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:653
+"天竺" = "天竺"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1250
+"天草十二" = "天草十二"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1865
+"太めの注射針" = "太めの注射針"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:630
+"失意" = "失意"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2488
+"失神" = "失神"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1442
+"奈落の花" = "奈落の花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:309
+"奉亀克寿" = "奉亀克寿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1502
+"奏" = "奏"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:585
+"女王の母の不信" = "女王の母の不信"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:590
+"女王への協力依頼" = "女王への協力依頼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1814
+"女王様" = "女王様"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2151
+"女神" = "女神"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1372; shin/src/app/higurashi/quiz_scene/catalog.rs:1542
+"妄想" = "妄想"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1292
+"嫌だッ！" = "嫌だッ！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:768; shin/src/app/higurashi/quiz_scene/catalog.rs:2388
+"宇宙人" = "宇宙人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1392
+"宇宙船" = "宇宙船"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2483
+"安いホテル" = "安いホテル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:164
+"安藤" = "安藤"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:586
+"完売なのは" = "完売なのは"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:728
+"宗教" = "宗教"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:625
+"定期監査" = "定期監査"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:309
+"宝亀克久" = "宝亀克久"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:309
+"宝亀克寿" = "宝亀克寿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:154
+"宝石店" = "宝石店"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2304
+"実に美味しそう！" = "実に美味しそう！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2588
+"実は男の娘" = "実は男の娘"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1170
+"実は裸" = "実は裸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:823; shin/src/app/higurashi/quiz_scene/catalog.rs:1195
+"宮城季詩子" = "宮城季詩子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:913
+"宮田光貴" = "宮田光貴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:913
+"宮田幸季" = "宮田幸季"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:756
+"家具が増えた" = "家具が増えた"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1347
+"富山" = "富山"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2623
+"富田と岡村" = "富田と岡村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:436; shin/src/app/higurashi/quiz_scene/catalog.rs:708; shin/src/app/higurashi/quiz_scene/catalog.rs:1804; +3 more
+"富竹" = "富竹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2031; shin/src/app/higurashi/quiz_scene/catalog.rs:2313
+"富竹と鷹野" = "富竹と鷹野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1377
+"富竹の背中" = "富竹の背中"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:645; shin/src/app/higurashi/quiz_scene/catalog.rs:1160
+"富竹ジロウ" = "富竹ジロウ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1527
+"対戦アクション" = "対戦アクション"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1634
+"対象a" = "対象a"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1634
+"対象r" = "対象r"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:955; shin/src/app/higurashi/quiz_scene/catalog.rs:1005; shin/src/app/higurashi/quiz_scene/catalog.rs:1085
+"射撃" = "射撃"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1030
+"小児科" = "小児科"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1859
+"小料理屋" = "小料理屋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1587
+"小日向" = "小日向"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:990
+"小早川" = "小早川"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:566
+"小林" = "小林"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:611
+"小林ゆう" = "小林ゆう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:611
+"小林ゆゆ" = "小林ゆゆ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1487
+"小池ノクト" = "小池ノクト"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1971
+"小走り" = "小走り"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:591
+"小野かおる" = "小野かおる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:591
+"小野大輔" = "小野大輔"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:591
+"小野清舟" = "小野清舟"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1689
+"少女漫画" = "少女漫画"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1235
+"尾八白様" = "尾八白様"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:149
+"居間" = "居間"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2423
+"屋上" = "屋上"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:965
+"山下" = "山下"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:391; shin/src/app/higurashi/quiz_scene/catalog.rs:970
+"山口" = "山口"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:990
+"山本" = "山本"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1080
+"山沖" = "山沖"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:893
+"山田" = "山田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1839
+"山羊" = "山羊"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1347
+"岐阜" = "岐阜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1307
+"岐阜県" = "岐阜県"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:793
+"岐阜県警" = "岐阜県警"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1537
+"島みやえい子" = "島みやえい子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2423
+"崖" = "崖"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:164
+"嶋" = "嶋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:990
+"川上" = "川上"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:616
+"川淵奈々" = "川淵奈々"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:698
+"工" = "工"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1976
+"工事の看板" = "工事の看板"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:19
+"左腕" = "左腕"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1255
+"左藤利奈" = "左藤利奈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:698
+"巧" = "巧"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1739
+"巫女" = "巫女"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2618
+"巫女服" = "巫女服"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:576; shin/src/app/higurashi/quiz_scene/catalog.rs:908; shin/src/app/higurashi/quiz_scene/catalog.rs:1080; +1 more
+"巴" = "巴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:304
+"巴かすみ" = "巴かすみ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2086
+"市民プール" = "市民プール"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:144
+"布団" = "布団"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:129; shin/src/app/higurashi/quiz_scene/catalog.rs:683
+"帝王" = "帝王"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2448
+"平成元年" = "平成元年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1547
+"平行世界" = "平行世界"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:818
+"年号が違う" = "年号が違う"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:54
+"幸一" = "幸一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:234
+"幸助" = "幸助"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:34
+"幸子" = "幸子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1517
+"幸探し編" = "幸探し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:189
+"幸遠し編" = "幸遠し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2158
+"幻の控え投手" = "幻の控え投手"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:833
+"幻覚が見える" = "幻覚が見える"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2231
+"幽体離脱" = "幽体離脱"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2157
+"幽霊マネージャー" = "幽霊マネージャー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1125
+"広報室長" = "広報室長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1120
+"座敷わらし" = "座敷わらし"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:149
+"庭" = "庭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1377
+"廃車" = "廃車"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1789
+"建設省職員" = "建設省職員"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2603
+"引き分け" = "引き分け"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:39; shin/src/app/higurashi/quiz_scene/catalog.rs:44; shin/src/app/higurashi/quiz_scene/catalog.rs:643; +1 more
+"弘" = "弘"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2408
+"弟" = "弟"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1502
+"弦" = "弦"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2091
+"弾丸直球" = "弾丸直球"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:662
+"形状記憶合金" = "形状記憶合金"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1572
+"彩" = "彩"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2051
+"彩り" = "彩り"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1245
+"彩花" = "彩花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:199; shin/src/app/higurashi/quiz_scene/catalog.rs:209; shin/src/app/higurashi/quiz_scene/catalog.rs:451; +4 more
+"彩音" = "彩音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:89
+"彫刻家" = "彫刻家"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2186
+"影" = "影"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:728
+"彼女" = "彼女"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2171
+"彼氏" = "彼氏"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1111
+"後ろに下がる" = "後ろに下がる"
+# shin/src/adv/backlog_jump.rs:27; shin/src/adv/higurashi/browser_navigation/labels.rs:45
+"後尾" = "後尾"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1497
+"後編" = "後編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1971
+"徒歩" = "徒歩"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2408
+"従兄弟" = "従兄弟"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2328
+"御神輿" = "御神輿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1190
+"徹甲弾" = "徹甲弾"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:466; shin/src/app/higurashi/quiz_scene/catalog.rs:1507
+"心癒し編" = "心癒し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:688
+"心霊" = "心霊"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:933
+"志茂田麻美" = "志茂田麻美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2488
+"急用で帰った" = "急用で帰った"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1452
+"怪" = "怪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1814
+"息子" = "息子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:234; shin/src/app/higurashi/quiz_scene/catalog.rs:571; shin/src/app/higurashi/quiz_scene/catalog.rs:2216; +5 more
+"悟史" = "悟史"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2478
+"悪戯狸" = "悪戯狸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:768
+"悪魔" = "悪魔"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:204; shin/src/app/higurashi/quiz_scene/catalog.rs:516; shin/src/app/higurashi/quiz_scene/catalog.rs:838; +1 more
+"想" = "想"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2588
+"意外に家庭的" = "意外に家庭的"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:748
+"愛" = "愛"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:391
+"愛媛" = "愛媛"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:793; shin/src/app/higurashi/quiz_scene/catalog.rs:1020
+"愛知県警" = "愛知県警"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2465
+"感覚を研ぎ澄ませ" = "感覚を研ぎ澄ませ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:888
+"慎" = "慎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:556
+"戦人" = "戦人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1684
+"戦略" = "戦略"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1684
+"戦術" = "戦術"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1684
+"戦闘" = "戦闘"
+# shin/src/adv/higurashi/save_game/recovery.rs:32; shin/src/app/higurashi/shutdown.rs:63
+"戻る" = "戻る"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1956
+"手作り弁当" = "手作り弁当"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1689
+"手料理" = "手料理"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:943
+"折笠富子" = "折笠富子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:943
+"折笠富美子" = "折笠富美子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1392
+"抜け穴" = "抜け穴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:406
+"拓央" = "拓央"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1694
+"拡" = "拡"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2328
+"拷問器具" = "拷問器具"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:688
+"振鈴" = "振鈴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2224
+"捜査一課の目暮" = "捜査一課の目暮"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:351
+"推薦組" = "推薦組"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:124
+"放火" = "放火"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:773
+"政治家" = "政治家"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2608
+"敗北宣言" = "敗北宣言"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:763; shin/src/app/higurashi/quiz_scene/catalog.rs:1025
+"教師" = "教師"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1342
+"散" = "散"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1302
+"散弾銃" = "散弾銃"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:239
+"文乃" = "文乃"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:738
+"文芸部" = "文芸部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:960
+"料亭" = "料亭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:179
+"斧" = "斧"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2363
+"断った" = "断った"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:700
+"新しい風" = "新しい風"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2199
+"新刊が落ちた" = "新刊が落ちた"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2246
+"新聞紙" = "新聞紙"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:918
+"新谷涼子" = "新谷涼子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:918
+"新谷良子" = "新谷良子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2573
+"方位磁石" = "方位磁石"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1095
+"旗" = "旗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2629
+"日替わりデザート" = "日替わりデザート"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2630
+"日替わりランチ" = "日替わりランチ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1382
+"日本刀" = "日本刀"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1961
+"日直" = "日直"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:633
+"日立大" = "日立大"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2298
+"日間賀島" = "日間賀島"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:748
+"明" = "明"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:19
+"明日" = "明日"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:561
+"明日音" = "明日音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:129
+"明王" = "明王"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2298
+"明石" = "明石"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1744
+"星海社文庫" = "星海社文庫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:274
+"星総一郎" = "星総一郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2448
+"昭和47年" = "昭和47年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2448
+"昭和53年" = "昭和53年"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2448
+"昭和60年" = "昭和60年"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:735
+"昭和５８年６月" = "昭和５８年６月"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:506
+"時報" = "時報"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1789
+"時報役" = "時報役"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2438
+"普段着" = "普段着"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:745
+"暇潰し編のカケラ" = "暇潰し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2026
+"暗黒四天王" = "暗黒四天王"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1412
+"曹長" = "曹長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:417
+"最初に惚れる相手" = "最初に惚れる相手"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:555
+"最初の「検体」" = "最初の「検体」"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:419
+"最後の対決方法" = "最後の対決方法"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1924
+"有村" = "有村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:893
+"有田" = "有田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:611
+"木林ゆう" = "木林ゆう"
+# shin/src/app/higurashi/load_game.rs:60
+"本体の設定で自動スリープを有効にしている場合、オートモード進行中は一時的に自動スリープが抑制されます。" = "本体の設定で自動スリープを有効にしている場合、オートモード進行中は一時的に自動スリープが抑制されます。"
+# shin/src/adv/higurashi/temporary_wrapper.rs:23; shin/src/layer/user/higurashi/temporary.rs:696
+"本編を続ける" = "本編を続ける"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:748
+"朱" = "朱"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2151
+"村のアイドル" = "村のアイドル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:189; shin/src/app/higurashi/quiz_scene/catalog.rs:1512
+"村崩し編" = "村崩し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:586
+"村田ゆかり" = "村田ゆかり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:299
+"村田ゆりか" = "村田ゆりか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1582
+"村田姫" = "村田姫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2343; shin/src/app/higurashi/quiz_scene/catalog.rs:2418
+"村長" = "村長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:985
+"来花" = "来花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:331
+"東京" = "東京"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1134; shin/src/app/higurashi/quiz_scene/catalog.rs:1141
+"東京地方検察庁" = "東京地方検察庁"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:321
+"東京都庁" = "東京都庁"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:184; shin/src/app/higurashi/quiz_scene/catalog.rs:441; shin/src/app/higurashi/quiz_scene/catalog.rs:1150; +1 more
+"松井菜桜子" = "松井菜桜子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:164
+"松岡" = "松岡"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1537
+"松澤由美" = "松澤由美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2473
+"松竹梅" = "松竹梅"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2378
+"松茸" = "松茸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1287
+"染シミ子" = "染シミ子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:980
+"柳桜" = "柳桜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1961
+"校医" = "校医"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1961; shin/src/app/higurashi/quiz_scene/catalog.rs:2026
+"校長" = "校長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1190
+"核弾頭" = "核弾頭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1085
+"格闘技" = "格闘技"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1245
+"桃花" = "桃花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1619
+"桐原歩鳥" = "桐原歩鳥"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:980
+"桜桃" = "桜桃"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:985; shin/src/app/higurashi/quiz_scene/catalog.rs:1245
+"桜花" = "桜花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:678
+"梅酒" = "梅酒"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:888
+"梢" = "梢"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:94; shin/src/app/higurashi/quiz_scene/catalog.rs:99; shin/src/app/higurashi/quiz_scene/catalog.rs:104; +23 more
+"梨花" = "梨花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2236
+"梨花の両親" = "梨花の両親"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2603
+"梨花の勝利" = "梨花の勝利"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2241
+"梨花の母親" = "梨花の母親"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2241
+"梨花の父親" = "梨花の父親"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1075
+"森" = "森"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1382
+"椅子" = "椅子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1634
+"検体s" = "検体s"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2413
+"椿" = "椿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:279
+"楯山麻衣" = "楯山麻衣"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:813
+"極デレ" = "極デレ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1502
+"楽" = "楽"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:134
+"楽笑" = "楽笑"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1302
+"機関銃" = "機関銃"
+# shin/src/adv/chapter_navigation.rs:16
+"次のチャプター、未読メッセージ、選択肢まで@rスキップします。よろしいですか？" = "次のチャプター、未読メッセージ、選択肢まで@rスキップします。よろしいですか？"
+# shin/src/adv/chapter_navigation.rs:18; shin/src/adv/higurashi/navigation.rs:17
+"次のチャプターか選択肢までスキップします。@rよろしいですか？" = "次のチャプターか選択肢までスキップします。@rよろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1035
+"歌姫" = "歌姫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:673
+"正解はない" = "正解はない"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:426
+"正雄" = "正雄"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2423
+"歩道" = "歩道"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1357
+"歯ブラシ" = "歯ブラシ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:818
+"死人が多い" = "死人が多い"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:124
+"殺人" = "殺人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2198
+"母が熱を出した" = "母が熱を出した"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1814
+"母さん" = "母さん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2483
+"民宿" = "民宿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2036
+"気の済むまで" = "気の済むまで"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:633
+"水戸大" = "水戸大"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:304
+"水橋かおり" = "水橋かおり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1993
+"水着の重要性" = "水着の重要性"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:184; shin/src/app/higurashi/quiz_scene/catalog.rs:441; shin/src/app/higurashi/quiz_scene/catalog.rs:1150; +1 more
+"水野理紗" = "水野理紗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1302; shin/src/app/higurashi/quiz_scene/catalog.rs:2081
+"水鉄砲" = "水鉄砲"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2598
+"水鉄砲対決" = "水鉄砲対決"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1854
+"水飴" = "水飴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:314
+"氷上共子" = "氷上共子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:314
+"氷上恭子" = "氷上恭子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:314
+"氷上響子" = "氷上響子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:621
+"永沢秀治" = "永沢秀治"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:24
+"永遠の17歳" = "永遠の17歳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2281
+"汝、奉り給え" = "汝、奉り給え"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2210
+"江戸川ケーイチ" = "江戸川ケーイチ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:34; shin/src/app/higurashi/quiz_scene/catalog.rs:2528
+"沁子" = "沁子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:990
+"沖田" = "沖田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1307
+"沖縄県" = "沖縄県"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:159
+"沙織" = "沙織"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:883
+"沙英" = "沙英"
+# shin/src/adv/higurashi/browser_history.rs:50; shin/src/app/higurashi/quiz_scene/catalog.rs:94; shin/src/app/higurashi/quiz_scene/catalog.rs:99; +21 more
+"沙都子" = "沙都子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2313
+"沙都子と悟史" = "沙都子と悟史"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2031
+"沙都子と梨花" = "沙都子と梨花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2370
+"沙都子のトラップ" = "沙都子のトラップ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2236
+"沙都子の叔母" = "沙都子の叔母"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2355
+"沙都子の家の隣" = "沙都子の家の隣"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2428
+"沙都子の母" = "沙都子の母"
+# shin/src/adv/higurashi/fake_select.rs:15
+"沙都子を救いに戻り記憶を捨てる" = "沙都子を救いに戻り記憶を捨てる"
+# shin/src/adv/higurashi/fake_select.rs:14
+"沙都子を見殺しにして記憶を残す" = "沙都子を見殺しにして記憶を残す"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2056
+"沙都子＆梨花" = "沙都子＆梨花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:626
+"沢代みゆき" = "沢代みゆき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:626
+"沢城みゆき" = "沢城みゆき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:626
+"沢城美雪" = "沢城美雪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:718
+"泡だて器" = "泡だて器"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1427
+"泰夫" = "泰夫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:29
+"洋子" = "洋子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2111
+"洋菓子" = "洋菓子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2307
+"活きがいい！" = "活きがいい！"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2598
+"流しそうめん対決" = "流しそうめん対決"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:980
+"流桜" = "流桜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2493
+"浦安" = "浦安"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1649
+"海水パンツ" = "海水パンツ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1914
+"海音" = "海音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:139
+"涙" = "涙"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:304
+"涼宮かおり" = "涼宮かおり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:366
+"深雪" = "深雪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1397
+"清見村" = "清見村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:888
+"渚" = "渚"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:713
+"渡" = "渡"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1075
+"渡邉" = "渡邉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2118
+"満塁ホームラン" = "満塁ホームラン"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:893
+"満田" = "満田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:970
+"滝口" = "滝口"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:621
+"滝口林" = "滝口林"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1372
+"漆黒" = "漆黒"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1442
+"漆黒の祭壇" = "漆黒の祭壇"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:738
+"演劇部" = "演劇部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2318
+"演舞" = "演舞"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:346
+"漬物" = "漬物"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1684
+"潜水" = "潜水"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:743; shin/src/app/higurashi/quiz_scene/catalog.rs:970
+"澤村" = "澤村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1779
+"濡れた雑巾" = "濡れた雑巾"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1317
+"瀬戸利樹" = "瀬戸利樹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:274
+"瀬戸総一郎" = "瀬戸総一郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2613
+"灯油" = "灯油"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:371; shin/src/app/higurashi/quiz_scene/catalog.rs:2051
+"炭水化物" = "炭水化物"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2478
+"烏天狗" = "烏天狗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:566
+"烏養" = "烏養"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:331
+"無" = "無"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2383
+"無料" = "無料"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2102
+"焼き肉食い放題" = "焼き肉食い放題"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2128
+"焼き芋大会" = "焼き芋大会"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1190
+"焼夷弾" = "焼夷弾"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2513
+"焼肉" = "焼肉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:678
+"焼肉のたれ" = "焼肉のたれ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1694
+"煌" = "煌"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2519
+"煎餅の値引き率" = "煎餅の値引き率"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1753
+"煮物ありがとう" = "煮物ありがとう"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1175
+"熊" = "熊"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1287
+"熊沢チヨ" = "熊沢チヨ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:264
+"熊田" = "熊田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2046
+"熊肉重" = "熊肉重"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1312
+"熊谷" = "熊谷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1868
+"熱いほうじ茶" = "熱いほうじ茶"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1250
+"燕13" = "燕13"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:466; shin/src/app/higurashi/quiz_scene/catalog.rs:1714
+"燕返し編" = "燕返し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1190
+"爆裂弾" = "爆裂弾"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2197
+"父が起きなかった" = "父が起きなかった"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1814
+"父さん" = "父さん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:757
+"父のキャバクラ" = "父のキャバクラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2026
+"父親" = "父親"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1537; shin/src/app/higurashi/quiz_scene/catalog.rs:1629
+"片霧烈火" = "片霧烈火"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2453
+"牛飼" = "牛飼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1287
+"牧野アンナ" = "牧野アンナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1287
+"牧野沁子" = "牧野沁子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2166
+"物置の屋根" = "物置の屋根"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1844
+"特別メンバー" = "特別メンバー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1844
+"特待生" = "特待生"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2119
+"犠牲フライ" = "犠牲フライ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2453
+"犬飼" = "犬飼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:174
+"犯人探し" = "犯人探し"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1175
+"狼" = "狼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1175
+"猪" = "猪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1839
+"猫" = "猫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2338
+"猫さん" = "猫さん"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:189; shin/src/app/higurashi/quiz_scene/catalog.rs:1522
+"猫殺し編" = "猫殺し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:326
+"玉美" = "玉美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1352
+"玲奈" = "玲奈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2579
+"現代メイド理論" = "現代メイド理論"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:476; shin/src/app/higurashi/quiz_scene/catalog.rs:481; shin/src/app/higurashi/quiz_scene/catalog.rs:486; +3 more
+"現場監督" = "現場監督"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:466; shin/src/app/higurashi/quiz_scene/catalog.rs:1507; shin/src/app/higurashi/quiz_scene/catalog.rs:1714
+"現壊し編" = "現壊し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1919
+"理香" = "理香"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1719
+"瑞穂" = "瑞穂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2393
+"瑠音" = "瑠音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2146
+"生き字引" = "生き字引"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2186
+"生まれ変わり" = "生まれ変わり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:566; shin/src/app/higurashi/quiz_scene/catalog.rs:743
+"田中" = "田中"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:606
+"田中一成" = "田中一成"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:606
+"田中三成" = "田中三成"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:606
+"田中拳" = "田中拳"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:913
+"田宮幸季" = "田宮幸季"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1582
+"田村みこと" = "田村みこと"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:299; shin/src/app/higurashi/quiz_scene/catalog.rs:586; shin/src/app/higurashi/quiz_scene/catalog.rs:843
+"田村ゆかり" = "田村ゆかり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:299; shin/src/app/higurashi/quiz_scene/catalog.rs:586
+"田村ゆりか" = "田村ゆりか"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1582
+"田村姫命" = "田村姫命"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1582
+"田村媛命" = "田村媛命"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:965
+"田淵" = "田淵"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1000
+"田無" = "田無"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:299
+"田無ゆかり" = "田無ゆかり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1265
+"田無三四" = "田無三四"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:446; shin/src/app/higurashi/quiz_scene/catalog.rs:1265
+"田無美代子" = "田無美代子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:331
+"田舎" = "田舎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2473
+"甲乙丙" = "甲乙丙"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:878
+"甲部" = "甲部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:89; shin/src/app/higurashi/quiz_scene/catalog.rs:1025
+"画家" = "画家"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:129
+"界王" = "界王"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2141
+"留学" = "留学"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1567
+"畠山一馬" = "畠山一馬"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:833; shin/src/app/higurashi/quiz_scene/catalog.rs:1547
+"疑心暗鬼" = "疑心暗鬼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1532
+"病" = "病"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:336
+"病死" = "病死"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1532
+"症候群" = "症候群"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1867
+"痛くない注射針" = "痛くない注射針"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2266
+"白" = "白"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1170
+"白い宇宙服" = "白い宇宙服"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:80
+"白ヒゲのおっさん" = "白ヒゲのおっさん"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:600
+"白川公園転落事故" = "白川公園転落事故"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1397
+"白川村" = "白川村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2383
+"百万円" = "百万円"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:775
+"皆殺し編のカケラ" = "皆殺し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:376; shin/src/app/higurashi/quiz_scene/catalog.rs:955
+"盆栽" = "盆栽"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1005
+"盗撮" = "盗撮"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2418; shin/src/app/higurashi/quiz_scene/catalog.rs:2593
+"監督" = "監督"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2369
+"監視カメラ" = "監視カメラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1015
+"目撃証言" = "目撃証言"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:765
+"目明し編のカケラ" = "目明し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:581
+"目暮" = "目暮"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:660
+"目覚まし時計" = "目覚まし時計"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1983
+"目障りだ、失せろ" = "目障りだ、失せろ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1629
+"相原優気" = "相原優気"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2393
+"眞音" = "眞音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2160
+"真の監督" = "真の監督"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1112
+"真ん中を通る" = "真ん中を通る"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1113
+"真上にジャンプ" = "真上にジャンプ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1090
+"真央" = "真央"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:259
+"真奈美" = "真奈美"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1260
+"真島淳司" = "真島淳司"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:733
+"真知子" = "真知子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1090
+"真緒" = "真緒"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1090
+"真魚" = "真魚"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1362
+"眼" = "眼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1030
+"眼科" = "眼科"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1992
+"着衣の重要性" = "着衣の重要性"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2433
+"睡眠薬" = "睡眠薬"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:908; shin/src/app/higurashi/quiz_scene/catalog.rs:1961; shin/src/app/higurashi/quiz_scene/catalog.rs:2181; +1 more
+"知恵" = "知恵"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2313
+"知恵と入江" = "知恵と入江"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1707
+"知恵サマー" = "知恵サマー"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1774
+"知育ゲーム" = "知育ゲーム"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:648
+"短距離走" = "短距離走"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:938
+"石俊彦" = "石俊彦"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:713
+"石原" = "石原"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2613
+"石灰岩" = "石灰岩"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:550
+"研究快調" = "研究快調"
+# shin/src/adv/config_dialog.rs:31; shin/src/adv/higurashi/save_menu/model.rs:55; shin/src/adv/save_game.rs:102; +4 more
+"確認" = "確認"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:581
+"磯野" = "磯野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1342
+"礼" = "礼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1352
+"礼奈" = "礼奈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:376
+"社交ダンス" = "社交ダンス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2323
+"社務所" = "社務所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:29
+"祐子" = "祐子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:683; shin/src/app/higurashi/quiz_scene/catalog.rs:773
+"神" = "神"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1859
+"神主" = "神主"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:665
+"神主の憂鬱" = "神主の憂鬱"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1619
+"神代海凪" = "神代海凪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1619
+"神園しのぶ" = "神園しのぶ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1517
+"神姦し編" = "神姦し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:688
+"神礼" = "神礼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2354
+"神社の裏手の小屋" = "神社の裏手の小屋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2356
+"神社の集会所" = "神社の集会所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:688
+"神鈴" = "神鈴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2231
+"神隠し" = "神隠し"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:204; shin/src/app/higurashi/quiz_scene/catalog.rs:516; shin/src/app/higurashi/quiz_scene/catalog.rs:838; +1 more
+"祟" = "祟"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2146
+"祟り" = "祟り"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:770
+"祟殺し編のカケラ" = "祟殺し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1342
+"祭" = "祭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2323
+"祭具殿" = "祭具殿"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:780
+"祭囃し編のカケラ" = "祭囃し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1347
+"福井" = "福井"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:54
+"秀樹" = "秀樹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1985
+"私一人で充分だ" = "私一人で充分だ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1132; shin/src/app/higurashi/quiz_scene/catalog.rs:1142
+"科学捜査研究所" = "科学捜査研究所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1131; shin/src/app/higurashi/quiz_scene/catalog.rs:1143
+"科学警察研究所" = "科学警察研究所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:970
+"種田" = "種田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1572
+"稲" = "稲"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1317
+"稲葉友" = "稲葉友"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:653; shin/src/app/higurashi/quiz_scene/catalog.rs:1764
+"穀倉" = "穀倉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1058; shin/src/app/higurashi/quiz_scene/catalog.rs:1068
+"穴を掘って埋まる" = "穴を掘って埋まる"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1270
+"穴子輝" = "穴子輝"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:556
+"空条" = "空条"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:506
+"空気" = "空気"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1005
+"空気を読む" = "空気を読む"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2466
+"空間を把握しろ" = "空間を把握しろ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:124
+"窃盗" = "窃盗"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2433
+"窒息" = "窒息"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:336
+"窒息死" = "窒息死"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1056; shin/src/app/higurashi/quiz_scene/catalog.rs:1067
+"立ったまま気絶" = "立ったまま気絶"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1664
+"竜宮れな" = "竜宮れな"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:715; shin/src/app/higurashi/quiz_scene/catalog.rs:1165; shin/src/app/higurashi/quiz_scene/catalog.rs:1664
+"竜宮レナ" = "竜宮レナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1664
+"竜宮０７" = "竜宮０７"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:728
+"競馬" = "競馬"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1297
+"竹原" = "竹原"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:381
+"第一室" = "第一室"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:381
+"第七室" = "第七室"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:381
+"第五室" = "第五室"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:381
+"第零室" = "第零室"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1629
+"篝" = "篝"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:406
+"篤士" = "篤士"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2383
+"米一俵" = "米一俵"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1694
+"粋" = "粋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2464
+"精神を鋭利に" = "精神を鋭利に"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1030
+"精神外科" = "精神外科"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:561
+"紗音" = "紗音"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:740
+"終末への誘い" = "終末への誘い"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:204; shin/src/app/higurashi/quiz_scene/catalog.rs:516; shin/src/app/higurashi/quiz_scene/catalog.rs:838; +2 more
+"絆" = "絆"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:371
+"絶食" = "絶食"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:139; shin/src/app/higurashi/quiz_scene/catalog.rs:1854
+"綿" = "綿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1834
+"綿アメ" = "綿アメ"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:760
+"綿流し編のカケラ" = "綿流し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1487
+"緋賀ゆかり" = "緋賀ゆかり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:341
+"総一郎" = "総一郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:154
+"総合病院" = "総合病院"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2051
+"緑黄色野菜" = "緑黄色野菜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1312
+"織田" = "織田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:943
+"織笠富美子" = "織笠富美子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:346
+"缶詰" = "缶詰"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2598
+"缶蹴り" = "缶蹴り"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:139
+"罪" = "罪"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:755
+"罪滅し編のカケラ" = "罪滅し編のカケラ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1522
+"罰恋し編" = "罰恋し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1125
+"署長" = "署長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2453
+"羊飼" = "羊飼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:366; shin/src/app/higurashi/quiz_scene/catalog.rs:2458
+"美幸" = "美幸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:366; shin/src/app/higurashi/quiz_scene/catalog.rs:551; shin/src/app/higurashi/quiz_scene/catalog.rs:2458
+"美雪" = "美雪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1914
+"美音" = "美音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1507
+"羞晒し編" = "羞晒し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2588
+"義理の妹" = "義理の妹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:39; shin/src/app/higurashi/quiz_scene/catalog.rs:44; shin/src/app/higurashi/quiz_scene/catalog.rs:643; +2 more
+"義郎" = "義郎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1165; shin/src/app/higurashi/quiz_scene/catalog.rs:1624
+"羽入" = "羽入"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:420
+"羽入と詩音の有無" = "羽入と詩音の有無"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:773
+"考古学者" = "考古学者"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1437
+"耳かき" = "耳かき"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:356
+"聖セレナ" = "聖セレナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:356
+"聖ナポリ" = "聖ナポリ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:356
+"聖マリア" = "聖マリア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:356
+"聖ルチーア" = "聖ルチーア"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:571
+"聡志" = "聡志"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1185
+"肉じゃが" = "肉じゃが"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1769
+"肉フェス" = "肉フェス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2046
+"肉巻きお握り" = "肉巻きお握り"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2225
+"胃腸の弱い永沢" = "胃腸の弱い永沢"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:401
+"胸" = "胸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2573
+"腕時計" = "腕時計"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:139
+"臓物" = "臓物"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1699; shin/src/app/higurashi/quiz_scene/catalog.rs:1971; shin/src/app/higurashi/quiz_scene/catalog.rs:1976
+"自転車" = "自転車"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:653; shin/src/app/higurashi/quiz_scene/catalog.rs:1764
+"興宮" = "興宮"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2357
+"興宮のホテル" = "興宮のホテル"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2222
+"興宮書房の大石" = "興宮書房の大石"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2483
+"興宮署" = "興宮署"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:82
+"舌を出した女の子" = "舌を出した女の子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1035
+"舞姫" = "舞姫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1075
+"舞沢" = "舞沢"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1572
+"舟" = "舟"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2146
+"良心" = "良心"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:733
+"芥川" = "芥川"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:960
+"花屋" = "花屋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1919
+"花梨" = "花梨"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2318
+"花火" = "花火"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:264
+"花田" = "花田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2623
+"花田と藤田" = "花田と藤田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:34; shin/src/app/higurashi/quiz_scene/catalog.rs:426
+"芳子" = "芳子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:703
+"芸能" = "芸能"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1270
+"若元紀夫" = "若元紀夫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1270
+"若本ノリ夫" = "若本ノリ夫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1270
+"若本規夫" = "若本規夫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1866
+"苦くないお薬" = "苦くないお薬"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2001
+"苺ショート" = "苺ショート"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1769
+"苺祭" = "苺祭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:908; shin/src/app/higurashi/quiz_scene/catalog.rs:2528
+"茜" = "茜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1307
+"茨城県" = "茨城県"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1020
+"茨城県警" = "茨城県警"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1966
+"茶" = "茶"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:621
+"茶風林" = "茶風林"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:621
+"茶風鈴" = "茶風鈴"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1689
+"草津の湯" = "草津の湯"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1587; shin/src/app/higurashi/quiz_scene/catalog.rs:1924
+"荒川" = "荒川"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2623
+"荒川と利根川" = "荒川と利根川"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1567
+"荒川龍ノ介" = "荒川龍ノ介"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1567
+"荒川龍一" = "荒川龍一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1397
+"荘川村" = "荘川村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:304
+"荻上かおり" = "荻上かおり"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1357
+"葉っぱ" = "葉っぱ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2528
+"葛西" = "葛西"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:748
+"蒐" = "蒐"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:576
+"薙" = "薙"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:888
+"薫" = "薫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:264
+"藤田" = "藤田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1517
+"虚仮威し編" = "虚仮威し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1542
+"虚言" = "虚言"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2318
+"蛍火" = "蛍火"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:204; shin/src/app/higurashi/quiz_scene/catalog.rs:516; shin/src/app/higurashi/quiz_scene/catalog.rs:838; +1 more
+"螺" = "螺"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1859
+"行司" = "行司"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1714
+"裏返し編" = "裏返し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:154
+"製薬会社" = "製薬会社"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:129
+"覇王" = "覇王"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2076
+"親族会議" = "親族会議"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1497
+"解答編" = "解答編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2231
+"記憶喪失" = "記憶喪失"
+# shin/src/adv/config_dialog.rs:15; shin/src/app/higurashi/config/owner.rs:30
+"設定を初期値に戻します。よろしいですか？" = "設定を初期値に戻します。よろしいですか？"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:159
+"詩織" = "詩織"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:119; shin/src/app/higurashi/quiz_scene/catalog.rs:436; shin/src/app/higurashi/quiz_scene/catalog.rs:526; +10 more
+"詩音" = "詩音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2343
+"詩音の母" = "詩音の母"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2343
+"詩音の父" = "詩音の父"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1452
+"誓" = "誓"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1512
+"語咄し編" = "語咄し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:234
+"誠" = "誠"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:955
+"読書" = "読書"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1085
+"諜報" = "諜報"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:199; shin/src/app/higurashi/quiz_scene/catalog.rs:209; shin/src/app/higurashi/quiz_scene/catalog.rs:451; +4 more
+"諫山実生" = "諫山実生"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:321; shin/src/app/higurashi/quiz_scene/catalog.rs:1020
+"警察庁" = "警察庁"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:638; shin/src/app/higurashi/quiz_scene/catalog.rs:1010
+"警視" = "警視"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:321; shin/src/app/higurashi/quiz_scene/catalog.rs:793; shin/src/app/higurashi/quiz_scene/catalog.rs:1020
+"警視庁" = "警視庁"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:638; shin/src/app/higurashi/quiz_scene/catalog.rs:1010
+"警視正" = "警視正"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:638
+"警視長" = "警視長"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:638; shin/src/app/higurashi/quiz_scene/catalog.rs:1010
+"警部" = "警部"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1010
+"警部補" = "警部補"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:653
+"谷河内" = "谷河内"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2501
+"谷河内の廃屋" = "谷河内の廃屋"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:580
+"谷河内の採石場" = "谷河内の採石場"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2293
+"豚肉" = "豚肉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:14
+"豚骨ショウガ味" = "豚骨ショウガ味"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1175
+"象" = "象"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2323
+"賽銭箱" = "賽銭箱"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:545
+"赤いカプセル薬" = "赤いカプセル薬"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2521
+"赤い物の速度" = "赤い物の速度"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1170
+"赤い羽衣" = "赤い羽衣"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:556; shin/src/app/higurashi/quiz_scene/catalog.rs:708; shin/src/app/higurashi/quiz_scene/catalog.rs:1724; +1 more
+"赤坂" = "赤坂"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:446
+"赤坂美雪" = "赤坂美雪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1317
+"赤楚衛二" = "赤楚衛二"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:648
+"走り高跳び" = "走り高跳び"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:29
+"路子" = "路子"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1412
+"軍曹" = "軍曹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2141
+"転校" = "転校"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:336
+"転落死" = "転落死"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1542
+"輪廻" = "輪廻"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:396; shin/src/app/higurashi/quiz_scene/catalog.rs:1297
+"辰吉" = "辰吉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:396
+"辰由" = "辰由"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:396
+"辰義" = "辰義"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:396
+"辰良" = "辰良"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:376
+"農業" = "農業"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2580
+"近代メイド図鑑" = "近代メイド図鑑"
+# shin/src/adv/higurashi/save_menu/model.rs:49
+"追加コンテンツがインストールされていないため、@rこのセーブデータをロードすることはできません。" = "追加コンテンツがインストールされていないため、@rこのセーブデータをロードすることはできません。"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1059; shin/src/app/higurashi/quiz_scene/catalog.rs:1069
+"逃亡して行方不明" = "逃亡して行方不明"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:506
+"通過点" = "通過点"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:54
+"進一" = "進一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1599
+"進入禁止" = "進入禁止"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:89
+"遊び人" = "遊び人"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1547
+"運気による変化" = "運気による変化"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:606
+"道頓堀一成" = "道頓堀一成"
+# shin/src/app/higurashi/tips_menu.rs:154; shin/src/title/cg_gallery.rs:148; shin/src/title/movie_gallery.rs:136; +1 more
+"達成率:100％" = "達成率:100％"
+# shin/src/app/higurashi/cg_gallery.rs:192
+"達成率:{completion}％" = "達成率:{completion}％"
+# shin/src/app/higurashi/chart/model.rs:323
+"達成率:{percentage}％" = "達成率:{percentage}％"
+# shin/src/app/higurashi/movie_gallery.rs:197; shin/src/app/higurashi/music_gallery.rs:163
+"達成率:{percent}％" = "達成率:{percent}％"
+# shin/src/app/higurashi/tips_menu.rs:156; shin/src/title/cg_gallery.rs:150; shin/src/title/movie_gallery.rs:138; +1 more
+"達成率:{}.{}％" = "達成率:{}.{}％"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2026
+"部活メンバー" = "部活メンバー"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:705
+"部活結成" = "部活結成"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:264
+"郷田" = "郷田"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2323
+"酒蔵" = "酒蔵"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2061
+"酢豚" = "酢豚"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:14
+"醤油味" = "醤油味"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1572; shin/src/app/higurashi/quiz_scene/catalog.rs:1624
+"采" = "采"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2166
+"重機の隙間" = "重機の隙間"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1075
+"野村" = "野村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2096
+"野球" = "野球"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2086
+"野球場" = "野球場"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2061
+"野菜炒め" = "野菜炒め"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1387; shin/src/app/higurashi/quiz_scene/catalog.rs:1447
+"金塊" = "金塊"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:179; shin/src/app/higurashi/quiz_scene/catalog.rs:1382; shin/src/app/higurashi/quiz_scene/catalog.rs:2081
+"金属バット" = "金属バット"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2231
+"金縛り" = "金縛り"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2081; shin/src/app/higurashi/quiz_scene/catalog.rs:2251
+"鉄パイプ" = "鉄パイプ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:571; shin/src/app/higurashi/quiz_scene/catalog.rs:1624; shin/src/app/higurashi/quiz_scene/catalog.rs:2533
+"鉄平" = "鉄平"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:179; shin/src/app/higurashi/quiz_scene/catalog.rs:1362
+"鉈" = "鉈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2513
+"銀シャリ" = "銀シャリ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:626
+"銅鑼野織乃楠" = "銅鑼野織乃楠"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1377
+"銭湯の煙突" = "銭湯の煙突"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:581
+"鎌霧" = "鎌霧"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:391
+"長崎" = "長崎"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1347
+"長野" = "長野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2493
+"門前仲町" = "門前仲町"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1260
+"間島淳司" = "間島淳司"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1260
+"間島純次" = "間島純次"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1275
+"関俊一" = "関俊一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:938
+"関俊彦" = "関俊彦"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:938
+"関利彦" = "関利彦"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1275
+"関友一" = "関友一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1275
+"関智一" = "関智一"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1447; shin/src/app/higurashi/quiz_scene/catalog.rs:2613
+"除草剤" = "除草剤"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:69
+"陸" = "陸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1342
+"雀" = "雀"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1507
+"雛見沢停留所" = "雛見沢停留所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1874
+"雛見沢分校" = "雛見沢分校"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2223
+"雛見沢分署の大石" = "雛見沢分署の大石"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2458
+"雪絵" = "雪絵"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1250
+"雲雀13" = "雲雀13"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1604
+"電撃大王" = "電撃大王"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1744
+"電撃文庫" = "電撃文庫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1966
+"青" = "青"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1502
+"音" = "音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:755
+"預金が減った" = "預金が減った"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:19
+"頭" = "頭"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2363
+"頭から被った" = "頭から被った"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:401
+"頭の良さ" = "頭の良さ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2398
+"頭痛" = "頭痛"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1784
+"頭突き" = "頭突き"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:149
+"風呂場" = "風呂場"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:985
+"風花" = "風花"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2398
+"風邪" = "風邪"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2371
+"飛び出し坊や" = "飛び出し坊や"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2293
+"飛騨牛" = "飛騨牛"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2363
+"飲み干した" = "飲み干した"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2520
+"餃子のうまさ" = "餃子のうまさ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1854
+"餅" = "餅"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2453
+"馴鹿" = "馴鹿"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1599
+"駐車禁止" = "駐車禁止"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1599
+"駐輪禁止" = "駐輪禁止"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:965
+"駒鳥" = "駒鳥"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2111
+"骨付きカルビ" = "骨付きカルビ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2398
+"骨折" = "骨折"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:164
+"高屋敷" = "高屋敷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:668
+"高杉" = "高杉"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2543
+"高枝切りばさみ" = "高枝切りばさみ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1764
+"高津戸" = "高津戸"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2493
+"高田馬場" = "高田馬場"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1230
+"高野" = "高野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:401
+"髪形" = "髪形"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:768; shin/src/app/higurashi/quiz_scene/catalog.rs:2388
+"鬼" = "鬼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2333
+"鬼の国" = "鬼の国"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1397
+"鬼ケ淵村" = "鬼ケ淵村"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1594
+"鬼ヶ淵沼" = "鬼ヶ淵沼"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1035
+"鬼姫" = "鬼姫"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1035
+"鬼婆" = "鬼婆"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:466
+"鬼曝し編" = "鬼曝し編"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1714
+"鬼曝し編アフター" = "鬼曝し編アフター"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:750
+"鬼隠し編のカケラ" = "鬼隠し編のカケラ"
+# shin/src/adv/higurashi/browser_history.rs:50; shin/src/app/higurashi/quiz_scene/catalog.rs:94; shin/src/app/higurashi/quiz_scene/catalog.rs:99; +24 more
+"魅音" = "魅音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2031
+"魅音と詩音" = "魅音と詩音"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1090
+"魔央" = "魔央"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2550
+"魔法の鏡" = "魔法の鏡"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2151; shin/src/app/higurashi/quiz_scene/catalog.rs:2618
+"魔法少女" = "魔法少女"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1634
+"魔王k" = "魔王k"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:59
+"鯛焼き" = "鯛焼き"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:823; shin/src/app/higurashi/quiz_scene/catalog.rs:1195
+"鴻野貴光" = "鴻野貴光"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1250
+"鶯13" = "鶯13"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1230
+"鷹埜" = "鷹埜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:436; shin/src/app/higurashi/quiz_scene/catalog.rs:903; shin/src/app/higurashi/quiz_scene/catalog.rs:1230; +4 more
+"鷹野" = "鷹野"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1794
+"鷹野よ" = "鷹野よ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1160
+"鷹野三四" = "鷹野三四"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:633
+"鹿嶋大" = "鹿嶋大"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1352
+"麗奈" = "麗奈"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2513
+"麦飯" = "麦飯"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1482
+"麻婆豆腐" = "麻婆豆腐"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:576
+"麻尋" = "麻尋"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2398
+"麻疹" = "麻疹"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1133; shin/src/app/higurashi/quiz_scene/catalog.rs:1144
+"麻薬取締官事務所" = "麻薬取締官事務所"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:169; shin/src/app/higurashi/quiz_scene/catalog.rs:1085; shin/src/app/higurashi/quiz_scene/catalog.rs:1527
+"麻雀" = "麻雀"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1966
+"黄" = "黄"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2333
+"黄泉の国" = "黄泉の国"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1392
+"黄金" = "黄金"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2333
+"黄金郷" = "黄金郷"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1966; shin/src/app/higurashi/quiz_scene/catalog.rs:2266
+"黒" = "黒"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1170
+"黒い戦闘服" = "黒い戦闘服"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1779
+"黒板消し" = "黒板消し"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1567
+"黒澤工" = "黒澤工"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1057; shin/src/app/higurashi/quiz_scene/catalog.rs:1066
+"鼻血吹き出す" = "鼻血吹き出す"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1664
+"龍宮レナ" = "龍宮レナ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:980
+"龍桜" = "龍桜"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1452
+"祝" = "祝"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:2166
+"２階の雨どい" = "２階の雨どい"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:535
+"Ｃ１０３投与実験" = "Ｃ１０３投与実験"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1744
+"ＧＡ文庫" = "ＧＡ文庫"
+# shin/src/app/higurashi/kakera_menu/catalog.rs:540
+"Ｈ１７０" = "Ｈ１７０"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:903
+"ＪＪ・リックス" = "ＪＪ・リックス"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1472
+"Ｋ" = "Ｋ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1774
+"ＬＳＩゲーム" = "ＬＳＩゲーム"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:703
+"ＳＦ" = "ＳＦ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1527
+"ＳＲＰＧ" = "ＳＲＰＧ"
+# shin/src/app/higurashi/quiz_scene/catalog.rs:1809
+"Ｖ．Ｇ．" = "Ｖ．Ｇ．"
