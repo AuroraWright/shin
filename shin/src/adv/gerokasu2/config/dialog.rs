@@ -157,6 +157,9 @@ pub struct GerDialog {
     atlas: Arc<CharacterTextures>,
     prompt: Text,
     answers: Vec<Text>,
+    /// Gerokasu only: native 21be8 reserves 28px under the prompt and 23ac0
+    /// paints `dialog_logo` there. Holds the prompt height.
+    logo: Option<f32>,
     _cache: wgpu::Texture,
     cache_view: wgpu::TextureView,
 }
@@ -191,7 +194,11 @@ impl GerDialog {
             .map(|s| Text::load(server, &font, s, 40.))
             .collect::<Result<_>>()?;
         let sizes: Vec<_> = answers.iter().map(|t| t.size).collect();
-        let geometry = geometry(prompt.size, &sizes);
+        let logo = (server.context().game == crate::cli::Game::Gerokasu).then_some(prompt.size.y);
+        if logo.is_some() {
+            atlas.require_names("/systex.txa", &["dialog_logo"])?;
+        }
+        let geometry = geometry(prompt.size + vec2(0., logo.map_or(0., |_| LOGO_GAP)), &sizes);
         let cache = server
             .context()
             .wgpu_device
@@ -228,6 +235,7 @@ impl GerDialog {
             atlas,
             prompt,
             answers,
+            logo,
             _cache: cache,
             cache_view,
         })
@@ -316,6 +324,28 @@ impl GerDialog {
             },
             DrawPrimitive::TrianglesStrip,
         ));
+        if let Some(height) = self.logo {
+            // Drawn right after the frame, in outer-texture pixels.
+            let vertices = [
+                vec4(50., height + 30., 0., 0.),
+                vec4(270., height + 30., 1., 0.),
+                vec4(50., height + 30. + LOGO_GAP, 0., 1.),
+                vec4(270., height + 30. + LOGO_GAP, 1., 1.),
+            ]
+            .map(|v| PosTexVertex {
+                position: vec2(v.x, v.y),
+                texture_position: vec2(v.z, v.w),
+            });
+            textured(
+                &mut pass,
+                VertexSource::VertexData {
+                    vertices: &vertices,
+                },
+                self.atlas.get("dialog_logo").as_source(),
+                projection,
+                Vec4::ONE,
+            );
+        }
         let content = content_transform(outer);
         self.prompt.render(
             &mut pass,
@@ -396,6 +426,7 @@ impl GerDialog {
         Ok(())
     }
 }
+const LOGO_GAP: f32 = 28.;
 fn backdrop_vertices() -> [PosVertex; 3] {
     [vec3(-1., 1., 0.), vec3(3., 1., 0.), vec3(-1., -3., 0.)].map(|position| PosVertex { position })
 }
@@ -564,3 +595,6 @@ mod tests;
 
 #[cfg(test)]
 mod localization_gpu_tests;
+
+#[cfg(test)]
+mod gerokasu_gpu_tests;
