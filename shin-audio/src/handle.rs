@@ -1,7 +1,5 @@
-use std::sync::Arc;
+use std::sync::{Arc, mpsc::Sender};
 
-use anyhow::anyhow;
-use ringbuf::{HeapProd, traits::Producer as _};
 use shin_core::{
     time::{Ticks, Tween},
     vm::command::types::{AudioWaitStatus, Pan, Volume},
@@ -10,11 +8,19 @@ use shin_core::{
 use crate::sound::{Command, Shared};
 
 pub struct AudioHandle {
-    pub(super) command_producer: HeapProd<Command>,
+    pub(super) command_producer: Sender<Command>,
     pub(super) shared: Arc<Shared>,
 }
 
 impl AudioHandle {
+    /// Preserve every authored command in FIFO order, even when a game update
+    /// outpaces the audio callback. A disconnected receiver means the sound
+    /// has already retired, so late parameter/stop requests have no target.
+    fn send_command(&self, command: Command) -> anyhow::Result<()> {
+        let _ = self.command_producer.send(command);
+        Ok(())
+    }
+
     /// Published source sample position, preserving submillisecond media timing.
     pub fn position_samples(&self) -> u32 {
         self.shared
@@ -26,7 +32,9 @@ impl AudioHandle {
     /// An EOF source can compare its exclusive last real sample against this
     /// value while supplying silence to retain its media clock.
     pub fn drained_position_samples(&self) -> u32 {
-        self.shared.drained_position_samples.load(std::sync::atomic::Ordering::Acquire)
+        self.shared
+            .drained_position_samples
+            .load(std::sync::atomic::Ordering::Acquire)
     }
 
     pub fn sample_rate(&self) -> u32 {
@@ -57,7 +65,7 @@ impl AudioHandle {
     }
 
     /// Suspend source playback without losing its position or wait state.
-    /// Atomic state avoids overflowing the bounded audio command queue.
+    /// Atomic state avoids queueing redundant frame-by-frame pause commands.
     pub fn set_paused(&self, paused: bool) {
         self.shared
             .paused
@@ -74,7 +82,7 @@ impl AudioHandle {
         );
     }
 
-    /// Retire playback at the next callback, bypassing the bounded command queue.
+    /// Retire playback at the next callback, bypassing pending ordered commands.
     /// This is infallible so an owner's destructor can always request cleanup.
     pub fn stop_immediate(&self) {
         self.shared
@@ -85,40 +93,30 @@ impl AudioHandle {
     /// Sets the volume of the sound.
     /// The volume is a value between 0.0 and 1.0, on the linear scale.
     pub fn set_volume(&mut self, volume: Volume, tween: Tween) -> anyhow::Result<()> {
-        self.command_producer
-            .try_push(Command::SetVolume(volume, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::SetVolume(volume, tween))
     }
 
     /// Append a volume transition without replacing the current ramp. Older
     /// Higurashi BGMVOL calls its native interpolator with flags0, not bit8.
     pub fn enqueue_volume(&mut self, volume: Volume, tween: Tween) -> anyhow::Result<()> {
-        self.command_producer
-            .try_push(Command::EnqueueVolume(volume, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::EnqueueVolume(volume, tween))
     }
 
     /// Sets the panning of the sound
     pub fn set_panning(&mut self, panning: Pan, tween: Tween) -> anyhow::Result<()> {
-        self.command_producer
-            .try_push(Command::SetPanning(panning, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::SetPanning(panning, tween))
     }
 
     /// Append a pan transition, preserving the native SE interpolator queue.
     pub fn enqueue_panning(&mut self, panning: Pan, tween: Tween) -> anyhow::Result<()> {
-        self.command_producer
-            .try_push(Command::EnqueuePanning(panning, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::EnqueuePanning(panning, tween))
     }
 
     /// Retarget source playback speed without restarting the decoder.
     /// The multiplier must be positive and finite; the tween uses wall-clock time.
     pub fn set_playback_rate(&mut self, rate: f32, tween: Tween) -> anyhow::Result<()> {
         anyhow::ensure!(rate.is_finite() && rate > 0.0, "Invalid playback rate");
-        self.command_producer
-            .try_push(Command::SetPlaybackRate(rate, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::SetPlaybackRate(rate, tween))
     }
 
     /// Retarget volume, pan, and source speed as one audio-thread command.
@@ -130,9 +128,7 @@ impl AudioHandle {
         tween: Tween,
     ) -> anyhow::Result<()> {
         anyhow::ensure!(rate.is_finite() && rate > 0.0, "Invalid playback rate");
-        self.command_producer
-            .try_push(Command::SetParameters(volume, pan, rate, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::SetParameters(volume, pan, rate, tween))
     }
 
     /// Older SE repeats may reuse a matching source during its stop fade.
@@ -145,9 +141,7 @@ impl AudioHandle {
         tween: Tween,
     ) -> anyhow::Result<()> {
         anyhow::ensure!(rate.is_finite() && rate > 0.0, "Invalid playback rate");
-        self.command_producer
-            .try_push(Command::ResumeParameters(volume, pan, rate, tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::ResumeParameters(volume, pan, rate, tween))
     }
 
     /// Fades out the sound to silence with the given tween and then
@@ -155,22 +149,17 @@ impl AudioHandle {
     ///
     /// Once the sound is stopped, it cannot be restarted.
     pub fn stop(&mut self, tween: Tween) -> anyhow::Result<()> {
-        self.command_producer
-            .try_push(Command::Stop(tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::Stop(tween))
     }
 
     /// Older SE stop/reconstruction finishes the queued volume target before
     /// fading. A stopping source restarts its retirement timer from silence.
     pub fn finish_volume_and_stop(&mut self, tween: Tween) -> anyhow::Result<()> {
-        self.command_producer
-            .try_push(Command::FinishVolumeAndStop(tween))
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::FinishVolumeAndStop(tween))
     }
     /// Higurashi c3cc8 finishes volume and pan without changing source speed.
     pub fn finish_volume_and_pan(&mut self) -> anyhow::Result<()> {
-        self.command_producer.try_push(Command::FinishVolumeAndPan)
-            .map_err(|_| anyhow!("Command queue full"))
+        self.send_command(Command::FinishVolumeAndPan)
     }
 
     /// Playback position in integer milliseconds, without a floating-point

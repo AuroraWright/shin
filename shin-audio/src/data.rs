@@ -1,17 +1,13 @@
 //! Implements the SoundData trait for the Kira audio library.
 
-use std::sync::Arc;
+use std::sync::{Arc, mpsc};
 
 use anyhow::Result;
 use kira::sound::{Sound, SoundData};
-use ringbuf::{HeapRb, traits::Split as _};
 use shin_core::format::audio::{AudioDecoder, AudioFile, AudioFrameSource};
 
 use super::AudioSettings;
-use crate::{
-    handle::AudioHandle,
-    sound::{AudioSound, COMMAND_BUFFER_CAPACITY},
-};
+use crate::{handle::AudioHandle, sound::AudioSound};
 use shin_core::time::Tweener;
 
 pub struct AudioData<S: AudioFrameSource> {
@@ -72,7 +68,7 @@ impl<S: AudioFrameSource + Send + 'static> SoundData for AudioData<S> {
 
 impl<S: AudioFrameSource + Send> AudioData<S> {
     fn split(self) -> (AudioSound<S>, AudioHandle) {
-        let (command_producer, command_consumer) = HeapRb::new(COMMAND_BUFFER_CAPACITY).split();
+        let (command_producer, command_consumer) = mpsc::channel();
 
         let sound = AudioSound::new(self, command_consumer);
         let shared = sound.shared();

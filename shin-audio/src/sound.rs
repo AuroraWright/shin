@@ -2,12 +2,12 @@ use std::{
     f32::consts::SQRT_2,
     sync::{
         Arc,
+        mpsc::Receiver,
         atomic::{AtomicBool, AtomicI32, AtomicU32, AtomicU64, Ordering},
     },
 };
 
 use kira::{Frame, info::Info, sound::Sound};
-use ringbuf::{HeapCons, traits::Consumer as _};
 use shin_core::{
     format::audio::{AudioFrameSource, AudioSource},
     time::{Ticks, Tween, Tweener},
@@ -16,8 +16,6 @@ use shin_core::{
 use tracing::debug;
 
 use crate::{AudioData, resampler::Resampler};
-
-pub const COMMAND_BUFFER_CAPACITY: usize = 8;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Command {
@@ -168,7 +166,7 @@ impl<S: AudioFrameSource + Send> SampleProvider<S> {
 }
 
 pub struct AudioSound<S: AudioFrameSource + Send> {
-    command_consumer: HeapCons<Command>,
+    command_consumer: Receiver<Command>,
     shared: Arc<Shared>,
     state: PlaybackState,
     volume: Tweener,
@@ -179,7 +177,7 @@ pub struct AudioSound<S: AudioFrameSource + Send> {
 }
 
 impl<S: AudioFrameSource + Send> AudioSound<S> {
-    pub fn new(data: AudioData<S>, command_consumer: HeapCons<Command>) -> Self {
+    pub fn new(data: AudioData<S>, command_consumer: Receiver<Command>) -> Self {
         assert!(data.settings.playback_rate.is_finite() && data.settings.playback_rate > 0.0);
         debug!("Creating audio sound");
 
@@ -273,7 +271,7 @@ impl<S: AudioFrameSource + Send> AudioSound<S> {
 
 impl<S: AudioFrameSource + Send> Sound for AudioSound<S> {
     fn on_start_processing(&mut self) {
-        while let Some(command) = self.command_consumer.try_pop() {
+        while let Ok(command) = self.command_consumer.try_recv() {
             match command {
                 // note: unlike in the layer props, we do the "enqueue_now" thing here
                 // bacause we don't want to wait for previous audio changes to be applied
@@ -1303,3 +1301,6 @@ mod tests {
         assert!(handle.get_wait_status().is_empty());
     }
 }
+
+#[cfg(test)]
+mod command_burst_tests;
