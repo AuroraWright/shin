@@ -483,6 +483,7 @@ impl Gerokasu2Runner {
                         return Err(error);
                     }
                 };
+                tracing::trace!("command {command:?}");
                 self.pending = Some(Pending {
                     command,
                     owner: Owner::New,
@@ -641,6 +642,11 @@ impl Gerokasu2Runner {
                             } else {
                                 Owner::External
                             };
+                    }
+                    Cmd::Shared(RuntimeCommand::DEBUGOUT(command)) => {
+                        // Native debug print only; Gerokasu's script runs it.
+                        tracing::debug!("DEBUGOUT {:?} {:?}", command.format, command.args);
+                        pending.owner = Owner::Ready;
                     }
                     Cmd::Shared(RuntimeCommand::TROPHY(command)) => {
                         gallery::trophy(command.trophy_id);

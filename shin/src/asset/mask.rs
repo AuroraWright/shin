@@ -220,7 +220,7 @@ impl Asset for MaskTexture {
         shin_tasks::compute::spawn(move || {
             crate::asset::system::catch_asset_preparation_panic("Mask", || {
                 let mask = match context.game {
-                    crate::cli::Game::Umineko | crate::cli::Game::Gerokasu2 => shin_core::format::mask::read_mask(&data)?,
+                    crate::cli::Game::Umineko | crate::cli::Game::Gerokasu2 | crate::cli::Game::Gerokasu => shin_core::format::mask::read_mask(&data)?,
                     crate::cli::Game::Higurashi => {
                         let texels = shin_core::format::mask::read_higurashi_mask(&data)?;
                         // MSK3 has no optimized white/black regions. A conservative

@@ -168,6 +168,13 @@ impl Gerokasu2MessageOwner {
             !self.command_pending(),
             "Gerokasu2 message command is still pending"
         );
+        if let Gerokasu2RuntimeCommand::GerMessageFace { args } = command {
+            return Ok(Some(MessageCommandOutcome {
+                status: MessageCommandStatus::Complete,
+                portrait: self.face.on_ger_msgface(*args, bustups),
+                installed_message: None,
+            }));
+        }
         if let Gerokasu2RuntimeCommand::MessageFace { face } = command {
             return Ok(Some(MessageCommandOutcome {
                 status: MessageCommandStatus::Complete,

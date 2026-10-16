@@ -84,6 +84,7 @@ impl Gerokasu2Scripter {
                 GerInstruction::Wait { .. }
                     | GerInstruction::MessageSet { .. }
                     | GerInstruction::MessageFace { .. }
+                    | GerInstruction::GerMessageFace { .. }
                     | GerInstruction::Shared(Instruction::Command(_))
             ) && reader.position() == self.reader.position(),
             "Gerokasu2 replay checkpoint has an inconsistent command boundary"

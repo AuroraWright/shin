@@ -50,7 +50,7 @@ pub struct HigurashiBustup {
     pub disable_animations: bool,
 }
 
-fn upload(
+pub(super) fn upload(
     context: &AssetLoadContext,
     data: &[u8],
     location: FileLocation,

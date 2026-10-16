@@ -128,6 +128,7 @@ pub fn locate_assets_for_game(
     match game {
         Game::Umineko => return locate_assets(cli_assets),
         Game::Gerokasu2 => return locate_gerokasu2_assets(cli_assets),
+        Game::Gerokasu => return locate_gerokasu_assets(cli_assets),
         Game::Higurashi => {}
     }
     if let Some(path) = cli_assets {
@@ -481,6 +482,28 @@ fn locate_gerokasu2_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredA
     bail!(
         "Failed to locate Gerokasu2 assets, tried {paths:?}. Use --assets-dir or SHIN_GEROKASU2_ASSETS."
     );
+}
+
+/// Gerokasu uses its own named root so it never picks up Gerokasu2 data.
+fn locate_gerokasu_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo> {
+    let explicit = cli_assets
+        .map(PathBuf::from)
+        .or_else(|| std::env::var_os("SHIN_GEROKASU_ASSETS").map(PathBuf::from));
+    let paths = if let Some(path) = explicit {
+        vec![path]
+    } else {
+        let mut paths = vec![std::env::current_dir()?.join("gerokasu")];
+        if let Some(parent) = std::env::current_exe()?.parent() {
+            paths.push(parent.join("gerokasu"));
+        }
+        paths
+    };
+    for path in &paths {
+        if let Some(io) = try_assets_directory(path)? {
+            return Ok(io);
+        }
+    }
+    bail!("Failed to locate Gerokasu assets, tried {paths:?}. Use --assets-dir or SHIN_GEROKASU_ASSETS.");
 }
 
 #[cfg(test)]

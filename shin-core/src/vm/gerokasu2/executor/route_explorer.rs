@@ -106,6 +106,7 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
             }
             bytecode::Instruction::Wait { .. }
             | bytecode::Instruction::MessageFace { .. }
+            | bytecode::Instruction::GerMessageFace { .. }
             | bytecode::Instruction::Shared(Instruction::Command(_)) => {
                 static_commands.insert(start);
             }

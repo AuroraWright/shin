@@ -79,7 +79,9 @@ fn run(window_probe: bool) -> anyhow::Result<()> {
     match cli.game {
         cli::Game::Umineko => shin_window::run_window::<app::App>(cli),
         cli::Game::Higurashi => shin_window::run_window::<app::HigurashiApp>(cli),
-        cli::Game::Gerokasu2 => shin_window::run_window::<app::gerokasu2::Gerokasu2App>(cli),
+        cli::Game::Gerokasu2 | cli::Game::Gerokasu => {
+            shin_window::run_window::<app::gerokasu2::Gerokasu2App>(cli)
+        }
     }
     Ok(())
 }

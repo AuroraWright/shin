@@ -52,6 +52,7 @@ impl DictionaryDirectory {
             Game::Higurashi => "higurashi/data.rom",
             Game::Umineko => "umineko_switch_files/data.rom",
             Game::Gerokasu2 => "gerokasu2/data.rom",
+            Game::Gerokasu => "gerokasu/data.rom",
         }))
         .unwrap();
         io.with_localized_file(self.0.join("localized.toml"));

@@ -93,8 +93,14 @@ fn configure_surface(
 ) -> ResizeableSurface {
     let SurfaceSize { width, height } = surface_resize_handle.get();
 
+    // Debug builds can dump presented frames (SHIN_DEBUG_CAPTURE_DIR).
+    let capture = cfg!(debug_assertions) && std::env::var_os("SHIN_DEBUG_CAPTURE_DIR").is_some();
     let surface_config = wgpu::SurfaceConfiguration {
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        usage: if capture {
+            wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC
+        } else {
+            wgpu::TextureUsages::RENDER_ATTACHMENT
+        },
         format: surface_texture_format,
         width,
         height,

@@ -1,5 +1,6 @@
 #[cfg(target_os = "macos")]
 mod macos_quit;
+mod debug_capture;
 
 use std::{
     fmt::Debug,
@@ -1297,6 +1298,14 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                     app.render(context, &mut pass);
                 });
 
+                let capture = debug_capture::due().then(|| {
+                    debug_capture::copy(
+                        &wgpu.device,
+                        &mut render_encoder,
+                        &surface_texture.texture.texture,
+                    )
+                });
+
                 info_span!("submit").in_scope(|| {
                     let mut dynamic_buffer_encoder =
                         wgpu.device
@@ -1312,6 +1321,10 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                     ]);
                     render.dynamic_buffer.recall();
                 });
+
+                if let Some(capture) = capture {
+                    debug_capture::write(&wgpu.device, capture);
+                }
 
                 info_span!("present").in_scope(|| {
                     winit.window.pre_present_notify();

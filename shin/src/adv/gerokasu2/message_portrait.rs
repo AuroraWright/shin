@@ -70,8 +70,8 @@ impl PortraitLayer {
 pub(crate) fn placement_transform(request: &PortraitRequest) -> Mat4 {
     let scale = request.scale as f32 * 0.001;
     let position = vec3(
-        -960.0 - request.negated_translation_x as f32,
-        540.0 - request.negated_translation_y as f32,
+        request.base_translation[0] as f32 - request.negated_translation_x as f32,
+        request.base_translation[1] as f32 - request.negated_translation_y as f32,
         0.0,
     );
     multiply_transforms(
@@ -102,11 +102,14 @@ async fn acquire(job: PortraitJob<SharedLayer>, assets: Arc<AssetServer>) -> Res
     if !job.is_current() {
         return Ok(false);
     }
-    let layer = BustupLayerImpl::new_gerokasu2(
+    let mut layer = BustupLayerImpl::new_gerokasu2(
         asset.0.clone(),
         format!("{}[{}]", request.path, request.expression),
         crate::engine_random::next_seed(),
     );
+    if let Some([scale, x, y]) = request.placement {
+        layer.set_placement([f32::from(scale) * 0.01, f32::from(x), f32::from(y)]);
+    }
     Ok(job.publish(Arc::new(Mutex::new(PortraitLayer {
         request,
         layer,

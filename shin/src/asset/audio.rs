@@ -34,7 +34,7 @@ impl Asset for AudioFile {
         let bytes = data.read_all().await?;
         match context.game {
             crate::cli::Game::Higurashi => read_higurashi_audio(&bytes),
-            crate::cli::Game::Umineko | crate::cli::Game::Gerokasu2 => read_audio(&bytes),
+            crate::cli::Game::Umineko | crate::cli::Game::Gerokasu2 | crate::cli::Game::Gerokasu => read_audio(&bytes),
         }
         .context("Parsing audio file")
     }

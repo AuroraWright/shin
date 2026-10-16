@@ -134,6 +134,9 @@ pub struct BustupLayerImpl {
     eyes_state: u32,
     blink: super::bustup_blink::BustupBlink,
     ordered_origin: bool,
+    /// Gerokasu per-entry placement `T(x, -y) * S(scale)`, applied between
+    /// the layer transform and the origin translation (native 351c0).
+    placement: Option<[f32; 3]>,
 }
 
 impl BustupLayerImpl {
@@ -186,6 +189,7 @@ impl BustupLayerImpl {
             mouth_state: 0,
             eyes_state: 0,
             ordered_origin: false,
+            placement: None,
         }
     }
 
@@ -201,7 +205,12 @@ impl BustupLayerImpl {
             mouth_state: 0,
             eyes_state: 0,
             ordered_origin: true,
+            placement: None,
         }
+    }
+
+    pub(crate) fn set_placement(&mut self, [scale, x, y]: [f32; 3]) {
+        self.placement = Some([scale, x, y]);
     }
 
     /// MSGFACE installs neutral property27, so its animation permission is
@@ -229,7 +238,13 @@ impl BustupLayerImpl {
         transform: Mat4,
     ) {
         let (origin_x, origin_y) = self.bustup.origin();
-        let translation = Mat4::from_translation(vec3(-origin_x as f32, -origin_y as f32, 0.0));
+        let mut translation =
+            Mat4::from_translation(vec3(-origin_x as f32, -origin_y as f32, 0.0));
+        if let Some([scale, x, y]) = self.placement {
+            translation = Mat4::from_translation(vec3(x, -y, 0.0))
+                * Mat4::from_scale(vec3(scale, scale, 1.0))
+                * translation;
+        }
         let transform = crate::layer::render_params::multiply_transforms(transform, translation);
         self.render_blocks_with_asset_transform(pass, builder, params, transform);
     }

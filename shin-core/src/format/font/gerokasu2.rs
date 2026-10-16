@@ -17,6 +17,7 @@ const HEADER_SIZE: usize = 32;
 const PAGE_SIZE: usize = 514;
 const DESCRIPTOR_SIZE: usize = 24;
 const FALLBACK_CODEPOINT: u32 = 0x203b;
+mod fnt4;
 pub mod texture;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -86,6 +87,8 @@ pub struct Gerokasu2Font {
     pages: Vec<CharacterPage>,
     descriptors: Vec<Descriptor>,
     data: Bytes,
+    /// Gerokasu's FNT4 source, decoded to signed-distance glyphs on demand.
+    fnt4: Option<fnt4::Fnt4Source>,
 }
 
 /// A lookup retains the owning font, so a descriptor cannot decode against
@@ -127,6 +130,9 @@ fn decoded_size(width: u16, height: u16, count: u16) -> Result<u32> {
 
 impl Gerokasu2Font {
     pub fn new(data: Bytes) -> Result<Self> {
+        if data.starts_with(b"FNT4") {
+            return Self::from_fnt4(data);
+        }
         ensure!(data.len() >= HEADER_SIZE, "Truncated FNT6 header");
         ensure!(&data[..4] == b"FNT6", "Expected FNT6 font");
         let header = Gerokasu2FontHeader {
@@ -215,7 +221,66 @@ impl Gerokasu2Font {
             pages,
             descriptors,
             data,
+            fnt4: None,
         })
+    }
+
+    /// Owner words: `[spread, 0, ascent, descent, 0, 0]`, so line metrics use
+    /// the FNT4 ascent/descent and SDF thresholds use the adapter's spread.
+    fn from_fnt4(data: Bytes) -> Result<Self> {
+        let source = fnt4::Fnt4Source::new(&data)?;
+        let glyph_count = source.glyph_count();
+        ensure!(
+            glyph_count > 0 && glyph_count < usize::from(u16::MAX),
+            "Unsupported FNT4 glyph count"
+        );
+        let header = Gerokasu2FontHeader {
+            version: 1,
+            file_size: data.len() as u32,
+            flags: 0,
+            page_count: 256,
+            glyph_count: glyph_count as u16,
+            metric_words: [fnt4::SPREAD, 0, source.ascent(), source.descent(), 0, 0],
+        };
+        let mapping = source.mapping();
+        let pages = (0..256usize)
+            .map(|tag| CharacterPage {
+                tag: tag as u16,
+                glyphs: std::array::from_fn(|low| mapping[(tag << 8) | low].0 as u16),
+            })
+            .collect();
+        let descriptors = (0..glyph_count as u32)
+            .map(|id| {
+                let glyph = source.glyph(id).context("FNT4 glyph ids must be dense")?;
+                Ok(Descriptor {
+                    info: Gerokasu2GlyphInfo {
+                        bearing_x: glyph.bearing_x,
+                        bearing_y: glyph.bearing_y,
+                        width: glyph.width,
+                        height: glyph.height,
+                        advance_sixteenths: u16::from(glyph.advance) * 16,
+                        word_10: 0,
+                        identity: id,
+                        mip_count: fnt4::MIP_COUNT,
+                        decoded_size: decoded_size(glyph.width, glyph.height, fnt4::MIP_COUNT)?,
+                    },
+                    compressed_size: 0,
+                    data_offset: 0,
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(Self {
+            header,
+            pages,
+            descriptors,
+            data,
+            fnt4: Some(source),
+        })
+    }
+
+    /// True when this font came from an FNT4 file (Gerokasu).
+    pub fn is_fnt4(&self) -> bool {
+        self.fnt4.is_some()
     }
 
     pub fn header(&self) -> &Gerokasu2FontHeader {
@@ -285,6 +350,12 @@ impl Gerokasu2Font {
             .get(id.0 as usize)
             .context("FNT6 glyph index outside descriptor table")?;
         let info = descriptor.info;
+        if let Some(source) = &self.fnt4 {
+            return Ok(Gerokasu2Glyph {
+                info,
+                mipmaps: source.decode(id.0)?,
+            });
+        }
         // Native reconstruction assumes nonempty, compatible mip dimensions.
         // Odd sizes can make its area-based allocation exceed the image span;
         // reject those unauthored layouts until their caller contract is known.

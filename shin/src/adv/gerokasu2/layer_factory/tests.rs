@@ -169,6 +169,7 @@ impl Native {
                 path,
                 expression,
                 character_id,
+                ..
             }) => {
                 strings[0] = path;
                 strings[1] = expression;

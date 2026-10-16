@@ -13,7 +13,9 @@ fn decode_archive(
     use shin_core::format::text::TextEncoding;
     let encoding = match game {
         crate::cli::Game::Gerokasu2 => TextEncoding::Utf8,
-        crate::cli::Game::Umineko | crate::cli::Game::Higurashi => TextEncoding::ShiftJis,
+        crate::cli::Game::Umineko | crate::cli::Game::Higurashi | crate::cli::Game::Gerokasu => {
+            TextEncoding::ShiftJis
+        }
     };
     shin_core::format::texture_archive::read_texture_archive_with_encoding(data, encoding)
 }

@@ -191,3 +191,100 @@ fn gerokasu2_supplied_bytecode_inventory() {
         message_ids.last()
     );
 }
+
+fn supplied_gerokasu() -> Gerokasu2Scenario {
+    let path = std::env::var_os("SHIN_GEROKASU_ROM").expect("SHIN_GEROKASU_ROM");
+    let mut rom = RomReader::new(StatelessFile::new(File::open(path).unwrap()).unwrap()).unwrap();
+    let file = rom.find_file("/main.snr").unwrap();
+    let mut data = Vec::new();
+    rom.open_file(file).unwrap().read_to_end(&mut data).unwrap();
+    Gerokasu2Scenario::new(data.into()).unwrap()
+}
+
+#[test]
+#[ignore = "requires supplied Gerokasu data.rom (SHIN_GEROKASU_ROM); syntax inventory only"]
+fn gerokasu_supplied_bytecode_inventory() {
+    let scenario = supplied_gerokasu();
+    assert_eq!(scenario.dialect, Dialect::Gerokasu);
+    let mut reader = scenario.instruction_reader(super::super::instruction_elements::CodeAddress(
+        scenario.header.code_offset,
+    ));
+    let mut opcodes = std::collections::BTreeMap::new();
+    let mut recent = std::collections::VecDeque::new();
+    let mut starts = BTreeSet::new();
+    let mut targets = BTreeSet::new();
+    let mut message_ids = BTreeSet::new();
+    let mut samples = 0;
+    let mut trailing_zeros = 0;
+    while (reader.position().0 as usize) < scenario.raw().len() {
+        let start = reader.position().0 as usize;
+        let remaining = &scenario.raw()[start..];
+        if remaining.len() < 16 && remaining.iter().all(|&byte| byte == 0) {
+            trailing_zeros = remaining.len();
+            break;
+        }
+        let instruction = reader.read().unwrap_or_else(|error| {
+            panic!(
+                "{error:#}; recent={recent:x?}; bytes={:x?}",
+                &scenario.raw()[start..scenario.raw().len().min(start + 32)]
+            )
+        });
+        let end = reader.position().0 as usize;
+        if std::env::var_os("SHIN_GEROKASU_LISTING").is_some() {
+            println!("L {start:06x} {instruction:?}");
+        }
+        *opcodes.entry(scenario.raw()[start]).or_insert(0usize) += 1;
+        starts.insert(start as u32);
+        recent.push_back((start, end, scenario.raw()[start]));
+        if recent.len() > 5 {
+            recent.pop_front();
+        }
+        match &instruction {
+            bytecode::Instruction::MessageSet { text, msg_id, .. } => {
+                if samples < 40 || std::env::var_os("SHIN_GEROKASU_ALL_TEXT").is_some() {
+                    samples += 1;
+                    println!("MSG {start:#x} {:?} {}", msg_id.0, text.as_str());
+                }
+                if msg_id.0 > 0 {
+                    message_ids.insert(msg_id.0);
+                }
+            }
+            bytecode::Instruction::CallTable { targets: table, .. } => {
+                targets.extend(table.0.iter().map(|address| address.0))
+            }
+            bytecode::Instruction::Shared(
+                super::super::instructions::Instruction::j { target }
+                | super::super::instructions::Instruction::jc { target, .. }
+                | super::super::instructions::Instruction::gosub { target }
+                | super::super::instructions::Instruction::call { target, .. },
+            ) => {
+                targets.insert(target.0);
+            }
+            bytecode::Instruction::Shared(super::super::instructions::Instruction::jt {
+                table,
+                ..
+            }) => targets.extend(table.0.iter().map(|address| address.0)),
+            bytecode::Instruction::Shared(super::super::instructions::Instruction::Command(
+                command,
+            )) => {
+                if std::env::var_os("SHIN_GEROKASU_COMMANDS").is_some() {
+                    println!("CMD {start:#x} {command:?}");
+                }
+            }
+            _ => {}
+        }
+    }
+    assert!(
+        targets.is_subset(&starts),
+        "Non-instruction branch targets: {:?}",
+        targets.difference(&starts).collect::<Vec<_>>()
+    );
+    println!(
+        "Gerokasu complete syntax inventory: {} instructions, {} opcode values, {} direct branch targets, {} dialogue IDs (max {:?}), {trailing_zeros} trailing zero bytes; counts={opcodes:x?}",
+        opcodes.values().sum::<usize>(),
+        opcodes.len(),
+        targets.len(),
+        message_ids.len(),
+        message_ids.last()
+    );
+}

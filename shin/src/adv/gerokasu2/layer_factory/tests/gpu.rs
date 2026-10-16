@@ -55,7 +55,7 @@ fn basic_gerokasu2_factories_acquire_retained_utf8_assets_and_draw() {
             );
             let again =
                 shin_tasks::block_on(PreparedBasicDrawable::load(&assets, &request)).unwrap();
-            let PreparedBasicDrawable::Bustup(other, _) = again else {
+            let PreparedBasicDrawable::Bustup(other, _, _) = again else {
                 panic!()
             };
             assert!(Arc::ptr_eq(owner, &other));

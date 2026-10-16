@@ -46,6 +46,9 @@ pub enum Instruction {
     Noop { opcode: u8 },
     /// Native bfd78 reads one NumberSpec; factory eb4 retains it at VM+9100.
     MessageFace { face: NumberSpec },
+    /// Gerokasu's 8b handler (c0dd0) reads five NumberSpecs into one command
+    /// (factory vtable +0x60); Gerokasu2 reads only the face.
+    GerMessageFace { args: [NumberSpec; 5] },
     /// Gerokasu2 adds a numeric operand before the UTF-8 text. Keep the wire
     /// message ID; native bfbe4 subtracts one when constructing the command.
     /// The additional operand reaches MessageLayer+f4, independently of the
@@ -84,13 +87,39 @@ pub enum Instruction {
 #[derive(Clone)]
 pub struct InstructionReader {
     cursor: Cursor<Bytes>,
+    dialect: super::Dialect,
 }
 
 impl InstructionReader {
     pub fn new(data: Bytes, address: CodeAddress) -> Self {
+        Self::with_dialect(data, address, super::Dialect::Gerokasu2)
+    }
+
+    pub fn with_dialect(data: Bytes, address: CodeAddress, dialect: super::Dialect) -> Self {
         let mut cursor = Cursor::new(data);
         cursor.set_position(address.0 as u64);
-        Self { cursor }
+        Self { cursor, dialect }
+    }
+
+    /// Message-like text: Gerokasu applies Umineko's half-width-katakana fixup
+    /// (MSGSET/SAVEINFO are U16FixupString operands in that engine generation).
+    fn fixup_text(&mut self) -> Result<U16Utf8String> {
+        Ok(match self.dialect {
+            super::Dialect::Gerokasu2 => U16Utf8String::read_le(&mut self.cursor)?,
+            super::Dialect::Gerokasu => {
+                U16Utf8String::new(U16FixupString::read_le(&mut self.cursor)?.0)
+            }
+        })
+    }
+
+    /// A u16-length string operand: UTF-8 in Gerokasu2, Shift-JIS in Gerokasu.
+    fn text(&mut self) -> Result<U16Utf8String> {
+        Ok(match self.dialect {
+            super::Dialect::Gerokasu2 => U16Utf8String::read_le(&mut self.cursor)?,
+            super::Dialect::Gerokasu => {
+                U16Utf8String::new(U16String::read_le(&mut self.cursor)?.0)
+            }
+        })
     }
 
     pub fn position(&self) -> CodeAddress {
@@ -155,7 +184,14 @@ impl InstructionReader {
                 selector: field!(),
                 index: field!(),
             },
+            0x8b if self.dialect == super::Dialect::Gerokasu => Instruction::GerMessageFace {
+                args: [field!(), field!(), field!(), field!(), field!()],
+            },
             0x8b => Instruction::MessageFace { face: field!() },
+            // Gerokasu's table (1c51d8) has no SYSSE/SYSCALL; bf180 returns 1.
+            0x9f | 0xa6 if self.dialect == super::Dialect::Gerokasu => {
+                Instruction::Noop { opcode }
+            }
             0xe0 => command!(QUIZ, dest: field!(), arg: field!()),
             // Exact be1fc slots in the supplied native dispatch table. In
             // particular e2 consumes no Umineko QUIZ operands in this game.
@@ -172,19 +208,19 @@ impl InstructionReader {
                 msg_id: field!(),
                 auto_wait: field!(),
                 message_arg: field!(),
-                text: U16Utf8String::read_le(&mut self.cursor)?,
+                text: self.fixup_text()?,
             },
             0x8d => command!(SELECT,
                 choice_set_base: field!(), choice_index: field!(), dest: field!(), choice_visibility_mask: field!(),
-                choice_title: U16String::new(U16Utf8String::read_le(&mut self.cursor)?.0), variants: string_array(&mut self.cursor)?),
+                choice_title: U16String::new(self.text()?.0), variants: string_array(&mut self.cursor, self.dialect)?),
             0x9c => {
-                command!(VOICEPLAY, name: U16String::new(U16Utf8String::read_le(&mut self.cursor)?.0), volume: field!(), flags: field!())
+                command!(VOICEPLAY, name: U16String::new(self.text()?.0), volume: field!(), flags: field!())
             }
             0xa0 => {
-                command!(SAVEINFO, level: field!(), info: U16FixupString::new(U16Utf8String::read_le(&mut self.cursor)?.0))
+                command!(SAVEINFO, level: field!(), info: U16FixupString::new(self.fixup_text()?.0))
             }
             0xff => {
-                command!(DEBUGOUT, format: U16String::new(U16Utf8String::read_le(&mut self.cursor)?.0), args: field!())
+                command!(DEBUGOUT, format: U16String::new(self.text()?.0), args: field!())
             }
             _ => {
                 self.cursor.set_position(self.cursor.position() - 1);
@@ -194,7 +230,7 @@ impl InstructionReader {
     }
 }
 
-fn string_array(cursor: &mut Cursor<Bytes>) -> Result<StringArray> {
+fn string_array(cursor: &mut Cursor<Bytes>, dialect: super::Dialect) -> Result<StringArray> {
     let length = u16::read_le(cursor)? as usize;
     ensure!(length > 0, "Empty Gerokasu2 choice string span");
     let mut data = vec![0; length];
@@ -208,7 +244,13 @@ fn string_array(cursor: &mut Cursor<Bytes>) -> Result<StringArray> {
         ensure!(data.pop() == Some(0), "Unterminated Gerokasu2 choice label");
         for value in data.split(|&byte| byte == 0) {
             ensure!(!value.is_empty(), "Empty Gerokasu2 choice label");
-            strings.push(std::str::from_utf8(value)?.to_owned());
+            strings.push(match dialect {
+                super::Dialect::Gerokasu2 => std::str::from_utf8(value)?.to_owned(),
+                super::Dialect::Gerokasu => crate::format::text::read_sjis_string(
+                    &mut std::io::Cursor::new(value),
+                    Some(value.len()),
+                )?,
+            });
         }
     }
     Ok(StringArray::new(strings))

@@ -38,6 +38,10 @@ pub enum Gerokasu2RuntimeCommand {
     MessageFace {
         face: i32,
     },
+    /// Gerokasu MSGFACE: five evaluated words.
+    GerMessageFace {
+        args: [i32; 5],
+    },
     MessageInit {
         style: i32,
     },
@@ -228,6 +232,12 @@ impl Gerokasu2Scripter {
                     self.checkpoint_ready = true;
                     return Ok(Gerokasu2RuntimeCommand::MessageFace {
                         face: self.ctx.get_number(face),
+                    });
+                }
+                GerInstruction::GerMessageFace { args } => {
+                    self.checkpoint_ready = true;
+                    return Ok(Gerokasu2RuntimeCommand::GerMessageFace {
+                        args: args.map(|arg| self.ctx.get_number(arg)),
                     });
                 }
                 GerInstruction::Shared(Instruction::Command(command)) => {
@@ -657,3 +667,5 @@ impl Gerokasu2Scripter {
 mod tests;
 #[cfg(test)]
 mod route_explorer;
+#[cfg(test)]
+mod gerokasu_trace;

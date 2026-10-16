@@ -95,13 +95,14 @@ pub(crate) fn inspect(cli: &Cli) -> Result<()> {
                 "Higurashi normal launch is available with --game higurashi; this inspection does not open a window or read/write progress."
             );
         }
-        Game::Gerokasu2 => {
+        Game::Gerokasu2 | Game::Gerokasu => {
             let scenario = Gerokasu2Scenario::new(data.into())?;
             println!(
-                "Scenario: {} bytes, entry 0x{:x}, {} dialogue IDs, UTF-8",
+                "Scenario: {} bytes, entry 0x{:x}, {} dialogue IDs, {:?} dialect",
                 scenario.header.size,
                 scenario.header.code_offset,
-                scenario.header.dialogue_line_count
+                scenario.header.dialogue_line_count,
+                scenario.dialect
             );
             println!(
                 "Tables: masks={}, pictures={}, bustups={}, BGM={}, SE={}, movies={}, voice mappings={}, CG gallery={}, music gallery={}, character gallery segments={}",
@@ -117,14 +118,20 @@ pub(crate) fn inspect(cli: &Cli) -> Result<()> {
                 scenario.character_box_info.len()
             );
             paths.extend(scenario.asset_paths());
-            for path in ["/newrodin-medium.fnt", "/system.fnt"] {
+            let fonts: &[&str] = if cli.game == Game::Gerokasu {
+                &["/newrodin.fnt", "/system.fnt"]
+            } else {
+                &["/newrodin-medium.fnt", "/system.fnt"]
+            };
+            for &path in fonts {
                 paths.insert(path.into());
                 if let Ok(file) = io.read_file(path) {
                     let font = Gerokasu2Font::new(file.read_all_sync()?.into())
                         .with_context(|| format!("Inspecting FNT6 font {path}"))?;
                     let header = font.header();
                     println!(
-                        "Font: {path}, FNT6 v{}, {} Unicode pages, {} glyphs, {} mapped codepoints, flags={}",
+                        "Font: {path}, {} v{}, {} Unicode pages, {} glyphs, {} mapped codepoints, flags={}",
+                        if font.is_fnt4() { "FNT4" } else { "FNT6" },
                         header.version,
                         header.page_count,
                         header.glyph_count,

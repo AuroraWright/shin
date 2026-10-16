@@ -1,5 +1,7 @@
 //! Gerokasu2 window adapter; the legacy App keeps its own startup policy.
 use super::AppAction;
+#[cfg(test)]
+use crate::cli::Game;
 use crate::{
     adv::{
         gerokasu2::{
@@ -10,7 +12,7 @@ use crate::{
         input_area::{PointerKind, PointerSampler},
     },
     asset::system::{AssetLoadContext, AssetServer, cache::AssetCache, locate_assets_for_game},
-    cli::{Cli, Game},
+    cli::Cli,
     layer::render_params::TransformParams,
     render::PreRenderContext,
 };
@@ -49,6 +51,7 @@ mod first_boot;
 mod title_demo;
 mod transitions;
 mod write_wait;
+mod debug_input;
 
 /// Native menu modes share one global music player, including loading and
 /// stop tails. Dropping a mode must not stop its music before the next owner.
@@ -56,8 +59,8 @@ pub(super) type MenuBgm = Arc<parking_lot::Mutex<menu_audio::MenuMusic>>;
 
 pub(crate) fn validate_options(cli: &Cli) -> Result<()> {
     ensure!(
-        cli.game == Game::Gerokasu2,
-        "Expected Gerokasu2 game selection"
+        cli.game.is_gerokasu_family(),
+        "Expected Gerokasu or Gerokasu2 game selection"
     );
     ensure!(
         cli.unsafe_entry_point.is_none() && cli.fast_forward_to.is_none(),
@@ -907,7 +910,7 @@ impl ShinApp for Gerokasu2App {
         let assets = Arc::new(AssetServer::new(
             io.into(),
             AssetLoadContext {
-                game: crate::cli::Game::Gerokasu2,
+                game: cli.game,
                 wgpu_device: ctx.wgpu.device.clone(),
                 wgpu_queue: ctx.wgpu.queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -1086,10 +1089,15 @@ impl ShinApp for Gerokasu2App {
     fn update(
         &mut self,
         mut ctx: AppContext<Self>,
-        input: EnumMap<AppAction, ActionState>,
+        mut input: EnumMap<AppAction, ActionState>,
         elapsed: Duration,
         encoder: &mut wgpu::CommandEncoder,
     ) {
+        {
+            static UPDATES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let frame = UPDATES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+            debug_input::apply(frame, &mut input);
+        }
         let held = input[AppAction::PointerClick].is_held;
         self.update_owner(&mut ctx, input, elapsed, encoder);
         if let Err(error) = self.prepare_write_wait(&mut PreRenderContext {

@@ -9,6 +9,15 @@ pub enum Game {
     Umineko,
     Higurashi,
     Gerokasu2,
+    /// 幻想牢獄のカレイドスコープ (the first game); runs on the Gerokasu2 engine path.
+    Gerokasu,
+}
+
+impl Game {
+    /// Gerokasu and Gerokasu2 share one engine generation and app path.
+    pub fn is_gerokasu_family(self) -> bool {
+        matches!(self, Game::Gerokasu | Game::Gerokasu2)
+    }
 }
 
 #[derive(Parser, Debug)]

@@ -262,7 +262,7 @@ impl Asset for Picture {
     ) -> Result<Self> {
         let label = format!("Pic[{}]", name);
         let format = match context.game {
-            crate::cli::Game::Umineko | crate::cli::Game::Gerokasu2 => PictureFormat::Umineko,
+            crate::cli::Game::Umineko | crate::cli::Game::Gerokasu2 | crate::cli::Game::Gerokasu => PictureFormat::Umineko,
             crate::cli::Game::Higurashi => PictureFormat::HigurashiV2,
         };
         let mut cursor = data.cursor()?;

@@ -35,8 +35,14 @@ pub struct MessageResources {
 }
 impl MessageResources {
     pub async fn load(assets: &AssetServer) -> Result<Self> {
+        // Gerokasu ships one FNT4 message font under the Umineko name.
+        let font = if assets.context().game == crate::cli::Game::Gerokasu {
+            "/newrodin.fnt"
+        } else {
+            "/newrodin-medium.fnt"
+        };
         let (medium, textures) = futures::try_join!(
-            assets.load("/newrodin-medium.fnt"),
+            assets.load(font),
             assets.load("/msgtex.txa")
         )?;
         Ok(Self { medium, textures })

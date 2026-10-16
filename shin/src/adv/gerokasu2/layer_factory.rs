@@ -4,7 +4,10 @@ use std::sync::Arc;
 use anyhow::{Result, bail};
 use glam::Vec4;
 use shin_core::{
-    format::scenario::{gerokasu2::Gerokasu2Scenario, instruction_elements::UntypedNumberArray},
+    format::scenario::{
+        gerokasu2::{Dialect, Gerokasu2Scenario},
+        instruction_elements::UntypedNumberArray,
+    },
     primitives::color::FloatColor4,
 };
 
@@ -34,6 +37,9 @@ pub enum LayerFactoryRequest {
         path: String,
         expression: String,
         character_id: i32,
+        /// Gerokasu metadata placement: (scale, x, y), drawn by the layer as
+        /// `T(x, -y) * S(scale)` around the bustup origin (native 351c0).
+        placement: Option<[f32; 3]>,
     },
     Animation {
         mode: i32,
@@ -72,6 +78,51 @@ impl LayerFactoryRequest {
         params: UntypedNumberArray,
     ) -> Option<Self> {
         let index = usize::try_from(params.0).ok();
+        if scenario.dialect == Dialect::Gerokasu {
+            match kind {
+                // Native 1f92c: param 1 selects the `%TIME%` suffix.
+                2 => {
+                    return Some(match index.and_then(|i| scenario.picture_info.get(i)) {
+                        Some(info) => Self::Picture {
+                            path: Gerokasu2Scenario::gerokasu_picture_path(
+                                info.name.as_str(),
+                                params.1,
+                            ),
+                        },
+                        None => Self::Null,
+                    });
+                }
+                // Native 1f97c: params are (entry, dress, face number, face
+                // variant); be760 builds the path, bec10 formats "%03d" plus
+                // the variant suffix ("" or "a").
+                3 => {
+                    return Some(match index.and_then(|i| scenario.bustup_info.get(i)) {
+                        Some(info) => {
+                            let [scale, x, y] = info.raw_placement;
+                            Self::Bustup {
+                                path: Gerokasu2Scenario::gerokasu_bustup_path(
+                                    info.name.as_str(),
+                                    params.1,
+                                ),
+                                expression: format!(
+                                    "{:03}{}",
+                                    params.2,
+                                    if params.3 == 1 { "a" } else { "" }
+                                ),
+                                character_id: i32::from(info.lipsync_character_id as i16),
+                                placement: Some([
+                                    f32::from(scale) * 0.01,
+                                    f32::from(x),
+                                    f32::from(y),
+                                ]),
+                            }
+                        }
+                        None => Self::Null,
+                    });
+                }
+                _ => {}
+            }
+        }
         Some(match kind {
             0 => Self::Null,
             1 => Self::Tile {
@@ -98,6 +149,7 @@ impl LayerFactoryRequest {
                     ),
                     expression: info.emotion.as_str().to_owned(),
                     character_id: i32::from(info.lipsync_character_id as i16),
+                    placement: None,
                 },
                 None => Self::Null,
             },
@@ -143,7 +195,7 @@ pub enum PreparedBasicDrawable {
     Null,
     Tile { color: FloatColor4, rect: Vec4 },
     Picture(Arc<Picture>, String),
-    Bustup(Arc<Gerokasu2Bustup>, String),
+    Bustup(Arc<Gerokasu2Bustup>, String, Option<[f32; 3]>),
     CardSelect(Arc<CardTextures>, i32),
     Movie(parking_lot::Mutex<crate::layer::user::MovieLayer>),
     Procedural(super::procedural_animation::PreparedProcedural),
@@ -180,6 +232,7 @@ impl PreparedBasicDrawable {
                 path,
                 expression,
                 character_id,
+                placement,
             } => Self::Bustup(
                 assets
                     .load_with_args(
@@ -192,6 +245,7 @@ impl PreparedBasicDrawable {
                     )
                     .await?,
                 format!("{path}[{expression}]"),
+                *placement,
             ),
             LayerFactoryRequest::CardSelect { first, second, .. } => {
                 anyhow::ensure!(
@@ -267,9 +321,13 @@ impl PreparedBasicDrawable {
             Self::Picture(picture, name) => {
                 PictureLayer::new(picture.clone(), Some(name.clone())).into()
             }
-            Self::Bustup(bustup, name) => {
+            Self::Bustup(bustup, name, placement) => {
                 retained_bustup = Some(bustup.clone());
-                BustupLayer::new_gerokasu2(bustup.0.clone(), name.clone()).into()
+                let mut layer = BustupLayer::new_gerokasu2(bustup.0.clone(), name.clone());
+                if let Some(placement) = placement {
+                    layer.inner_mut().set_placement(*placement);
+                }
+                layer.into()
             }
             Self::Procedural(prepared) => prepared.construct(),
             Self::Rain(textures, mode, min, max) => {
