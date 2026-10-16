@@ -1,5 +1,5 @@
 use super::*;
-use crate::time::Tweener;
+use crate::time::{Ticks, Tweener};
 
 fn easing_words(easing: Easing) -> (u32, i32) {
     match easing {

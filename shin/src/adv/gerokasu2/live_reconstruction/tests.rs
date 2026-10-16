@@ -86,6 +86,22 @@ impl ReconstructionAudio for Audio {
 }
 
 #[test]
+fn ger_prepared_audio_rejects_missing_metadata_before_publication() {
+    let mut descriptors = Descriptors::default();
+    check_audio_metadata(&descriptors, 0, 0).unwrap();
+    descriptors.music.id = 20;
+    assert!(check_audio_metadata(&descriptors, 20, 90).is_err());
+    check_audio_metadata(&descriptors, 21, 90).unwrap();
+    // Validate the last SE too, before any earlier accepted music/effects can
+    // touch the current source. Negative inactive IDs need no metadata.
+    descriptors.effects[31].id = 90;
+    assert!(check_audio_metadata(&descriptors, 21, 90).is_err());
+    check_audio_metadata(&descriptors, 21, 91).unwrap();
+    descriptors.effects[31].id = i32::MIN;
+    check_audio_metadata(&descriptors, 21, 0).unwrap();
+}
+
+#[test]
 fn ger_audio_restore_failure_keeps_applied_prefix_and_can_retry() {
     let descriptors = Descriptors::default();
     let mut audio = Audio {

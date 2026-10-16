@@ -230,11 +230,16 @@ fn composed_root_scene_runs_utf8_message_root_controls_wipes_waits_and_exit() {
     assert_eq!(installs, 1);
     assert_eq!(scene.runner().completed_commands(), 17);
     let message = scene.runner().message_owner();
-    let previous = scene.backend().previous_root.as_ref().unwrap();
-    assert!(previous.message_owner().unwrap().same_owner(&message));
-    assert_eq!(
-        previous.reference_message_ownership(),
-        scene.backend().root.reference_message_ownership()
+    // Native10AA0 releases the retained root at an enabled blocking poll;
+    // EXIT's pending close has crossed that boundary before terminal status.
+    assert!(!scene.backend().has_previous_root());
+    assert!(
+        scene
+            .backend()
+            .root()
+            .message_owner()
+            .unwrap()
+            .same_owner(&message)
     );
     println!(
         "GEROKASU2_ROOT_SCENE commands=17 installs=1 root_opacity_translation_message_screen_history_shared_fast_skip_close_wipe_wait_EXIT=verified frames={} channels={} audio=Loopback Audio",

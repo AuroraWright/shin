@@ -1,6 +1,12 @@
 use super::*;
+mod backlog;
+mod first_boot;
 mod message_properties;
+mod playback_modes;
 mod restoration;
+mod system_menu;
+mod title_demo;
+mod transitions;
 use crate::{
     adv::gerokasu2::{layer_factory::GerDrawable, play_scene::SceneEvent},
     asset::{font::gerokasu2::draw::gpu_tests::Offscreen, system::LayeredAssetIo},
@@ -69,7 +75,7 @@ fn ger_app_options_allow_native_save_import_and_reject_unimplemented_debug_entri
         assert!(validate_options(&cli).is_err());
     }
 }
-fn bytes() -> Vec<u8> {
+pub(super) fn bytes() -> Vec<u8> {
     let mut rom = RomReader::new(
         StatelessFile::new(
             std::fs::File::open(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap()).unwrap(),
@@ -85,7 +91,7 @@ fn bytes() -> Vec<u8> {
         .unwrap();
     data
 }
-fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
+pub(super) fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
     let mut io = LayeredAssetIo::new();
     io.try_with_rom(&std::path::PathBuf::from(
         std::env::var_os("SHIN_GEROKASU2_ROM").unwrap(),
@@ -99,7 +105,6 @@ fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
             wgpu_queue: gpu.queue.clone(),
             bustup_cache: AssetCache::new(),
             higurashi_bustup_cache: Default::default(),
-
 
             picture_cache: Default::default(),
             font_cache: Default::default(),
@@ -115,7 +120,7 @@ fn host(gpu: &Offscreen, data: Vec<u8>) -> GerHost {
     ))
     .unwrap()
 }
-fn num(d: &mut Vec<u8>, v: i32) {
+pub(super) fn num(d: &mut Vec<u8>, v: i32) {
     let mut c = Cursor::new(Vec::new());
     NumberSpec::<i32>::constant(v).write_le(&mut c).unwrap();
     d.extend(c.into_inner());
@@ -387,7 +392,7 @@ fn ger_app_authored_prologue_keyboard_and_root_render_without_external_ack() {
         frames.frames * 320 * 180 * 4
     );
 }
-fn msg(d: &mut Vec<u8>, wire_id: u32, text: &str) {
+pub(super) fn msg(d: &mut Vec<u8>, wire_id: u32, text: &str) {
     d.push(0x86);
     d.extend(&wire_id.to_le_bytes()[..3]);
     d.push(1); // auto-wait; actual message owner retains the command.
@@ -482,14 +487,10 @@ fn ger_app_native_read_skip_autoplay_sys_gates_and_new_message_recheck() {
             & 1,
         1
     );
+    // Native 11650 excludes A from its clear mask: confirming kept skip
+    // latched, so the read message now skips on its own.
+    assert!(host.scene.playback().modes.skip);
     tick(&mut host, &mut frame, &idle, point, 30.0);
-    tick(
-        &mut host,
-        &mut frame,
-        &held(AppAction::ToggleSkip),
-        point,
-        30.0,
-    );
     while retained(&host) != "@r次の未読" {
         tick(&mut host, &mut frame, &idle, point, 30.0);
         assert!(Instant::now() < deadline);

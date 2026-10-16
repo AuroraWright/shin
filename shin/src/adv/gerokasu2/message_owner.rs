@@ -108,12 +108,20 @@ impl Gerokasu2MessageOwner {
     }
     pub(crate) fn clear_for_reconstruction(&mut self) {
         if let Some(message) = self.message.as_mut() {
-            message.clock_mut().clear_for_reconstruction();
+            message.clear_for_reconstruction();
         }
         self.portrait = Default::default();
     }
     pub fn message(&self) -> Option<&Gerokasu2Message> {
         self.message.as_ref()
+    }
+    pub(crate) fn close_for_exit(&mut self) {
+        if let Some(message) = self.message.as_mut() {
+            message.clock_mut().close(true);
+        }
+    }
+    pub(crate) fn exit_busy(&self) -> bool {
+        self.message.as_ref().is_some_and(|m| m.clock().busy())
     }
     pub fn portrait(&self) -> &Gerokasu2MessagePortrait {
         &self.portrait
@@ -140,6 +148,11 @@ impl Gerokasu2MessageOwner {
     }
     pub fn retained_text(&self) -> Option<&str> {
         self.commands.retained_text()
+    }
+    pub fn set_modal_hidden(&mut self, hidden: bool) {
+        if let Some(message) = self.message.as_mut() {
+            message.set_modal_hidden(hidden);
+        }
     }
 
     pub fn dispatch(

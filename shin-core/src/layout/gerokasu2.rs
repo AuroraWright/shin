@@ -71,3 +71,54 @@ pub fn choice_layouter<Font: TextFontMetrics + Clone>(
 
 #[cfg(test)]
 mod selection_tests;
+
+/// GenericText menu and dialog callers supply their native sizes and wrapping
+/// policy, while retaining the later engine's parser and layout rules.
+pub fn generic_layouter<Font: TextFontMetrics + Clone>(
+    font: Font,
+    params: LayoutParams,
+) -> super::MessageTextLayouter<Font> {
+    super::MessageTextLayouter::new(
+        font.clone(),
+        font,
+        params,
+        MessageTextLayouterDefaults {
+            color: 999,
+            draw_speed: 50,
+            fade: 200,
+        },
+    )
+    .with_gerokasu2_rules()
+}
+
+/// MessageBrowser LogMessage807C0. The modern backlog name/quotation mixin
+/// is retained with Ger font roles, parser rules and caller dimensions.
+pub fn backlog_layouter<Font: TextFontMetrics + Clone>(
+    normal: Font,
+    bold: Font,
+    color: i32,
+) -> super::BacklogTextLayouter<Font> {
+    super::BacklogTextLayouter::new(
+        normal,
+        bold,
+        LayoutParams {
+            layout_width: 1320.0,
+            text_alignment: MessageTextLayout::Justify,
+            line_padding_above: 6.0,
+            line_padding_below: 4.0,
+            line_padding_between: 0.0,
+            rubi_size: 0.0,
+            text_size: 44.0,
+            base_font_horizontal_scale: 1.0,
+            follow_kinsoku_shori_rules: true,
+            always_leave_space_for_rubi: false,
+            perform_soft_breaks: true,
+        },
+        MessageTextLayouterDefaults {
+            color,
+            draw_speed: 50,
+            fade: 200,
+        },
+    )
+    .with_gerokasu2_rules()
+}

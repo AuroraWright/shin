@@ -92,6 +92,11 @@ impl Gerokasu2VoicePlayer {
     pub(super) fn play_command(&mut self, name: &str, volume: f32, flags: i32) -> bool {
         self.play_segment(name, volume, 0, 0, VoicePlayFlags::from_bits_retain(flags))
     }
+    /// Browser95D50 calls the native voice transport with flags0: no character
+    /// muting/lipsync and no segment. Its separate owner keeps ADV voice paused.
+    pub(crate) fn play_backlog(&mut self, name: &str, volume: f32) -> bool {
+        self.play_segment(name, volume, 0, 0, VoicePlayFlags::empty())
+    }
     fn play_segment(
         &mut self,
         name: &str,

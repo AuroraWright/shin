@@ -655,3 +655,5 @@ impl Gerokasu2Scripter {
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod route_explorer;

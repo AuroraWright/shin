@@ -176,7 +176,8 @@ fn ger_audio_negative_active_slots_volume_pan_stop_and_legacy_bounds() {
     ))
     .unwrap();
     let mut frames = Frames::new(&gpu);
-    let player = &mut scene.reference_audio_mut().se_player;
+    let mut audio = scene.reference_audio_mut();
+    let player = &mut audio.se_player;
     let path = format!("/se/{}.nxa", scenario.se_info[0].name.as_str());
     let slot = player.request_once(
         assets.clone(),
@@ -207,6 +208,7 @@ fn ger_audio_negative_active_slots_volume_pan_stop_and_legacy_bounds() {
     player.stop(-999, Tween::IMMEDIATE);
     player.set_volume(-999, Volume(1.0), Tween::IMMEDIATE);
     player.set_panning(-999, Pan(0.0), Tween::IMMEDIATE);
+    drop(audio);
     assert!(
         frames
             .draw_scene(&gpu, scene.backend_mut())

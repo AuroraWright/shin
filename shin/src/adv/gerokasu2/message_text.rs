@@ -233,6 +233,14 @@ impl Gerokasu2MessageText {
         })
     }
 
+    /// Reconstruction mode 0 empties the window's glyphs with its clock.
+    pub(crate) fn clear(&mut self) {
+        self.commands.clear();
+        self.lines.clear();
+        self.characters.clear();
+        self.vertex_buffer = None;
+    }
+
     pub fn character_count(&self) -> usize {
         self.characters.len()
     }

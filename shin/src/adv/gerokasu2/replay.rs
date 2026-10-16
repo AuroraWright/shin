@@ -127,6 +127,26 @@ impl ReplaySession {
     pub fn status(&self) -> ReplayStatus {
         self.status
     }
+    /// Run the desktop load worker in bounded chunks. Cancellation remains
+    /// observable between chunks and completed commands. Numeric execution
+    /// retains its independent instruction budget.
+    pub(crate) fn pump_to_ready(
+        &mut self,
+        seen: &IndexSet,
+        cancelled: impl Fn() -> bool,
+    ) -> Result<()> {
+        loop {
+            ensure!(!cancelled(), "Ger save reconstruction cancelled");
+            match self.pump(seen, 4096, 100000, &cancelled)? {
+                ReplayStatus::Ready => return Ok(()),
+                ReplayStatus::CommandBudget => {}
+                ReplayStatus::Cancelled => anyhow::bail!("Ger save reconstruction cancelled"),
+                ReplayStatus::Published => {
+                    anyhow::bail!("Ger save reconstruction already published")
+                }
+            }
+        }
+    }
     pub fn fault(&self) -> Option<&str> {
         self.fault.as_deref()
     }
@@ -399,6 +419,7 @@ fn supported(command: &Cmd) -> bool {
             )
     )
 }
+pub mod chapter_skip;
 #[cfg(test)]
 mod native_tests;
 #[cfg(test)]

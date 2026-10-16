@@ -39,6 +39,50 @@ use std::{
     time::{Duration, Instant},
 };
 
+// BEGIN NATIVE BACK ROOT MODEL
+/// ADV+D0 retains the first pre-mutation root until an animation-enabled
+/// command poll blocks. Completed commands and host frame boundaries keep it.
+pub(crate) struct PreviousRoot<T> {
+    value: Option<T>,
+}
+impl<T> Default for PreviousRoot<T> {
+    fn default() -> Self {
+        Self { value: None }
+    }
+}
+impl<T> PreviousRoot<T> {
+    pub fn is_none(&self) -> bool {
+        self.value.is_none()
+    }
+    pub fn capture(&mut self, current: &T, clone: impl FnOnce(&T) -> T) -> bool {
+        if self.value.is_some() {
+            return false;
+        }
+        self.value = Some(clone(current));
+        true
+    }
+    pub fn command_blocked(&mut self, animations_allowed: bool) -> bool {
+        if animations_allowed {
+            self.value.take().is_some()
+        } else {
+            false
+        }
+    }
+    pub fn selected<'a>(&'a self, current: &'a T) -> &'a T {
+        self.value.as_ref().unwrap_or(current)
+    }
+    pub fn selected_mut<'a>(&'a mut self, current: &'a mut T) -> &'a mut T {
+        self.value.as_mut().unwrap_or(current)
+    }
+    pub fn update_pair(&mut self, current: &mut T, mut update: impl FnMut(&mut T)) {
+        update(current);
+        if let Some(previous) = self.value.as_mut() {
+            update(previous);
+        }
+    }
+}
+// END NATIVE BACK ROOT MODEL
+
 /// Shared root/Screen/Page/bank owners and resource/transition services. The
 /// runner attaches its retained message;pending jobs preserve existing owners.
 pub struct BasicLoadBackend {
@@ -48,7 +92,7 @@ pub struct BasicLoadBackend {
     scenario: Arc<Gerokasu2Scenario>,
     counters: LoadCounters,
     root: Gerokasu2Root,
-    previous_root: Option<Gerokasu2Root>,
+    previous_root: PreviousRoot<Gerokasu2Root>,
     task: Option<shin_tasks::AsyncTask<Result<PreparedBasicDrawable>>>,
     prepared: Option<PreparedBasicDrawable>,
     prototype: Option<BasicDrawable>,
@@ -81,6 +125,25 @@ impl BasicLoadBackend {
     }
     pub(crate) fn reconstruction_root_mut(&mut self) -> &mut Gerokasu2Root {
         &mut self.root
+    }
+    /// Original13800 uses ADV+D0 when retained, otherwise ADV+C0.
+    pub(crate) fn modal_capture_root_mut(&mut self) -> &mut Gerokasu2Root {
+        self.selected_root_mut()
+    }
+    /// Native11190/13800 select the retained pre-mutation root when present.
+    pub fn selected_root(&self) -> &Gerokasu2Root {
+        self.previous_root.selected(&self.root)
+    }
+    pub fn selected_root_mut(&mut self) -> &mut Gerokasu2Root {
+        self.previous_root.selected_mut(&mut self.root)
+    }
+    pub fn has_previous_root(&self) -> bool {
+        !self.previous_root.is_none()
+    }
+    /// Called at native105E0/10AA0 only after a command poll returns pending.
+    /// It must not run for a paused frame, completed command, or budget yield.
+    pub fn command_blocked(&mut self) {
+        self.previous_root.command_blocked(self.animations);
     }
     pub(crate) fn reconstruction_set_root(&mut self, root: Gerokasu2Root) {
         self.root = root;
@@ -147,10 +210,12 @@ impl BasicLoadBackend {
         self.root.attach_message(owner)
     }
     pub fn prepare_message_frame(&mut self, ctx: &AdvUpdateContext) {
-        self.root.prepare_message_frame(ctx);
+        self.previous_root
+            .update_pair(&mut self.root, |root| root.prepare_message_frame(ctx));
     }
     pub fn prepare_root_fast_forward(&mut self) {
-        self.root.fast_forward();
+        self.previous_root
+            .update_pair(&mut self.root, |root| root.fast_forward());
     }
     pub fn new(
         assets: Arc<AssetServer>,
@@ -164,7 +229,7 @@ impl BasicLoadBackend {
             scenario,
             counters,
             root: Gerokasu2Root::new(),
-            previous_root: None,
+            previous_root: PreviousRoot::default(),
             task: None,
             prepared: None,
             prototype: None,
@@ -255,10 +320,12 @@ impl BasicLoadBackend {
         self.screen_mut().page_layer_mut().planes_mut()
     }
     pub fn update(&mut self, context: &AdvUpdateContext) {
-        self.root.update(context);
+        self.previous_root
+            .update_pair(&mut self.root, |root| root.update(context));
     }
     pub fn fast_forward(&mut self) {
-        self.root.fast_forward();
+        self.previous_root
+            .update_pair(&mut self.root, |root| root.fast_forward());
     }
     /// The caller supplies the page/parent boundary; these methods prepare and
     /// render the selected bank plane, not a complete Screen/Page root.
@@ -285,8 +352,9 @@ impl BasicLoadBackend {
         context: &mut PreRenderContext,
         transform: &TransformParams,
     ) -> Result<()> {
-        self.root.pre_render(context, transform);
-        self.root.check_render()?;
+        let root = self.selected_root_mut();
+        root.pre_render(context, transform);
+        root.check_render()?;
         Ok(())
     }
     pub fn render_scene(
@@ -296,8 +364,9 @@ impl BasicLoadBackend {
         stencil: u8,
         kind: PassKind,
     ) -> Result<()> {
-        self.root.render(pass, transform, stencil, kind);
-        self.root.check_render()
+        let root = self.selected_root();
+        root.render(pass, transform, stencil, kind);
+        root.check_render()
     }
     fn accept_transition(&mut self, result: Result<AnyWiper>) -> Result<()> {
         match result {
@@ -442,7 +511,8 @@ impl SceneServices for BasicLoadBackend {
                 device: &device,
                 encoder: &mut encoder,
             };
-            self.previous_root = Some(self.root.render_clone(&mut ctx));
+            self.previous_root
+                .capture(&self.root, |root| root.render_clone(&mut ctx));
             self.assets.context().wgpu_queue.submit([encoder.finish()]);
         }
         Ok(())
@@ -773,6 +843,9 @@ impl LoadServices for BasicLoadBackend {
     }
 }
 
+#[cfg(test)]
+#[path = "drawables/back_root_tests.rs"]
+mod back_root_tests;
 #[cfg(test)]
 mod tests;
 

@@ -48,6 +48,8 @@ pub enum SceneEvent {
     VoiceObserved(String),
 }
 struct Services {
+    scene_title: String,
+    exit: Option<super::exit_mode::ExitMode>,
     playback: super::playback::Playback,
     selection: Option<super::selection::SharedSelection>,
     selection_history: super::selection::SelectionHistory,
@@ -55,7 +57,10 @@ struct Services {
     gallery: GalleryUnlocks,
     save: SaveSession,
     message_capture: Option<SaveCapture>,
-    audio: GlobalAudio,
+    audio: Arc<parking_lot::Mutex<GlobalAudio>>,
+    externally_updated_audio: bool,
+    defer_audio_publication: bool,
+    audio_restore_pending: bool,
     scenario: Arc<Gerokasu2Scenario>,
     backend: Box<BasicLoadBackend>,
     assets: Arc<AssetServer>,
@@ -66,6 +71,14 @@ struct Services {
     resume_requested: bool,
 }
 impl Services {
+    fn update_audio(&mut self) {
+        if !self.externally_updated_audio {
+            let mut audio = self.audio.lock();
+            audio.bgm_player.update();
+            audio.se_player.update();
+            audio.system_player.update();
+        }
+    }
     fn play_selection_cues(&mut self) {
         let cues = self
             .selection
@@ -73,6 +86,7 @@ impl Services {
             .map_or_else(Vec::new, |s| s.lock().model.take_sounds());
         for cue in cues {
             self.audio
+                .lock()
                 .system_player
                 .play(&self.assets, cue, Volume(1.0));
         }
@@ -169,6 +183,7 @@ impl SaveServices for Services {
         Ok(())
     }
     fn show_scene_title(&mut self, title: &str) -> Result<()> {
+        self.scene_title = title.to_owned();
         self.events.push(SceneEvent::SceneTitle(title.to_owned()));
         Ok(())
     }
@@ -186,32 +201,44 @@ impl AudioCommands for Services {
             .bgm_info
             .get(usize::try_from(id)?)
             .ok_or_else(|| anyhow::anyhow!("Invalid Ger BGM {id}"))?;
-        Ok(self.audio.bgm_player.request_with_loop_count(
+        let accepted = self.audio.lock().bgm_player.request_with_loop_count(
             self.assets.clone(),
             format!("/bgm/{}.nxa", info.name.as_str()),
             BgmId::from_number(id),
             loops as u32,
             volume(value),
             fade(time),
-        ))
+        );
+        // Global38368..3838C is a producer even for restored requests. The
+        // command-level notification only supplies title/UI cues.
+        if accepted {
+            self.gallery.bgms.add(id as usize);
+            if info.linked_bgm_id >= 0 {
+                self.gallery.bgms.add(info.linked_bgm_id as usize);
+            }
+        }
+        Ok(accepted)
     }
     fn bgm_changed(&mut self, id: i32) -> Result<()> {
         self.events.push(SceneEvent::BgmChanged(id));
         Ok(())
     }
     fn bgm_stop(&mut self, time: i32) -> Result<()> {
-        self.audio.bgm_player.stop(fade(time));
+        self.audio.lock().bgm_player.stop(fade(time));
         Ok(())
     }
     fn bgm_volume(&mut self, value: f32, time: i32) -> Result<()> {
-        self.audio.bgm_player.set_volume(volume(value), fade(time));
+        self.audio
+            .lock()
+            .bgm_player
+            .set_volume(volume(value), fade(time));
         Ok(())
     }
     fn bgm_status(&self) -> i32 {
-        self.audio.bgm_player.get_wait_status().bits()
+        self.audio.lock().bgm_player.get_wait_status().bits()
     }
     fn bgm_position(&self) -> u64 {
-        self.audio.bgm_player.position_micros()
+        self.audio.lock().bgm_player.position_micros()
     }
     fn se_play(
         &mut self,
@@ -232,7 +259,7 @@ impl AudioCommands for Services {
             .se_info
             .get(usize::try_from(id)?)
             .ok_or_else(|| anyhow::anyhow!("Invalid Ger SE {id}"))?;
-        self.audio.se_player.request(
+        self.audio.lock().se_player.request(
             self.assets.clone(),
             format!("/se/{}.nxa", info.name.as_str()),
             slot,
@@ -250,11 +277,11 @@ impl AudioCommands for Services {
             slot < crate::audio::SE_SLOT_COUNT as i32,
             "Invalid Ger SE slot {slot}"
         );
-        self.audio.se_player.stop(slot, fade(time));
+        self.audio.lock().se_player.stop(slot, fade(time));
         Ok(())
     }
     fn se_stop_all(&mut self, time: i32) -> Result<()> {
-        self.audio.se_player.stop_all(fade(time));
+        self.audio.lock().se_player.stop_all(fade(time));
         Ok(())
     }
     fn se_volume(&mut self, slot: i32, value: f32, time: i32) -> Result<()> {
@@ -263,6 +290,7 @@ impl AudioCommands for Services {
             "Invalid Ger SE slot {slot}"
         );
         self.audio
+            .lock()
             .se_player
             .set_volume(slot, volume(value), fade(time));
         Ok(())
@@ -273,28 +301,79 @@ impl AudioCommands for Services {
             "Invalid Ger SE slot {slot}"
         );
         self.audio
+            .lock()
             .se_player
             .set_panning(slot, Pan(value.clamp(-1.0, 1.0)), fade(time));
         Ok(())
     }
     fn se_status(&self, slot: i32) -> i32 {
         if slot < crate::audio::SE_SLOT_COUNT as i32 {
-            self.audio.se_player.get_wait_status(slot).bits()
+            self.audio.lock().se_player.get_wait_status(slot).bits()
         } else {
             0
         }
     }
     fn se_once_status(&self, slot: i32) -> i32 {
-        self.audio.se_player.get_once_wait_status(slot).bits()
+        self.audio
+            .lock()
+            .se_player
+            .get_once_wait_status(slot)
+            .bits()
     }
 }
 impl super::live_reconstruction::ReconstructionAudio for Services {
     fn prepare_effect_reconstruction(&mut self) -> Result<()> {
-        self.audio.se_player.prepare_restore();
+        self.audio.lock().se_player.prepare_restore();
         Ok(())
     }
 }
 impl RunnerServices for Services {
+    fn command_blocked(&mut self) -> Result<()> {
+        self.backend.command_blocked();
+        Ok(())
+    }
+    fn begin_exit(&mut self) -> Result<bool> {
+        self.exit = super::exit_mode::ExitMode::for_command(0);
+        self.poll_exit_ready()?;
+        self.playback.hidden_ui = false;
+        self.playback.system_controls = false;
+        self.playback.held_skip = false;
+        self.playback.modes.reset();
+        self.backend
+            .root()
+            .message_owner()
+            .unwrap()
+            .lock()
+            .close_for_exit();
+        let mut audio = self.audio.lock();
+        audio.se_player.prepare_restore();
+        audio.se_player.stop_all(Tween::IMMEDIATE);
+        Ok(true)
+    }
+    fn poll_exit_ready(&mut self) -> Result<bool> {
+        let gates = super::exit_mode::ExitGates {
+            // Concrete hide-message and notification motion owners are not
+            // installed yet; the current app has no such pending tasks.
+            hide_motion_busy: false,
+            message_busy: self
+                .backend
+                .root()
+                .message_owner()
+                .is_some_and(|m| m.lock().exit_busy()),
+            tasks_idle: !self.backend.reconstruction_has_jobs(),
+        };
+        let Some(exit) = self.exit.as_mut() else {
+            return Ok(true);
+        };
+        for action in exit.poll(gates) {
+            if action == super::exit_mode::ExitAction::RequestSave {
+                // Original F120 commits pending persistent variables before
+                // requesting the global save task, never at Title publication.
+                self.save.variables.commit()?;
+            }
+        }
+        Ok(exit.phase() == super::exit_mode::ExitPhase::SaveQueued)
+    }
     fn mask_services(&mut self) -> Option<&mut (dyn super::masks::MaskServices + '_)> {
         Some(self.backend.as_mut())
     }
@@ -437,6 +516,9 @@ impl RunnerServices for Services {
             movie_volume_settings: self.backend.movie_volume_settings(),
         };
         self.backend.update(&ctx);
+        if let Some(exit) = self.exit.as_mut() {
+            exit.advance_clock(delta.as_f32());
+        }
         Ok(())
     }
     fn fast_forward_layers(&mut self, _: &Gerokasu2Layers) -> Result<()> {
@@ -452,6 +534,57 @@ pub struct Gerokasu2PlayScene {
     navigation: Option<Box<navigation::Navigation>>,
 }
 impl Gerokasu2PlayScene {
+    pub(crate) fn is_exiting(&self) -> bool {
+        self.services.exit.is_some()
+    }
+    pub(crate) fn focus_policy_ready(&self) -> bool {
+        !self.services.backend.reconstruction_has_jobs() && self.navigation.is_none()
+    }
+    pub(crate) fn exit_save_completed(&mut self) -> Vec<super::exit_mode::ExitAction> {
+        self.services
+            .exit
+            .as_mut()
+            .map_or_else(Vec::new, |e| e.save_completed())
+    }
+    /// Keep background save hydration silent until its destination is ready.
+    /// Standalone scenes retain their existing immediate publication contract.
+    pub(crate) fn defer_audio_publication(&mut self) {
+        self.services.defer_audio_publication = true;
+    }
+
+    pub(crate) fn publish_global_audio(
+        &mut self,
+        audio: Arc<parking_lot::Mutex<GlobalAudio>>,
+    ) -> Result<()> {
+        // Validate every restored ID before attaching or touching the audible
+        // source. A rejected destination must leave the retained menu usable.
+        self.check_audio_publication()?;
+        self.services.audio = audio;
+        self.services.externally_updated_audio = true;
+        self.services.defer_audio_publication = false;
+        if let Some(settings) = self.services.loaded_settings.as_ref() {
+            let mut audio = self.services.audio.lock();
+            audio.bgm_player.set_settings_volume(settings.v0_bgmvol);
+            audio.se_player.set_settings_volume(settings.v1_sfxvol);
+            audio.system_player.set_settings_volume(settings.v3_sysvol);
+        }
+        if self.services.audio_restore_pending {
+            let descriptors = self.services.save.descriptors.clone();
+            super::live_reconstruction::restore_audio(&descriptors, &mut self.services)?;
+            self.services.audio_restore_pending = false;
+        }
+        Ok(())
+    }
+    pub(crate) fn check_audio_publication(&self) -> Result<()> {
+        if self.services.audio_restore_pending {
+            super::live_reconstruction::check_audio_metadata(
+                &self.services.save.descriptors,
+                self.services.scenario.bgm_info.len(),
+                self.services.scenario.se_info.len(),
+            )?;
+        }
+        Ok(())
+    }
     pub fn import_save_globals(&mut self, data: &shin_core::format::save::gerokasu2::SaveData) {
         use shin_core::format::save::index_set::IndexSet;
         let vectors = &data.save_vectors;
@@ -471,33 +604,103 @@ impl Gerokasu2PlayScene {
             bgms: IndexSet::from_raw_words(vectors.unlocked_bgms.clone()),
             movies: IndexSet::from_raw_words(vectors.unlocked_movies.clone()),
         };
-        self.services.context.message_speed = data.settings.v9_msgspeed;
+        self.apply_settings(&data.settings);
+    }
+    /// Native 258F0 system cue at volume 1.0 (ADV playback-mode feedback).
+    pub fn play_system_cue(&mut self, cue: &str) {
         self.services
             .audio
-            .bgm_player
-            .set_settings_volume(data.settings.v0_bgmvol);
-        self.services
-            .audio
-            .se_player
-            .set_settings_volume(data.settings.v1_sfxvol);
-        self.services
-            .audio
+            .lock()
             .system_player
-            .set_settings_volume(data.settings.v3_sysvol);
+            .play(&self.services.assets, cue, Volume(1.0));
+    }
+    /// Live Config must update preferences without importing older progress,
+    /// persistent variables or read/gallery vectors from the desktop store.
+    pub fn apply_settings(&mut self, settings: &shin_core::format::save::Settings) {
+        self.services.playback.disallow_skip_unread = settings.v11_disallowskipunread;
+        self.services.context.message_speed = settings.v9_msgspeed;
+        self.services
+            .audio
+            .lock()
+            .bgm_player
+            .set_settings_volume(settings.v0_bgmvol);
+        self.services
+            .audio
+            .lock()
+            .se_player
+            .set_settings_volume(settings.v1_sfxvol);
+        self.services
+            .audio
+            .lock()
+            .system_player
+            .set_settings_volume(settings.v3_sysvol);
         self.runner.voice_mut().set_preferences(
-            data.settings.v2_voicevol,
-            data.settings.v19,
-            data.settings.v5_voicepanapot,
+            settings.v2_voicevol,
+            settings.v19,
+            settings.v5_voicepanapot,
         );
         self.services
             .backend
-            .set_movie_volume_settings((&data.settings).into());
+            .set_movie_volume_settings(settings.into());
         self.runner
             .message_owner()
             .lock()
             .ui_settings
-            .window_opacity = data.settings.v13_msgwinalpha;
-        self.services.loaded_settings = Some(data.settings.clone());
+            .window_opacity = settings.v13_msgwinalpha;
+        self.services.loaded_settings = Some(settings.clone());
+    }
+    pub fn scene_title(&self) -> &str {
+        &self.services.scene_title
+    }
+    pub fn system_menu_allowed(&self) -> bool {
+        self.navigation.is_none()
+            && !self.is_exiting()
+            && self.services.playback.system_controls
+            && self.services.save.timeline.event < 0
+            && (self.selection_ready()
+                || self
+                    .runner
+                    .message_owner()
+                    .lock()
+                    .message()
+                    .is_some_and(|m| {
+                        let c = m.clock();
+                        c.open && c.slide >= 1.0 && !c.is_finished()
+                    }))
+    }
+    pub fn set_menu_paused(&mut self, paused: bool) {
+        self.runner.voice_mut().set_paused(paused);
+        self.services.audio.lock().se_player.set_paused(paused);
+    }
+    pub fn pause_menu_effects(&mut self, paused: bool) {
+        self.services.audio.lock().se_player.set_paused(paused);
+    }
+    pub fn step_menu(
+        &mut self,
+        frame: FrameId,
+        delta: Ticks,
+        suspended: bool,
+        paused: bool,
+    ) -> Result<RunnerStatus> {
+        // Original10A38 gates VM and10DCC gates *all* root/message updates
+        // while pause_depth!=0. The independently advanced parent backdrop is
+        // outside these gates. Final14194 releases clocks in the same frame.
+        if paused || suspended {
+            self.services.update_audio();
+            return Ok(RunnerStatus::Waiting);
+        }
+        self.step(
+            frame,
+            delta,
+            FramePolicy {
+                paused: false,
+                scene_changing: false,
+                animations_allowed: true,
+                autoplay: false,
+                fast_skip: false,
+            },
+            self.services.context,
+        )
     }
     pub fn export_save_globals(&self, data: &mut shin_core::format::save::gerokasu2::SaveData) {
         data.persist_data = self.persistent().clone();
@@ -516,7 +719,8 @@ impl Gerokasu2PlayScene {
         &mut self,
         replay: &mut super::replay::ReplaySession,
     ) -> Result<()> {
-        self.reconstruct_replay_with_display(replay, false).await
+        self.reconstruct_replay_with_display(replay, false, || false)
+            .await
     }
     /// Load publication clears the displayed MessageLayer (original mode0).
     /// Its retained MSGSET still installs text only on the first live poll.
@@ -524,12 +728,22 @@ impl Gerokasu2PlayScene {
         &mut self,
         replay: &mut super::replay::ReplaySession,
     ) -> Result<()> {
-        self.reconstruct_replay_with_display(replay, true).await
+        self.reconstruct_replay_with_display(replay, true, || false)
+            .await
+    }
+    pub(crate) async fn reconstruct_replay_for_load_cancellable(
+        &mut self,
+        replay: &mut super::replay::ReplaySession,
+        cancelled: impl Fn() -> bool,
+    ) -> Result<()> {
+        self.reconstruct_replay_with_display(replay, true, cancelled)
+            .await
     }
     async fn reconstruct_replay_with_display(
         &mut self,
         replay: &mut super::replay::ReplaySession,
         clear_display: bool,
+        cancelled: impl Fn() -> bool,
     ) -> Result<()> {
         replay.check_publication(&self.services.scenario)?;
         let mut prepared = self
@@ -539,11 +753,17 @@ impl Gerokasu2PlayScene {
                 &replay.layers,
                 &replay.save.descriptors,
                 !clear_display,
-                || false,
+                &cancelled,
             )
             .await?;
+        anyhow::ensure!(
+            !cancelled(),
+            "Ger reconstruction cancelled before live publication"
+        );
         self.runner.voice_mut().stop();
-        if let Err(error) =
+        if self.services.defer_audio_publication {
+            self.services.audio_restore_pending = true;
+        } else if let Err(error) =
             super::live_reconstruction::restore_audio(&replay.save.descriptors, &mut self.services)
         {
             self.runner.require_publication_retry(&error);
@@ -585,6 +805,7 @@ impl Gerokasu2PlayScene {
             .install_replayed_parts(vm, layers, pending, response);
         self.services.context.event_mode = save.timeline.event;
         self.services.save = save;
+        self.services.scene_title = self.services.save.metadata.saved()[1].to_string();
         self.services.backend = prepared;
         for (kind, params) in self.services.backend.take_loaded_notifications() {
             self.services
@@ -652,12 +873,12 @@ impl Gerokasu2PlayScene {
         result
     }
     #[cfg(test)]
-    pub(crate) fn reference_audio(&self) -> &GlobalAudio {
-        &self.services.audio
+    pub(crate) fn reference_audio(&self) -> parking_lot::MutexGuard<'_, GlobalAudio> {
+        self.services.audio.lock()
     }
     #[cfg(test)]
-    pub(crate) fn reference_audio_mut(&mut self) -> &mut GlobalAudio {
-        &mut self.services.audio
+    pub(crate) fn reference_audio_mut(&mut self) -> parking_lot::MutexGuard<'_, GlobalAudio> {
+        self.services.audio.lock()
     }
     /// Bootstrap and settings remain caller inputs until native title/save/input
     /// integration resolves them. Unsupported commands remain retained owners.
@@ -697,6 +918,8 @@ impl Gerokasu2PlayScene {
             runner: Box::new(runner),
             navigation: None,
             services: Services {
+                scene_title: String::new(),
+                exit: None,
                 playback: Default::default(),
                 selection: None,
                 selection_history: Default::default(),
@@ -704,7 +927,10 @@ impl Gerokasu2PlayScene {
                 gallery: GalleryUnlocks::default(),
                 save,
                 message_capture: None,
-                audio: GlobalAudio::new(audio),
+                audio: Arc::new(parking_lot::Mutex::new(GlobalAudio::new(audio))),
+                externally_updated_audio: false,
+                defer_audio_publication: false,
+                audio_restore_pending: false,
                 scenario,
                 backend,
                 assets,
@@ -734,6 +960,32 @@ impl Gerokasu2PlayScene {
     }
     pub fn playback_mut(&mut self) -> &mut super::playback::Playback {
         &mut self.services.playback
+    }
+    pub fn assets(&self) -> &Arc<AssetServer> {
+        &self.services.assets
+    }
+    pub fn scenario(&self) -> &Arc<Gerokasu2Scenario> {
+        &self.services.scenario
+    }
+    /// Native11B00 skip predicate, as consumed by parent-owned clocks such as
+    /// the save/BGM title notifications (11014..11028).
+    pub fn skip_active(&self) -> bool {
+        self.services
+            .playback
+            .skip(self.services.save.timeline.event, self.playback_blocked())
+    }
+    /// Native11950 autoplay predicate (the auto indicator's pulse).
+    pub fn autoplay_active(&self) -> bool {
+        self.services
+            .playback
+            .autoplay(self.services.save.timeline.event, self.playback_blocked())
+    }
+    /// The interactive overlay withholds playback modes.
+    pub fn playback_blocked(&self) -> bool {
+        self.services
+            .selection
+            .as_ref()
+            .is_some_and(|s| s.lock().blocks_playback())
     }
     pub fn persistent(&self) -> &shin_core::format::save::PersistData {
         self.services.save.variables.committed()
@@ -768,9 +1020,7 @@ impl Gerokasu2PlayScene {
                 policy.scene_changing = true;
                 self.runner
                     .advance(frame, delta, policy, &mut self.services)?;
-                self.services.audio.bgm_player.update();
-                self.services.audio.se_player.update();
-                self.services.audio.system_player.update();
+                self.services.update_audio();
                 return Ok(RunnerStatus::Waiting);
             }
             // Native10A20 polls modes before10A48 gates the command loop.
@@ -798,10 +1048,8 @@ impl Gerokasu2PlayScene {
                 super::replay::ReplaySession::new(self.services.scenario.clone(), save, restored)?;
             self.begin_reconstruction(replay, 3)?;
         }
-        self.services.audio.bgm_player.update();
-        self.services.audio.se_player.update();
         self.services.play_selection_cues();
-        self.services.audio.system_player.update();
+        self.services.update_audio();
         Ok(status)
     }
     pub fn selection(&self) -> Option<super::selection::SharedSelection> {

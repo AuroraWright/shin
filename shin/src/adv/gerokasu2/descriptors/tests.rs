@@ -229,7 +229,7 @@ impl Native {
 
 #[test]
 #[ignore = "requires exact executable, fonts and original descriptor constructor oracle"]
-fn ger_native_descriptors_audio_message_SYS_EXIT_message_properties_and_checkpoint_order() {
+fn ger_native_descriptors_audio_message_sys_exit_message_properties_and_checkpoint_order() {
     let mut native = Native::new();
     native.compare(0, &[], None, false, None);
     for value in [i32::MIN, -1001, -1, 0, 1, 999, 1000, 2001, i32::MAX] {

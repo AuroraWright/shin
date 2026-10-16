@@ -228,7 +228,7 @@ fn words(commands: &[Command], lines: &[LineInfo], size: [f32; 2]) -> Vec<u32> {
 
 #[test]
 #[ignore = "requires supplied ROM, executable and guarded native message layout oracle"]
-fn native_synthetic_UTF8_tags_names_modes_and_alignment_match_shared_layout() {
+fn native_synthetic_utf8_tags_names_modes_and_alignment_match_shared_layout() {
     let (normal, bold, _) = read_assets();
     let mut native = Native::new();
     let texts = [
@@ -262,7 +262,7 @@ fn native_synthetic_UTF8_tags_names_modes_and_alignment_match_shared_layout() {
 
 #[test]
 #[ignore = "requires supplied ROM, executable and guarded native message layout oracle"]
-fn native_all_authored_messages_match_shared_UTF8_parser_layout_and_profiles() {
+fn native_all_authored_messages_match_shared_utf8_parser_layout_and_profiles() {
     let (normal, bold, scenario) = read_assets();
     let mut reader = scenario.instruction_reader(CodeAddress(scenario.header.code_offset));
     let mut native = Native::new();

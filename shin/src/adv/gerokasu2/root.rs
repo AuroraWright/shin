@@ -141,6 +141,7 @@ impl DrawableLayer for RootChild {
     }
 }
 pub struct Gerokasu2Root {
+    overlay_concealed: bool,
     group: LayerGroup<RootChild>,
     error: Arc<parking_lot::Mutex<Option<String>>>,
 }
@@ -169,6 +170,7 @@ impl Gerokasu2Root {
             )),
         );
         Self {
+            overlay_concealed: false,
             group,
             error: Default::default(),
         }
@@ -197,6 +199,49 @@ impl Gerokasu2Root {
     pub fn remove_selection(&mut self) {
         self.group
             .remove_layer(OVERLAY, shin_core::time::Ticks::ZERO);
+    }
+    pub fn conceal_overlay(&mut self, hidden: bool) {
+        self.overlay_concealed = hidden;
+    }
+    pub fn capture_without_ui(
+        &mut self,
+        ctx: &mut PreRenderContext,
+    ) -> Result<shin_render::render_texture::RenderTexture> {
+        // Original13800 removes slots1/2, prepares and draws the same root,
+        // then restores the same target owners. Do not clone/reconstruct them.
+        let message = self
+            .group
+            .remove_layer(MESSAGE, shin_core::time::Ticks::ZERO);
+        let overlay = self
+            .group
+            .remove_layer(OVERLAY, shin_core::time::Ticks::ZERO);
+        let transform = TransformParams::default();
+        self.group.pre_render(ctx, &transform);
+        let mut target = ctx.new_render_texture("Ger modal scene without UI".into());
+        {
+            let mut pass = ctx.begin_pass(
+                target.as_texture_target(),
+                Some(ctx.depth_stencil),
+                "Ger modal scene capture",
+            );
+            pass.clear(
+                Some(shin_core::primitives::color::UnormColor::BLACK),
+                Some(0),
+                Some(1.0),
+            );
+            for kind in [PassKind::Opaque, PassKind::Transparent] {
+                self.group.render(&mut pass, &transform, 0, kind);
+            }
+        }
+        if let Some(message) = message {
+            self.group.add_layer_storage(MESSAGE, message, None);
+        }
+        if let Some(overlay) = overlay {
+            self.group.add_layer_storage(OVERLAY, overlay, None);
+        }
+        self.pre_render(ctx, &transform);
+        self.check_render()?;
+        Ok(target)
     }
     pub fn has_message(&self) -> bool {
         self.group.get_direct_layer(MESSAGE).is_some()
@@ -245,6 +290,7 @@ impl RenderClone for Gerokasu2Root {
         // not survive page/history snapshots.
         group.remove_layer(OVERLAY, shin_core::time::Ticks::ZERO);
         Self {
+            overlay_concealed: self.overlay_concealed,
             group,
             error: self.error.clone(),
         }
@@ -263,7 +309,17 @@ impl Layer for Gerokasu2Root {
         self.group.get_stencil_bump()
     }
     fn pre_render(&mut self, ctx: &mut PreRenderContext, t: &TransformParams) {
+        let overlay = self
+            .overlay_concealed
+            .then(|| {
+                self.group
+                    .remove_layer(OVERLAY, shin_core::time::Ticks::ZERO)
+            })
+            .flatten();
         self.group.pre_render(ctx, t);
+        if let Some(overlay) = overlay {
+            self.group.add_layer_storage(OVERLAY, overlay, None);
+        }
     }
     fn render(&self, p: &mut RenderPass, t: &TransformParams, s: u8, k: PassKind) {
         self.group.render(p, t, s, k);

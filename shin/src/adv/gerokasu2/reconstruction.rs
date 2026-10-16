@@ -7,7 +7,7 @@ use super::{
 };
 use crate::{
     asset::{mask::MaskTexture, system::AssetServer},
-    layer::{DrawableLayer, LayerProperties, LayerPropertiesState},
+    layer::{DrawableLayer, LayerProperties, LayerPropertiesState, PropertyPolicy},
 };
 use anyhow::{Result, ensure};
 use enum_map::Enum;
@@ -154,9 +154,12 @@ impl BasicLoadBackend {
                     device: &device,
                     encoder: &mut encoder,
                 };
-                let layer = resource
+                let mut layer = resource
                     .construct_movie(&mut context)
                     .unwrap_or_else(|| resource.construct());
+                // Live LAYERLOAD installs fresh Ger-policy properties; a
+                // constructed (uncached) owner needs the same policy.
+                layer.set_properties(LayerProperties::with_policy(PropertyPolicy::Gerokasu2));
                 assets.context().wgpu_queue.submit([encoder.finish()]);
                 ensure!(
                     !cancelled(),

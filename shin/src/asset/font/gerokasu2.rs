@@ -21,11 +21,19 @@ pub mod draw;
 pub struct GpuGerokasu2Font {
     font: Arc<Gerokasu2Font>,
     glyph_cache: Arc<cache::Gerokasu2GlyphCache<GpuGerokasu2Glyph>>,
+    text_overrides: Arc<crate::asset::localization::TextOverrides>,
 }
 
 impl GpuGerokasu2Font {
+    #[cfg(test)]
     pub fn new(font: Gerokasu2Font) -> Result<Self> {
         Self::with_cache(font, Arc::new(cache::Gerokasu2GlyphCache::default()))
+    }
+
+    /// Code-defined UI text through the asset server's `localized.toml`.
+    /// Scenario text (story, choices, titles, history) stays authored.
+    pub fn localize<'a>(&self, text: &'a str) -> std::borrow::Cow<'a, str> {
+        self.text_overrides.translate(text)
     }
 
     /// Shared layout owns these CPU metrics independently of drawable handles.
@@ -44,6 +52,7 @@ impl GpuGerokasu2Font {
         Ok(Self {
             font: Arc::new(font),
             glyph_cache,
+            text_overrides: Arc::default(),
         })
     }
 
@@ -61,7 +70,11 @@ impl GpuGerokasu2Font {
             .iter()
             .copied()
             .zip(batch.handles)
-            .map(|(codepoint, handle)| GpuGerokasu2GlyphHandle { codepoint, handle })
+            .map(|(_codepoint, handle)| GpuGerokasu2GlyphHandle {
+                #[cfg(test)]
+                codepoint: _codepoint,
+                handle,
+            })
             .collect();
         if !batch.requests.is_empty() {
             shin_tasks::compute::spawn_and_forget(move || {
@@ -101,6 +114,10 @@ impl TextFontMetrics for GpuGerokasu2Font {
 }
 
 impl Asset for GpuGerokasu2Font {
+    fn attach_text_overrides(&mut self, overrides: Arc<crate::asset::localization::TextOverrides>) {
+        self.text_overrides = overrides;
+    }
+
     type Args = ();
     async fn load(
         context: &Arc<AssetLoadContext>,
@@ -117,6 +134,8 @@ impl Asset for GpuGerokasu2Font {
 
 #[derive(Debug, Clone)]
 pub struct GpuGerokasu2GlyphHandle {
+    /// Tests check that handles keep the requested character order.
+    #[cfg(test)]
     pub codepoint: char,
     handle: CacheHandle<GpuGerokasu2Glyph>,
 }
@@ -197,6 +216,22 @@ mod tests {
         let mut wrong_dialect = font(70, 10);
         wrong_dialect[..4].copy_from_slice(b"FNT4");
         assert!(read_layout_font(wrong_dialect).is_err());
+    }
+
+    #[test]
+    fn gerokasu2_font_localizes_code_text_through_attached_overrides() {
+        let mut font = GpuGerokasu2Font::new(Gerokasu2Font::new(font(70, 10).into()).unwrap()).unwrap();
+        assert_eq!(font.localize("はい"), "はい", "no localized.toml keeps the source");
+        font.attach_text_overrides(Arc::new(
+            crate::asset::localization::TextOverrides::parse(
+                "\"はい\" = \"Yes\"\n\"{m}分\" = \"{m} min\"\n\"{h}時間 {m}分\" = \"{h} h {m} min\"\n",
+            )
+            .unwrap(),
+        ));
+        assert_eq!(font.localize("はい"), "Yes");
+        assert_eq!(font.localize("5分"), "5 min");
+        assert_eq!(font.localize("12時間 5分"), "12 h 5 min");
+        assert_eq!(font.localize("はいはい"), "はいはい", "no substring matches");
     }
 }
 

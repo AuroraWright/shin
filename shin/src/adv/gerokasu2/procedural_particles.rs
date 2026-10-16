@@ -58,11 +58,16 @@ impl GerRainParticles {
         if !self.needs_warm_up {
             return;
         }
-        // Native waits indefinitely for first expiry with nonpositive controls.
-        // Keep warm-up pending in that unsupported domain so later valid
-        // controls can complete it without freezing the host's update thread.
-        if self.expired == 0 && !(intensity > 0.0 && speed > 0.0) {
-            return;
+        if self.expired == 0 {
+            // Zero intensity can finish: a fresh owner has one pending emission,
+            // and existing particles retain the velocity captured at birth.
+            // Leave genuinely nonterminating controls pending for a later call.
+            let can_spawn =
+                speed > 0.0 && (intensity > 0.0 || (intensity == 0.0 && self.emission >= 1.0));
+            let can_expire_existing = self.particles.iter().any(|p| p.velocity.y > 0.0);
+            if !can_spawn && !can_expire_existing {
+                return;
+            }
         }
         while self.expired == 0 {
             self.update(1.0, intensity, direction, speed);

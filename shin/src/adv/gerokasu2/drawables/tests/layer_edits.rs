@@ -93,7 +93,7 @@ impl Native {
         let (mask, flags) = group.reference_mask_state();
         let mut expected = vec![
             1,
-            backend.previous_root.is_some() as u32,
+            backend.has_previous_root() as u32,
             visits,
             entries.len() as u32,
             mask.is_some() as u32,
@@ -162,7 +162,7 @@ fn ger_layer_edits_real_groups_match_native_swap_unload_countdowns_clear_and_fas
                     .property_tweener_mut(LayerProperty::TranslateY)
                     .fast_forward_to(id as f32);
             }
-            backend.previous_root = None;
+            backend.previous_root = super::super::PreviousRoot::default();
             native.compare(&[0, u32::from(p), 2, 0, 0, 0, 0, 0], &backend, plane, 0, 0);
             edit(&mut backend, &mut layers, swap(0, 1));
             native.compare(&[2, u32::from(p), 0, 1, 1, 0, 0, 0], &backend, plane, 1, 0);

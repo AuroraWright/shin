@@ -58,6 +58,14 @@ pub struct InitialMessage {
 }
 
 pub trait RunnerServices: MessageNotifications {
+    /// Concrete ADV keeps EXIT's wait/UI/save owner alive until the outer mode
+    /// accepts its handoff. Fixture services may retain immediate termination.
+    fn begin_exit(&mut self) -> Result<bool> {
+        Ok(false)
+    }
+    fn poll_exit_ready(&mut self) -> Result<bool> {
+        Ok(true)
+    }
     fn selection_services(
         &mut self,
     ) -> Option<&mut (dyn super::selection::SelectionServices + '_)> {
@@ -113,6 +121,12 @@ pub trait RunnerServices: MessageNotifications {
     /// Re-evaluate native playback gates after this frame pumps commands.
     fn frame_policy(&mut self, policy: FramePolicy) -> FramePolicy {
         policy
+    }
+    /// Original105E0/10AA0: an actual command poll returned pending. The scene
+    /// releases its retained previous root only when animations are enabled.
+    /// Paused frames and host command-budget yields do not reach this boundary.
+    fn command_blocked(&mut self) -> Result<()> {
+        Ok(())
     }
     fn system_call(&mut self, _: i32, _: i32) -> Result<bool> {
         Ok(false)
@@ -446,7 +460,14 @@ impl Gerokasu2Runner {
             self.vm_fault
         );
         if self.exited {
-            return Ok(RunnerStatus::Exited);
+            if paused {
+                return Ok(RunnerStatus::Waiting);
+            }
+            if services.poll_exit_ready()? {
+                return Ok(RunnerStatus::Exited);
+            }
+            services.command_blocked()?;
+            return Ok(RunnerStatus::Waiting);
         }
         services.attach_message(self.message.clone())?;
         if paused {
@@ -662,6 +683,7 @@ impl Gerokasu2Runner {
                                 Owner::Audio(state)
                             };
                             if !complete {
+                                services.command_blocked()?;
                                 return Ok(RunnerStatus::Waiting);
                             }
                         } else {
@@ -685,6 +707,11 @@ impl Gerokasu2Runner {
                         self.pending = None;
                         self.completed += 1;
                         if self.exited {
+                            if services.begin_exit()? {
+                                self.voice.stop();
+                                services.command_blocked()?;
+                                return Ok(RunnerStatus::Waiting);
+                            }
                             return Ok(RunnerStatus::Exited);
                         }
                         continue;
@@ -1024,13 +1051,17 @@ impl Gerokasu2Runner {
                     if !available {
                         pending.owner = Owner::External;
                     }
+                    services.command_blocked()?;
                     return Ok(if available {
                         RunnerStatus::Waiting
                     } else {
                         RunnerStatus::External
                     });
                 }
-                Owner::External => return Ok(RunnerStatus::External),
+                Owner::External => {
+                    services.command_blocked()?;
+                    return Ok(RunnerStatus::External);
+                }
                 Owner::LayerLoad(controller) => {
                     let loader = services
                         .layer_load_services()
@@ -1083,6 +1114,7 @@ impl Gerokasu2Runner {
                 }
             };
             if status == MessageCommandStatus::Pending {
+                services.command_blocked()?;
                 return Ok(RunnerStatus::Waiting);
             }
             self.pending = None;

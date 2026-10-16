@@ -2,7 +2,7 @@
 //!
 //! Raw relative and speed controls stay queued until installation. Unlike the
 //! older policy, interpolation uses FMA and completed clocks retain both ends.
-use super::{Easing, Ticks, Tween, TweenOptions};
+use super::{Easing, Tween, TweenOptions};
 use std::{
     collections::VecDeque,
     sync::atomic::{AtomicU32, Ordering},

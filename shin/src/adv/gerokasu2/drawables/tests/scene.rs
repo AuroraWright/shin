@@ -91,7 +91,7 @@ fn actual_pageback_promotion_all_scene_wipers_and_copied_bank_retirement() {
             }
             assert_eq!(wipe.poll(&mut backend).unwrap(), progress == 1.0);
         }
-        assert!(backend.previous_root.is_some());
+        assert!(backend.has_previous_root());
     }
     // PAGEBACK copies the target page,then strips copied bank wrappers without
     // advancing their target properties or changing active bank clocks.

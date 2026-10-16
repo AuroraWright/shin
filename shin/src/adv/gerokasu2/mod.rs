@@ -1,9 +1,14 @@
 //! Later-engine command state, kept separate from Umineko's ADV policy.
 pub mod audio_commands;
+pub mod backlog;
+pub mod bustup_gallery;
 pub mod card_select;
+pub mod cg_gallery;
 pub mod checkpoints;
+pub mod config;
 pub mod descriptors;
 pub mod drawables;
+pub mod exit_mode;
 pub mod gallery;
 pub mod layer_control;
 pub mod layer_edit;
@@ -11,6 +16,7 @@ pub mod layer_factory;
 pub mod layer_load;
 pub mod layers;
 pub mod live_reconstruction;
+pub mod manual;
 pub mod masks;
 pub mod message;
 pub mod message_clock;
@@ -19,21 +25,34 @@ pub mod message_owner;
 pub mod message_portrait;
 pub mod message_text;
 pub mod message_ui;
+pub mod modal;
 pub mod movie;
+pub mod music_gallery;
 pub mod play_scene;
 pub mod playback;
 pub(crate) mod procedural_animation;
 pub(crate) mod procedural_particles;
+#[cfg(all(test, target_os = "macos", target_arch = "aarch64"))]
+mod question_reference;
 pub mod quiz;
 pub mod reconstruction;
 pub mod reconstruction_mode;
 pub mod replay;
 pub mod responses;
 pub mod root;
+pub mod root_ui;
 pub mod runner;
 pub mod save_commands;
+pub mod save_menu;
+#[path = "save_menu/preview/replay.rs"]
+pub(crate) mod save_preview_replay;
+#[path = "save_menu/preview/scene.rs"]
+pub(crate) mod save_preview_scene;
+pub mod save_write;
 pub mod scene;
 pub mod selection;
+pub mod system_menu;
+pub mod title;
 pub mod variables;
 pub mod voice;
 pub mod voice_commands;

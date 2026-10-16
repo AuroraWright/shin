@@ -53,7 +53,7 @@ fn ger_rain_zero_delta_moves_once_wraps_repeatedly_preserves_negative_zero_and_e
 #[test]
 fn ger_rain_warmup_stays_pending_for_nonterminating_controls_then_completes_once() {
     let mut m = GerRainParticles::new(0, 100, 1500, 1);
-    for (intensity, speed) in [(0.0, 1000.0), (3000.0, 0.0), (-1.0, 1000.0)] {
+    for (intensity, speed) in [(0.0, 0.0), (3000.0, 0.0), (-1.0, 1000.0)] {
         m.warm_up(intensity, 100.0, speed);
         assert!(m.needs_warm_up);
         assert!(m.particles.is_empty());
@@ -71,6 +71,34 @@ fn ger_rain_warmup_stays_pending_for_nonterminating_controls_then_completes_once
     assert_eq!(rain_snapshot(&m), rain_snapshot(&copy));
     copy.particles[0].position.x = -10.0;
     assert_ne!(rain_snapshot(&m), rain_snapshot(&copy));
+}
+
+#[test]
+fn ger_rain_zero_intensity_warmup_consumes_pending_emission_or_existing_velocity() {
+    for mode in 0..4 {
+        let mut m = GerRainParticles::new(mode, 100, 1500, 42);
+        m.warm_up(0.0, 100.0, 1000.0);
+        assert!(!m.needs_warm_up);
+        assert_eq!(m.expired, 1);
+        assert_eq!(m.emission, 0.0);
+        assert!(m.particles.is_empty());
+        assert_eq!(m.seed, if mode == 1 { 3_864_260 } else { 974_199_846 });
+
+        let mut m = GerRainParticles::new(mode, 100, 1500, 42);
+        m.update(0.0, 0.0, 100.0, 1000.0);
+        assert_eq!(m.particles.len(), 1);
+        // Current speed only affects future particles. The retained particle
+        // can finish native warm-up using its original positive velocity.
+        m.warm_up(0.0, 100.0, 0.0);
+        assert!(!m.needs_warm_up);
+        assert_eq!(m.expired, 1);
+
+        let mut m = GerRainParticles::new(mode, 100, 1500, 42);
+        m.emission = 0.5;
+        m.warm_up(0.0, 100.0, 1000.0);
+        assert!(m.needs_warm_up);
+        assert!(m.particles.is_empty());
+    }
 }
 
 #[test]
@@ -204,8 +232,10 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
     let mut expected = Vec::new();
     let mut rows = 0;
     let mut constructors = 0;
+    let mut record_offsets = Vec::new();
     let mut record = |row: [u32; 8], snapshot: Vec<u8>| {
         input.extend(row.into_iter().flat_map(u32::to_le_bytes));
+        record_offsets.push(expected.len());
         expected.extend(snapshot);
         rows += 1;
     };
@@ -282,6 +312,18 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
             );
         }
     }
+    // Initial emission is one, so intensity zero still warms up to one expiry.
+    // This finite native case is distinct from empty zero-emission warm-up.
+    for mode in 0..4 {
+        let mut m = GerRainParticles::new(mode, 100, 1500, 42);
+        record([0, mode as u32, 100, 1500, 42, 0, 0, 0], rain_snapshot(&m));
+        constructors += 1;
+        m.warm_up(0.0, 100.0, 1000.0);
+        record(
+            [4, 0, 0, 100.0f32.to_bits(), 1000.0f32.to_bits(), 0, 0, 0],
+            rain_snapshot(&m),
+        );
+    }
     for seed in [0, 1, 42, 2_147_483_646, 2_147_483_647, u32::MAX] {
         let offset = Vec2::new(i32::MIN as f32, i32::MAX as f32);
         let mut m = GerFocusRays::new(seed);
@@ -308,9 +350,20 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
         }
     }
     drop(record);
+    // clang can merge sinf/cosf into Darwin's paired entrypoint, while an
+    // unoptimized Rust host uses scalar calls. They differ for this angle.
+    // Select the actual host geometry contract; SDK trig remains excluded.
+    let (sine, cosine) = std::hint::black_box(f32::from_bits(0x3de9a0cc)).sin_cos();
+    assert_eq!(cosine.to_bits(), 0x3f7e560a, "unreviewed host cosine");
+    let rotation_profile = match sine.to_bits() {
+        0x3de91f2a => "scalar",
+        0x3de91f29 => "paired",
+        value => panic!("unreviewed host sine {value:08x}"),
+    };
     let run = |mutant: Option<&str>| {
         let mut command = Command::new(&binary);
         command
+            .env("SHIN_GER_PROCEDURAL_ROTATION", rotation_profile)
             .args([
                 root.join("gerokasu2/uncompressed_executable"),
                 root.join("gerokasu2/.local/newrodin-medium.fnt"),
@@ -340,6 +393,9 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
     };
     let output = run(None);
     fs::write(folder.join("native.log"), &output.stderr).unwrap();
+    fs::write(folder.join("comparison-input.bin"), &input).unwrap();
+    fs::write(folder.join("comparison-native.bin"), &output.stdout).unwrap();
+    fs::write(folder.join("comparison-rust.bin"), &expected).unwrap();
     if output.stdout != expected {
         let at = output
             .stdout
@@ -347,8 +403,33 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
             .zip(&expected)
             .position(|(a, b)| a != b)
             .unwrap_or(output.stdout.len().min(expected.len()));
+        let row = record_offsets.partition_point(|offset| *offset <= at) - 1;
+        let offset = at - record_offsets[row];
+        let request = |row: usize| {
+            input[row * 32..(row + 1) * 32]
+                .chunks_exact(4)
+                .map(|word| u32::from_le_bytes(word.try_into().unwrap()))
+                .collect::<Vec<_>>()
+        };
+        let constructor = (0..=row)
+            .rev()
+            .find(|row| matches!(request(*row)[0], 0 | 2))
+            .unwrap();
+        let kind = request(constructor)[0];
+        let stride = if kind == 2 { 16 } else { 88 };
+        let field = if offset < 48 {
+            format!("header word {}", offset / 4)
+        } else {
+            format!(
+                "record {} word {}",
+                (offset - 48) / stride,
+                ((offset - 48) % stride) / 4
+            )
+        };
         panic!(
-            "Ger procedural native mismatch byte {at}, native bytes{}, port bytes{}; native{:?}, port{:?}",
+            "Ger procedural native mismatch byte {at}, row {row}, {field}, request {:08x?}, constructor row {constructor} {:08x?}, rotation {rotation_profile}, native bytes{}, port bytes{}; native{:?}, port{:?}",
+            request(row),
+            request(constructor),
             output.stdout.len(),
             expected.len(),
             output
@@ -357,6 +438,7 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
             expected.get(at.saturating_sub(4)..(at + 8).min(expected.len()))
         );
     }
+    let mut mutants = Vec::new();
     for mutant in [
         "rain_emission_fma",
         "rain_distance_fma",
@@ -368,12 +450,38 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
     ] {
         let mutated = run(Some(mutant));
         assert!(
-            !mutated.status.success() || mutated.stdout != expected,
+            mutated.status.success(),
+            "procedural mutant {mutant} failed instead of completing: {}",
+            String::from_utf8_lossy(&mutated.stderr)
+        );
+        assert!(
+            mutated.stdout != expected,
             "undetected procedural mutant {mutant}"
         );
+        mutants.push(serde_json::json!({
+            "name": mutant,
+            "exit_code": mutated.status.code(),
+            "changed": true,
+            "bytes": mutated.stdout.len(),
+        }));
     }
+    fs::write(
+        folder.join("comparison-summary.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "rows": rows,
+            "constructors": constructors,
+            "bytes": expected.len(),
+            "equal": true,
+            "host_rotation": rotation_profile,
+            "mutants": mutants,
+            "sdk_trigonometry_verified": false,
+            "gpu_audio_executed": false,
+        }))
+        .unwrap(),
+    )
+    .unwrap();
     eprintln!(
-        "GEROKASU2_PROCEDURAL rows={rows} constructors={constructors} bytes={} mutants=7 original_native_simulation_and_tweens=verified sdk_rotation_properties_seed_draws=prepared",
+        "GEROKASU2_PROCEDURAL rows={rows} constructors={constructors} bytes={} mutants=7 original_native_simulation_and_tweens=verified sdk_rotation_properties_seed_draws=prepared host_rotation={rotation_profile}",
         expected.len()
     );
 }

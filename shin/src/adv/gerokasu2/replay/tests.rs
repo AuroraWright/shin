@@ -115,8 +115,8 @@ fn ger_authored_layer_init_operands_inventory_has_no_message_minus5_address() {
             instructions::Instruction as SharedInstruction,
         },
     };
-    use shin_core::vm::command::CompiletimeCommand;
     use shin_core::primitives::stateless_reader::StatelessFile;
+    use shin_core::vm::command::CompiletimeCommand;
     use std::io::Read;
     let Some(path) = std::env::var_os("SHIN_GEROKASU2_ROM") else {
         return;
@@ -285,6 +285,26 @@ fn ger_replay_event_block_reforks_last_skip_and_cancellation_is_after_completed_
         replay.pump(&IndexSet::new(), 32, 1000, || false).unwrap(),
         ReplayStatus::Cancelled
     );
+}
+
+#[test]
+fn ger_desktop_replay_worker_observes_cancellation_after_a_full_command_chunk() {
+    let script = scenario(|d| {
+        for _ in 0..6000 {
+            d.push(0x85);
+            num(d, 3);
+        }
+        message(d);
+    });
+    let mut replay = saved(script, u32::MAX, u32::MAX, Vec::new());
+    let polls = std::cell::Cell::new(0);
+    let result = replay.pump_to_ready(&IndexSet::new(), || {
+        polls.set(polls.get() + 1);
+        polls.get() > 5000
+    });
+    assert!(result.unwrap_err().to_string().contains("cancelled"));
+    assert_eq!(replay.status(), ReplayStatus::Cancelled);
+    assert!(replay.completed_commands > 4096 && replay.completed_commands < 6000);
 }
 
 #[test]

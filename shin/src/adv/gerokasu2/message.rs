@@ -25,6 +25,10 @@ impl Gerokasu2Message {
     pub fn clock(&self) -> &MessageClock {
         &self.clock
     }
+    pub(super) fn clear_for_reconstruction(&mut self) {
+        self.clock.clear_for_reconstruction();
+        self.text.clear();
+    }
     pub(super) fn clock_mut(&mut self) -> &mut MessageClock {
         &mut self.clock
     }

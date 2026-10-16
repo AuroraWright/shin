@@ -42,18 +42,27 @@ impl Playback {
             self.modes.reset();
         }
     }
-    /// Native L/autoplay wins simultaneous L/R clicks. Confirmation cancels
-    /// the mode word only when neither toggle was dispatched.
-    pub fn input(&mut self, auto: bool, skip: bool, cancel: bool) {
+    /// Native L/autoplay wins simultaneous L/R clicks. `cancel` is the
+    /// 11650 mask 0x200000C0 (X bit6, Y bit7, B alias bit29; never A); it clears the mode word only when
+    /// neither toggle was dispatched. Returns the native 258F0 cue when the
+    /// word changed: 1167C/11714 select `son` for a bit turned on and
+    /// `cancel` for one turned off; 1166C clears with `cancel`. The caller
+    /// consumes that press, as 11744 returns.
+    pub fn input(&mut self, auto: bool, skip: bool, cancel: bool) -> Option<&'static str> {
         if self.hidden_ui {
-            return;
+            return None;
         }
         if self.system_controls && auto {
             self.modes.toggle_autoplay();
+            Some(if self.modes.autoplay { "son" } else { "cancel" })
         } else if self.system_controls && skip {
             self.modes.toggle_skip();
-        } else if cancel {
+            Some(if self.modes.skip { "son" } else { "cancel" })
+        } else if cancel && (self.modes.autoplay || self.modes.skip) {
             self.modes.reset();
+            Some("cancel")
+        } else {
+            None
         }
     }
     pub fn autoplay(&self, event: i32, interactive_overlay: bool) -> bool {
