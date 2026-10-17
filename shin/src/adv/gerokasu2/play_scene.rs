@@ -1163,6 +1163,12 @@ impl Gerokasu2PlayScene {
             .as_ref()
             .is_some_and(|m| m.lock().select(index))
     }
+    pub fn card_autoplay_action(&self) -> Option<super::card_select::gerokasu::AutoAction> {
+        self.services
+            .interactive
+            .as_ref()
+            .and_then(|m| m.lock().autoplay_action())
+    }
     pub fn confirm_card(&mut self) -> bool {
         self.services
             .interactive

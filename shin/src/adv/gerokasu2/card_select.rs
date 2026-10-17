@@ -28,6 +28,10 @@ pub trait CardInteraction: Send {
         Vec::new()
     }
     fn set_voice_playing(&mut self, _playing: bool) {}
+    /// Debug playtests: the next step that reaches an unfinished pairing.
+    fn autoplay_action(&self) -> Option<gerokasu::AutoAction> {
+        None
+    }
 }
 impl CardInteraction for CardSelectModel {
     fn attach_listener(&mut self) {
@@ -106,6 +110,9 @@ impl CardInteraction for gerokasu::GerokasuCardModel {
     }
     fn set_voice_playing(&mut self, playing: bool) {
         self.voice_playing = playing;
+    }
+    fn autoplay_action(&self) -> Option<gerokasu::AutoAction> {
+        gerokasu::GerokasuCardModel::autoplay_action(self)
     }
 }
 

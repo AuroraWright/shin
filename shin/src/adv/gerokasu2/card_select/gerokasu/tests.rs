@@ -155,3 +155,68 @@ fn navigation_skips_placed_slots_without_wrapping() {
     m.navigate(-1);
     assert_eq!(m.slot, 0);
 }
+
+/// Drive the model with the debug autoplayer until QUIZ has a result.
+fn autoplay(m: &mut GerokasuCardModel) -> i32 {
+    for _ in 0..20_000 {
+        if let Some(result) = m.result() {
+            return result;
+        }
+        if m.phase == 5 {
+            m.voice_playing = false;
+        }
+        match m.autoplay_action() {
+            Some(AutoAction::Navigate(direction)) => assert!(m.navigate(direction)),
+            Some(AutoAction::Confirm) => assert!(m.confirm()),
+            Some(AutoAction::Cancel) => assert!(m.cancel()),
+            None => {}
+        }
+        settle(m, 1);
+    }
+    panic!("autoplay stalled in phase {} with {:?}", m.phase, m.placed);
+}
+
+#[test]
+fn debug_autoplay_backs_out_of_dead_ends_and_finds_an_unfinished_pairing() {
+    let finishable = |mask: u32| {
+        (0..4).any(|p| {
+            (0..4).any(|q| {
+                let index = PAIRING[p * 4 + q];
+                index >= 0 && mask & (1 << index) == 0
+            })
+        })
+    };
+    let mut dead_ends = 0;
+    for mask in (0..0x1000u32).filter(|&mask| finishable(mask)).step_by(7) {
+        for seed in [1, 99, 4242] {
+            let mut m = GerokasuCardModel::new(mask as i32, seed);
+            m.attach_listener();
+            // Like the stalled playtest: a judge and a prisoner leave only
+            // slots whose pierrot pairings are done, when the mask allows it.
+            let dead_end = (0..4)
+                .flat_map(|j| (0..4).map(move |p| (j, p)))
+                .find(|&(j, slot)| {
+                    let p = SLOT_HEROINE[slot];
+                    j != slot
+                        && m.done_prisoner[p] < 3
+                        && (0..4).filter(|&q| q != slot && q != j).all(|q| {
+                            let index = PAIRING[p * 4 + SLOT_HEROINE[q]];
+                            index >= 0 && mask & (1 << index) != 0
+                        })
+                });
+            if let Some((judge, slot)) = dead_end {
+                dead_ends += 1;
+                play(&mut m, 2, judge as i32);
+                play(&mut m, PRISONER, slot as i32);
+            }
+            let result = autoplay(&mut m);
+            assert!((0..12).contains(&result), "mask {mask:#x}: {result}");
+            assert_eq!(
+                mask & (1 << result),
+                0,
+                "mask {mask:#x} repeated pairing {result}"
+            );
+        }
+    }
+    assert!(dead_ends > 0);
+}

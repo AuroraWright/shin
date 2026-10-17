@@ -44,6 +44,16 @@ fn script() -> &'static [(u64, u64, u64, AppAction)] {
     })
 }
 
+/// `SHIN_DEBUG_CARD_AUTOPLAY=1`: card selection plays itself, one keyboard
+/// step every 12 frames, and ignores real or scripted card input.
+pub(super) fn card_autoplay() -> bool {
+    static AUTOPLAY: OnceLock<bool> = OnceLock::new();
+    *AUTOPLAY.get_or_init(|| {
+        cfg!(debug_assertions)
+            && std::env::var_os("SHIN_DEBUG_CARD_AUTOPLAY").is_some_and(|value| value != "0")
+    })
+}
+
 /// Apply the script to this update frame's input.
 pub(super) fn apply(frame: u64, input: &mut EnumMap<AppAction, ActionState>) {
     for &(start, end, step, action) in script() {

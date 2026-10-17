@@ -158,6 +158,14 @@ const ROT_Y: usize = 4;
 const ALPHA: usize = 5;
 const FLASH: usize = 6;
 
+/// One keyboard step chosen by the debug autoplayer.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AutoAction {
+    Navigate(i32),
+    Confirm,
+    Cancel,
+}
+
 #[derive(Clone, Debug)]
 pub struct Placed {
     pub slot: usize,
@@ -324,6 +332,70 @@ impl GerokasuCardModel {
     }
     fn placed_slot(&self, slot: usize) -> bool {
         self.placed.iter().any(|p| p.slot == slot)
+    }
+    /// Debug autoplay: prisoner and pierrot slots for an unfinished pairing
+    /// that agree with the cards already placed.
+    fn autoplay_plan(&self) -> Option<(usize, usize)> {
+        let fixed = |kind: u8| {
+            self.placed
+                .iter()
+                .find(|p| p.card.kind == kind)
+                .map(|p| p.slot)
+        };
+        let (prisoner, pierrot) = (fixed(PRISONER), fixed(PIERROT));
+        let usable = |slot: usize, fixed: Option<usize>| {
+            fixed.map_or(!self.placed_slot(slot), |fixed| fixed == slot)
+        };
+        let done = |index: i32| index >= 0 && self.mask & (1 << index) != 0;
+        (0..4)
+            .flat_map(|p| (0..4).map(move |q| (p, q)))
+            .find(|&(p, q)| {
+                let (hp, hq) = (SLOT_HEROINE[p], SLOT_HEROINE[q]);
+                p != q
+                    && usable(p, prisoner)
+                    && usable(q, pierrot)
+                    && self.done_prisoner[hp] < 3
+                    && self.done_pierrot[hq] < 3
+                    && !done(PAIRING[hp * 4 + hq])
+            })
+    }
+    /// Debug autoplay: the next keyboard step towards an unfinished pairing,
+    /// taking cards back when the placed ones allow none.
+    pub fn autoplay_action(&self) -> Option<AutoAction> {
+        if !self.ready() {
+            return None;
+        }
+        let plan = self.autoplay_plan();
+        let toward = |current: i32, target: usize| match current.cmp(&(target as i32)) {
+            std::cmp::Ordering::Less => AutoAction::Navigate(1),
+            std::cmp::Ordering::Greater => AutoAction::Navigate(-1),
+            std::cmp::Ordering::Equal => AutoAction::Confirm,
+        };
+        match self.phase {
+            1 => {
+                if plan.is_none() {
+                    return (!self.placed.is_empty()).then_some(AutoAction::Cancel);
+                }
+                let target = [PRISONER, PIERROT]
+                    .iter()
+                    .find_map(|&kind| self.hand.iter().position(|c| c.kind == kind))
+                    .unwrap_or(0);
+                Some(toward(self.selected, target))
+            }
+            3 => {
+                let Some((prisoner, pierrot)) = plan else {
+                    return Some(AutoAction::Cancel);
+                };
+                let kind = self.hand.get(usize::try_from(self.selected).ok()?)?.kind;
+                let target = match kind {
+                    PRISONER => prisoner,
+                    PIERROT => pierrot,
+                    _ => (0..4).find(|&s| !self.placed_slot(s) && s != prisoner && s != pierrot)?,
+                };
+                Some(toward(self.slot, target))
+            }
+            _ => None,
+        }
     }
     fn lowest_free_slot(&self) -> i32 {
         (0..4).find(|&s| !self.placed_slot(s)).map_or(-1, |s| s as i32)

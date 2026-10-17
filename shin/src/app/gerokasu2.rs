@@ -456,6 +456,23 @@ impl GerHost {
                         input[AppAction::Up].is_held || input[AppAction::AnyDown].is_held,
                         input[AppAction::Enter].is_clicked,
                     );
+                } else if ready && debug_input::card_autoplay() {
+                    use crate::adv::gerokasu2::card_select::gerokasu::AutoAction;
+                    static STEP: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
+                    if STEP.fetch_add(1, std::sync::atomic::Ordering::Relaxed) % 12 == 0 {
+                        match self.scene.card_autoplay_action() {
+                            Some(AutoAction::Navigate(direction)) => {
+                                self.scene.navigate_card(direction);
+                            }
+                            Some(AutoAction::Confirm) => {
+                                self.scene.confirm_card();
+                            }
+                            Some(AutoAction::Cancel) => {
+                                self.scene.cancel_card();
+                            }
+                            None => {}
+                        }
+                    }
                 } else if ready {
                     if input[AppAction::Left].is_clicked_or_repeated {
                         self.scene.navigate_card(-1);
