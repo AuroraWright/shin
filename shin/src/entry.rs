@@ -1,6 +1,5 @@
 extern crate self as shin;
 
-use clap::Parser;
 use tracing::error;
 
 #[expect(unused)]
@@ -39,7 +38,7 @@ fn run(window_probe: bool) -> anyhow::Result<()> {
     }
     #[cfg(not(feature = "higurashi-window-probe"))]
     assert!(!window_probe, "The window probe requires its Cargo feature");
-    let mut cli = cli::Cli::parse();
+    let mut cli = cli::Cli::load();
     cli.game.set_current();
 
     if cli.inspect_assets {

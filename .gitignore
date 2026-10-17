@@ -35,6 +35,7 @@ heaptrack.*.zst
 /.workspace-recovery-*/
 # Local reverse-engineering diagnostics and scratch binaries.
 /.local/
+/builds/manual-engine/shin.ini
 
 # Reverse-engineering evidence and agent working files
 /reverse-engineering/
