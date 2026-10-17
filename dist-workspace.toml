@@ -30,3 +30,6 @@ libasound2-dev = '*'
 "libgstreamer1.0-dev" = '*'
 "libgstreamer-plugins-base1.0-dev" = '*'
 libudev-dev = '*'
+# GitHub's Ubuntu 22.04 runner ships libunwind-14-dev, which blocks GStreamer's
+# libunwind-dev dependency unless it is requested explicitly
+libunwind-dev = '*'
