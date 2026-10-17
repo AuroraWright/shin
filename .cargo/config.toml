@@ -5,3 +5,6 @@ rustflags = ["-C", "link-arg=-fuse-ld=mold"]
 [env]
 # Use upstream Tracy's forced software timer instead of the old no-RDTSC fork.
 TRACY_CLIENT_SYS_CXXFLAGS = "-DTRACY_DISALLOW_HW_TIMER"
+# Match Opus's MSVC runtime to Rust's, see msvc-crt.cmake.
+CMAKE_TOOLCHAIN_FILE_x86_64_pc_windows_msvc = { value = ".cargo/msvc-crt.cmake", relative = true }
+CMAKE_TOOLCHAIN_FILE_aarch64_pc_windows_msvc = { value = ".cargo/msvc-crt.cmake", relative = true }
