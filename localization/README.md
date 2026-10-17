@@ -1,32 +1,33 @@
 # UI text overrides
 
-Copy `higurashi.en.toml` or `umineko.en.toml` into that game's selected asset
-folder, rename it `localized.toml`, then restart the game. For the standard
-manual launchers, use `higurashi/localized.toml` or
-`umineko_switch_files/localized.toml` in the workspace. Preserve any existing
-custom dictionary by merging the desired entries instead of replacing it.
+Copy `umineko.en.toml` or `higurashi.en.toml` into that game's assets folder,
+rename it `localized.toml`, then restart the game. If the folder already has a
+`localized.toml`, merge the entries you want into it instead of replacing it.
 
-The English profiles use the translations supplied by
-[HigurashiENX](https://github.com/masagrator/HigurashiENX/blob/main/exefs_texts.txt)
-and [umineko-catbox-english, rebirth branch](https://github.com/andOlga/umineko-catbox-english/blob/rebirth/exefs_texts.txt).
-They contain 39 Higurashi and 60 Umineko code keys, respectively. These lists
-cover only part of the UI: remaining keys keep Japanese. Scenario `.snr` content
-and text baked into images are excluded.
+To play with the fan translations' scenario patches as well, see the main
+[README](../README.md#mods-and-translations).
 
-The original hexadecimal addresses are provenance comments, not lookup keys.
-The conversion adapts printf time values to Rust placeholders, expands completion
-prefixes into complete code keys, combines the Higurashi shortcut prompt's two
-literal pieces, and preserves Umineko's native leading color/size controls.
-The equivalent save-warning wording uses the code's `ソフト` key instead of the
-source list's `アプリケーション`. English wording remains from the supplied lists.
+The English profiles are taken from the `exefs_texts.txt` lists of the fan
+translation projects
+[umineko-catbox-english](https://github.com/andOlga/umineko-catbox-english/blob/rebirth/exefs_texts.txt)
+(rebirth branch) and
+[HigurashiENX](https://github.com/masagrator/HigurashiENX/blob/main/exefs_texts.txt).
+They contain 60 Umineko and 39 Higurashi keys, respectively. These lists cover
+only part of the UI, so the remaining keys keep their Japanese text. Scenario
+text and text baked into images are not affected.
 
-The `.localized.toml.example` files list all code keys with Japanese identity
-values. Use them to add translations not supplied by the English lists.
-Gerokasu2 has only `gerokasu2.localized.toml.example` (no English profile). Put
-its translated copy in `gerokasu2/localized.toml`. It covers dialogs, Load's
-empty and loading rows, the play-time clock and the backlog chapter's fixed
-markers. Story, choice, chapter, scene and music titles come from the scenario
-and keep their original text.
-See the main README for font, markup and placeholder limitations. Reproduction
-inputs, mappings and checks are under
-`reverse-engineering/higurashi/english-localization-20261015/`.
+The conversion adapts printf time values to Rust placeholders, expands
+completion prefixes into complete keys, combines the two pieces of Higurashi's
+shortcut prompt, and preserves Umineko's leading color and size commands. The
+save warning uses the engine's `ソフト` key instead of the source list's
+`アプリケーション`. The English wording is unchanged from the source lists. The
+hexadecimal addresses in the comments record where each string came from; they
+are not lookup keys.
+
+The `.localized.toml.example` files list every key with its Japanese text as
+the value. Use them to translate keys the English profiles don't cover.
+Gerokasu2 has only `gerokasu2.localized.toml.example`, without an English
+profile. It covers dialogs, the Load screen's empty and loading rows, the
+play-time clock and the backlog's fixed chapter markers. Story, choice,
+chapter, scene and music titles come from the scenario and keep their original
+text.

@@ -13,23 +13,25 @@ can run the original games' data unchanged.
 
 ## Supported games
 
-The engine runs the Switch releases of these games. Select one with `--game`:
+This version runs the Switch releases of the Entergram-published 07th Expansion
+games. Select one with `--game`:
 
 | `--game` | Game |
 | --- | --- |
-| `umineko` (default) | Umineko no Naku Koro ni Saku \~Nekobako to Musou no Koukyoukyoku\~ (`01006A300BA2C000`), original release or with the 1.03 update |
+| `umineko` (default) | Umineko no Naku Koro ni Saku \~Nekobako to Musou no Koukyoukyoku\~, original release or with the 1.03 update |
 | `higurashi` | Higurashi no Naku Koro ni Hō (the updated release, including the Origin content) |
 | `gerokasu` | 幻想牢獄のカレイドスコープ (Gensou Rougoku no Kaleidoscope) |
-| `gerokasu2` | 幻想牢獄のカレイドスコープ 2 |
+| `gerokasu2` | 幻想牢獄のカレイドスコープ 2 (Gensou Rougoku no Kaleidoscope 2) |
 
-Story playback, title menus, saving and loading, the backlog, settings and the
-in-game menus are implemented for each game, along with its own features and
-extras: Umineko's character screen, Tips, murderer quiz and galleries,
-Higurashi's Chart, TIPS, Kakera and Quiz screens and galleries, and the
-Gerokasu card selection minigame and galleries.
+Story playback, title menus, saving and loading, the backlog, settings, the
+in-game menus and "special" gameplay segments are implemented for each game,
+along with any other features and extras: Umineko's character screen, Tips and
+galleries, Higurashi's Chart, TIPS, Kakera and Quiz screens and galleries, and
+the Gerokasu card selection minigame and galleries.
 
-Some details still differ from the original games. If you find a problem,
-please open an [issue on GitHub](https://github.com/DCNick3/shin/issues).
+Some details might differ from the original games. I tested Umineko and
+Higurashi pretty extensively and the Gerokasu games to a lesser extent. If you
+find a problem, please [open an issue](https://github.com/AuroraWright/shin/issues).
 
 ## Running a game
 
@@ -42,10 +44,9 @@ from a dumped package, for example:
 hactoolnet -t pfs0 "Umineko no Naku Koro ni Saku ~Nekobako to Musou no Koukyoukyoku~ [01006A300BA2C000].nsp" --romfs=assets
 ```
 
-The resulting folder contains `data.rom`. For Umineko, its SHA-256 should be
-`6d90eb0bacacf769a7e4634407622b047acd711c47debb28136d7bab3fd0e591`.
-For Umineko 1.03 and Higurashi, also place the update's `patch.rom` (and, for
-Higurashi, the `append.rom` add-on content) in the same folder.
+The resulting folder contains `data.rom`. For Umineko 1.03 and Higurashi, also
+place the `patch.rom` from the update's romfs (and, for Higurashi, optionally
+the `append.rom` from the Origin DLC's romfs) in the same folder.
 
 By default, the engine reads the `assets` folder next to the executable. Inside
 a macOS app bundle, `Contents/Resources/assets` is also accepted. Use
@@ -72,7 +73,7 @@ The default save file is in:
 - Linux: `~/.local/share/shin/<game>/SAVEDATA`
 
 Progress, settings, gallery unlocks and save slots are all stored in this one
-file. It is written atomically. If a write fails, the game offers to retry.
+file.
 
 ### shin.ini
 
@@ -108,9 +109,21 @@ an original string to its replacement:
 The [localization](localization/) folder has the full list of strings for
 [Umineko](localization/umineko.localized.toml.example),
 [Higurashi](localization/higurashi.localized.toml.example) and
-[Gerokasu2](localization/gerokasu2.localized.toml.example), plus English
-translations for [Umineko](localization/umineko.en.toml) and
-[Higurashi](localization/higurashi.en.toml). Scenario text is not affected.
+[Gerokasu2](localization/gerokasu2.localized.toml.example).
+
+It also includes English translations converted from the fan translation
+projects [umineko-catbox-english](https://github.com/andOlga/umineko-catbox-english)
+and [HigurashiENX](https://github.com/masagrator/HigurashiENX). To use them
+together with those projects' patches:
+
+- Higurashi: copy `higurashi.en.toml` to `localized.toml` in the assets folder.
+  Download and extract `HigurashiENX.zip` from the HigurashiENX releases, then
+  move `atmosphere/contents/0100F6A00A684000/romfs/patch.rmm` to `mod.rom` in
+  the assets folder.
+- Umineko: copy `umineko.en.toml` to `localized.toml` in the assets folder.
+  Download and extract `patch_atmos.zip` from the umineko-catbox-english
+  releases, then move `contents/01006a300ba2c000/romfs/patch.rom` to `mod.rom`
+  in the assets folder.
 
 ### Text WebSocket
 
@@ -167,10 +180,6 @@ Install [Rust](https://www.rust-lang.org/); the toolchain version is pinned in
 cargo build --release -p shin
 cargo run --release -p shin -- --game umineko --assets-dir /path/to/assets
 ```
-
-Debug builds also accept `--loopback-audio`, which sends audio to a system
-output device named `Loopback Audio`. The hardware audio tests require that
-device.
 
 ## Disclaimer
 
