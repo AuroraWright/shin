@@ -1,0 +1,26 @@
+; Example shin.ini. Copy this file to "shin.ini" to use it.
+;
+; Shin reads shin.ini from the folder that contains the engine executable. For
+; Shin.app it also looks in Shin.app/Contents/Resources.
+;
+; Each line sets one command line option, using its long name without "--":
+;   option = value
+; Lines starting with ";" or "#" are comments, and an empty value means "not set".
+; On/off options take true or false. Relative paths are resolved from the
+; folder that contains this file.
+;
+; Options given on the actual command line always win.
+
+; Game to start: umineko, higurashi, gerokasu or gerokasu2.
+game = umineko
+
+; Folder containing data.rom (or a "data" directory). Defaults to "assets" next
+; to the executable (for Shin.app, also Shin.app/Contents/Resources/assets).
+assets-dir = assets
+
+; Progress/save file. Defaults to shin/<game>/SAVEDATA in the system app data
+; folder (~/Library/Application Support on macOS, %APPDATA% on Windows).
+save-file =
+
+; Serve displayed text over WebSocket at HOST:PORT.
+text-websocket = 127.0.0.1:9001

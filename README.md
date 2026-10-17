@@ -89,7 +89,7 @@ text-websocket = 127.0.0.1:9001
 Lines starting with `;` or `#` are comments, an empty value leaves an option
 unset, and relative paths are resolved from the folder containing `shin.ini`.
 Options given on the command line take precedence. See
-[`shin.ini.example`](builds/manual-engine/shin.ini.example).
+[`shin.ini.example`](shin.ini.example).
 
 ### Mods and translations
 

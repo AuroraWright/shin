@@ -100,7 +100,10 @@ pub const SAVE_FILE_NAME: &str = "SAVEDATA";
 /// `<data_dir>/shin/<game id>/SAVEDATA`, with the game's `--game` value as its id.
 pub fn default_save_file(data_dir: PathBuf, game: Game) -> PathBuf {
     let id = game.to_possible_value().expect("every game is selectable");
-    data_dir.join("shin").join(id.get_name()).join(SAVE_FILE_NAME)
+    data_dir
+        .join("shin")
+        .join(id.get_name())
+        .join(SAVE_FILE_NAME)
 }
 pub const ASSETS_DIR_NAME: &str = "assets";
 
@@ -165,14 +168,21 @@ mod tests {
         let cli = Cli::try_parse_from(["shin", "--text-websocket", "127.0.0.1:9001"]).unwrap();
         assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
         assert_eq!(Cli::try_parse_from(["shin"]).unwrap().text_websocket, None);
-        assert!(Cli::try_parse_from(["shin", "--loopback-audio"]).unwrap().loopback_audio());
+        assert!(
+            Cli::try_parse_from(["shin", "--loopback-audio"])
+                .unwrap()
+                .loopback_audio()
+        );
         for removed in [
             "--load-save",
             "--save-slot",
             "--fast-forward-to",
             "--unsafe-entry-point",
         ] {
-            assert!(Cli::try_parse_from(["shin", removed, "1"]).is_err(), "{removed}");
+            assert!(
+                Cli::try_parse_from(["shin", removed, "1"]).is_err(),
+                "{removed}"
+            );
         }
     }
     #[test]
@@ -192,8 +202,8 @@ mod tests {
                 Path::new("/data/shin").join(id).join("SAVEDATA")
             );
         }
-        let cli = Cli::try_parse_from(["shin", "-a", "/games/umineko", "--save-file", "p.dat"])
-            .unwrap();
+        let cli =
+            Cli::try_parse_from(["shin", "-a", "/games/umineko", "--save-file", "p.dat"]).unwrap();
         assert_eq!(cli.save_file(), Path::new("p.dat"));
         let cli = Cli::try_parse_from(["shin"]).unwrap();
         let exe = std::env::current_exe().unwrap();
@@ -244,7 +254,10 @@ mod tests {
         let cli = Cli::try_parse_from(&argv).unwrap();
         assert_eq!(cli.game, Game::Higurashi);
         assert_eq!(cli.assets_dir(), Path::new("b"));
-        assert_eq!(cli.save_file(), default_save_file(dirs_next::data_dir().unwrap(), Game::Higurashi));
+        assert_eq!(
+            cli.save_file(),
+            default_save_file(dirs_next::data_dir().unwrap(), Game::Higurashi)
+        );
         assert!(cli.loopback_audio());
 
         for bad in [
@@ -270,7 +283,7 @@ mod tests {
         );
 
         // The packaged example parses as-is.
-        let example = include_str!("../../builds/manual-engine/shin.ini.example");
+        let example = include_str!("../../shin.ini.example");
         let mut argv = vec![std::ffi::OsString::from("shin")];
         argv.extend(ini::to_args(example, folder, &[]).unwrap());
         let cli = Cli::try_parse_from(&argv).unwrap();

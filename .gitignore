@@ -3,42 +3,30 @@
 __pycache__/
 *.py[cod]
 /*.mp4
-/umineko_switch_files/
-/higurashi/*.rom
-/higurashi/uncompressed_executable*
-/gerokasu2/*.rom
-/gerokasu2/uncompressed_executable*
-/gerokasu2/.local/
-/gerokasu/*.rom
-/gerokasu/uncompressed_*
-/gerokasu/main.npdm
-/gerokasu/rtld
-/gerokasu/.local/
-/builds/manual-engine/shin
-/builds/manual-engine/Shin.app/
-/builds/manual-engine/assets*/
-/builds/manual-engine/saves*/
-/builds/manual-engine/saves/
-/builds/manual-engine/logs/
 .idea
 heaptrack.*.zst
 .flatpak-builder
 *.snr
 *.cap
 /shin-core/test_assets/*.fnt
+/shin.ini
 
-# Supplied local modules and workspace recovery data
-/higurashi/uncompressed_sdk
-/higurashi/uncompressed_subsdk*
-/higurashi/main.npdm
-/higurashi/rtld
-/.workspace-recovery-*/
-# Local reverse-engineering diagnostics and scratch binaries.
-/.local/
-/builds/manual-engine/shin.ini
+# Game data, local builds, reverse-engineering evidence and recovery data.
+# No trailing slash, so symlinked folders are ignored too.
+/builds
+/umineko_switch_files
+/higurashi
+/gerokasu
+/gerokasu2
+/reverse-engineering
+/.local
+/.workspace-recovery-*
 
-# Reverse-engineering evidence and agent working files
-/reverse-engineering/
+# Test captures too large to track; the tests using them skip without them.
+/test-fixtures/higurashi/tile-gamma-active-clip-20261014/allocation-closure/whole-tile-nonfinite
+/test-fixtures/higurashi/tile-gamma-active-clip-20261014/allocation-closure/whole-tile-nonfinite-integration
+
+# Agent working files
 AGENTS.md
 CLAUDE.md
 /HANDOFF*.md
