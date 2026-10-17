@@ -84,8 +84,8 @@ struct Counts {
 fn packet(m: &mut Controller, c: &mut Counts) -> Vec<u32> {
     for a in m.take_actions() {
         match a {
-            Action::LoadBustup { .. } => c.bup += 1,
-            Action::LoadBackground { .. } => c.bg += 1,
+            Action::LoadBustup { .. } | Action::LoadGerokasuBustup { .. } => c.bup += 1,
+            Action::LoadBackground { .. } | Action::LoadGerokasuBackground { .. } => c.bg += 1,
             Action::StopBgm(t) => {
                 c.stops += 1;
                 c.ticks = t;
@@ -613,4 +613,95 @@ fn gerokasu_bustup_chrome_adds_sliding_bottom_band() {
     assert_eq!(ger[i].rect, [0., 1036., 1920., 1124.]);
     assert_eq!(ger[i].uv, [0., 0., 1., 1.]);
     assert_eq!((ger[i].color, ger[i].blend), (u32::MAX, 2));
+}
+#[test]
+fn gerokasu_bupmode_six_rows_size_requests_and_viewer_limits() {
+    use crate::cli::Game;
+    let mut m = Controller::new_gerokasu();
+    m.assets_ready();
+    m.phase = Phase::Active;
+    assert_eq!(m.rows(), [[0, 4], [1, 4], [0, 3], [0, 2], [0, 46], [0, 18]]);
+    let press = |m: &mut Controller, input: Input| m.controls(true, false, input);
+    let down = Input {
+        down: true,
+        ..Default::default()
+    };
+    let right = Input {
+        right: true,
+        ..Default::default()
+    };
+    // Size row reloads the bustup at the next size table entry.
+    press(&mut m, down);
+    press(&mut m, right);
+    assert_eq!(
+        m.take_actions(),
+        [Action::LoadGerokasuBustup {
+            request: [3, 0, 0],
+            size: 2
+        }]
+    );
+    m.replacement_ready();
+    // ±10 paging is absent; the background row is the sixth.
+    for _ in 0..4 {
+        press(&mut m, down);
+    }
+    assert_eq!(m.focus, 5);
+    press(&mut m, down);
+    assert_eq!(m.focus, 5);
+    press(
+        &mut m,
+        Input {
+            next: true,
+            ..Default::default()
+        },
+    );
+    assert!(m.take_actions().is_empty());
+    press(&mut m, right);
+    assert_eq!(m.take_actions(), [Action::LoadGerokasuBackground { index: 1 }]);
+    m.replacement_ready();
+    // Character change keeps the global size.
+    m.focus = 0;
+    press(&mut m, right);
+    assert_eq!(
+        m.take_actions(),
+        [Action::LoadGerokasuBustup {
+            request: [18, 0, 0],
+            size: 2
+        }]
+    );
+    // Artwork: sheet cells, all six text rows, 18px glyphs.
+    let packets = artwork::packets(&m, Game::Gerokasu);
+    let find = |name: &str| packets.iter().find(|p| p.texture == name).unwrap();
+    assert_eq!(find("charicon").uv, [0.25, 0., 0.5, 1.]);
+    assert_eq!(find("sizeicon").uv, [0.5, 0., 0.75, 1.]);
+    assert_eq!(find("bgicon").uv, [0.25, 0., 0.5, 0.2]);
+    assert_eq!(find("bgicon").rect, [1504., 808., 1648., 952.]);
+    assert_eq!(packets.iter().filter(|p| p.texture == "text").count(), 6);
+    let glyph = find("num");
+    assert_eq!(glyph.rect[2] - glyph.rect[0], 18.);
+    assert!(packets.iter().all(|p| !p.texture.starts_with("char0")));
+    // Viewer: step 4, clamps ±80/±70.
+    m.phase = Phase::ViewerActive;
+    for _ in 0..40 {
+        m.viewer_controls(
+            true,
+            false,
+            ViewerInput {
+                left: true,
+                up: true,
+                ..Default::default()
+            },
+        );
+    }
+    assert_eq!(m.viewer_position, [-80., -70.]);
+    m.viewer_position = [0.; 2];
+    m.viewer_controls(
+        true,
+        false,
+        ViewerInput {
+            axes: [1., 0.5],
+            ..Default::default()
+        },
+    );
+    assert_eq!(m.viewer_position, [12., 6.]);
 }

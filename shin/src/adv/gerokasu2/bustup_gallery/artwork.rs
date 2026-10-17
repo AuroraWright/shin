@@ -34,51 +34,58 @@ fn draw(
         flash: None,
     }
 }
-fn number_glyphs(out: &mut Vec<Packet>, current: usize, count: usize, x: f32, y: f32) {
-    // 39810 takes zero-based current and count-1, formatting both plus one.
+fn number_glyphs(
+    out: &mut Vec<Packet>,
+    current: usize,
+    count: usize,
+    x: f32,
+    y: f32,
+    gerokasu: bool,
+) {
+    // 39810 (Gerokasu 38900) takes zero-based current and count-1, formatting
+    // both plus one. Gerokasu glyphs are 18px from left-1 (UV width 18/352).
     let advance = if current > 8 { 48.0 } else { 32.0 } + if count > 9 { 32.0 } else { 16.0 };
     let mut left = x + 56.0 - advance * 0.5;
     let tint = rgba(0.8, 0.73333335, 0.6666667, 1.0);
+    let (offset, width) = if gerokasu { (1.0, 18.0) } else { (3.0, 24.0) };
     for ch in format!("{}/{count}", current + 1).bytes() {
         let index = if ch == b'/' { 10 } else { ch - b'0' };
         let u = (index as f32 * 32.0) / 352.0;
         out.push(draw(
             "num",
-            left - 3.0,
+            left - offset,
             y + 36.0,
-            24.0,
+            width,
             40.0,
-            vec4(u, 0.0, (index as f32 * 32. + 24.) / 352., 1.0),
+            vec4(u, 0.0, (index as f32 * 32. + width) / 352., 1.0),
             tint,
         ));
         left += 16.0;
     }
+}
+/// One cell of a horizontal Gerokasu icon sheet.
+fn sheet(index: usize, cells: f32) -> [f32; 4] {
+    let u = index as f32 / cells;
+    vec4(u, 0.0, u + 1.0 / cells, 1.0)
 }
 pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
     let gerokasu = game == crate::cli::Game::Gerokasu;
     if !menu.ready {
         return vec![];
     }
-    let catalog = &menu.catalog;
     let controls = menu.controls_visibility.value();
     let mut out = Vec::new();
     let full = vec4(0.0, 0.0, 1.0, 1.0);
     let white = u32::MAX;
-    let (c, o, p, e) = menu.selection.indices();
-    let indices = [c, o, p, e, menu.selection.background_index()];
-    let counts = [
-        catalog.characters.len(),
-        catalog.characters[c].outfits.len(),
-        catalog.characters[c].outfits[o].poses.len(),
-        catalog.characters[c].outfits[o].poses[p].expressions.len(),
-        catalog.backgrounds.len(),
-    ];
-    let flashes = std::array::from_fn::<_, 10, _>(|i| menu.arrows[i].value());
-    for row in 0..5 {
-        let large = row == 0 || row == 4;
-        let size = if large { 144.0 } else { 112.0 };
-        let x = menu.panel_offset.value() + if large { 1504.0 } else { 1520.0 };
-        let y = [216.0, 360.0, 472.0, 584.0, 696.0][row];
+    let (c, o, ..) = menu.selection.indices();
+    let rows = menu.rows();
+    let last = rows.len() - 1;
+    for (row, &[index, count]) in rows.iter().enumerate() {
+        let geometry = menu.row_geometry(row);
+        let size = geometry.size;
+        let large = size > 112.0;
+        let x = menu.panel_offset.value() + geometry.x;
+        let y = geometry.y;
         let icon = if large { 0.0 } else { 1.0 };
         let focused = menu.focus == row;
         out.push(draw(
@@ -90,8 +97,8 @@ pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
             vec4(icon * 0.5, 0.0, icon * 0.5 + size / 288.0, size / 288.0),
             white,
         ));
-        match row {
-            0 => out.push(draw(
+        match (menu.is_gerokasu(), row) {
+            (false, 0) => out.push(draw(
                 format!("char{:02}", c + 1),
                 x,
                 y,
@@ -100,8 +107,8 @@ pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
                 full,
                 white,
             )),
-            4 => out.push(draw(
-                format!("bg{:03}", indices[4] + 1),
+            (false, 4) => out.push(draw(
+                format!("bg{:03}", index + 1),
                 x,
                 y,
                 144.0,
@@ -109,7 +116,32 @@ pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
                 full,
                 white,
             )),
-            _ => number_glyphs(&mut out, indices[row], counts[row], x, y),
+            // Gerokasu 38370/38720/38810/38ae0: 4-cell sheets and a 4x5 bgicon.
+            (true, 0) => out.push(draw("charicon", x, y, 144.0, 144.0, sheet(c, 4.0), white)),
+            (true, 1) => out.push(draw(
+                "sizeicon",
+                x,
+                y,
+                112.0,
+                112.0,
+                sheet(index, 4.0),
+                white,
+            )),
+            (true, 2) => out.push(draw("dressicon", x, y, 112.0, 112.0, sheet(o, 4.0), white)),
+            (true, row) if row == last => {
+                let u = (index % 4) as f32 * 0.25;
+                let v = (index / 4) as f32 * 144.0 / 720.0;
+                out.push(draw(
+                    "bgicon",
+                    x,
+                    y,
+                    144.0,
+                    144.0,
+                    vec4(u, v, u + 0.25, v + 0.2),
+                    white,
+                ));
+            }
+            _ => number_glyphs(&mut out, index, count, x, y, menu.is_gerokasu()),
         }
         if focused {
             out.push(draw(
@@ -127,7 +159,13 @@ pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
                 rgba(1.0, 1.0, 1.0, 0.3),
             ));
         }
-        let text_y = [0.0, 2.0, 3.0, 4.0, 5.0][row] * 32.0 / 192.0;
+        // Gerokasu labels all six text rows; Gerokasu2 skips サイズ.
+        let text_row = if menu.is_gerokasu() {
+            row as f32
+        } else {
+            [0.0, 2.0, 3.0, 4.0, 5.0][row]
+        };
+        let text_y = text_row * 32.0 / 192.0;
         out.push(draw(
             "text",
             x + size * 0.5 - 72.0,
@@ -137,18 +175,12 @@ pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
             vec4(0.0, text_y, 1.0, text_y + 1.0 / 6.0),
             white,
         ));
-        let arrow_y = [248.0, 376.0, 488.0, 600.0, 728.0][row];
         for side in 0..2 {
-            let arrow_x = menu.panel_offset.value()
-                + if large {
-                    [1424.0, 1648.0][side]
-                } else {
-                    [1440.0, 1632.0][side]
-                };
+            let arrow_x = menu.panel_offset.value() + geometry.arrows[side];
             let enabled = if side == 0 {
-                indices[row] > 0
+                index > 0
             } else {
-                indices[row] + 1 < counts[row]
+                index + 1 < count
             };
             let tint = if enabled {
                 white
@@ -159,19 +191,19 @@ pub fn packets(menu: &Controller, game: crate::cli::Game) -> Vec<Packet> {
             let mut base = draw(
                 "arrow",
                 arrow_x,
-                arrow_y,
+                geometry.arrow_y,
                 80.0,
                 80.0,
                 vec4(u, 0.0, u + 0.5, 0.5),
                 tint,
             );
-            base.flash = Some(flashes[row * 2 + side]);
+            base.flash = Some(menu.arrows[row * 2 + side].value());
             out.push(base);
             if focused {
                 out.push(draw(
                     "arrow",
                     arrow_x,
-                    arrow_y,
+                    geometry.arrow_y,
                     80.0,
                     80.0,
                     vec4(u, 0.5, u + 0.5, 1.0),

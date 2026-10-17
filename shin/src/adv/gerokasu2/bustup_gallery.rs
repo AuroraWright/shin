@@ -4,6 +4,8 @@
 pub mod artwork;
 #[path = "bustup_gallery/catalog.rs"]
 pub mod catalog;
+#[path = "bustup_gallery/gerokasu.rs"]
+pub mod gerokasu;
 #[path = "cg_gallery/motion.rs"]
 pub mod motion;
 #[cfg(test)]
@@ -40,6 +42,25 @@ pub const TEXTURES: &[&str] = &[
     "text",
     "top",
 ];
+/// Gerokasu atlas: sheet icons replace charNN/bgNNN, plus the bottom band.
+pub const GEROKASU_TEXTURES: &[&str] = &[
+    "arrow",
+    "bgicon",
+    "bottom",
+    "button_shadow",
+    "caption",
+    "charicon",
+    "close",
+    "dressicon",
+    "help_bupmode",
+    "hidden",
+    "icon",
+    "key",
+    "num",
+    "sizeicon",
+    "text",
+    "top",
+];
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Input {
     pub cancel: bool,
@@ -69,6 +90,14 @@ pub enum Action {
     LoadBackground {
         primary: u16,
         secondary: Option<u16>,
+    },
+    /// Gerokasu: `[entry, dress parameter, expression]` at one of four sizes.
+    LoadGerokasuBustup {
+        request: [i32; 3],
+        size: usize,
+    },
+    LoadGerokasuBackground {
+        index: usize,
     },
     StopBgm(u32),
     PlayBgm {
@@ -108,7 +137,9 @@ pub struct Controller {
     pub close_flash: Motion,
     pub confirm_flash: Motion,
     pub panel_offset: Motion,
-    pub arrows: [Motion; 10],
+    /// Gerokasu only: the global size row (0x244).
+    pub size: Option<usize>,
+    pub arrows: [Motion; 12],
     pub scene_x: Motion,
     pub camera: [Motion; 2],
     pub viewer_position: [f32; 2],
@@ -126,6 +157,7 @@ impl Controller {
         Self {
             catalog,
             selection,
+            size: None,
             focus: 0,
             phase: Phase::Loading,
             contact: -1,
@@ -149,6 +181,60 @@ impl Controller {
             sounds: vec![],
             disabled: 0,
         }
+    }
+    /// Gerokasu ctor 0x36b60: hard-coded catalog and a size row on 中.
+    pub fn new_gerokasu() -> Self {
+        let mut this = Self::new(gerokasu::catalog());
+        this.size = Some(gerokasu::INITIAL_SIZE);
+        this
+    }
+    pub fn is_gerokasu(&self) -> bool {
+        self.size.is_some()
+    }
+    /// `(index, count)` per row in native row order: Gerokasu inserts size
+    /// after the character row.
+    pub fn rows(&self) -> Vec<[usize; 2]> {
+        let i = self.indices();
+        let n = self.counts();
+        let mut rows: Vec<_> = (0..5).map(|r| [i[r], n[r]]).collect();
+        if let Some(size) = self.size {
+            rows.insert(1, [size, gerokasu::SIZES]);
+        }
+        rows
+    }
+    /// The Gerokasu2 selection row behind a native row, or None for size.
+    fn shared_row(&self, row: usize) -> Option<usize> {
+        match (self.is_gerokasu(), row) {
+            (false, row) => Some(row),
+            (true, 0) => Some(0),
+            (true, 1) => None,
+            (true, row) => Some(row - 1),
+        }
+    }
+    pub fn gerokasu_request(&self) -> Option<[i32; 3]> {
+        let (c, o, p, e) = self.selection.indices();
+        self.size.map(|size| gerokasu::request(c, size, o, p, e))
+    }
+    fn load_action(&self, background: bool) -> Action {
+        match (self.size, background) {
+            (Some(_), true) => Action::LoadGerokasuBackground {
+                index: self.selection.background_index(),
+            },
+            (Some(size), false) => Action::LoadGerokasuBustup {
+                request: self.gerokasu_request().unwrap(),
+                size,
+            },
+            (None, true) => {
+                let (primary, secondary) = self.selected_background();
+                Action::LoadBackground { primary, secondary }
+            }
+            (None, false) => Action::LoadBustup {
+                id: self.selected_bustup(),
+            },
+        }
+    }
+    fn bgm(&self) -> i32 {
+        if self.is_gerokasu() { gerokasu::BGM } else { 8 }
     }
     pub fn assets_ready(&mut self) {
         self.ready = true;
@@ -201,14 +287,19 @@ impl Controller {
         std::mem::take(&mut self.sounds)
     }
     pub fn change(&mut self, delta: i32) -> bool {
-        let i = self.indices();
-        let n = self.counts();
-        let next =
-            (i[self.focus] as i64 + i64::from(delta)).clamp(0, n[self.focus] as i64 - 1) as usize;
-        if next == i[self.focus] {
+        let [index, count] = self.rows()[self.focus];
+        let next = (index as i64 + i64::from(delta)).clamp(0, count as i64 - 1) as usize;
+        if next == index {
             return false;
         }
-        match self.focus {
+        let Some(row) = self.shared_row(self.focus) else {
+            self.size = Some(next);
+            self.sounds.push("move");
+            self.loading = true;
+            self.actions.push(self.load_action(false));
+            return true;
+        };
+        match row {
             0 => {
                 self.selection.select_character(next);
             }
@@ -228,14 +319,7 @@ impl Controller {
         };
         self.sounds.push("move");
         self.loading = true;
-        self.actions.push(if self.focus == 4 {
-            let (primary, secondary) = self.selected_background();
-            Action::LoadBackground { primary, secondary }
-        } else {
-            Action::LoadBustup {
-                id: self.selected_bustup(),
-            }
-        });
+        self.actions.push(self.load_action(row == 4));
         true
     }
     fn close(&mut self) {
@@ -263,7 +347,7 @@ impl Controller {
                     self.sounds.push("move");
                 }
             } else if input.down {
-                if self.focus < 4 {
+                if self.focus + 1 < self.rows().len() {
                     self.focus += 1;
                     self.sounds.push("move");
                 }
@@ -272,9 +356,9 @@ impl Controller {
                     -1
                 } else if input.right {
                     1
-                } else if input.previous {
+                } else if input.previous && !self.is_gerokasu() {
                     -10
-                } else if input.next {
+                } else if input.next && !self.is_gerokasu() {
                     10
                 } else {
                     0
@@ -318,19 +402,25 @@ impl Controller {
                 self.sounds.push("cancel");
                 self.return_viewer();
             } else {
-                let x = if input.left {
-                    -10.
-                } else if input.right {
-                    10.
+                // Gerokasu 0x3bc00 steps by 4 and scales the stick by 12.
+                let (step, stick) = if self.is_gerokasu() {
+                    (4., 12.)
                 } else {
-                    input.axes[0] * 20.
+                    (10., 20.)
+                };
+                let x = if input.left {
+                    -step
+                } else if input.right {
+                    step
+                } else {
+                    input.axes[0] * stick
                 };
                 let y = if input.up {
-                    -10.
+                    -step
                 } else if input.down {
-                    10.
+                    step
                 } else {
-                    input.axes[1] * 20.
+                    input.axes[1] * stick
                 };
                 if x != 0. || y != 0. {
                     self.viewer_position[0] += x;
@@ -343,8 +433,13 @@ impl Controller {
         self.phase != Phase::ViewerReturning
     }
     fn clamp_viewer(&mut self) {
-        self.viewer_position[0] = self.viewer_position[0].clamp(-420., 420.);
-        self.viewer_position[1] = self.viewer_position[1].clamp(-130., 130.);
+        let [x, y] = if self.is_gerokasu() {
+            [80., 70.]
+        } else {
+            [420., 130.]
+        };
+        self.viewer_position[0] = self.viewer_position[0].clamp(-x, x);
+        self.viewer_position[1] = self.viewer_position[1].clamp(-y, y);
     }
     pub fn viewer_probe(&mut self) {
         self.viewer_velocity = [0.; 2];
@@ -403,7 +498,10 @@ impl Controller {
                 self.phase = Phase::Opening;
             }
             Phase::Opening if self.capture_elapsed >= 60. => {
-                self.actions.push(Action::PlayBgm { id: 8, fade: 0 });
+                self.actions.push(Action::PlayBgm {
+                    id: self.bgm(),
+                    fade: 0,
+                });
                 self.phase = Phase::InstallingInput;
                 self.input_installed = true;
             }
@@ -479,9 +577,20 @@ impl Controller {
         self.loading = false;
         self.close_flash.snap(0.);
         self.actions.clear();
-        self.actions.push(Action::PlayBgm { id: 8, fade: 0 });
+        self.actions.push(Action::PlayBgm {
+            id: self.bgm(),
+            fade: 0,
+        });
         self.reset();
     }
+}
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RowGeometry {
+    pub x: f32,
+    pub y: f32,
+    pub size: f32,
+    pub arrows: [f32; 2],
+    pub arrow_y: f32,
 }
 fn rect(point: [f32; 2], x: f32, y: f32, size: f32) -> bool {
     point[0] >= x && point[0] < x + size && point[1] >= y && point[1] < y + size
@@ -514,42 +623,41 @@ impl Controller {
         true
     }
     pub fn selector_hit(&self, point: [f32; 2]) -> i32 {
-        let (c, o, p, e) = self.selection.indices();
-        let indices = [c, o, p, e, self.selection.background_index()];
-        let counts = [
-            self.catalog.characters.len(),
-            self.catalog.characters[c].outfits.len(),
-            self.catalog.characters[c].outfits[o].poses.len(),
-            self.catalog.characters[c].outfits[o].poses[p]
-                .expressions
-                .len(),
-            self.catalog.backgrounds.len(),
-        ];
         // Labels win first, then enabled left/right arrows, in authored row order.
-        for row in 0..5 {
-            let (x, y, size) = match row {
-                0 => (1504.0, 216.0, 144.0),
-                4 => (1504.0, 696.0, 144.0),
-                _ => (1520.0, 248.0 + row as f32 * 112.0, 112.0),
-            };
-            if rect(point, x, y, size) {
+        for (row, [index, count]) in self.rows().into_iter().enumerate() {
+            let geometry = self.row_geometry(row);
+            if rect(point, geometry.x, geometry.y, geometry.size) {
                 return row as i32 * 3 + 2;
             }
-            let x = if row == 0 || row == 4 { 1424.0 } else { 1440.0 };
-            let y = if row == 4 {
-                728.0
-            } else {
-                248.0 + row as f32 * 112.0 + if row == 0 { 0.0 } else { 16.0 }
-            };
-            if indices[row] > 0 && rect(point, x, y, 80.0) {
+            if index > 0 && rect(point, geometry.arrows[0], geometry.arrow_y, 80.0) {
                 return row as i32 * 3;
             }
-            let x = if row == 0 || row == 4 { 1648.0 } else { 1632.0 };
-            if indices[row] + 1 < counts[row] && rect(point, x, y, 80.0) {
+            if index + 1 < count && rect(point, geometry.arrows[1], geometry.arrow_y, 80.0) {
                 return row as i32 * 3 + 1;
             }
         }
         -1
+    }
+    /// Label square and arrow placement (Gerokasu2 3D380, Gerokasu 0x3a0b0).
+    pub fn row_geometry(&self, row: usize) -> RowGeometry {
+        let rows = self.rows().len();
+        let large = row == 0 || row + 1 == rows;
+        let y = if self.is_gerokasu() {
+            [216.0, 360.0, 472.0, 584.0, 696.0, 808.0][row]
+        } else {
+            [216.0, 360.0, 472.0, 584.0, 696.0][row]
+        };
+        RowGeometry {
+            x: if large { 1504.0 } else { 1520.0 },
+            y,
+            size: if large { 144.0 } else { 112.0 },
+            arrows: if large {
+                [1424.0, 1648.0]
+            } else {
+                [1440.0, 1632.0]
+            },
+            arrow_y: y + if large { 32.0 } else { 16.0 },
+        }
     }
     pub fn reset(&mut self) {
         self.contact = -1;

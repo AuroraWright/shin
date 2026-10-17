@@ -8,6 +8,7 @@ use crate::{
             bustup_gallery::{
                 self, Action, Controller, Input, ViewerInput,
                 catalog::{Catalog, Segment, Selection},
+                gerokasu,
             },
             layer_factory::{BasicDrawable, LayerFactoryRequest, PreparedBasicDrawable},
             reconstruction_mode::{OverlayClock, overlay::Overlay},
@@ -46,8 +47,10 @@ use shin_render::{
 };
 use std::sync::Arc;
 
+/// Layer slot, resource and (Gerokasu) property 2 to apply on install.
+type Prepared = (u32, PreparedBasicDrawable, Option<f32>);
 struct Replacement {
-    task: Option<shin_tasks::AsyncTask<Result<Vec<(u32, PreparedBasicDrawable)>>>>,
+    task: Option<shin_tasks::AsyncTask<Result<Vec<Prepared>>>>,
 }
 impl Drop for Replacement {
     fn drop(&mut self) {
@@ -61,7 +64,7 @@ impl Drop for Replacement {
 }
 pub(super) struct BustupGalleryHost {
     model: Controller,
-    published_selection: Selection,
+    published_selection: (Selection, Option<usize>),
     scene: LayerGroup<BasicDrawable>,
     atlas: Arc<CharacterTextures>,
     mask: Arc<MaskTexture>,
@@ -87,57 +90,66 @@ impl BustupGalleryHost {
         data: &SaveData,
         bgm: MenuBgm,
     ) -> Result<Self> {
-        let catalog =
-            Catalog::from_segments(scenario.character_box_info.iter().map(|s| match *s {
-                CharacterBoxSegment::Background {
-                    primary_picture_id,
-                    secondary_picture_id_offset,
-                } => Segment::Background {
-                    primary: primary_picture_id.into_i32() as u16,
-                    secondary_offset: secondary_picture_id_offset,
-                },
-                CharacterBoxSegment::Bustup { bustup_id } => {
-                    Segment::Bustup(bustup_id.into_i32() as u16)
-                }
-                CharacterBoxSegment::EndExpressionGroup => Segment::EndExpressionGroup,
-                CharacterBoxSegment::EndPoseGroup => Segment::EndPoseGroup,
-                CharacterBoxSegment::EndDefinition => Segment::EndDefinition,
-            }))
-            .map_err(anyhow::Error::msg)?;
-        let mut model = Controller::new(catalog);
+        let gerokasu = assets.context().game == crate::cli::Game::Gerokasu;
+        let mut model = if gerokasu {
+            Controller::new_gerokasu()
+        } else {
+            Controller::new(catalog(&scenario)?)
+        };
         let atlas: Arc<CharacterTextures> = assets.load(bustup_gallery::ATLAS).await?;
-        atlas.require_names(bustup_gallery::ATLAS, bustup_gallery::TEXTURES)?;
-        if assets.context().game == crate::cli::Game::Gerokasu {
-            atlas.require_names(bustup_gallery::ATLAS, &["bottom"])?;
+        if gerokasu {
+            atlas.require_names(bustup_gallery::ATLAS, bustup_gallery::GEROKASU_TEXTURES)?;
+        } else {
+            atlas.require_names(bustup_gallery::ATLAS, bustup_gallery::TEXTURES)?;
         }
         let mask = assets.load(bustup_gallery::MASK).await?;
-        let (primary, secondary) = model.selected_background();
-        let (background, bustup) = futures::try_join!(
-            prepare(
-                &assets,
-                &scenario,
-                Action::LoadBackground { primary, secondary }
-            ),
-            prepare(
-                &assets,
-                &scenario,
-                Action::LoadBustup {
-                    id: model.selected_bustup()
-                }
-            ),
-        )?;
+        let (background, bustup) = if gerokasu {
+            futures::try_join!(
+                prepare(
+                    &assets,
+                    &scenario,
+                    Action::LoadGerokasuBackground { index: 0 }
+                ),
+                prepare(
+                    &assets,
+                    &scenario,
+                    Action::LoadGerokasuBustup {
+                        request: model.gerokasu_request().unwrap(),
+                        size: gerokasu::INITIAL_SIZE,
+                    }
+                ),
+            )?
+        } else {
+            let (primary, secondary) = model.selected_background();
+            futures::try_join!(
+                prepare(
+                    &assets,
+                    &scenario,
+                    Action::LoadBackground { primary, secondary }
+                ),
+                prepare(
+                    &assets,
+                    &scenario,
+                    Action::LoadBustup {
+                        id: model.selected_bustup()
+                    }
+                ),
+            )?
+        };
+        // The first Gerokasu bustup keeps the default Z (0x3e29c).
+        let bustup = bustup.into_iter().map(|(s, p, _)| (s, p, None)).collect();
         let mut scene = LayerGroup::with_property_policy(
             Some("Ger Bustup selected scene".into()),
             PropertyPolicy::Gerokasu2,
         );
-        install(&mut scene, background);
-        install(&mut scene, bustup);
+        install(&mut scene, background, gerokasu);
+        install(&mut scene, bustup, gerokasu);
         model.assets_ready();
         let mut sounds = SystemSoundPlayer::new(audio);
         sounds.set_settings_volume(data.settings.v3_sysvol);
         bgm.lock().set_settings_volume(data.settings.v0_bgmvol);
         Ok(Self {
-            published_selection: model.selection.clone(),
+            published_selection: (model.selection.clone(), model.size),
             model,
             scene,
             atlas,
@@ -206,14 +218,14 @@ impl BustupGalleryHost {
             self.job = None;
             match result {
                 Ok(prepared) => {
-                    install(&mut self.scene, prepared);
-                    self.published_selection = self.model.selection.clone();
+                    install(&mut self.scene, prepared, self.model.is_gerokasu());
+                    self.published_selection = (self.model.selection.clone(), self.model.size);
                 }
                 Err(error) => {
                     // Explicit desktop IO failure boundary: keep the real old
                     // scene and its remembered selector, then require release.
                     tracing::error!(%error, "Ger Bustup replacement failed; retaining selected scene");
-                    self.model.selection = self.published_selection.clone();
+                    (self.model.selection, self.model.size) = self.published_selection.clone();
                     self.cancel_input();
                 }
             }
@@ -283,7 +295,10 @@ impl BustupGalleryHost {
         let mut result = None;
         for action in self.model.take_actions() {
             match action {
-                Action::LoadBustup { .. } | Action::LoadBackground { .. } => {
+                Action::LoadBustup { .. }
+                | Action::LoadBackground { .. }
+                | Action::LoadGerokasuBustup { .. }
+                | Action::LoadGerokasuBackground { .. } => {
                     let (assets, scenario) = (self.assets.clone(), self.scenario.clone());
                     self.job = Some(Replacement {
                         task: Some(shin_tasks::async_io::spawn_loader(async move {
@@ -395,11 +410,56 @@ impl BustupGalleryHost {
     }
 }
 
+fn catalog(scenario: &Gerokasu2Scenario) -> Result<Catalog> {
+    Catalog::from_segments(scenario.character_box_info.iter().map(|s| match *s {
+        CharacterBoxSegment::Background {
+            primary_picture_id,
+            secondary_picture_id_offset,
+        } => Segment::Background {
+            primary: primary_picture_id.into_i32() as u16,
+            secondary_offset: secondary_picture_id_offset,
+        },
+        CharacterBoxSegment::Bustup { bustup_id } => Segment::Bustup(bustup_id.into_i32() as u16),
+        CharacterBoxSegment::EndExpressionGroup => Segment::EndExpressionGroup,
+        CharacterBoxSegment::EndPoseGroup => Segment::EndPoseGroup,
+        CharacterBoxSegment::EndDefinition => Segment::EndDefinition,
+    }))
+    .map_err(anyhow::Error::msg)
+}
 async fn prepare(
     assets: &AssetServer,
     scenario: &Gerokasu2Scenario,
     action: Action,
-) -> Result<Vec<(u32, PreparedBasicDrawable)>> {
+) -> Result<Vec<Prepared>> {
+    let gerokasu_request = match action {
+        Action::LoadGerokasuBustup { request, size } => Some((
+            u32::from(gerokasu::BUSTUP_LAYER),
+            LayerFactoryRequest::resolve(
+                scenario,
+                3,
+                (request[0], request[1], request[2], 0, 0, 0, 0, 0),
+            ),
+            gerokasu::SIZE_Z[size],
+        )),
+        Action::LoadGerokasuBackground { index } => Some((
+            u32::from(gerokasu::BACKGROUND_LAYER),
+            gerokasu::BACKGROUNDS
+                .get(index)
+                .map(|path| LayerFactoryRequest::Picture {
+                    path: (*path).into(),
+                }),
+            gerokasu::BACKGROUND_Z,
+        )),
+        _ => None,
+    };
+    if let Some((slot, request, z)) = gerokasu_request {
+        let request = request.context("Missing Gerokasu Bustup factory")?;
+        return Ok(vec![(
+            slot,
+            PreparedBasicDrawable::load(assets, &request).await?,
+            Some(z),
+        )]);
+    }
     let requests = match action {
         Action::LoadBustup { id } => vec![(10, 3, id)],
         Action::LoadBackground { primary, secondary } => {
@@ -412,17 +472,34 @@ async fn prepare(
         let request =
             LayerFactoryRequest::resolve(scenario, kind, (i32::from(id), 0, 0, 0, 0, 0, 0, 0))
                 .context("Missing Ger Bustup factory")?;
-        prepared.push((slot, PreparedBasicDrawable::load(assets, &request).await?));
+        prepared.push((
+            slot,
+            PreparedBasicDrawable::load(assets, &request).await?,
+            None,
+        ));
     }
     Ok(prepared)
 }
-fn install(scene: &mut LayerGroup<BasicDrawable>, prepared: Vec<(u32, PreparedBasicDrawable)>) {
-    for (slot, prepared) in prepared {
+fn install(scene: &mut LayerGroup<BasicDrawable>, prepared: Vec<Prepared>, gerokasu: bool) {
+    for (slot, prepared, z) in prepared {
         let mut layer = prepared.construct();
         let bank = LayerbankId::new_unchecked(slot as u8);
         let previous = scene.get_layer(bank).map(|old| old.properties().clone());
         let replacing = previous.is_some();
-        if let Some(properties) = previous {
+        if gerokasu {
+            // Gerokasu 0x3d070/0x3dfd0: fresh properties with the layer ID
+            // (background 0 under bustup 1) and property 2 per request.
+            let mut properties = LayerProperties::with_policy(PropertyPolicy::Gerokasu2);
+            properties.set_layer_id(shin_core::vm::command::types::LayerId::new_unchecked(
+                slot as u16,
+            ));
+            if let Some(z) = z {
+                properties
+                    .property_tweener_mut(LayerProperty::TranslateZ)
+                    .fast_forward_to(z);
+            }
+            layer.set_properties(properties);
+        } else if let Some(properties) = previous {
             layer.set_properties(properties);
         } else {
             layer.set_properties(LayerProperties::with_policy(PropertyPolicy::Gerokasu2));

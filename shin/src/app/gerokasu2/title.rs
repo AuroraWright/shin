@@ -454,4 +454,14 @@ mod tests {
             assert_eq!(availability(&data).extra_unlocked, value != 0);
         }
     }
+
+    /// Scripted gallery runs: `SHIN_GEROKASU_UNLOCKED_SAVE=<path>`.
+    #[test]
+    #[ignore = "writes an Extra-unlocked save for scripted gallery runs"]
+    fn write_extra_unlocked_save() {
+        let path = std::env::var_os("SHIN_GEROKASU_UNLOCKED_SAVE").unwrap();
+        let mut data = SaveData::default();
+        data.persist_data.0 = vec![1];
+        std::fs::write(path, data.encode().unwrap()).unwrap();
+    }
 }
