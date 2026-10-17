@@ -68,10 +68,10 @@ on `PATH` or next to the engine.
 
 | Option | Description |
 | --- | --- |
-| `--game <GAME>` | The game to run: `umineko` (default), `higurashi`, `gerokasu` or `gerokasu2`. |
+| `-g`, `--game <GAME>` | The game to run: `umineko` (default), `higurashi`, `gerokasu` or `gerokasu2`. |
 | `-a`, `--assets-dir <DIR>` | Folder containing `data.rom` (or a `data` folder). Defaults to `assets` next to the executable. |
-| `--save-file <FILE>` | Save file. Defaults to `shin/<game>/SAVEDATA` in the system application data folder. |
-| `--text-websocket <HOST:PORT>` | Serve the displayed text over WebSocket, for example to a text hooker or translation tool. |
+| `-s`, `--save-file <FILE>` | Save file. Defaults to `shin/<game>/SAVEDATA` in the system application data folder. |
+| `-t`, `--text-websocket <HOST:PORT>` | Serve the displayed text over WebSocket, for example to a text hooker or translation tool. |
 
 The default save file is in:
 

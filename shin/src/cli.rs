@@ -36,7 +36,7 @@ impl Game {
 /// A visual novel engine
 pub struct Cli {
     /// Select the game to launch (Umineko by default).
-    #[clap(long, value_enum, default_value_t = Game::Umineko)]
+    #[clap(short, long, value_enum, default_value_t = Game::Umineko)]
     pub game: Game,
     /// Resources resolved before the Higurashi window starts. Direct app callers
     /// leave this empty and resolve the same resources during initialization.
@@ -55,7 +55,7 @@ pub struct Cli {
     ///
     /// Defaults to "shin/<game>/SAVEDATA" in the OS application data directory
     /// (e.g. ~/Library/Application Support on macOS, %APPDATA% on Windows).
-    #[clap(long)]
+    #[clap(short, long)]
     pub save_file: Option<PathBuf>,
     /// Search this directory for assets
     ///
@@ -68,7 +68,7 @@ pub struct Cli {
     ///
     /// Every connected client receives each message box text as plain text (all games), plus
     /// Umineko's character, tip and purple-statement descriptions.
-    #[clap(long, value_name = "HOST:PORT")]
+    #[clap(short, long, value_name = "HOST:PORT")]
     pub text_websocket: Option<String>,
 }
 
@@ -193,6 +193,25 @@ mod tests {
                 "{removed}"
             );
         }
+    }
+    #[test]
+    fn short_options_match_long_options() {
+        let cli = Cli::try_parse_from([
+            "shin",
+            "-g",
+            "higurashi",
+            "-s",
+            "SAVEDATA",
+            "-t",
+            "127.0.0.1:9001",
+            "-a",
+            "assets",
+        ])
+        .unwrap();
+        assert_eq!(cli.game, Game::Higurashi);
+        assert_eq!(cli.save_file, Some(PathBuf::from("SAVEDATA")));
+        assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
+        assert_eq!(cli.assets_dir, Some(PathBuf::from("assets")));
     }
     #[test]
     fn save_file_defaults_to_savedata_in_the_app_data_directory() {
