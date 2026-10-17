@@ -1,6 +1,6 @@
+mod debug_capture;
 #[cfg(target_os = "macos")]
 mod macos_quit;
-mod debug_capture;
 
 use std::{
     fmt::Debug,
@@ -130,6 +130,34 @@ impl<E: Send + Debug + 'static> ShinEventLoopProxy<E> {
                 EventLoopClosed(e)
             })
     }
+}
+
+/// A 1920x1080 window, shrunk to fit the monitor if needed while keeping
+/// 16:9, centered on the monitor.
+#[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
+fn centered_window(
+    monitor_size: winit::dpi::PhysicalSize<u32>,
+    monitor_position: winit::dpi::PhysicalPosition<i32>,
+    scale_factor: f64,
+) -> (
+    winit::dpi::PhysicalSize<u32>,
+    winit::dpi::PhysicalPosition<i32>,
+) {
+    // Leave room for the title bar, menu bar and dock or taskbar.
+    const MAX_FRACTION: f64 = 0.9;
+    let (monitor_width, monitor_height) = (monitor_size.width as f64, monitor_size.height as f64);
+    let fit = (monitor_width * MAX_FRACTION / (1920.0 * scale_factor))
+        .min(monitor_height * MAX_FRACTION / (1080.0 * scale_factor))
+        .min(1.0);
+    let width = (1920.0 * scale_factor * fit).round();
+    let height = (1080.0 * scale_factor * fit).round();
+    (
+        winit::dpi::PhysicalSize::new(width as u32, height as u32),
+        winit::dpi::PhysicalPosition::new(
+            monitor_position.x + ((monitor_width - width) / 2.0) as i32,
+            monitor_position.y + ((monitor_height - height) / 2.0) as i32,
+        ),
+    )
 }
 
 pub struct WindowState {
@@ -465,6 +493,27 @@ mod surface_availability_tests {
     }
 
     #[test]
+    fn window_is_centered_and_fits_the_monitor() {
+        use winit::dpi::{PhysicalPosition, PhysicalSize};
+        // 4K at 2x: 1920x1080 points does not fit, so shrink to 90% height.
+        let (size, position) = centered_window(
+            PhysicalSize::new(3840, 2160),
+            PhysicalPosition::new(0, 0),
+            2.0,
+        );
+        assert_eq!(size, PhysicalSize::new(3456, 1944));
+        assert_eq!(position, PhysicalPosition::new(192, 108));
+        // A large 1x monitor keeps the full size, offset by the monitor origin.
+        let (size, position) = centered_window(
+            PhysicalSize::new(2560, 1440),
+            PhysicalPosition::new(-2560, 0),
+            1.0,
+        );
+        assert_eq!(size, PhysicalSize::new(1920, 1080));
+        assert_eq!(position, PhysicalPosition::new(-2240, 180));
+    }
+
+    #[test]
     fn unactivated_launch_plays_until_first_focus_then_pauses_on_focus_loss() {
         let initial = Instant::now();
         let mut state = PlatformSuspension::launching(false, initial);
@@ -600,11 +649,18 @@ impl WindowState {
 
         #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
         {
-            use winit::dpi::{LogicalPosition, LogicalSize};
+            use winit::dpi::LogicalSize;
             attributes = attributes
                 .with_inner_size(LogicalSize::new(1920, 1080))
-                .with_maximized(false)
-                .with_position(LogicalPosition::new(1080, 0));
+                .with_maximized(false);
+            let monitor = event_loop
+                .primary_monitor()
+                .or_else(|| event_loop.available_monitors().next());
+            if let Some(monitor) = monitor {
+                let (size, position) =
+                    centered_window(monitor.size(), monitor.position(), monitor.scale_factor());
+                attributes = attributes.with_inner_size(size).with_position(position);
+            }
         }
 
         #[cfg(target_arch = "wasm32")]
