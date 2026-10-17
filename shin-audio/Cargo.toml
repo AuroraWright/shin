@@ -1,9 +1,9 @@
 [package]
 name = "shin-audio"
-version = "0.8.1"
+version = "1.0.0-fork"
 edition = "2024"
 description = "Kira audio sources for Shin Engine"
-repository = "https://github.com/DCNick3/shin"
+repository = "https://github.com/AuroraWright/shin"
 license = "MPL-2.0"
 authors = ["DCNick3"]
 

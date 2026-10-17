@@ -5424,7 +5424,7 @@ dependencies = [
 
 [[package]]
 name = "sdu"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "binrw",
@@ -5581,7 +5581,7 @@ dependencies = [
 
 [[package]]
 name = "shin"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "anymap3",
@@ -5633,7 +5633,7 @@ dependencies = [
 
 [[package]]
 name = "shin-asm"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "ariadne",
  "assert_matches",
@@ -5663,7 +5663,7 @@ dependencies = [
 
 [[package]]
 name = "shin-audio"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "cpal",
@@ -5676,7 +5676,7 @@ dependencies = [
 
 [[package]]
 name = "shin-core"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "array-util",
@@ -5724,7 +5724,7 @@ dependencies = [
 
 [[package]]
 name = "shin-derive"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "darling 0.24.1",
  "itertools 0.15.0",
@@ -5737,7 +5737,7 @@ dependencies = [
 
 [[package]]
 name = "shin-input"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "enum-map",
@@ -5758,7 +5758,7 @@ dependencies = [
 
 [[package]]
 name = "shin-primitives"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "bytemuck",
  "cfg-if",
@@ -5770,7 +5770,7 @@ dependencies = [
 
 [[package]]
 name = "shin-render"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5790,7 +5790,7 @@ dependencies = [
 
 [[package]]
 name = "shin-render-shader-types"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "bytemuck",
  "encase",
@@ -5804,7 +5804,7 @@ dependencies = [
 
 [[package]]
 name = "shin-render-shaders"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "bytemuck",
  "cfg-if",
@@ -5826,7 +5826,7 @@ dependencies = [
 
 [[package]]
 name = "shin-tasks"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "async-executor",
  "async-task",
@@ -5842,7 +5842,7 @@ dependencies = [
 
 [[package]]
 name = "shin-video"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -5876,7 +5876,7 @@ dependencies = [
 
 [[package]]
 name = "shin-window"
-version = "0.8.1"
+version = "1.0.0-fork"
 dependencies = [
  "anyhow",
  "cfg-if",

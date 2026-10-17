@@ -1,9 +1,9 @@
 [package]
 name = "shin"
-version = "0.8.1"
+version = "1.0.0-fork"
 edition = "2024"
 description = "A visual novel engine used by some entergram games"
-repository = "https://github.com/DCNick3/shin"
+repository = "https://github.com/AuroraWright/shin"
 license = "MPL-2.0"
 authors = ["DCNick3"]
 default-run = "shin"
@@ -83,7 +83,11 @@ tracy = ["shin-window/tracy"]
 # Internal automated acceptance entry; it never creates a manual package.
 higurashi-window-probe = []
 
-[[bin]]
+# An example, not a binary, so release packages leave it out. It lives in src/
+# because it includes the application entry and its module tree.
+# Build with: cargo build --release -p shin --example higurashi-window-probe
+#             --features higurashi-window-probe
+[[example]]
 name = "higurashi-window-probe"
 path = "src/higurashi_window_probe.rs"
 # The normal application binary owns the shared engine test harness.

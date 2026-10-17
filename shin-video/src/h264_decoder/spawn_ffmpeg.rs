@@ -129,14 +129,50 @@ async fn forward_decoded_frames_inner<R: futures_lite::AsyncRead + Unpin>(
     }
 }
 
+/// Folders searched for ffmpeg after `PATH`. Apps opened from the macOS Finder
+/// get a minimal `PATH` without the usual package manager folders.
+const FFMPEG_FALLBACK_DIRS: &[&str] = if cfg!(target_os = "macos") {
+    &["/opt/homebrew/bin", "/usr/local/bin", "/opt/local/bin"]
+} else if cfg!(unix) {
+    &["/usr/local/bin", "/usr/bin"]
+} else {
+    &[]
+};
+
+/// Find ffmpeg on `PATH`, next to the executable (also `Contents/Resources`
+/// inside a macOS app bundle), or in the usual install folders.
+fn locate_ffmpeg() -> Result<std::path::PathBuf> {
+    if let Ok(path) = which::which("ffmpeg") {
+        return Ok(path);
+    }
+    let executable_dirs = std::env::current_exe()
+        .ok()
+        .and_then(|exe| {
+            let dir = exe.parent()?.to_path_buf();
+            let mut dirs = vec![dir.clone()];
+            if dir.ends_with("Contents/MacOS") {
+                dirs.push(dir.parent()?.join("Resources"));
+            }
+            Some(dirs)
+        })
+        .unwrap_or_default();
+    let candidates = executable_dirs
+        .into_iter()
+        .chain(FFMPEG_FALLBACK_DIRS.iter().map(std::path::PathBuf::from));
+    which::which_in_global("ffmpeg", Some(std::env::join_paths(candidates)?))?
+        .next()
+        .context("ffmpeg is not on PATH or in any fallback folder")
+}
+
 impl super::H264DecoderTrait for SpawnFfmpegH264Decoder {
     fn new<S: Read + Seek + Send + 'static>(track: Mp4TrackReader<S>) -> Result<Self> {
         let mut bitstream_converter = track
             .get_mp4_track_info(Mp4BitstreamConverter::for_mp4_track)
             .context("Preparing AVC bitstream converter")?;
 
-        // TODO: use a more robust way to find the ffmpeg binary
-        let ffmpeg = which::which("ffmpeg").context("Could not locate ffmpeg binary")?;
+        let ffmpeg = locate_ffmpeg().context(
+            "Could not locate ffmpeg; install it or place it next to the shin executable",
+        )?;
 
         // let timescale = track.get_mp4_track_info(|t| t.timescale());
 
