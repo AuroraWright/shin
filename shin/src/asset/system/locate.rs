@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use anyhow::bail;
 use tracing::{debug, instrument, trace};
@@ -67,88 +67,24 @@ pub(super) fn try_assets_directory(path: &Path) -> anyhow::Result<Option<Layered
 /// patch.rom, data directory and data.rom. Missing entries fall through to the
 /// following layers. This can be useful for translation mods.
 ///
-/// The candidate asset directories are (in order)
-/// 1. The directory specified on the command line with the `--assets-dir` option
-/// 2. The directory specified in the `SHIN_ASSETS` environment variable
-/// 3. The directory "assets" next to the executable
-/// 4. The directory "assets" in the current working directory
-/// 5. The user's shared data directory (see [`dirs_next::data_dir`], `/home/alice/.local/share/shin/assets` / `C:\Users\Alice\AppData\Roaming\shin\assets` / `/Users/Alice/Library/Application Support/shin/assets`)
-///
-/// The used asset directory is the first one having a "data" directory or a "data.rom" file.
-#[allow(clippy::match_result_ok)]
-pub fn locate_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo> {
-    // First, try the assets directory specified on the command line
-    // Then, try the assets directory specified in the environment
-    // Then, try the assets directory next to the executable
-    // Then, try the assets directory in the current working directory
-    // Then, try the user's shared data directory
-
-    let mut try_list = Vec::new();
-
-    if let Some(cli_assets) = cli_assets {
-        try_list.push(cli_assets.to_path_buf());
+/// The directory is `--assets-dir`, defaulting to "assets" next to the
+/// executable (see [`crate::cli::Cli::assets_dir`]).
+pub fn locate_assets(path: &Path) -> anyhow::Result<LayeredAssetIo> {
+    match try_assets_directory(path)? {
+        Some(result) => Ok(result),
+        None => bail!(
+            "Failed to locate assets: {} has no \"data\" directory or \"data.rom\"",
+            path.display()
+        ),
     }
-
-    if let Some(env_assets) = std::env::var_os("SHIN_ASSETS") {
-        try_list.push(PathBuf::from(env_assets));
-    }
-
-    if let Some(exe_assets) = std::env::current_exe()?.parent().map(|p| p.join("assets")) {
-        try_list.push(exe_assets);
-    }
-
-    if let Some(cwd_assets) = std::env::current_dir()?.join("assets").canonicalize().ok() {
-        try_list.push(cwd_assets);
-    }
-
-    // |Platform | Value                                    | Example                                  |
-    // | ------- | ---------------------------------------- | ---------------------------------------- |
-    // | Linux   | `$XDG_DATA_HOME` or `$HOME`/.local/share | /home/alice/.local/share                 |
-    // | macOS   | `$HOME`/Library/Application Support      | /Users/Alice/Library/Application Support |
-    // | Windows | `{FOLDERID_RoamingAppData}`              | C:\Users\Alice\AppData\Roaming           |
-    if let Some(shared_assets) = dirs_next::data_dir().map(|p| p.join("../../..").join("assets")) {
-        try_list.push(shared_assets);
-    }
-
-    for path in try_list.iter() {
-        if let Some(result) = try_assets_directory(path)? {
-            return Ok(result);
-        }
-    }
-
-    bail!("Failed to locate assets directory, tried: {:#?}", try_list);
 }
 
-/// Preserve Umineko's existing search policy. Other games use named roots
-/// so they cannot silently pick up assets from an unrelated game.
-pub fn locate_assets_for_game(
-    game: Game,
-    cli_assets: Option<&Path>,
-) -> anyhow::Result<LayeredAssetIo> {
+/// Every game reads one assets directory; the layer rules differ per game.
+pub fn locate_assets_for_game(game: Game, path: &Path) -> anyhow::Result<LayeredAssetIo> {
     match game {
-        Game::Umineko => return locate_assets(cli_assets),
-        Game::Gerokasu2 => return locate_gerokasu2_assets(cli_assets),
-        Game::Gerokasu => return locate_gerokasu_assets(cli_assets),
-        Game::Higurashi => {}
+        Game::Umineko | Game::Gerokasu2 | Game::Gerokasu => locate_assets(path),
+        Game::Higurashi => higurashi_directory(path),
     }
-    if let Some(path) = cli_assets {
-        return higurashi_directory(path);
-    }
-    if let Some(path) = std::env::var_os("SHIN_HIGURASHI_ASSETS") {
-        return higurashi_directory(Path::new(&path));
-    }
-    let mut paths = vec![std::env::current_dir()?.join("higurashi")];
-    if let Some(parent) = std::env::current_exe()?.parent() {
-        paths.push(parent.join("higurashi"));
-    }
-    for path in &paths {
-        if path.is_dir() {
-            return higurashi_directory(path);
-        }
-    }
-    bail!(
-        "Failed to locate Higurashi assets, tried {paths:?}. Use --assets-dir or SHIN_HIGURASHI_ASSETS."
-    );
 }
 
 fn higurashi_directory(path: &Path) -> anyhow::Result<LayeredAssetIo> {
@@ -268,11 +204,12 @@ pub(crate) fn higurashi_scenario_supports_origin(
 #[cfg(test)]
 mod higurashi_tests {
     use super::*;
+    use std::path::PathBuf;
 
     #[test]
     fn explicit_missing_higurashi_directory_does_not_fall_back() {
         let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("missing-higurashi-assets");
-        assert!(locate_assets_for_game(Game::Higurashi, Some(&path)).is_err());
+        assert!(locate_assets_for_game(Game::Higurashi, &path).is_err());
     }
 
     #[test]
@@ -287,7 +224,7 @@ mod higurashi_tests {
         };
         use std::{collections::BTreeSet, io::Read};
         let root = PathBuf::from(std::env::var_os("SHIN_HIGURASHI_ASSETS").unwrap());
-        let io = locate_assets_for_game(Game::Higurashi, Some(&root)).unwrap();
+        let io = locate_assets_for_game(Game::Higurashi, &root).unwrap();
         let mut patched = BTreeSet::new();
         for archive in ["patch.rom", "append.rom"] {
             let mut rom = RomReader::new(
@@ -461,51 +398,6 @@ mod higurashi_tests {
     }
 }
 
-fn locate_gerokasu2_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo> {
-    let explicit = cli_assets
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("SHIN_GEROKASU2_ASSETS").map(PathBuf::from));
-    let paths = if let Some(path) = explicit {
-        vec![path]
-    } else {
-        let mut paths = vec![std::env::current_dir()?.join("gerokasu2")];
-        if let Some(parent) = std::env::current_exe()?.parent() {
-            paths.push(parent.join("gerokasu2"));
-        }
-        paths
-    };
-    for path in &paths {
-        if let Some(io) = try_assets_directory(path)? {
-            return Ok(io);
-        }
-    }
-    bail!(
-        "Failed to locate Gerokasu2 assets, tried {paths:?}. Use --assets-dir or SHIN_GEROKASU2_ASSETS."
-    );
-}
-
-/// Gerokasu uses its own named root so it never picks up Gerokasu2 data.
-fn locate_gerokasu_assets(cli_assets: Option<&Path>) -> anyhow::Result<LayeredAssetIo> {
-    let explicit = cli_assets
-        .map(PathBuf::from)
-        .or_else(|| std::env::var_os("SHIN_GEROKASU_ASSETS").map(PathBuf::from));
-    let paths = if let Some(path) = explicit {
-        vec![path]
-    } else {
-        let mut paths = vec![std::env::current_dir()?.join("gerokasu")];
-        if let Some(parent) = std::env::current_exe()?.parent() {
-            paths.push(parent.join("gerokasu"));
-        }
-        paths
-    };
-    for path in &paths {
-        if let Some(io) = try_assets_directory(path)? {
-            return Ok(io);
-        }
-    }
-    bail!("Failed to locate Gerokasu assets, tried {paths:?}. Use --assets-dir or SHIN_GEROKASU_ASSETS.");
-}
-
 #[cfg(test)]
 mod gerokasu2_tests {
     use super::*;
@@ -513,7 +405,7 @@ mod gerokasu2_tests {
     #[test]
     fn explicit_missing_directory_does_not_fall_back_to_another_game() {
         let path = std::env::temp_dir().join(format!("shin-no-gerokasu2-{}", std::process::id()));
-        assert!(locate_assets_for_game(Game::Gerokasu2, Some(&path)).is_err());
+        assert!(locate_assets_for_game(Game::Gerokasu2, &path).is_err());
     }
 }
 

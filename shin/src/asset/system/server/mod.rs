@@ -485,7 +485,7 @@ mod update_reference_tests {
         let mut rom =
             RomReader::new(StatelessFile::new(std::fs::File::open(patch).unwrap()).unwrap())
                 .unwrap();
-        let layered = locate_assets(Some(directory)).unwrap();
+        let layered = locate_assets(directory).unwrap();
         let paths: Vec<_> = rom
             .traverse()
             .filter_map(|(path, entry)| matches!(entry, IndexEntry::File(_)).then_some(path))

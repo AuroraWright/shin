@@ -143,7 +143,7 @@ fn supplied_message_resources_shared_font_and_composed_windows_cursors_text_matc
     let gpu = Offscreen::new();
     let path = std::path::PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap());
     let assets = AssetServer::new(
-        locate_assets_for_game(Game::Gerokasu2, Some(path.parent().unwrap()))
+        locate_assets_for_game(Game::Gerokasu2, path.parent().unwrap())
             .unwrap()
             .into(),
         AssetLoadContext {
@@ -360,7 +360,7 @@ fn evaluated_message_owner_commands_preserve_windows_text_and_portrait_requests(
     let gpu = Offscreen::new();
     let path = std::path::PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap());
     let assets = AssetServer::new(
-        locate_assets_for_game(Game::Gerokasu2, Some(path.parent().unwrap()))
+        locate_assets_for_game(Game::Gerokasu2, path.parent().unwrap())
             .unwrap()
             .into(),
         AssetLoadContext {

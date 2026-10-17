@@ -60,7 +60,7 @@ impl Journey {
         });
         let (device, queue, _) = crate::adv::higurashi::reference_gpu_assets();
         let server = AssetServer::new(
-            locate_assets_for_game(Game::Higurashi, Some(&inputs))
+            locate_assets_for_game(Game::Higurashi, &inputs)
                 .unwrap()
                 .into(),
             AssetLoadContext {

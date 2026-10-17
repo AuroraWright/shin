@@ -62,10 +62,6 @@ pub(crate) fn validate_options(cli: &Cli) -> Result<()> {
         cli.game.is_gerokasu_family(),
         "Expected Gerokasu or Gerokasu2 game selection"
     );
-    ensure!(
-        cli.unsafe_entry_point.is_none() && cli.fast_forward_to.is_none(),
-        "Gerokasu2 debug-entry reconstruction is not connected yet"
-    );
     Ok(())
 }
 fn command_context() -> MessageCommandContext {
@@ -126,6 +122,7 @@ pub(crate) struct GerHost {
     pub request: Option<root_touch::Request>,
 }
 impl GerHost {
+    #[cfg(test)]
     pub async fn restore_saved(
         &mut self,
         scenario: Arc<Gerokasu2Scenario>,
@@ -919,16 +916,8 @@ impl ShinApp for Gerokasu2App {
         Some(winit::keyboard::KeyCode::KeyF);
     fn init(ctx: AppContext<Self>, cli: Cli) -> Result<Self> {
         validate_options(&cli)?;
-        let imported = cli
-            .load_save
-            .as_ref()
-            .map(|path| saves::read(path))
-            .transpose()?;
-        let save_store = Some(saves::Store::load(
-            saves::progress_path(&cli)?,
-            imported.clone(),
-        )?);
-        let io = locate_assets_for_game(cli.game, cli.assets_dir.as_deref())?;
+        let save_store = Some(saves::Store::load(saves::progress_path(&cli)?)?);
+        let io = locate_assets_for_game(cli.game, &cli.assets_dir())?;
         let data = io
             .read_file("/main.snr")?
             .read_all_sync()
@@ -948,7 +937,7 @@ impl ShinApp for Gerokasu2App {
             },
         ));
         #[cfg(not(test))]
-        let audio = Arc::new(if cli.loopback_audio {
+        let audio = Arc::new(if cli.loopback_audio() {
             AudioManager::new_for_tests()
         } else {
             AudioManager::new()
@@ -959,43 +948,27 @@ impl ShinApp for Gerokasu2App {
             audio.clone(),
             &scenario,
         )));
-        let mut first_boot = None;
-        let host = if let Some(data) = imported.as_ref() {
-            let mut host = shin_tasks::block_on(GerHost::load(
-                assets.clone(),
-                scenario.clone(),
+        // 252C8/5C2D0: the first owner is always FirstBoot; its finish runs
+        // the DF9B0 TitleDemo/Title gate.
+        let voice = (cli.game == Game::Gerokasu).then(|| {
+            system_voice::SystemVoice::new(
                 audio.clone(),
-                fresh_seed()?,
-            ))?;
-            host.scene.defer_audio_publication();
-            shin_tasks::block_on(host.restore_saved(scenario.clone(), data, cli.save_slot))?;
-            host.scene
-                .publish_global_audio(menu_bgm.lock().shared_audio())?;
-            Some(host)
-        } else {
-            // 252C8/5C2D0: the first owner is always FirstBoot; its finish
-            // runs the DF9B0 TitleDemo/Title gate.
-            let voice = (cli.game == Game::Gerokasu).then(|| {
-                system_voice::SystemVoice::new(
-                    audio.clone(),
-                    assets.clone(),
-                    save_store.as_ref().unwrap().data.settings.v2_voicevol,
-                )
-            });
-            first_boot = Some(shin_tasks::block_on(first_boot::FirstBoot::load(
                 assets.clone(),
-                voice,
-            ))?);
-            None
-        };
+                save_store.as_ref().unwrap().data.settings.v2_voicevol,
+            )
+        });
+        let first_boot = Some(shin_tasks::block_on(first_boot::FirstBoot::load(
+            assets.clone(),
+            voice,
+        ))?);
+        let host = None;
         let system_textures = shin_tasks::block_on(assets.load("/systex.txa"))
             .inspect_err(|error| tracing::error!(%error, "Ger touch-effect art failed to load"))
             .ok();
         let play_clock = crate::adv::play_clock::PlayClock::from_saved_seconds(
-            imported
+            save_store
                 .as_ref()
-                .map(|data| data.play_seconds)
-                .or_else(|| save_store.as_ref().map(|store| store.data.play_seconds))
+                .map(|store| store.data.play_seconds)
                 .unwrap_or(0),
         );
         Ok(Self {

@@ -281,6 +281,7 @@ impl SceneHost {
             viewer_axes: glam::Vec2::ZERO,
         }
     }
+    #[cfg(test)]
     pub fn new(adv: Adv, assets: AdvAssets, server: Arc<AssetServer>) -> Self {
         Self {
             scene: Some(Scene::Adv(Box::new(adv))),

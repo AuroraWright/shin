@@ -2,13 +2,9 @@ use super::*;
 use clap::Parser;
 
 #[test]
-fn ger_progress_path_keeps_normal_storage_separate_and_honors_explicit_paths() {
+fn ger_progress_path_defaults_to_app_data_and_honors_explicit_paths() {
     let cli = crate::cli::Cli::try_parse_from(["shin", "--game", "gerokasu2"]).unwrap();
-    assert!(
-        progress_path(&cli)
-            .unwrap()
-            .ends_with("shin/gerokasu2/progress.dat")
-    );
+    assert!(progress_path(&cli).unwrap().ends_with("shin/gerokasu2/SAVEDATA"));
     let cli = crate::cli::Cli::try_parse_from([
         "shin",
         "--game",
@@ -33,13 +29,15 @@ fn ger_progress_path_keeps_normal_storage_separate_and_honors_explicit_paths() {
 struct Temporary(std::path::PathBuf);
 impl Temporary {
     fn new() -> Self {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
         let folder = std::env::temp_dir().join(format!(
-            "shin-ger-save-{}-{}",
+            "shin-ger-save-{}-{}-{}",
             std::process::id(),
             std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .unwrap()
-                .as_nanos()
+                .as_nanos(),
+            NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
         ));
         std::fs::create_dir(&folder).unwrap();
         Self(folder)
@@ -55,7 +53,7 @@ impl Drop for Temporary {
 fn ger_store_preserves_existing_file_on_invalid_snapshot_and_corrupt_import() {
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.persist_data.0 = vec![-1, 731];
     store.data.save_vectors.seen_messages = vec![0x80000001, 0];
     store.flush().unwrap();
@@ -69,7 +67,7 @@ fn ger_store_preserves_existing_file_on_invalid_snapshot_and_corrupt_import() {
     assert_eq!(std::fs::read(&path).unwrap(), original);
     assert_eq!(std::fs::read_dir(&temporary.0).unwrap().count(), 1);
     std::fs::write(&path, b"invalid encrypted save").unwrap();
-    assert!(Store::load(path.clone(), None).is_err());
+    assert!(Store::load(path.clone()).is_err());
     assert_eq!(std::fs::read(&path).unwrap(), b"invalid encrypted save");
 }
 
@@ -78,7 +76,7 @@ fn ger_store_coalesces_writes_and_drains_before_last_snapshot() {
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.play_seconds = 1;
     store.request_flush().unwrap();
     for value in 2..=10 {
@@ -96,7 +94,7 @@ fn ger_store_async_completion_waits_for_queued_snapshot_and_allows_failed_write_
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.settings.v0_bgmvol = 20;
     store.request_flush().unwrap();
     assert!(store.is_flush_pending());
@@ -189,7 +187,7 @@ fn ger_manual_store_stages_in_memory_until_open_question_dispatches_worker() {
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.save_menu_position = 18;
     store.flush().unwrap();
     let old = std::fs::read(&path).unwrap();
@@ -228,7 +226,7 @@ fn ger_frozen_globals_write_keeps_constructor_settings_and_live_progress_separat
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.settings.v0_bgmvol = 34;
     let snapshot = store.data.clone();
     store.data.settings.v0_bgmvol = 57;
@@ -255,7 +253,7 @@ fn ger_manual_store_save_overwrite_delete_and_concurrent_transaction_guard() {
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.save_menu_position = 17;
     store.flush().unwrap();
     assert!(
@@ -297,7 +295,7 @@ fn ger_manual_store_failed_snapshot_rolls_back_only_slot_and_remembered_selectio
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.manual_save_slots[4] = Some(manual_game(1));
     store.data.save_menu_position = 19;
     store.flush().unwrap();
@@ -335,7 +333,7 @@ fn ger_manual_store_predecessor_failure_discards_staged_queue_and_delete_rolls_b
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.manual_save_slots[3] = Some(manual_game(1));
     store.data.save_menu_position = 27;
     store.flush().unwrap();
@@ -367,11 +365,11 @@ fn ger_manual_store_predecessor_and_deferred_globals_cross_one_commit_boundary()
     crate::init_test_task_pools();
     let temporary = Temporary::new();
     let path = temporary.0.join("progress.dat");
-    let mut store = Store::load(path.clone(), None).unwrap();
+    let mut store = Store::load(path.clone()).unwrap();
     store.data.play_seconds = 1;
     store.data.save_menu_position = 8;
     store.flush().unwrap();
-    let before = Store::load(path.clone(), Some(store.data.clone())).unwrap();
+    let before = Store::load(path.clone()).unwrap();
     let (release, ready) = futures::channel::oneshot::channel::<()>();
     store.pending = Some(shin_tasks::async_io::spawn(async move {
         ready.await.unwrap();

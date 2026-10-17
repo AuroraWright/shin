@@ -24,23 +24,10 @@ fn validate_cli(cli: &Cli) -> Result<()> {
         cli.game == Game::Higurashi && !cli.inspect_assets,
         "Higurashi application requires a normal Higurashi launch"
     );
-    ensure!(
-        cli.load_save.is_none()
-            && cli.fast_forward_to.is_none()
-            && cli.unsafe_entry_point.is_none(),
-        "Higurashi direct-save/debug entry is not connected; start through the title screen and use --save-file for global progress"
-    );
     Ok(())
 }
 fn progress_path(cli: &Cli) -> Result<PathBuf> {
-    if let Some(path) = &cli.save_file {
-        return Ok(path.clone());
-    }
-    Ok(dirs_next::data_local_dir()
-        .context("No desktop data directory; supply --save-file for Higurashi progress")?
-        .join("shin")
-        .join("higurashi")
-        .join("progress.dat"))
+    Ok(cli.save_file())
 }
 
 /// Own the mounted assets across the CLI/window boundary. Progress is only a
@@ -61,7 +48,7 @@ pub(crate) fn prepare_launch(cli: &mut Cli) -> Result<()> {
             !progress.as_os_str().is_empty(),
             "Higurashi progress path is empty"
         );
-        let assets = locate_assets_for_game(Game::Higurashi, cli.assets_dir.as_deref())
+        let assets = locate_assets_for_game(Game::Higurashi, &cli.assets_dir())
             .context("Locating Higurashi assets for normal launch")?;
         cli.higurashi_launch = Some(PreparedLaunch { progress, assets });
     }
@@ -129,7 +116,7 @@ impl ShinApp for HigurashiApp {
     fn init(context: AppContext<Self>, mut cli: Cli) -> Result<Self> {
         let PreparedLaunch { progress, assets } = take_launch(&mut cli)?;
         #[cfg(not(test))]
-        let manager = Arc::new(if cli.loopback_audio {
+        let manager = Arc::new(if cli.loopback_audio() {
             shin_audio::AudioManager::new_for_tests()
         } else {
             shin_audio::AudioManager::new()
@@ -334,7 +321,7 @@ mod tests {
     }
 
     #[test]
-    fn higurashi_window_cli_keeps_inspection_and_direct_import_separate() {
+    fn higurashi_window_cli_keeps_inspection_separate_and_defaults_progress() {
         assert!(validate_cli(&Cli::try_parse_from(["shin"]).unwrap()).is_err());
         assert!(
             validate_cli(
@@ -342,19 +329,6 @@ mod tests {
             )
             .is_err()
         );
-        for extra in [
-            ["--load-save", "save.dat"],
-            ["--unsafe-entry-point", "1"],
-            ["--fast-forward-to", "1"],
-        ] {
-            assert!(
-                validate_cli(
-                    &Cli::try_parse_from(["shin", "--game", "higurashi", extra[0], extra[1]])
-                        .unwrap()
-                )
-                .is_err()
-            );
-        }
         let cli = Cli::try_parse_from([
             "shin",
             "--game",
@@ -368,31 +342,9 @@ mod tests {
             progress_path(&cli).unwrap(),
             PathBuf::from("higu-progress.dat")
         );
-        let cli = Cli::try_parse_from(["shin", "--game", "higurashi"]).unwrap();
+        let cli = Cli::try_parse_from(["shin", "--game", "higurashi", "-a", "higu"]).unwrap();
         validate_cli(&cli).unwrap();
-        assert!(
-            progress_path(&cli)
-                .unwrap()
-                .ends_with("shin/higurashi/progress.dat")
-        );
-    }
-
-    #[test]
-    fn higurashi_launch_rejects_direct_entry_before_asset_lookup() {
-        let files = LaunchFiles::new();
-        for extra in [
-            ["--load-save", "save.dat"],
-            ["--unsafe-entry-point", "1"],
-            ["--fast-forward-to", "1"],
-        ] {
-            let mut cli = files.cli(&extra);
-            let error = format!("{:#}", prepare_launch(&mut cli).unwrap_err());
-            assert!(error.contains("direct-save/debug entry"), "{error}");
-            assert!(!error.contains("Locating Higurashi assets"), "{error}");
-            assert!(cli.higurashi_launch.is_none());
-        }
-        assert!(!files.0.join("assets").exists());
-        assert!(!files.0.join("new-profile").exists());
+        assert!(progress_path(&cli).unwrap().ends_with("shin/higurashi/SAVEDATA"));
     }
 
     #[test]

@@ -266,7 +266,7 @@ pub(super) fn driver_with_scenario(
     std::fs::create_dir(&folder).unwrap();
     let temporary = Temporary(folder);
     let path = temporary.0.join("progress.dat");
-    let store = saves::Store::load(path.clone(), None).unwrap();
+    let store = saves::Store::load(path.clone()).unwrap();
     let bgm = Arc::new(parking_lot::Mutex::new(menu_audio::MenuMusic::new(
         audio.clone(),
         &scenario,

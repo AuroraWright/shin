@@ -212,7 +212,6 @@ pub struct Adv {
     adv_state: AdvState,
     // action_state: ActionState<AdvMessageAction>,
     current_command: Option<ExecutingCommand>,
-    fast_forward_to_bp: Option<BreakpointObserver>,
     finished: bool,
     character_scroll_axis: f32,
     interactive_axes: glam::Vec2,
@@ -292,7 +291,6 @@ impl Adv {
             vm_state,
             adv_state,
             current_command: None,
-            fast_forward_to_bp: None,
             finished: false,
             character_scroll_axis: 0.0,
             interactive_axes: glam::Vec2::ZERO,
@@ -1043,7 +1041,6 @@ impl Adv {
         self.pending_result = shin_core::vm::command::CommandResult::None;
         self.finished = false;
         self.exit_save_finished = false;
-        self.fast_forward_to_bp = None;
         match start {
             CommandStartResult::Continue(result) => self.pending_result = result,
             CommandStartResult::Yield(command) => self.current_command = Some(command),
@@ -1094,11 +1091,6 @@ impl Adv {
         for id in self.adv_state.message_layer_mut().take_completed_messages() {
             self.vm_state.mark_message_read(id);
         }
-    }
-
-    pub fn fast_forward_to(&mut self, addr: CodeAddress) {
-        assert!(self.fast_forward_to_bp.is_none());
-        self.fast_forward_to_bp = Some(self.scripter.add_breakpoint(addr).into());
     }
 
     /// Called every app frame, including frames before a modal opens. Coordinates
@@ -2049,10 +2041,6 @@ impl Adv {
                 fast_forward_button_held,
             )
             && self.can_skip_current_message()
-            || self.fast_forward_to_bp.is_some()
-                && self.adv_state.character_screen.is_none()
-                && !self.adv_state.hidden_ui_active
-                && self.adv_state.modal_backdrop.is_none()
         {
             self.adv_state.root_layer_group_mut().fast_forward();
             if let Some(back_layer_group) = &mut self.adv_state.back_layer_group {
@@ -2062,24 +2050,14 @@ impl Adv {
 
         let mut result = std::mem::replace(&mut self.pending_result, CommandResult::None);
         while !self.finished {
-            // check the fast-forward breakpoint; delete if hit
-            if self
-                .fast_forward_to_bp
-                .as_mut()
-                .is_some_and(|bp| bp.update())
-            {
-                debug!("Fast-forward breakpoint hit, stopping the FF");
-                self.fast_forward_to_bp = None;
-            }
-
             let is_fast_forwarding = self.chapter_dialog.is_none()
                 && self.adv_state.modal_backdrop.is_none()
                 && !self.adv_state.hidden_ui_active
-                && (self.adv_state.playback_modes.is_skipping(
+                && self.adv_state.playback_modes.is_skipping(
                     self.vm_state.allows_system_controls(),
                     fast_forward_button_held,
-                ) && self.can_skip_current_message()
-                    || self.fast_forward_to_bp.is_some());
+                )
+                && self.can_skip_current_message();
 
             if is_fast_forwarding
                 && !self.adv_state.hidden_ui_active
@@ -2117,12 +2095,7 @@ impl Adv {
                 self.scripter.run(result).expect("scripter run failed")
             };
 
-            let message_skip = if self.fast_forward_to_bp.is_some()
-                && !self.adv_state.hidden_ui_active
-                && self.adv_state.modal_backdrop.is_none()
-            {
-                command::NewMessageSkip::Forced
-            } else if self.playback_indicator_controls_allowed()
+            let message_skip = if self.playback_indicator_controls_allowed()
                 && (self.adv_state.playback_modes.skip || fast_forward_button_held)
             {
                 command::NewMessageSkip::Requested
@@ -2146,7 +2119,6 @@ impl Adv {
                 }
                 CommandStartResult::Exit => {
                     self.finished = true;
-                    self.fast_forward_to_bp = None;
                 }
             }
         }

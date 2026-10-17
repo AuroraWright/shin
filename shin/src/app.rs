@@ -16,8 +16,7 @@ use anyhow::Context;
 use enum_map::{Enum, EnumMap};
 use shin_audio::AudioManager;
 use shin_core::{
-    format::scenario::instruction_elements::CodeAddress, primitives::update::FrameId, time::Ticks,
-    vm::Scripter,
+    primitives::update::FrameId, time::Ticks,
 };
 use shin_input::{
     Action, ActionState, RawInputState,
@@ -29,7 +28,6 @@ use tracing::debug;
 use winit::keyboard::KeyCode;
 
 use crate::{
-    adv::{Adv, assets::AdvAssets},
     asset::system::{AssetLoadContext, AssetServer, cache::AssetCache, locate_assets_for_game},
     cli::Cli,
     render::PreRenderContext,
@@ -301,6 +299,9 @@ impl App {
     }
 }
 
+#[cfg(test)]
+use crate::adv::{Adv, assets::AdvAssets};
+
 /// Real scene-host and touch-effect composition without a platform window.
 #[cfg(test)]
 pub(crate) struct ReferenceApp(App);
@@ -413,7 +414,7 @@ impl ShinApp for App {
             "Umineko application requires an Umineko launch"
         );
         #[cfg(not(test))]
-        let audio_manager = Arc::new(if cli.loopback_audio {
+        let audio_manager = Arc::new(if cli.loopback_audio() {
             AudioManager::new_for_tests()
         } else {
             AudioManager::new()
@@ -421,7 +422,7 @@ impl ShinApp for App {
         #[cfg(test)]
         let audio_manager = Arc::new(AudioManager::new_for_tests());
 
-        let asset_io = locate_assets_for_game(cli.game, cli.assets_dir.as_deref()).context("Failed to locate assets. Consult the README for instructions on how to set up the game.")?;
+        let asset_io = locate_assets_for_game(cli.game, &cli.assets_dir()).context("Failed to locate assets. Consult the README for instructions on how to set up the game.")?;
 
         debug!("Asset IO: {:#?}", asset_io);
 
@@ -438,156 +439,20 @@ impl ShinApp for App {
             },
         ));
 
-        if cli.unsafe_entry_point.is_none()
-            && cli.fast_forward_to.is_none()
-            && cli.load_save.is_none()
-        {
-            let audio = crate::audio::GlobalAudio::new(audio_manager.clone());
-            return Ok(Self {
-                shutdown: shutdown::Shutdown::default(),
-                platform_suspended: false,
-                frame_id: FrameId::default(),
-                effect_textures: None,
-                audio_manager,
-                asset_server: asset_server.clone(),
-                scenes: SceneHost::new_first_boot(audio, asset_server, cli.save_file),
-                pointer_position: glam::Vec2::ZERO,
-                character_scroll_axis: 0.0,
-                touch_effect: touch_effect::TouchEffect::default(),
-                touch_background: None,
-                system_textures: None,
-            });
-        }
-
-        // Explicit saved/debug story launches prepare their requested ADV.
-        let adv_assets = shin_tasks::block_on(AdvAssets::load(&asset_server))?;
-        let effect_textures = Some(shin_tasks::block_on(
-            asset_server.initialize_effects_atlas(),
-        )?);
-        let system_textures = Some(shin_tasks::block_on(asset_server.load("/systex.txa"))?);
-
-        let mut scripter = Scripter::new(&adv_assets.scenario, 0, 42);
-
-        if let Some(addr) = cli.unsafe_entry_point {
-            debug!("Starting execution from 0x{:x}", addr);
-            scripter.unsafe_set_position(CodeAddress(addr));
-        }
-
-        let mut adv = Adv::new(
-            audio_manager.clone(),
-            asset_server.clone(),
-            adv_assets.clone(),
-            scripter,
-        );
-
-        let imported_save = cli
-            .load_save
-            .as_ref()
-            .map(|path| {
-                let bytes = std::fs::read(path)
-                    .with_context(|| format!("Reading save {}", path.display()))?;
-                shin_core::format::save::SaveData::decode(&bytes).context("Decoding saved game")
-            })
-            .transpose()?;
-        if let Some(path) = &cli.save_file {
-            adv.configure_save_file(path.clone(), imported_save.clone())
-                .context("Opening progress save file")?;
-        } else if let Some(save) = &imported_save {
-            adv.restore_play_clock(save.play_seconds);
-        }
-        if let Some(save) = &imported_save {
-            let slot = if cli.save_slot == 0 {
-                save.auto_save_slot.as_ref()
-            } else {
-                save.manual_save_slots[cli.save_slot as usize - 1].as_ref()
-            }
-            .context("Selected save slot is empty")?;
-            adv.load_game_data(save, slot, asset_server.clone())
-                .context("Reconstructing saved scene")?;
-        }
-
-        if let Some(addr) = cli.fast_forward_to {
-            debug!("Fast forwarding to 0x{:x}", addr);
-            adv.fast_forward_to(CodeAddress(addr));
-        }
-
-        // let picture_name = "/picture/text001.pic";
-        //
-        // let picture = asset_server.load_sync::<Picture>(picture_name).unwrap();
-        //
-        // let mut tile_layer_bottom = TileLayer::new(
-        //     FloatColor4::PASTEL_PINK,
-        //     vec4(-1088.0, -612.0, 2176.0, 1224.0),
-        // );
-        // tile_layer_bottom
-        //     .properties_mut()
-        //     .set_layer_id(LayerId::new(1));
-        //
-        // let mut tile_layer_top = TileLayer::new(
-        //     FloatColor4::PASTEL_GREEN,
-        //     vec4(-300.0, -300.0, 600.0, 600.0),
-        // );
-        // {
-        //     let props = tile_layer_top.properties_mut();
-        //     props.set_layer_id(LayerId::new(3));
-        //     props
-        //         .property_tweener_mut(LayerProperty::MulColorAlpha)
-        //         .fast_forward_to(200.0);
-        // }
-        //
-        // let mut picture_layer = PictureLayer::new(picture, Some(picture_name.to_string()));
-        // {
-        //     let props = picture_layer.properties_mut();
-        //     props.set_layer_id(LayerId::new(2));
-        //     props
-        //         .property_tweener_mut(LayerProperty::TranslateZ)
-        //         .fast_forward_to(1500.0);
-        //     props
-        //         .property_tweener_mut(LayerProperty::MulColorAlpha)
-        //         .fast_forward_to(800.0);
-        // }
-        //
-        // let mut root_layer_group = RootLayerGroup::new();
-        //
-        // let screen_layer = root_layer_group.screen_layer_mut();
-        //
-        // let page_layer = screen_layer.page_layer_mut();
-        //
-        // let layer_group = page_layer.get_plane_mut(PlaneId::new(0));
-        // layer_group.add_layer(LayerbankId::new(1), tile_layer_bottom.into());
-        // layer_group.add_layer(LayerbankId::new(0), picture_layer.into());
-        // layer_group.add_layer(LayerbankId::new(2), tile_layer_top.into());
-        //
-        // {
-        //     let tweener = page_layer
-        //         .properties_mut()
-        //         .property_tweener_mut(LayerProperty::MulColorRed);
-        //
-        //     tweener.enqueue(2000.0, Tween::linear(Ticks::from_seconds(0.5)));
-        //     tweener.enqueue(1000.0, Tween::linear(Ticks::from_seconds(0.5)));
-        //     tweener.enqueue(2000.0, Tween::linear(Ticks::from_seconds(0.5)));
-        //     tweener.enqueue(1000.0, Tween::linear(Ticks::from_seconds(0.5)));
-        //
-        //     // tweener.enqueue(2000.0, Tween::linear(Ticks::from_seconds(1.0)));
-        //     // tweener.enqueue(0.0, Tween::linear(Ticks::from_seconds(1.0)));
-        //     // tweener.enqueue(2000.0, Tween::linear(Ticks::from_seconds(1.0)));
-        //     // tweener.enqueue(0.0, Tween::linear(Ticks::from_seconds(1.0)));
-        //     // tweener.enqueue(1000.0, Tween::linear(Ticks::from_seconds(0.5)));
-        // }
-
+        let audio = crate::audio::GlobalAudio::new(audio_manager.clone());
         Ok(Self {
             shutdown: shutdown::Shutdown::default(),
             platform_suspended: false,
             frame_id: FrameId::default(),
-            effect_textures,
+            effect_textures: None,
+            audio_manager,
+            asset_server: asset_server.clone(),
+            scenes: SceneHost::new_first_boot(audio, asset_server, Some(cli.save_file())),
             pointer_position: glam::Vec2::ZERO,
             character_scroll_axis: 0.0,
             touch_effect: touch_effect::TouchEffect::default(),
             touch_background: None,
-            system_textures,
-            audio_manager,
-            asset_server: asset_server.clone(),
-            scenes: SceneHost::new(adv, adv_assets, asset_server.clone()),
+            system_textures: None,
         })
     }
 

@@ -390,7 +390,7 @@ impl ShortMedia {
         let mut io = LayeredAssetIo::new();
         io.try_with_dir(&self.0).unwrap();
         io.with(
-            locate_assets_for_game(crate::cli::Game::Higurashi, Some(&root))
+            locate_assets_for_game(crate::cli::Game::Higurashi, &root)
                 .unwrap()
                 .into(),
         );

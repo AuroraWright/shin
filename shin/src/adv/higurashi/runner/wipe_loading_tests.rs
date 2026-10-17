@@ -301,7 +301,7 @@ fn higurashi_runner_mask_wipe_waits_before_lookup_and_freezes_clocks_cache_until
     );
     assert!(assets.contains(&path));
     let root = PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
-    let source = locate_assets_for_game(Game::Higurashi, Some(&root))
+    let source = locate_assets_for_game(Game::Higurashi, &root)
         .unwrap()
         .read_file(&path)
         .unwrap()
@@ -502,7 +502,7 @@ fn higurashi_runner_mask_wipe_cancellation_and_real_asset_faults_never_publish_b
     let mut io = LayeredAssetIo::new();
     io.try_with_dir(&scratch.0).unwrap();
     io.with(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
     );

@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub(crate) fn inspect(cli: &Cli) -> Result<()> {
-    let io = locate_assets_for_game(cli.game, cli.assets_dir.as_deref())?;
+    let io = locate_assets_for_game(cli.game, &cli.assets_dir())?;
     println!(
         "Game: {:?}\nAsset layers (first match wins): {io:#?}",
         cli.game

@@ -559,7 +559,7 @@ fn supplied_voice_transport_drives_message_waits_and_releases_playback() {
     let gpu = Offscreen::new();
     let path = std::path::PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap());
     let assets = Arc::new(AssetServer::new(
-        locate_assets_for_game(Game::Gerokasu2, Some(path.parent().unwrap()))
+        locate_assets_for_game(Game::Gerokasu2, path.parent().unwrap())
             .unwrap()
             .into(),
         AssetLoadContext {

@@ -356,7 +356,6 @@ pub fn apply_command_state_and_start_with_skip(
 pub(super) enum NewMessageSkip {
     Normal,
     Requested,
-    Forced,
 }
 
 pub(super) fn apply_command_state_and_start_with_skip_policy(
@@ -376,7 +375,6 @@ pub(super) fn apply_command_state_and_start_with_skip_policy(
                 NewMessageSkip::Requested => {
                     !vm_state.settings.v11_disallowskipunread || vm_state.messagebox_state.was_read
                 }
-                NewMessageSkip::Forced => true,
             };
             return msgset::start_with_skip(
                 message, context, scenario, vm_state, adv_state, skipping,

@@ -60,20 +60,14 @@ fn ger_app_viewport_mapping_excludes_bars_edges_and_invalid_sizes() {
     }
 }
 #[test]
-fn ger_app_options_allow_native_save_import_and_reject_unimplemented_debug_entries() {
+fn ger_app_options_require_a_gerokasu_game() {
     assert_eq!(Cli::try_parse_from(["shin"]).unwrap().game, Game::Umineko);
     assert!(validate_options(&Cli::try_parse_from(["shin"]).unwrap()).is_err());
     assert!(
         validate_options(&Cli::try_parse_from(["shin", "--game", "gerokasu2"]).unwrap()).is_ok()
     );
-    for option in ["--save-file", "--load-save"] {
-        let cli = Cli::try_parse_from(["shin", "--game", "gerokasu2", option, "1"]).unwrap();
-        assert!(validate_options(&cli).is_ok());
-    }
-    for option in ["--unsafe-entry-point", "--fast-forward-to"] {
-        let cli = Cli::try_parse_from(["shin", "--game", "gerokasu2", option, "1"]).unwrap();
-        assert!(validate_options(&cli).is_err());
-    }
+    let cli = Cli::try_parse_from(["shin", "--game", "gerokasu", "--save-file", "1"]).unwrap();
+    assert!(validate_options(&cli).is_ok());
 }
 pub(super) fn bytes() -> Vec<u8> {
     let mut rom = RomReader::new(

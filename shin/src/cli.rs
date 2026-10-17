@@ -1,7 +1,8 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use clap::{Parser, ValueEnum};
-use clap_num::maybe_hex;
+
+pub mod ini;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, ValueEnum, Default)]
 pub enum Game {
@@ -42,36 +43,25 @@ pub struct Cli {
     #[clap(skip)]
     pub(crate) higurashi_launch: Option<crate::app::PreparedLaunch>,
     /// Inspect scenario metadata and asset references without opening a window or writing saves.
-    #[clap(long, conflicts_with_all = ["save_file", "load_save", "unsafe_entry_point", "fast_forward_to", "loopback_audio", "text_websocket"])]
+    #[clap(long, conflicts_with_all = ["save_file", "text_websocket"])]
     pub inspect_assets: bool,
-    /// Route audio to the Loopback Audio system device for testing.
-    #[clap(long)]
+    /// Route audio to the Loopback Audio system device for testing (debug builds only).
+    #[cfg(debug_assertions)]
+    #[clap(long, conflicts_with = "inspect_assets")]
     pub loopback_audio: bool,
     /// Read global progress and write saves to this engine-format file.
-    /// Higurashi and Gerokasu2 default to the desktop data directory's shin/<game>/progress.dat.
+    ///
+    /// Defaults to "shin/<game>/SAVEDATA" in the OS application data directory
+    /// (e.g. ~/Library/Application Support on macOS, %APPDATA% on Windows).
     #[clap(long)]
     pub save_file: Option<PathBuf>,
-    /// Load an engine-format save file when starting Umineko or Gerokasu2.
-    #[clap(long, conflicts_with_all = ["unsafe_entry_point", "fast_forward_to"])]
-    pub load_save: Option<PathBuf>,
-    /// Load slot 0 (autosave) or a manual slot from 1 to 100.
-    #[clap(long, default_value_t = 0, requires = "load_save", value_parser = clap::value_parser!(u8).range(0..=100))]
-    pub save_slot: u8,
     /// Search this directory for assets
     ///
     /// The directory must contain either a directory named "data" or a file named "data.rom".
-    /// Consult the README for more information.
+    /// Defaults to "assets" next to the executable (inside a macOS app bundle, also
+    /// Contents/Resources/assets).
     #[clap(short, long)]
     pub assets_dir: Option<PathBuf>,
-    /// Automatically fast-forward Umineko to the specified address (useful for debugging)
-    #[clap(long, value_parser=maybe_hex::<u32>)]
-    pub fast_forward_to: Option<u32>,
-    /// Start Umineko scenario execution from the specified address (useful for debugging)
-    ///
-    /// Called "unsafe" because the VM is not designed to be started from arbitrary addresses.
-    /// But in lieu of proper scene loading this helps a lot with testing later parts of the episodes.
-    #[clap(long, value_parser=maybe_hex::<u32>)]
-    pub unsafe_entry_point: Option<u32>,
     /// Serve displayed text over WebSocket at HOST:PORT (e.g. 127.0.0.1:6677)
     ///
     /// Every connected client receives each message box text as plain text (all games), plus
@@ -80,72 +70,212 @@ pub struct Cli {
     pub text_websocket: Option<String>,
 }
 
+impl Cli {
+    /// Parse the command line, filling options it omits from `shin.ini`.
+    pub fn load() -> Self {
+        Self::parse_from(ini::merged_args())
+    }
+    /// The selected assets directory, or the default next to the executable.
+    pub fn assets_dir(&self) -> PathBuf {
+        self.assets_dir.clone().unwrap_or_else(default_assets_dir)
+    }
+    /// The selected save file, or `shin/<game>/SAVEDATA` in the OS application
+    /// data directory (the working directory when the OS has none).
+    pub fn save_file(&self) -> PathBuf {
+        self.save_file.clone().unwrap_or_else(|| {
+            default_save_file(dirs_next::data_dir().unwrap_or_default(), self.game)
+        })
+    }
+    /// Loopback Audio output is a debug-build testing option.
+    pub fn loopback_audio(&self) -> bool {
+        #[cfg(debug_assertions)]
+        return self.loopback_audio;
+        #[cfg(not(debug_assertions))]
+        false
+    }
+}
+
+pub const SAVE_FILE_NAME: &str = "SAVEDATA";
+
+/// `<data_dir>/shin/<game id>/SAVEDATA`, with the game's `--game` value as its id.
+pub fn default_save_file(data_dir: PathBuf, game: Game) -> PathBuf {
+    let id = game.to_possible_value().expect("every game is selectable");
+    data_dir.join("shin").join(id.get_name()).join(SAVE_FILE_NAME)
+}
+pub const ASSETS_DIR_NAME: &str = "assets";
+
+/// Folders searched for `shin.ini` and the default assets directory: the
+/// executable's own folder, then, inside a macOS app bundle
+/// (`Name.app/Contents/MacOS/<executable>`), `Contents/Resources`.
+pub fn executable_dirs(executable: &Path) -> Vec<PathBuf> {
+    let Some(directory) = executable.parent() else {
+        return Vec::new();
+    };
+    let mut dirs = vec![directory.to_path_buf()];
+    if directory.ends_with("Contents/MacOS")
+        && let Some(contents) = directory.parent()
+        && contents
+            .parent()
+            .and_then(Path::extension)
+            .is_some_and(|e| e.eq_ignore_ascii_case("app"))
+    {
+        dirs.push(contents.join("Resources"));
+    }
+    dirs
+}
+
+/// The first existing "assets" folder among [`executable_dirs`], else the
+/// one next to the executable.
+pub fn default_assets_dir() -> PathBuf {
+    let Ok(executable) = std::env::current_exe() else {
+        return PathBuf::from(ASSETS_DIR_NAME);
+    };
+    let candidates: Vec<_> = executable_dirs(&executable)
+        .into_iter()
+        .map(|dir| dir.join(ASSETS_DIR_NAME))
+        .collect();
+    candidates
+        .iter()
+        .find(|path| path.is_dir())
+        .or(candidates.first())
+        .cloned()
+        .unwrap_or_else(|| PathBuf::from(ASSETS_DIR_NAME))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     #[test]
-    fn gerokasu2_selection_preserves_umineko_defaults_and_save_isolation() {
+    fn selects_game_and_keeps_inspection_separate_from_launch_options() {
         assert_eq!(Cli::try_parse_from(["shin"]).unwrap().game, Game::Umineko);
         let cli = Cli::try_parse_from(["shin", "--game", "gerokasu2", "--inspect-assets"]).unwrap();
         assert_eq!(cli.game, Game::Gerokasu2);
         assert!(cli.inspect_assets);
+        assert!(cli.higurashi_launch.is_none());
         assert!(Cli::try_parse_from(["shin", "--game", "unknown"]).is_err());
-        for option in [
-            "--save-file",
-            "--load-save",
-            "--unsafe-entry-point",
-            "--fast-forward-to",
+        for extra in [
+            &["--save-file", "SAVEDATA"][..],
+            &["--text-websocket", "127.0.0.1:9001"],
+            &["--loopback-audio"],
         ] {
-            assert!(Cli::try_parse_from(["shin", "--inspect-assets", option, "1"]).is_err());
+            let mut args = vec!["shin", "--inspect-assets"];
+            args.extend(extra);
+            assert!(Cli::try_parse_from(args).is_err(), "{extra:?}");
         }
-        assert!(Cli::try_parse_from(["shin", "--inspect-assets", "--loopback-audio"]).is_err());
         let cli = Cli::try_parse_from(["shin", "--text-websocket", "127.0.0.1:9001"]).unwrap();
         assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
         assert_eq!(Cli::try_parse_from(["shin"]).unwrap().text_websocket, None);
-        assert!(
-            Cli::try_parse_from(["shin", "--inspect-assets", "--text-websocket", "127.0.0.1:9001"])
-                .is_err()
+        assert!(Cli::try_parse_from(["shin", "--loopback-audio"]).unwrap().loopback_audio());
+        for removed in [
+            "--load-save",
+            "--save-slot",
+            "--fast-forward-to",
+            "--unsafe-entry-point",
+        ] {
+            assert!(Cli::try_parse_from(["shin", removed, "1"]).is_err(), "{removed}");
+        }
+    }
+    #[test]
+    fn save_file_defaults_to_savedata_in_the_app_data_directory() {
+        let cli = Cli::try_parse_from(["shin", "--assets-dir", "/games/umineko"]).unwrap();
+        assert_eq!(cli.assets_dir(), Path::new("/games/umineko"));
+        let data = dirs_next::data_dir().unwrap();
+        assert_eq!(cli.save_file(), data.join("shin/umineko/SAVEDATA"));
+        for (game, id) in [
+            (Game::Umineko, "umineko"),
+            (Game::Higurashi, "higurashi"),
+            (Game::Gerokasu2, "gerokasu2"),
+            (Game::Gerokasu, "gerokasu"),
+        ] {
+            assert_eq!(
+                default_save_file("/data".into(), game),
+                Path::new("/data/shin").join(id).join("SAVEDATA")
+            );
+        }
+        let cli = Cli::try_parse_from(["shin", "-a", "/games/umineko", "--save-file", "p.dat"])
+            .unwrap();
+        assert_eq!(cli.save_file(), Path::new("p.dat"));
+        let cli = Cli::try_parse_from(["shin"]).unwrap();
+        let exe = std::env::current_exe().unwrap();
+        assert_eq!(cli.assets_dir(), exe.parent().unwrap().join("assets"));
+        assert_eq!(
+            executable_dirs(Path::new("/b/Shin.app/Contents/MacOS/shin")),
+            [
+                Path::new("/b/Shin.app/Contents/MacOS"),
+                Path::new("/b/Shin.app/Contents/Resources")
+            ]
+        );
+        assert_eq!(executable_dirs(Path::new("/b/shin")), [Path::new("/b")]);
+        assert_eq!(
+            executable_dirs(Path::new("/b/Contents/MacOS/shin")),
+            [Path::new("/b/Contents/MacOS")]
         );
     }
     #[test]
-    fn selects_game_and_keeps_inspection_separate_from_save_launches() {
-        assert_eq!(Cli::try_parse_from(["shin"]).unwrap().game, Game::Umineko);
-        let cli = Cli::try_parse_from(["shin", "--game", "higurashi", "--inspect-assets"]).unwrap();
+    fn shin_ini_fills_omitted_options_and_command_line_wins() {
+        let folder = Path::new("/games/shin");
+        let text = "\u{feff}; comment\n# comment\n[shin]\ngame = gerokasu\nassets-dir = \"assets dir\"\n\
+                    save_file=/abs/progress.dat\nloopback-audio = false\n--text-websocket = 127.0.0.1:9001\n\
+                    save-file-unused-check =\n";
+        assert!(ini::to_args(text, folder, &[]).is_err(), "unknown key");
+        let text = text.replace("save-file-unused-check =\n", "");
+        let args = ini::to_args(&text, folder, &[]).unwrap();
+        let mut argv = vec![std::ffi::OsString::from("shin")];
+        argv.extend(args);
+        let cli = Cli::try_parse_from(&argv).unwrap();
+        assert_eq!(cli.game, Game::Gerokasu);
+        assert_eq!(cli.assets_dir(), folder.join("assets dir"));
+        assert_eq!(cli.save_file(), Path::new("/abs/progress.dat"));
+        assert!(!cli.loopback_audio());
+        assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
+
+        // Options on the command line replace the ini's; empty values stay unset.
+        let explicit = ["game".to_owned(), "assets-dir".to_owned()];
+        let mut argv = vec![std::ffi::OsString::from("shin")];
+        argv.extend(
+            ini::to_args(
+                "game = gerokasu\nassets-dir = a\nloopback-audio = yes\nsave-file =\n",
+                folder,
+                &explicit,
+            )
+            .unwrap(),
+        );
+        argv.extend(["--game", "higurashi", "-a", "b"].map(Into::into));
+        let cli = Cli::try_parse_from(&argv).unwrap();
         assert_eq!(cli.game, Game::Higurashi);
-        assert!(cli.inspect_assets);
-        assert!(cli.higurashi_launch.is_none());
-        assert!(Cli::try_parse_from(["shin", "--game", "unknown"]).is_err());
-        assert!(
-            Cli::try_parse_from(["shin", "--inspect-assets", "--save-file", "progress.dat"])
-                .is_err()
+        assert_eq!(cli.assets_dir(), Path::new("b"));
+        assert_eq!(cli.save_file(), default_save_file(dirs_next::data_dir().unwrap(), Game::Higurashi));
+        assert!(cli.loopback_audio());
+
+        for bad in [
+            "unknown = 1",
+            "help = true",
+            "load-save = save.dat",
+            "game",
+            "loopback-audio = maybe",
+            "game = umineko\ngame = higurashi",
+        ] {
+            assert!(ini::to_args(bad, folder, &[]).is_err(), "{bad}");
+        }
+        assert_eq!(
+            ini::candidates(Path::new("/b/Shin.app/Contents/MacOS/shin")),
+            [
+                Path::new("/b/Shin.app/Contents/MacOS/shin.ini"),
+                Path::new("/b/Shin.app/Contents/Resources/shin.ini")
+            ]
         );
-        assert!(
-            Cli::try_parse_from(["shin", "--inspect-assets", "--load-save", "progress.dat"])
-                .is_err()
+        assert_eq!(
+            ini::candidates(Path::new("/b/shin")),
+            [Path::new("/b/shin.ini")]
         );
-    }
-    #[test]
-    fn save_loading_validates_slot_and_conflicting_entry_options() {
-        assert!(Cli::try_parse_from(["shin"]).is_ok());
-        let progress = Cli::try_parse_from(["shin", "--save-file", "progress.dat"]).unwrap();
-        assert_eq!(progress.save_file, Some("progress.dat".into()));
-        assert!(progress.load_save.is_none());
-        let cli =
-            Cli::try_parse_from(["shin", "--load-save", "save.dat", "--save-slot", "100"]).unwrap();
-        assert_eq!(cli.save_slot, 100);
-        assert!(Cli::try_parse_from(["shin", "--save-slot", "1"]).is_err());
-        assert!(
-            Cli::try_parse_from(["shin", "--load-save", "save.dat", "--save-slot", "101"]).is_err()
-        );
-        assert!(
-            Cli::try_parse_from([
-                "shin",
-                "--load-save",
-                "save.dat",
-                "--unsafe-entry-point",
-                "1"
-            ])
-            .is_err()
-        );
+
+        // The packaged example parses as-is.
+        let example = include_str!("../../builds/manual-engine/shin.ini.example");
+        let mut argv = vec![std::ffi::OsString::from("shin")];
+        argv.extend(ini::to_args(example, folder, &[]).unwrap());
+        let cli = Cli::try_parse_from(&argv).unwrap();
+        assert_eq!(cli.game, Game::Umineko);
+        assert_eq!(cli.assets_dir(), folder.join("assets"));
+        assert_eq!(cli.save_file, None);
     }
 }

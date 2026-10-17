@@ -180,7 +180,7 @@ pub(in crate::adv::higurashi) fn gpu_assets() -> (wgpu::Device, wgpu::Queue, Ass
     .unwrap();
     let root = std::path::PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
     let assets = AssetServer::new(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
         AssetLoadContext {
@@ -473,7 +473,7 @@ fn higurashi_message_glyphs_match_native_packets_at_720p_and_1080p() {
     .unwrap();
     let root = std::path::PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
     let assets = AssetServer::new(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
         AssetLoadContext {

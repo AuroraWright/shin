@@ -9,14 +9,7 @@ use std::{
 };
 
 pub(super) fn progress_path(cli: &crate::cli::Cli) -> Result<PathBuf> {
-    let path = match &cli.save_file {
-        Some(path) => path.clone(),
-        None => dirs_next::data_local_dir()
-            .context("No desktop data directory; supply --save-file for Gerokasu2 progress")?
-            .join("shin")
-            .join("gerokasu2")
-            .join("progress.dat"),
-    };
+    let path = cli.save_file();
     ensure!(!path.as_os_str().is_empty(), "Ger save path is empty");
     Ok(path)
 }
@@ -60,10 +53,8 @@ struct ManualWrite {
     result: Option<Result<()>>,
 }
 impl Store {
-    pub fn load(path: PathBuf, imported: Option<SaveData>) -> Result<Self> {
-        let data = if let Some(data) = imported {
-            data
-        } else if path.exists() {
+    pub fn load(path: PathBuf) -> Result<Self> {
+        let data = if path.exists() {
             read(&path)?
         } else {
             SaveData::default()

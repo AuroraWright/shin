@@ -18,7 +18,7 @@ fn basic_gerokasu2_factories_acquire_retained_utf8_assets_and_draw() {
     let scenario = scenario();
     let path = std::path::PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap());
     let assets = Arc::new(AssetServer::new(
-        locate_assets_for_game(Game::Gerokasu2, Some(path.parent().unwrap()))
+        locate_assets_for_game(Game::Gerokasu2, path.parent().unwrap())
             .unwrap()
             .into(),
         AssetLoadContext {

@@ -324,7 +324,7 @@ fn higurashi_updated_prologue_factory_loads_authored_pictures_and_selected_chara
     let root = PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
     let (device, queue) = gpu();
     let server = AssetServer::new(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
         context(Game::Higurashi, &device, &queue),
@@ -687,7 +687,7 @@ fn higurashi_prologue_layer_commands_drive_tile_and_preserve_front() {
     let root = PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
     let (device, queue) = gpu();
     let server = AssetServer::new(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
         context(Game::Higurashi, &device, &queue),
@@ -853,7 +853,7 @@ fn higurashi_prologue_default_wipe_publishes_pictures_and_retains_previous_front
     let root = PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
     let (device, queue) = gpu();
     let server = AssetServer::new(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
         context(Game::Higurashi, &device, &queue),
@@ -1149,7 +1149,7 @@ fn higurashi_prologue_group_textures_include_both_pictures_and_wipe() {
     let root = PathBuf::from(std::env::var("SHIN_HIGURASHI_ASSETS").unwrap());
     let (device, queue) = gpu();
     let server = AssetServer::new(
-        locate_assets_for_game(Game::Higurashi, Some(&root))
+        locate_assets_for_game(Game::Higurashi, &root)
             .unwrap()
             .into(),
         context(Game::Higurashi, &device, &queue),

@@ -1,6 +1,7 @@
 use super::*;
 use std::{
     io::Read,
+    path::PathBuf,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -86,13 +87,13 @@ fn mod_rom_priority_and_sparse_fallback_for_every_game() {
         std::fs::create_dir(assets.0.join("patch")).unwrap();
         std::fs::write(assets.0.join("patch/shared"), b"loose-patch").unwrap();
         assets.rom("mod.rom", version, &[("shared", b"mod")]);
-        let io = locate_assets_for_game(game, Some(&assets.0)).unwrap();
+        let io = locate_assets_for_game(game, &assets.0).unwrap();
         assert_eq!(read(&io, "/shared"), b"mod");
         assert_eq!(read(&io, "/patch-only"), b"patch-only");
         assert_eq!(read(&io, "/base-only"), b"base-only");
         drop(io);
         std::fs::remove_file(assets.0.join("mod.rom")).unwrap();
-        let io = locate_assets_for_game(game, Some(&assets.0)).unwrap();
+        let io = locate_assets_for_game(game, &assets.0).unwrap();
         assert_eq!(read(&io, "/shared"), b"loose-patch");
     }
 }
@@ -139,7 +140,7 @@ fn mod_rom_selected_scenario_controls_append_and_overrides_all_rom_layers() {
             ],
         );
         assets.rom("mod.rom", 1, &[("main.snr", selected), ("shared", b"mod")]);
-        let io = locate_assets_for_game(Game::Higurashi, Some(&assets.0)).unwrap();
+        let io = locate_assets_for_game(Game::Higurashi, &assets.0).unwrap();
         assert_eq!(read(&io, "/main.snr"), *selected);
         assert_eq!(read(&io, "/shared"), b"mod");
         assert_eq!(io.read_file("/append.txt").is_ok(), origin);

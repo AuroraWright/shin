@@ -132,7 +132,7 @@ fn synthetic() -> Arc<Gerokasu2Scenario> {
 fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
     let path = std::path::PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap());
     Arc::new(AssetServer::new(
-        locate_assets_for_game(Game::Gerokasu2, Some(path.parent().unwrap()))
+        locate_assets_for_game(Game::Gerokasu2, path.parent().unwrap())
             .unwrap()
             .into(),
         AssetLoadContext {

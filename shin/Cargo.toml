@@ -36,7 +36,6 @@ indexmap = { workspace = true }
 tracing = { workspace = true } # NOTE: enabling `release_max_level_off` increases perf a lot
 
 clap = { version = "4.6.7", features = ["derive"] }
-clap-num = "1.2.0"
 dirs-next = "2.0.0"
 
 winit = { workspace = true }
