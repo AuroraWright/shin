@@ -61,6 +61,10 @@ pub trait ShinApp: Sized {
 
     /// The window title: the game's own title.
     const WINDOW_TITLE: &'static str = "shin";
+    /// Runtime window title, for apps whose title depends on the selected game.
+    fn window_title() -> &'static str {
+        Self::WINDOW_TITLE
+    }
 
     fn init(context: AppContext<Self>, parameters: Self::Parameters) -> anyhow::Result<Self>;
 
@@ -551,7 +555,7 @@ mod fullscreen_shortcut_tests {
 impl WindowState {
     pub fn new<A: ShinApp>(event_loop: &ActiveEventLoop) -> Self {
         #[allow(unused_mut)]
-        let mut attributes = Window::default_attributes().with_title(A::WINDOW_TITLE);
+        let mut attributes = Window::default_attributes().with_title(A::window_title());
 
         #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
         {

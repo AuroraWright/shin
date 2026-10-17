@@ -905,6 +905,13 @@ impl Gerokasu2App {
 }
 impl ShinApp for Gerokasu2App {
     const WINDOW_TITLE: &'static str = "幻想牢獄のカレイドスコープ 2";
+    fn window_title() -> &'static str {
+        if Game::current() == Game::Gerokasu {
+            "幻想牢獄のカレイドスコープ"
+        } else {
+            Self::WINDOW_TITLE
+        }
+    }
     type Parameters = Cli;
     type EventType = ();
     type ActionType = AppAction;
