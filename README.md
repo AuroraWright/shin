@@ -38,7 +38,7 @@ find a problem, please [open an issue](https://github.com/AuroraWright/shin/issu
 You need the game's romfs, which you can dump from your Switch with
 [nxdumptool](https://github.com/DarkMatterCore/nxdumptool). With
 [hactoolnet](https://github.com/Thealexbarney/LibHac) you can extract the romfs
-from a dumped package, for example:
+from a dumped .nsp file as follows:
 
 ```bash
 hactoolnet -t pfs0 "Umineko no Naku Koro ni Saku ~Nekobako to Musou no Koukyoukyoku~ [01006A300BA2C000].nsp" --romfs=assets
@@ -128,8 +128,8 @@ together with those projects' patches:
 ### Text WebSocket
 
 With `--text-websocket 127.0.0.1:9001`, every connected client receives each
-displayed message as plain text. For Umineko, character, Tips and
-purple-statement descriptions are sent as well. A client that connects later
+displayed message as plain text. For Umineko, character, Tips and other important
+text is sent as well. A client that connects later
 first receives the most recent text.
 
 ## Controls
@@ -180,6 +180,12 @@ Install [Rust](https://www.rust-lang.org/); the toolchain version is pinned in
 cargo build --release -p shin
 cargo run --release -p shin -- --game umineko --assets-dir /path/to/assets
 ```
+
+## Thanks
+
+Huge thanks to [DCNick3](https://github.com/DCNick3) for the original version
+and for all their work on documenting the engine and its file formats,
+without which none of this would have been possible!
 
 ## Disclaimer
 
