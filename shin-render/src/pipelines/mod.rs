@@ -129,11 +129,48 @@ pub struct PipelineStorage {
 impl PipelineStorage {
     pub fn new(device: wgpu::Device, screen_texture_format: wgpu::TextureFormat) -> Self {
         let shader_context = ShaderContextStorage::new(&device);
+        Self::warm_up(device.clone(), screen_texture_format);
         Self {
             device,
             screen_texture_format,
             shader_context,
             pipelines: FxHashMap::default(),
+        }
+    }
+
+    /// Compile every shader once in the background.
+    ///
+    /// Pipelines are created on first use, and the first pipeline of each
+    /// shader compiles it, which can take ~100ms when the driver's shader
+    /// cache is cold. Later pipelines of the same shader reuse the driver's
+    /// compiled code, so this keeps screens from stalling the first time they
+    /// draw something new (e.g. mid-animation).
+    fn warm_up(device: wgpu::Device, screen_texture_format: wgpu::TextureFormat) {
+        // Driver caches are process-wide; later storages share the result.
+        static STARTED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+        if cfg!(target_arch = "wasm32") || STARTED.swap(true, std::sync::atomic::Ordering::Relaxed)
+        {
+            return;
+        }
+        let key = PipelineStorageKey {
+            target_kind: TextureTargetKind::Screen,
+            draw_primitive: DrawPrimitive::TrianglesStrip,
+            cull_face: CullFace::None,
+            blend_type: ColorBlendType::Opaque,
+            depth_stencil: None,
+        };
+        let spawned = std::thread::Builder::new()
+            .name("shader warm-up".into())
+            .spawn(move || {
+                let started = std::time::Instant::now();
+                for shader in enum_iterator::all::<ShaderName>() {
+                    let context = shader.descriptor().create_shader_context(&device);
+                    key.create_pipeline(&device, screen_texture_format, &context);
+                }
+                tracing::debug!("Compiled all shaders in {:?}", started.elapsed());
+            });
+        if let Err(error) = spawned {
+            tracing::warn!(%error, "Could not start shader warm-up");
         }
     }
 
