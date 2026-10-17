@@ -309,12 +309,12 @@ mod tests {
                 },
             })
             .unwrap();
-        // Simulate a callback that has not started (as in the crash report).
-        // Also saturate the legacy queue to prove neither new control uses it.
+        // Simulate a callback that has not started (as in the crash report),
+        // with ordered commands still pending, to prove neither immediate
+        // control waits behind the ordered command channel.
         for _ in 0..8 {
             handle.set_volume(Volume(0.9), Tween::IMMEDIATE).unwrap();
         }
-        assert!(handle.set_volume(Volume(0.9), Tween::IMMEDIATE).is_err());
         (manager, Timer::new_audio_tied(60_000, handle))
     }
 

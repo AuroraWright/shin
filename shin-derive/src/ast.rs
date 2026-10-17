@@ -394,7 +394,7 @@ fn test_ast_node() {
                         None
                     }
                     fn syntax(&self) -> &shin_asm::syntax::SyntaxNode {
-                        match self {
+                        match *self {
                             SourceFile {
                                 syntax: ref __binding_0,
                             } => &__binding_0,
@@ -467,7 +467,7 @@ fn test_transparent() {
                         None
                     }
                     fn syntax(&self) -> &shin_asm::syntax::SyntaxNode {
-                        match self {
+                        match *self {
                             SourceFileItem::InstructionBlock(ref __binding_0) => {
                                 <InstructionBlock as shin_asm::syntax::AstNode>::syntax(__binding_0)
                             }
