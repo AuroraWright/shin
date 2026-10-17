@@ -48,6 +48,7 @@ pub(super) struct Packet<'a> {
     #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub annex_b: &'a [u8],
     /// Decode and presentation timestamps in MP4 time units.
+    #[cfg_attr(windows, allow(dead_code))]
     pub decode_time: u64,
     pub presentation_time: i64,
     pub duration: u32,
