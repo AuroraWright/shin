@@ -74,6 +74,7 @@ pub(super) fn rate(clock: &mut Tweener, value: f32, speed: f32) {
 }
 impl TitleMotion {
     pub fn new(setup: TitleSetup) -> Self {
+        let returning = setup.returning_from_child;
         Self {
             selected: setup.selected,
             rows: (0..setup.items.len())
@@ -93,8 +94,10 @@ impl TitleMotion {
             first_wait: Tweener::new(0.0),
             background_reveal: Tweener::new(0.0),
             row_gate: Tweener::new(0.0),
-            logo_offset: Tweener::new(0.0),
-            logo_alpha: Tweener::new(1.0),
+            // The startup entrance snaps the logo to these once assets load;
+            // start there so it is not shown at full opacity while loading.
+            logo_offset: Tweener::new(if returning { 0.0 } else { -100.0 }),
+            logo_alpha: Tweener::new(if returning { 1.0 } else { 0.0 }),
             caption_alpha: Tweener::new(0.0),
             black_alpha: Tweener::new(0.0),
             continue_waits: 0,
@@ -493,6 +496,7 @@ mod tests {
         model.prepare_frame();
         assert_eq!(model.phase(), Phase::AwaitingAssets);
         assert!(model.frame().caption.is_none());
+        close(model.frame().logo_alpha, 0.0);
         model.assets_ready();
         close(model.background_reveal(), 2000.0);
         close(model.frame().logo_alpha, 0.0);
