@@ -490,4 +490,4 @@ impl NewDrawableLayer for GerokasuCardRenderer {
 
 #[cfg(test)]
 #[path = "gerokasu_draw/gpu_tests.rs"]
-mod gpu_tests;
+pub(crate) mod gpu_tests;

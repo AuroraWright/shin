@@ -112,6 +112,61 @@ impl NewDrawableLayer for DashRenderer {
 }
 
 #[cfg(test)]
+mod gpu_tests {
+    use super::*;
+    use crate::adv::gerokasu2::card_select::gerokasu_draw::gpu_tests::{Target, assets, save};
+    use crate::asset::font::gerokasu2::draw::gpu_tests::Offscreen;
+
+    /// Renders the three dash frames from the ROM's effects.txa; set
+    /// `SHIN_GEROKASU_DASH_FRAMES=<dir>` to keep `.rgba` review dumps.
+    #[test]
+    #[ignore = "requires gerokasu/data.rom and Metal; renders the dash frames offscreen"]
+    fn gerokasu_dash_frames_cover_screen_and_cycle() {
+        let gpu = Offscreen::new();
+        let assets = assets(&gpu);
+        let textures = shin_tasks::block_on(load(&assets)).unwrap();
+        let mut target = Target::new(&gpu);
+        let dir = std::env::var_os("SHIN_GEROKASU_DASH_FRAMES").map(std::path::PathBuf::from);
+        let frames: Vec<Vec<u8>> = [0.0, 4.5, 9.0, 13.5]
+            .into_iter()
+            .map(|time| {
+                let renderer = DashRenderer {
+                    textures: textures.clone(),
+                    time,
+                };
+                let pixels = target.draw(&gpu, &renderer);
+                if let Some(dir) = &dir {
+                    std::fs::create_dir_all(dir).unwrap();
+                    save(dir, &format!("dash-{time}"), &pixels);
+                }
+                pixels
+            })
+            .collect();
+        let backdrop = [90, 70, 70, 255];
+        let drawn: Vec<usize> = frames
+            .iter()
+            .map(|f| f.chunks(4).filter(|p| *p != backdrop).count())
+            .collect();
+        eprintln!("dash pixels changed per frame: {drawn:?}");
+        assert!(drawn.iter().all(|&n| n > 0), "dash frames draw nothing");
+        // Frame order 0,1,2 then repeat; the ROM's dash1 and dash2 are
+        // pixel-identical, so only frame 0 differs.
+        let hashes: Vec<u64> = frames
+            .iter()
+            .map(|f| {
+                use std::hash::{Hash, Hasher};
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                f.hash(&mut h);
+                h.finish()
+            })
+            .collect();
+        assert_ne!(hashes[0], hashes[1]);
+        assert_eq!(hashes[1], hashes[2]);
+        assert_eq!(hashes[0], hashes[3]);
+    }
+}
+
+#[cfg(test)]
 mod tests {
     #[test]
     fn frame_cycles_every_four_and_a_half_ticks() {

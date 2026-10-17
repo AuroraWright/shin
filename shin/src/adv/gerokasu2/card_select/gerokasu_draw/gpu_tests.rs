@@ -23,7 +23,7 @@ use shin_render::{
 const W: u32 = 1920;
 const H: u32 = 1080;
 
-fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
+pub(crate) fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
     let rom = std::env::var_os("SHIN_GEROKASU_ROM").map_or_else(
         || std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../gerokasu/data.rom"),
         std::path::PathBuf::from,
@@ -44,7 +44,7 @@ fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
     ))
 }
 
-struct Target {
+pub(crate) struct Target {
     texture: wgpu::Texture,
     view: wgpu::TextureView,
     depth: wgpu::TextureView,
@@ -54,7 +54,7 @@ struct Target {
     dynamic: DynamicBuffer,
 }
 impl Target {
-    fn new(gpu: &Offscreen) -> Self {
+    pub(crate) fn new(gpu: &Offscreen) -> Self {
         let descriptor = |format, usage| wgpu::TextureDescriptor {
             label: Some("Ger CardSelect review frame"),
             size: wgpu::Extent3d {
@@ -87,7 +87,11 @@ impl Target {
             dynamic: DynamicBuffer::new(gpu.device.clone(), BytesAddress::new(4 * 1024 * 1024)),
         }
     }
-    fn draw(&mut self, gpu: &Offscreen, layer: &GerokasuCardRenderer) -> Vec<u8> {
+    pub(crate) fn draw(
+        &mut self,
+        gpu: &Offscreen,
+        layer: &impl crate::layer::NewDrawableLayer,
+    ) -> Vec<u8> {
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
         let mut context = PreRenderContext {
             device: &gpu.device,
@@ -130,7 +134,9 @@ impl Target {
                     mode: crate::layer::render_params::DrawableClipMode::None,
                     area: glam::Vec4::ZERO,
                 },
-                0,
+                // Layer groups bump the stencil reference to at least 1; most
+                // layers test `ref > stored`, which a cleared 0 never passes.
+                1,
                 PassKind::Transparent,
             );
         }
@@ -138,7 +144,7 @@ impl Target {
     }
 }
 
-fn save(dir: &std::path::Path, name: &str, pixels: &[u8]) {
+pub(crate) fn save(dir: &std::path::Path, name: &str, pixels: &[u8]) {
     let mut data = b"RGBA".to_vec();
     data.extend(W.to_le_bytes());
     data.extend(H.to_le_bytes());
