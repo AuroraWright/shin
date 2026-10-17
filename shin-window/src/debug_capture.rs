@@ -6,6 +6,9 @@
 //! the surface byte order. `SHIN_DEBUG_CAPTURE_FROM` skips earlier frames,
 //! `SHIN_DEBUG_CAPTURE_AFTER_SECS` earlier wall-clock time, and
 //! `SHIN_DEBUG_CAPTURE_LIMIT` caps the number of dumps.
+//! `SHIN_DEBUG_KEEP_RENDERING=1` keeps updating and rendering while the
+//! window is unfocused, hidden or offscreen (occluded frames render into an
+//! offscreen texture, so captures continue) for unattended playtests.
 //! Release builds and unset variables do nothing.
 use std::{
     path::PathBuf,
@@ -59,6 +62,37 @@ fn settings() -> Option<&'static Settings> {
         })
         .as_ref()
 }
+
+/// Playtest switch: ignore focus loss and render occluded frames offscreen.
+pub fn keep_rendering() -> bool {
+    static KEEP: OnceLock<bool> = OnceLock::new();
+    *KEEP.get_or_init(|| {
+        cfg!(debug_assertions)
+            && std::env::var_os("SHIN_DEBUG_KEEP_RENDERING").is_some_and(|value| value != "0")
+    })
+}
+
+/// macOS App Nap would throttle a hidden playtest window; hold a
+/// user-initiated activity (idle system sleep still allowed) for the process.
+#[cfg(target_os = "macos")]
+pub fn disable_app_nap() {
+    use objc2::{class, msg_send, runtime::AnyObject};
+    // NSActivityUserInitiatedAllowingIdleSystemSleep.
+    const OPTIONS: u64 = 0x00FF_FFFF;
+    unsafe {
+        let info: *mut AnyObject = msg_send![class!(NSProcessInfo), processInfo];
+        let reason: *mut AnyObject = msg_send![
+            class!(NSString),
+            stringWithUTF8String: c"Shin playtest".as_ptr()
+        ];
+        let activity: *mut AnyObject =
+            msg_send![info, beginActivityWithOptions: OPTIONS, reason: reason];
+        // Keep the activity token for the lifetime of the process.
+        let _: *mut AnyObject = msg_send![activity, retain];
+    }
+}
+#[cfg(not(target_os = "macos"))]
+pub fn disable_app_nap() {}
 
 static FRAME: AtomicU64 = AtomicU64::new(0);
 

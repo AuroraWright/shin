@@ -18,9 +18,54 @@ pub struct ResizeableSurface<'window> {
     surface: wgpu::Surface<'window>,
     surface_config: wgpu::SurfaceConfiguration,
     resize_handle: ResizeHandle<SurfaceSize>,
+    /// Debug playtests render occluded frames here instead of the surface.
+    offscreen: Option<(wgpu::Texture, wgpu::TextureView)>,
 }
 
 impl ResizeableSurface<'_> {
+    /// A texture matching the surface, for frames that cannot be presented.
+    pub fn offscreen_frame(
+        &mut self,
+    ) -> Option<((f32, f32, f32, f32), wgpu::Texture, wgpu::TextureView)> {
+        if let Some(new_size) = self.resize_handle.update() {
+            if new_size.width == 0 || new_size.height == 0 {
+                return None;
+            }
+            self.surface_config.width = new_size.width;
+            self.surface_config.height = new_size.height;
+            self.surface.configure(&self.device, &self.surface_config);
+        }
+        let (width, height) = (self.surface_config.width, self.surface_config.height);
+        if width == 0 || height == 0 {
+            return None;
+        }
+        let stale = self.offscreen.as_ref().is_none_or(|(texture, _)| {
+            texture.width() != width
+                || texture.height() != height
+                || texture.format() != self.surface_config.format
+        });
+        if stale {
+            let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("offscreen surface"),
+                size: wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: self.surface_config.format,
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+            self.offscreen = Some((texture, view));
+        }
+        let (texture, view) = self.offscreen.clone()?;
+        Some((self.resize_handle.get_viewport(), texture, view))
+    }
+
     pub fn get_current_texture(
         &mut self,
     ) -> Result<((f32, f32, f32, f32), SurfaceTextureWithView), SurfaceError> {
@@ -117,6 +162,7 @@ fn configure_surface(
         surface,
         surface_config,
         resize_handle: surface_resize_handle,
+        offscreen: None,
     }
 }
 

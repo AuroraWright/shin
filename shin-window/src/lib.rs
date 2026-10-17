@@ -593,13 +593,19 @@ impl WindowState {
         let size = A::map_canvas_size(window.inner_size());
 
         info!("Created a window with size: {:?}", size);
+        if debug_capture::keep_rendering() {
+            debug_capture::disable_app_nap();
+        }
 
         let window_resize_source = SurfaceResizeSource::new(size);
 
         Self {
             #[cfg(target_os = "macos")]
             quit_handler: None,
-            suspension: PlatformSuspension::new(window.has_focus(), Instant::now()),
+            suspension: PlatformSuspension::new(
+                window.has_focus() || debug_capture::keep_rendering(),
+                Instant::now(),
+            ),
             surface_availability: SurfaceAvailability::default(),
             window,
             resize_source: window_resize_source,
@@ -861,6 +867,8 @@ impl<A: ShinApp> WinitAppState<A> {
     }
 
     fn change_suspension(&mut self, focused: Option<bool>, lifecycle: Option<bool>) {
+        // Unattended playtests behave as if the window always had focus.
+        let focused = focused.map(|focused| focused || debug_capture::keep_rendering());
         let background_allowed = match self {
             Self::Operational { app, .. } => app.run_in_background(),
             _ => false,
@@ -1222,33 +1230,61 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                     || size.height == 0
                     || winit.suspension.is_suspended()
                     || winit.suspension.is_background_running()
-                    || !winit.surface_availability.acquire_allowed()
                 {
+                    return;
+                }
+                let keep_rendering = debug_capture::keep_rendering();
+                let may_acquire = winit.surface_availability.acquire_allowed();
+                if !may_acquire && !keep_rendering {
                     return;
                 }
 
                 // Acquire before advancing story/input. A transient surface
                 // failure during a native fullscreen transition skips a frame
                 // without dropping updates or panicking in an AppKit callback.
-                let (viewport, surface_texture) = match render.surface.get_current_texture() {
-                    Ok(frame) => {
-                        winit.surface_availability.visible();
-                        frame
-                    }
-                    Err(shin_render::init::SurfaceError::Occluded) => {
-                        winit.surface_availability.occluded(Instant::now());
-                        debug!("Surface occluded; waiting for a bounded presentation probe");
-                        return;
-                    }
-                    Err(error) => {
-                        debug!(?error, "Surface frame temporarily unavailable");
-                        if winit.surface_availability.is_occluded() {
-                            winit.surface_availability.occluded(Instant::now());
-                        } else {
-                            winit.window.request_redraw();
+                let acquired = if !may_acquire {
+                    None
+                } else {
+                    match render.surface.get_current_texture() {
+                        Ok(frame) => {
+                            winit.surface_availability.visible();
+                            Some(frame)
                         }
-                        return;
+                        Err(shin_render::init::SurfaceError::Occluded) => {
+                            winit.surface_availability.occluded(Instant::now());
+                            debug!("Surface occluded; waiting for a bounded presentation probe");
+                            None
+                        }
+                        Err(error) => {
+                            debug!(?error, "Surface frame temporarily unavailable");
+                            if winit.surface_availability.is_occluded() {
+                                winit.surface_availability.occluded(Instant::now());
+                            } else if !keep_rendering {
+                                winit.window.request_redraw();
+                            }
+                            None
+                        }
                     }
+                };
+                // Debug playtests render frames that cannot be presented
+                // into an offscreen texture instead of skipping them.
+                let (viewport, surface_texture, texture, view) = match acquired {
+                    Some((viewport, frame)) => {
+                        let texture = frame.texture.texture.clone();
+                        let view = frame.view.clone();
+                        (viewport, Some(frame.texture), texture, view)
+                    }
+                    None if keep_rendering => {
+                        if !winit.surface_availability.is_occluded() {
+                            winit.surface_availability.occluded(Instant::now());
+                        }
+                        let Some((viewport, texture, view)) = render.surface.offscreen_frame()
+                        else {
+                            return;
+                        };
+                        (viewport, None, texture, view)
+                    }
+                    None => return,
                 };
 
                 let Some(elapsed) = winit.suspension.elapsed(Instant::now()) else {
@@ -1284,7 +1320,7 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                         &mut render_encoder,
                         TextureTarget {
                             kind: TextureTargetKind::Screen,
-                            view: &surface_texture.view,
+                            view: &view,
                         },
                         Some(DepthStencilTarget {
                             view: render.surface_depth_stencil_buffer.resize_and_get_view(),
@@ -1298,13 +1334,8 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                     app.render(context, &mut pass);
                 });
 
-                let capture = debug_capture::due().then(|| {
-                    debug_capture::copy(
-                        &wgpu.device,
-                        &mut render_encoder,
-                        &surface_texture.texture.texture,
-                    )
-                });
+                let capture = debug_capture::due()
+                    .then(|| debug_capture::copy(&wgpu.device, &mut render_encoder, &texture));
 
                 info_span!("submit").in_scope(|| {
                     let mut dynamic_buffer_encoder =
@@ -1326,9 +1357,14 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                     debug_capture::write(&wgpu.device, capture);
                 }
 
+                let Some(surface_texture) = surface_texture else {
+                    // Offscreen frames are paced by about_to_wait.
+                    tracy_client::frame_mark();
+                    return;
+                };
                 info_span!("present").in_scope(|| {
                     winit.window.pre_present_notify();
-                    wgpu.queue.present(surface_texture.texture);
+                    wgpu.queue.present(surface_texture);
                 });
 
                 tracy_client::frame_mark();
@@ -1364,7 +1400,21 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
             return;
         };
 
-        if winit
+        if debug_capture::keep_rendering()
+            && !winit.suspension.is_suspended()
+            && winit.surface_availability.is_occluded()
+        {
+            // Occluded playtest frames render offscreen at 60 Hz.
+            const PERIOD: Duration = Duration::from_nanos(1_000_000_000 / 60);
+            let now = Instant::now();
+            winit.surface_availability.request_probe(now);
+            if now.duration_since(winit.suspension.last_update) >= PERIOD {
+                winit.window.request_redraw();
+            }
+            _event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(
+                winit.suspension.last_update + PERIOD,
+            ));
+        } else if winit
             .suspension
             .updates_without_presentation(&winit.surface_availability)
         {
