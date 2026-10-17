@@ -178,6 +178,10 @@ impl SurfaceAvailability {
 
 struct PlatformSuspension {
     focused: bool,
+    /// macOS may never activate an app launched from a terminal, leaving its
+    /// window unfocused until the user switches away and back. Until the
+    /// window has had focus once, play as if it had it.
+    ever_focused: bool,
     lifecycle_suspended: bool,
     background_allowed: bool,
     last_update: Instant,
@@ -186,16 +190,29 @@ impl PlatformSuspension {
     fn new(focused: bool, now: Instant) -> Self {
         Self {
             focused,
+            ever_focused: true,
             lifecycle_suspended: false,
             background_allowed: false,
             last_update: now,
         }
     }
+    /// A newly created window, which plays until it first gains focus.
+    fn launching(focused: bool, now: Instant) -> Self {
+        Self {
+            ever_focused: focused,
+            ..Self::new(focused, now)
+        }
+    }
+    /// Focus for playback and input: the window is treated as focused until
+    /// it first gains focus.
+    fn plays_focused(&self) -> bool {
+        self.focused || !self.ever_focused
+    }
     fn is_suspended(&self) -> bool {
-        (!self.focused && !self.background_allowed) || self.lifecycle_suspended
+        (!self.plays_focused() && !self.background_allowed) || self.lifecycle_suspended
     }
     fn is_background_running(&self) -> bool {
-        !self.focused && !self.is_suspended()
+        !self.plays_focused() && !self.is_suspended()
     }
     fn updates_without_presentation(&self, surface: &SurfaceAvailability) -> bool {
         !self.is_suspended() && (self.is_background_running() || surface.is_occluded())
@@ -220,6 +237,7 @@ impl PlatformSuspension {
         let previous = self.is_suspended();
         if let Some(focused) = focused {
             self.focused = focused;
+            self.ever_focused |= focused;
         }
         if let Some(lifecycle) = lifecycle {
             self.lifecycle_suspended = lifecycle;
@@ -447,6 +465,29 @@ mod surface_availability_tests {
     }
 
     #[test]
+    fn unactivated_launch_plays_until_first_focus_then_pauses_on_focus_loss() {
+        let initial = Instant::now();
+        let mut state = PlatformSuspension::launching(false, initial);
+        assert!(!state.is_suspended());
+        assert!(!state.is_background_running(), "Renders and presents");
+        assert!(state.plays_focused(), "Accepts input");
+        assert_eq!(
+            state.change(Some(false), None, initial + Duration::from_millis(8)),
+            None
+        );
+        assert!(!state.is_suspended());
+        assert_eq!(
+            state.change(Some(true), None, initial + Duration::from_secs(1)),
+            None
+        );
+        assert_eq!(
+            state.change(Some(false), None, initial + Duration::from_secs(2)),
+            Some(true)
+        );
+        assert!(!state.plays_focused());
+    }
+
+    #[test]
     fn occluded_updates_preserve_focus_background_and_lifecycle_clock_policy() {
         let initial = Instant::now();
         let mut state = PlatformSuspension::new(true, initial);
@@ -597,6 +638,9 @@ impl WindowState {
         let size = A::map_canvas_size(window.inner_size());
 
         info!("Created a window with size: {:?}", size);
+        // A launch from a terminal does not always activate the app.
+        #[cfg(target_os = "macos")]
+        window.focus_window();
         if debug_capture::keep_rendering() {
             debug_capture::disable_app_nap();
         }
@@ -606,7 +650,7 @@ impl WindowState {
         Self {
             #[cfg(target_os = "macos")]
             quit_handler: None,
-            suspension: PlatformSuspension::new(
+            suspension: PlatformSuspension::launching(
                 window.has_focus() || debug_capture::keep_rendering(),
                 Instant::now(),
             ),
@@ -929,7 +973,7 @@ fn advance_application<A: ShinApp>(
     let (raw, input) = frame_input::<A::ActionType>(
         raw_input.start_frame(),
         actions,
-        context.winit.suspension.focused,
+        context.winit.suspension.plays_focused(),
         elapsed,
     );
     app.raw_input(&raw);
