@@ -1,6 +1,6 @@
 [package]
 name = "shin-tasks"
-version = "1.0.1-fork"
+version = "1.0.2-fork"
 edition = "2024"
 description = "A task executor for Shin Engine (based on bevy)"
 repository = "https://github.com/AuroraWright/shin"

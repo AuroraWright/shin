@@ -1,6 +1,6 @@
 [package]
 name = "shin-core"
-version = "1.0.1-fork"
+version = "1.0.2-fork"
 edition = "2024"
 description = "Core library for the Shin engine: file formats support, virtual machine, etc"
 repository = "https://github.com/AuroraWright/shin"

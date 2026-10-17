@@ -1,6 +1,6 @@
 [package]
 name = "shin-audio"
-version = "1.0.1-fork"
+version = "1.0.2-fork"
 edition = "2024"
 description = "Kira audio sources for Shin Engine"
 repository = "https://github.com/AuroraWright/shin"

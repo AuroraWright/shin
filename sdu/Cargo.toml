@@ -1,6 +1,6 @@
 [package]
 name = "sdu"
-version = "1.0.1-fork"
+version = "1.0.2-fork"
 edition = "2024"
 description = "Cli tool for working with shin-specific file formats"
 repository = "https://github.com/AuroraWright/shin"

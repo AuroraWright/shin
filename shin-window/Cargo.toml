@@ -1,6 +1,6 @@
 [package]
 name = "shin-window"
-version = "1.0.1-fork"
+version = "1.0.2-fork"
 edition = "2024"
 
 [dependencies]
