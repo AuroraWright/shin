@@ -78,7 +78,8 @@ replace_with = { workspace = true }
 
 [features]
 default = []
-gstreamer-video = ["shin-video/gstreamer"]
+# Decode movies with an ffmpeg executable instead of the platform decoder.
+ffmpeg-video = ["shin-video/ffmpeg"]
 tracy = ["shin-window/tracy"]
 # Internal automated acceptance entry; it never creates a manual package.
 higurashi-window-probe = []

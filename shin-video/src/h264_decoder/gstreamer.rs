@@ -1,296 +1,212 @@
-use std::io::{Read, Seek};
+//! Decodes H.264 with GStreamer, using whichever H.264 decoder plugin the
+//! system provides (libav, OpenH264, VA-API, ...).
 
-use anyhow::{bail, Context, Result};
+use std::sync::Once;
+
+use anyhow::{Context, Result, anyhow, bail, ensure};
 use dpi::PhysicalSize;
-use gst::prelude::*;
-use once_cell::sync::Lazy;
-use tracing::{debug, error, trace, warn};
+use gst_video::prelude::*;
+use tracing::{debug, warn};
 
-use crate::{
-    h264_decoder::{nv12::Nv12Frame, FrameTiming},
-    mp4::Mp4TrackReader,
-    mp4_bitstream_converter::Mp4BitstreamConverter,
+use super::{
+    Nv12Frame,
+    worker::{FrameDecoder, Output, Packet, StreamInfo, copy_plane},
 };
-// NOTE: doing this one-time init in a library is bad practice
-// but we want to abstract away the gstreamer dependency, so we do it in hopes no other dep uses GStreamer
 
-static INIT_ONCE: Lazy<()> = Lazy::new(|| {
-    tracing_gstreamer::integrate_events();
-    gst::log::remove_default_log_function();
-    gst::log::set_default_threshold(gst::DebugLevel::Memdump);
-    gst::init().expect("Failed to initialize GStreamer");
-});
-fn init() {
-    Lazy::force(&INIT_ONCE);
-}
-
-pub struct GStreamerH264Decoder {
-    #[allow(dead_code)] // it's required to keep the pipeline alive
+pub struct GStreamer {
     pipeline: gst::Pipeline,
-    app_sink: gst_app::AppSink,
-    frame_size: PhysicalSize<u32>,
-    saved_frame: Option<gst::Sample>,
-    time_base: u32,
-    frame_number: u32,
+    source: gst_app::AppSrc,
+    sink: gst_app::AppSink,
+    timescale: u64,
 }
 
-impl super::H264DecoderTrait for GStreamerH264Decoder {
-    fn new<S: Read + Seek + Send + 'static>(mut track: Mp4TrackReader<S>) -> Result<Self> {
-        init();
+fn init() -> Result<()> {
+    static INIT: Once = Once::new();
+    let mut result = Ok(());
+    INIT.call_once(|| result = gst::init());
+    result.context("Initializing GStreamer")
+}
 
-        let (major, minor, micro, nano) = gst::version();
-        debug!(
-            "Creating GStreamerH264Decoder with GStreamer version {}.{}.{}.{}",
-            major, minor, micro, nano
+/// Whether any installed plugin can decode H.264.
+fn h264_decoder_available() -> bool {
+    let caps = gst::Caps::builder("video/x-h264").build();
+    gst::ElementFactory::factories_with_type(
+        gst::ElementFactoryType::DECODER | gst::ElementFactoryType::MEDIA_VIDEO,
+        gst::Rank::MARGINAL,
+    )
+    .iter()
+    .any(|factory| factory.can_sink_any_caps(&caps))
+}
+
+impl GStreamer {
+    fn time(&self, value: i64) -> gst::ClockTime {
+        let value = u64::try_from(value).unwrap_or(0);
+        gst::ClockTime::from_nseconds(value * 1_000_000_000 / self.timescale)
+    }
+
+    /// Fail with the first error the pipeline reported.
+    fn check_bus(&self) -> Result<()> {
+        let Some(bus) = self.pipeline.bus() else {
+            return Ok(());
+        };
+        while let Some(message) = bus.pop_filtered(&[gst::MessageType::Error]) {
+            if let gst::MessageView::Error(error) = message.view() {
+                bail!(
+                    "GStreamer error from {}: {} ({:?})",
+                    error
+                        .src()
+                        .map(|source| source.path_string().to_string())
+                        .unwrap_or_default(),
+                    error.error(),
+                    error.debug()
+                );
+            }
+        }
+        Ok(())
+    }
+
+    fn emit(&self, sample: gst::Sample, output: &mut Output) -> Result<()> {
+        let caps = sample.caps().context("Decoded frame has no caps")?;
+        let info = gst_video::VideoInfo::from_caps(caps).context("Reading decoded frame format")?;
+        ensure!(
+            info.format() == gst_video::VideoFormat::Nv12,
+            "GStreamer returned {:?} instead of NV12",
+            info.format()
         );
+        let buffer = sample.buffer().context("Decoded frame has no buffer")?;
+        let frame = gst_video::VideoFrameRef::from_buffer_ref_readable(buffer, &info)
+            .map_err(|_| anyhow!("Mapping a decoded frame"))?;
+        let (width, height) = (info.width() as usize, info.height() as usize);
+        let mut planes = [0, 1].into_iter().map(|plane| -> Result<Vec<u8>> {
+            let data = frame.plane_data(plane).context("Reading a decoded plane")?;
+            let stride = usize::try_from(frame.info().stride()[plane as usize])
+                .context("Bottom-up GStreamer frames are not supported")?;
+            let rows = if plane == 0 {
+                height
+            } else {
+                height.div_ceil(2)
+            };
+            ensure!(
+                stride >= width && data.len() >= stride * (rows - 1) + width,
+                "Decoded plane is too small"
+            );
+            // SAFETY: checked above that the plane holds `rows` rows of `width` bytes.
+            Ok(unsafe { copy_plane(data.as_ptr(), stride, width, rows) })
+        });
+        let y_plane = planes.next().unwrap()?;
+        let uv_plane = planes.next().unwrap()?;
+        output.emit(Nv12Frame {
+            y_plane,
+            uv_plane,
+            size: PhysicalSize::new(width as u32, height as u32),
+        });
+        Ok(())
+    }
+}
 
-        let in_video_caps = gst::caps::Caps::builder("video/x-h264")
-            .field("stream-format", "byte-stream")
-            .field("alignment", "au")
-            .build();
+impl FrameDecoder for GStreamer {
+    const NAME: &'static str = "GStreamer";
 
-        let app_src = gst_app::AppSrc::builder()
-            .caps(&in_video_caps)
+    fn new(info: &StreamInfo) -> Result<Self> {
+        init()?;
+        ensure!(
+            h264_decoder_available(),
+            "No GStreamer H.264 decoder is installed (for example gst-libav or gst-plugins-bad's openh264)"
+        );
+        let (major, minor, micro, _) = gst::version();
+        debug!("Decoding movie with GStreamer {major}.{minor}.{micro}");
+
+        let source = gst_app::AppSrc::builder()
+            .caps(
+                &gst::Caps::builder("video/x-h264")
+                    .field("stream-format", "byte-stream")
+                    .field("alignment", "au")
+                    .build(),
+            )
             .format(gst::Format::Time)
             .build();
-
-        let decodebin = gst::ElementFactory::make("decodebin")
+        let decode = gst::ElementFactory::make("decodebin")
             .build()
-            .context("Failed to create decodebin")?;
-        let queue = gst::ElementFactory::make("queue")
+            .context("Creating decodebin")?;
+        let convert = gst::ElementFactory::make("videoconvert")
             .build()
-            .context("Failed to create queue")?;
-        let videoconvert = gst::ElementFactory::make("videoconvert")
-            .build()
-            .context("Failed to create videoconvert")?;
-
-        let out_video_caps = gst::caps::Caps::builder("video/x-raw")
-            .field("format", "NV12")
-            .field("interlace-mode", "progressive")
+            .context("Creating videoconvert")?;
+        let sink = gst_app::AppSink::builder()
+            .caps(
+                &gst::Caps::builder("video/x-raw")
+                    .field("format", "NV12")
+                    .build(),
+            )
+            .sync(false)
             .build();
-
-        let app_sink = gst_app::AppSink::builder()
-            .caps(&out_video_caps)
-            .drop(false)
-            .build();
-
         let pipeline = gst::Pipeline::default();
         pipeline
-            .add_many(&[
-                app_src.upcast_ref(),
-                &decodebin,
-                &queue,
-                &videoconvert,
-                app_sink.upcast_ref(),
-            ])
-            .context("Failed to add elements to pipeline")?;
-        // NOTE: we cannot link the whole pipeline here, because decodebin doesn't create output pads before it receives data
-        // we need to handle the "pad-added" signal from decodebin and link the elements then
-        app_src
-            .link(&decodebin)
-            .context("Failed to link app_src to decodebin")?;
-        gst::Element::link_many(&[&queue, &videoconvert, app_sink.upcast_ref()])
-            .context("Failed to link queue, videoconvert and appsink")?;
-
-        decodebin.connect_pad_added(move |_decodebin, src_pad| {
-            let is_video = {
-                let media_type = src_pad
-                    .current_caps()
-                    .and_then(|caps| caps.structure(0).map(|s| s.name().starts_with("video/")));
-
-                match media_type {
-                    None => {
-                        warn!("Failed to get media type from pad {}", src_pad.name());
-
-                        return;
-                    }
-                    Some(media_type) => media_type,
-                }
+            .add_many([source.upcast_ref(), &decode, &convert, sink.upcast_ref()])
+            .context("Building the GStreamer pipeline")?;
+        source
+            .link(&decode)
+            .context("Linking the GStreamer decoder")?;
+        convert
+            .link(&sink)
+            .context("Linking the GStreamer frame output")?;
+        // decodebin creates its output pad once it knows the stream.
+        let convert_weak = convert.downgrade();
+        decode.connect_pad_added(move |_, pad| {
+            let Some(convert) = convert_weak.upgrade() else {
+                return;
             };
-
-            let insert_sink = || -> Result<()> {
-                let sink_pad = queue.static_pad("sink").expect("queue has no sinkpad");
-                src_pad.link(&sink_pad)?;
-
-                Ok(())
-            };
-
-            if is_video {
-                if let Err(err) = insert_sink() {
-                    // TODO: do we care to use the bus?
-                    error!("Failed to insert sink: {:?}", err);
-                }
+            let sink_pad = convert
+                .static_pad("sink")
+                .expect("videoconvert has a sink pad");
+            if !sink_pad.is_linked()
+                && let Err(error) = pad.link(&sink_pad)
+            {
+                warn!("Linking the GStreamer decoder output: {error:?}");
             }
         });
-
-        // how many time units are there in 1 second
-        let time_base = track.get_mp4_track_info(|track| track.timescale());
-
-        // define data callback for AppSrc
-        {
-            let mut bitstream_converter: Mp4BitstreamConverter =
-                track.get_mp4_track_info(Mp4BitstreamConverter::for_mp4_track)?;
-            let mut vec_buffer = Vec::new();
-
-            app_src.set_callbacks(
-                gst_app::AppSrcCallbacks::builder()
-                    .need_data(move |app_src, _| match track.next_sample() {
-                        Ok(Some(sample)) => {
-                            let mp4_time_to_gst_time = |time| {
-                                gst::ClockTime::from_useconds(time * 1_000_000 / time_base as u64)
-                            };
-
-                            let start_time = mp4_time_to_gst_time(
-                                (sample.start_time as i64 + sample.rendering_offset as i64) as u64,
-                            );
-                            let duration = mp4_time_to_gst_time(sample.duration as u64);
-
-                            if let Err(error) =
-                                bitstream_converter.convert_packet(&sample.bytes, &mut vec_buffer)
-                            {
-                                error!(%error, "Error converting MP4 video sample");
-                                let _ = app_src.end_of_stream();
-                                return;
-                            }
-                            let mut buffer = gst::Buffer::with_size(vec_buffer.len())
-                                .expect("Failed to create buffer");
-                            {
-                                let buffer = buffer.get_mut().unwrap();
-                                buffer
-                                    .copy_from_slice(0, &vec_buffer)
-                                    .expect("Failed to copy data to buffer");
-                                buffer.set_pts(start_time);
-                                buffer.set_duration(duration);
-                            }
-
-                            let _ = app_src.push_buffer(buffer);
-                        }
-                        Ok(None) => {
-                            let _ = app_src.end_of_stream();
-                        }
-                        Err(e) => {
-                            error!("Error reading sample from mp4: {:?}; ending the stream", e);
-                            let _ = app_src.end_of_stream();
-                        }
-                    })
-                    .build(),
-            );
-        }
-
         pipeline
             .set_state(gst::State::Playing)
-            .context("Failed to set pipeline state to playing")?;
-
-        let sample = app_sink.pull_sample().unwrap();
-        let frame_size = {
-            let caps = sample.caps().context("Failed to get caps from sample")?;
-            let video_info = gst_video::VideoInfo::from_caps(caps)
-                .context("Failed to get video info from caps")?;
-            if video_info.format() != gst_video::VideoFormat::Nv12 {
-                bail!("Unsupported video format: {:?}", video_info.format())
-            }
-            if video_info.interlace_mode() != gst_video::VideoInterlaceMode::Progressive {
-                bail!(
-                    "Unsupported interlace mode: {:?}",
-                    video_info.interlace_mode()
-                )
-            }
-            // when doing hardware decoding with nvidia this is set to unknown... whatever
-            // if video_info.chroma_site() != gst_video::VideoChromaSite::MPEG2 {
-            //     bail!("Unsupported chroma site: {:?}", video_info.chroma_site())
-            // }
-            // ehh,, i dunno how to compare it
-            // assert_eq!(video_info.colorimetry(), gst_video::VideoColorimetry::);
-            // assert_eq!(video_info.pixel_aspect_ratio(), gst::Fraction::new(1, 1));
-
-            let width = video_info.width();
-            let height = video_info.height();
-
-            PhysicalSize::new(width, height)
-        };
-
+            .context("Starting the GStreamer pipeline")?;
         Ok(Self {
             pipeline,
-            app_sink,
-            frame_size,
-            saved_frame: Some(sample),
-            time_base,
-            frame_number: 0,
+            source,
+            sink,
+            timescale: u64::from(info.timescale).max(1),
         })
     }
 
-    fn read_frame(&mut self) -> Result<Option<(FrameTiming, Nv12Frame)>> {
-        if self.app_sink.is_eos() {
-            return Ok(None);
+    fn decode(&mut self, packet: &Packet, output: &mut Output) -> Result<()> {
+        let mut buffer = gst::Buffer::from_slice(packet.annex_b.to_vec());
+        {
+            let buffer = buffer.get_mut().unwrap();
+            buffer.set_pts(self.time(packet.presentation_time));
+            buffer.set_dts(self.time(packet.decode_time as i64));
+            buffer.set_duration(self.time(i64::from(packet.duration)));
         }
-
-        let sample = if let Some(sample) = self.saved_frame.take() {
-            sample
-        } else {
-            self.app_sink
-                .pull_sample()
-                .context("Failed to pull sample")?
-        };
-
-        Ok(Some(self.decode_sample(sample)?))
+        if let Err(flow) = self.source.push_buffer(buffer) {
+            self.check_bus()?;
+            bail!("GStreamer refused a movie frame: {flow:?}");
+        }
+        while let Some(sample) = self.sink.try_pull_sample(gst::ClockTime::ZERO) {
+            self.emit(sample, output)?;
+        }
+        self.check_bus()
     }
 
-    fn try_read_frame(&mut self) -> Result<super::DecoderPoll> {
-        let sample = self.saved_frame.take()
-            .or_else(|| self.app_sink.try_pull_sample(gst::ClockTime::ZERO));
-        let Some(sample) = sample else {
-            return Ok(if self.app_sink.is_eos() { super::DecoderPoll::Eof }
-                else { super::DecoderPoll::Pending });
-        };
-        let (timing, frame) = self.decode_sample(sample)?;
-        Ok(super::DecoderPoll::Frame(timing, frame))
-    }
-
-    fn frame_size(&mut self) -> Result<PhysicalSize<u32>> {
-        Ok(self.frame_size)
+    fn finish(&mut self, output: &mut Output) -> Result<()> {
+        self.source
+            .end_of_stream()
+            .map_err(|flow| anyhow!("Ending the GStreamer stream: {flow:?}"))?;
+        // Blocks until the next frame, or returns nothing at end of stream or on error.
+        while let Ok(sample) = self.sink.pull_sample() {
+            self.emit(sample, output)?;
+        }
+        self.check_bus()
     }
 }
 
-impl GStreamerH264Decoder {
-    fn decode_sample(&mut self, sample: gst::Sample) -> Result<(FrameTiming, Nv12Frame)> {
-        let buffer = sample.buffer().unwrap();
-        // TODO: suboptimal: FrameTimings should already be in an absolute time unit
-        let gst_time_to_mp4_time =
-            |time: gst::ClockTime| time.useconds() * self.time_base as u64 / 1_000_000;
-        let start_time = gst_time_to_mp4_time(buffer.pts().unwrap());
-        let duration = gst_time_to_mp4_time(buffer.duration().unwrap())
-            .try_into()
-            .unwrap();
-
-        let frame_timing = FrameTiming {
-            frame_number: self.frame_number,
-            start_time,
-            duration,
-        };
-
-        self.frame_number += 1;
-        trace!(
-            "Got a new frame! (frame #{}, start_time={})",
-            self.frame_number,
-            start_time
-        );
-
-        let y_len = (self.frame_size.width * self.frame_size.height) as usize;
-        let uv_len = y_len / 2;
-
-        let mut y_plane = vec![0; y_len];
-        let mut uv_plane = vec![0; uv_len];
-
-        buffer.copy_to_slice(0, &mut y_plane).unwrap();
-        buffer.copy_to_slice(y_len, &mut uv_plane).unwrap();
-
-        let frame = Nv12Frame {
-            y_plane,
-            uv_plane,
-            size: self.frame_size,
-        };
-
-        Ok((frame_timing, frame))
-
+impl Drop for GStreamer {
+    fn drop(&mut self) {
+        let _ = self.pipeline.set_state(gst::State::Null);
     }
 }

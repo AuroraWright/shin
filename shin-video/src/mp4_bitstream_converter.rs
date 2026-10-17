@@ -194,6 +194,19 @@ impl Mp4BitstreamConverter {
         })
     }
 
+    /// Size in bytes of the NAL unit length prefixes in MP4 samples.
+    pub fn length_size(&self) -> u8 {
+        self.length_size
+    }
+
+    /// The sequence parameter sets followed by the picture parameter sets.
+    pub fn parameter_sets(&self) -> impl Iterator<Item = &[u8]> {
+        self.sequence_parameter_sets
+            .iter()
+            .chain(&self.picture_parameter_sets)
+            .map(Vec::as_slice)
+    }
+
     /// Convert a single packet from the MP4 format to the Annex B format.
     ///
     /// It clears the `out` vector and appends the converted packet to it.
