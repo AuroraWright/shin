@@ -135,7 +135,8 @@ pub(super) fn render(
         atlas.get("copyright").as_source(),
         vec4(0.0, 952.0, 672.0, 1080.0),
         full,
-        UnormColor::WHITE,
+        // Native10c4f4 does not reset the logo's vertex color.
+        rgba(1.0, 1.0, 1.0, frame.logo_alpha),
         transform,
     );
     if let Some(caption) = frame.caption {

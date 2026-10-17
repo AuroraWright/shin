@@ -592,7 +592,7 @@ fn reference_title_gpu_artwork_rows_and_background_cover() {
                     im("copyright"),
                     [0.0, 952.0, 672.0, 1080.0],
                     full,
-                    white,
+                    color([1.0, 1.0, 1.0, frame.logo_alpha]),
                     px,
                     py,
                 );

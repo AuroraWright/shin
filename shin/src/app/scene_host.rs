@@ -839,6 +839,9 @@ impl SceneHost {
                 }));
             }
             Destination::StartupTitle(argument) => {
+                // Native110644 captures the outgoing frame for every Title,
+                // so the first entry also fades in from TitleDemo's frame.
+                let previous = self.capture_title_return(context);
                 let Some(Scene::Demo(demo)) = self.scene.take() else {
                     anyhow::bail!("Initial title requires TitleDemo");
                 };
@@ -851,7 +854,8 @@ impl SceneHost {
                 let mut scene = TitleScene::new(
                     self.server.clone(),
                     TitleSetup::from_save(globals.save(), argument),
-                );
+                )
+                .with_return_capture(previous);
                 scene.resize(extent);
                 self.scene = Some(Scene::Title(TitleRuntime {
                     scene,

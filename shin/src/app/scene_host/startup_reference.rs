@@ -488,6 +488,11 @@ fn reference_startup_movie_owner_and_host_handoff() {
         assert!(matches!(host.scene, Some(Scene::Demo(_))));
         step(&mut host, &mut ctx, &server, &mut frame, 0.0, None, false);
         assert!(host.reference_title().is_some());
+        // Native110644 holds TitleDemo's final frame until Title loads.
+        assert_eq!(
+            host.reference_title().unwrap().reference_return_capture(),
+            Some(1.0)
+        );
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
         while !host.reference_title().unwrap().is_loaded() {
             step(&mut host, &mut ctx, &server, &mut frame, 0.0, None, false);
