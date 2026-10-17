@@ -18,9 +18,9 @@ use crate::{
     vm::command::RuntimeCommand,
 };
 
-fn supplied_scenario() -> Arc<Gerokasu2Scenario> {
+fn supplied_scenario(variable: &str) -> Arc<Gerokasu2Scenario> {
     use shin_primitives::stateless_reader::StatelessFile;
-    let path = std::env::var_os("SHIN_GEROKASU2_ROM").expect("SHIN_GEROKASU2_ROM");
+    let path = std::env::var_os(variable).expect(variable);
     let mut rom =
         RomReader::new(StatelessFile::new(std::fs::File::open(path).unwrap()).unwrap()).unwrap();
     let file = rom.find_file("/main.snr").unwrap();
@@ -53,7 +53,12 @@ fn hash_of(value: &impl Hash) -> u64 {
 }
 
 /// Possible QUIZ results for the native CardSelect constructor at2ed60.
-fn card_faces(raw_mask: i32) -> Vec<i32> {
+/// Gerokasu returns a pairing index whose "already done" bit is clear
+/// (CARD-SELECT.md section 6); this may include pairings the deal never offers.
+fn card_faces(raw_mask: i32, gerokasu: bool) -> Vec<i32> {
+    if gerokasu {
+        return (0..12).filter(|i| raw_mask & (1 << i) == 0).collect();
+    }
     if raw_mask & 0x1000 != 0 {
         // Automatic variant: fixed mask/selected index.
         let (mask, selected) = match raw_mask & 15 {
@@ -76,11 +81,31 @@ fn selection_options(count: usize, mask: i32) -> Vec<i32> {
 #[test]
 #[ignore = "requires supplied Gerokasu2 data.rom (SHIN_GEROKASU2_ROM); numeric routes only"]
 fn gerokasu2_supplied_route_exploration_covers_script() {
-    let scenario = supplied_scenario();
-    let seed: u32 = std::env::var("SHIN_GEROKASU2_ROUTE_SEED")
+    explore(
+        &supplied_scenario("SHIN_GEROKASU2_ROM"),
+        "gerokasu2",
+        "GEROKASU2",
+    );
+}
+
+#[test]
+#[ignore = "requires supplied Gerokasu data.rom (SHIN_GEROKASU_ROM); numeric routes only"]
+fn gerokasu_supplied_route_exploration_covers_script() {
+    explore(
+        &supplied_scenario("SHIN_GEROKASU_ROM"),
+        "gerokasu",
+        "GEROKASU",
+    );
+}
+
+/// Explores every route; writes `<dir>/.local/playability/routes-seed*.txt`
+/// and the command inventory. `prefix` names the seed/playthrough variables.
+fn explore(scenario: &Arc<Gerokasu2Scenario>, dir: &str, prefix: &str) {
+    let gerokasu = scenario.dialect == crate::format::scenario::gerokasu2::Dialect::Gerokasu;
+    let seed: u32 = std::env::var(format!("SHIN_{prefix}_ROUTE_SEED"))
         .map(|value| value.parse().unwrap())
         .unwrap_or(42);
-    let max_playthroughs: u32 = std::env::var("SHIN_GEROKASU2_ROUTE_PLAYTHROUGHS")
+    let max_playthroughs: u32 = std::env::var(format!("SHIN_{prefix}_ROUTE_PLAYTHROUGHS"))
         .map(|value| value.parse().unwrap())
         .unwrap_or(8);
 
@@ -96,7 +121,13 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
         }
         let start = reader.position().0;
         let instruction = reader.read().unwrap();
-        static_text.insert(start, format!("{instruction:?}").chars().take(240).collect::<String>());
+        static_text.insert(
+            start,
+            format!("{instruction:?}")
+                .chars()
+                .take(240)
+                .collect::<String>(),
+        );
         match instruction {
             bytecode::Instruction::MessageSet { msg_id, .. } => {
                 static_commands.insert(start);
@@ -140,6 +171,9 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
     let mut stack = vec![start(BTreeMap::new(), 0)];
     'branches: while let Some(mut branch) = stack.pop() {
         branches_run += 1;
+        if branches_run % 10_000 == 0 {
+            eprintln!("{prefix}_ROUTES progress branches={branches_run} commands={total_commands}");
+        }
         assert!(branches_run < 200_000, "route explosion");
         loop {
             let result = std::mem::replace(&mut branch.result, CommandResult::None);
@@ -185,8 +219,13 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
                     visibility,
                     variants,
                     ..
-                } => format!("Selection count={} visibility={visibility:#x}", variants.len()),
-                Gerokasu2RuntimeCommand::Wait { allow_interrupt, .. } => {
+                } => format!(
+                    "Selection count={} visibility={visibility:#x}",
+                    variants.len()
+                ),
+                Gerokasu2RuntimeCommand::Wait {
+                    allow_interrupt, ..
+                } => {
                     format!("Wait allow_interrupt={allow_interrupt}")
                 }
                 Gerokasu2RuntimeCommand::Shared(RuntimeCommand::SGET(c)) => {
@@ -208,14 +247,17 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
                     branch
                         .cards
                         .get(&c.arg)
-                        .map(|&mask| card_faces(mask))
+                        .map(|&mask| card_faces(mask, gerokasu))
                         // Missing/noninteractive drawable: native zero result.
                         .unwrap_or_else(|| vec![0]),
                 ),
                 _ => None,
             };
             if let Gerokasu2RuntimeCommand::Shared(RuntimeCommand::QUIZ(c)) = &command
-                && branch.cards.get(&c.arg).is_some_and(|mask| mask & 0x1000 != 0)
+                && branch
+                    .cards
+                    .get(&c.arg)
+                    .is_some_and(|mask| mask & 0x1000 != 0)
             {
                 branch.automatic.push(pc);
             }
@@ -228,8 +270,20 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
                     ));
                     continue 'branches;
                 }
+                // Gerokasu pairings set ordering-dependent registers, so the
+                // full VM state never repeats across the 12! orders; explore
+                // each done-mask once per site instead.
+                let quiz = matches!(
+                    command,
+                    Gerokasu2RuntimeCommand::Shared(RuntimeCommand::QUIZ(_))
+                );
+                let state = if gerokasu && quiz {
+                    0
+                } else {
+                    branch.vm.ctx.fingerprint()
+                };
                 let key = hash_of(&(
-                    branch.vm.ctx.fingerprint(),
+                    state,
                     pc,
                     &branch.persist,
                     &branch.cards,
@@ -301,10 +355,15 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
     let out_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("gerokasu2/.local/playability");
+        .join(dir)
+        .join(".local/playability");
     std::fs::create_dir_all(&out_dir).unwrap();
     let mut file = std::fs::File::create(out_dir.join(format!("routes-seed{seed}.txt"))).unwrap();
-    writeln!(file, "seed={seed} branches={branches_run} total_commands={total_commands} longest={longest}").unwrap();
+    writeln!(
+        file,
+        "seed={seed} branches={branches_run} total_commands={total_commands} longest={longest}"
+    )
+    .unwrap();
     writeln!(file, "endings={endings:x?}").unwrap();
     for route in &ending_routes {
         writeln!(file, "{route}").unwrap();
@@ -333,7 +392,7 @@ fn gerokasu2_supplied_route_exploration_covers_script() {
     )
     .unwrap();
     println!(
-        "GEROKASU2_ROUTES seed={seed} branches={branches_run} endings={} routes={} longest={longest} messages={}/{} commands={}/{} faults={} inventory={}",
+        "{prefix}_ROUTES seed={seed} branches={branches_run} endings={} routes={} longest={longest} messages={}/{} commands={}/{} faults={} inventory={}",
         endings.len(),
         ending_routes.len(),
         covered_messages.intersection(&static_messages).count(),
