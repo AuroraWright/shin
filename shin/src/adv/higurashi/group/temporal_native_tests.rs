@@ -5,11 +5,11 @@ use super::*;
 
 const PROFILES: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-temporal-group-render-capture/profiles.json"
+    "/../test-fixtures/higurashi/live-temporal-group-render-capture/profiles.json"
 ));
 const ORIGINAL: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-temporal-group-render-capture/output.txt"
+    "/../test-fixtures/higurashi/live-temporal-group-render-capture/output.txt"
 ));
 
 #[test]

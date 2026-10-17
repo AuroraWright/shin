@@ -7,11 +7,11 @@ use winit::keyboard::KeyCode;
 
 const SOURCE: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/input-bridge-capture/input.txt"
+    "/../test-fixtures/higurashi/input-bridge-capture/input.txt"
 ));
 const ORIGINAL: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/input-bridge-capture/output.txt"
+    "/../test-fixtures/higurashi/input-bridge-capture/output.txt"
 ));
 const FRAME: Duration = Duration::from_nanos(16_666_667);
 

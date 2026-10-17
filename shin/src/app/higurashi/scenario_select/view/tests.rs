@@ -9,11 +9,11 @@ use std::collections::HashMap;
 use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/scenario-select-render-capture/input.txt"
+    "/../test-fixtures/higurashi/scenario-select-render-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/scenario-select-render-capture/output.txt"
+    "/../test-fixtures/higurashi/scenario-select-render-capture/output.txt"
 ));
 struct Frame {
     state: ViewState,

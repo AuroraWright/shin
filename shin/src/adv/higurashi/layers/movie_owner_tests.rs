@@ -18,11 +18,11 @@ mod retirement;
 
 const CORPUS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-movie-acquisition-capture/profiles.json"
+    "/../test-fixtures/higurashi/live-movie-acquisition-capture/profiles.json"
 ));
 const ORIGINAL: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-movie-acquisition-capture/output.txt"
+    "/../test-fixtures/higurashi/live-movie-acquisition-capture/output.txt"
 ));
 
 #[derive(Clone)]
@@ -655,7 +655,7 @@ fn higurashi_live_movie_owner_publication_reconstruction_and_scoped_retirement()
     // bounded there, while this test constructs the real paused codec owner.
     let reconstructed: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/live-movie-owner-fixtures/native-reconstruction.json"
+        "/../test-fixtures/higurashi/live-movie-owner-fixtures/native-reconstruction.json"
     )))
     .unwrap();
     for native in reconstructed["profiles"].as_array().unwrap() {

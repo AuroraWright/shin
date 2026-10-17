@@ -2,11 +2,14 @@
 
 use insta::assert_debug_snapshot;
 
-use super::make_snapshot;
+use super::{fonts_available, make_snapshot};
 use crate::vm::command::types::{MessageTextLayout, MessageboxType};
 
 #[test]
 fn snapshot_ep1_nanjo1() {
+    if !fonts_available() {
+        return;
+    }
     // here we have rubi text that is wider than the base text. the pointers have to be adjusted
     let snapshot = make_snapshot(MessageTextLayout::Justify, MessageboxType::Ushiromiya, "南條\u{3000}輝正@r@v19/11900001.「…………また。@k@v19/11900002.…お酒を@bたしな.@<嗜@>まれましたな？」");
 
@@ -15,6 +18,9 @@ fn snapshot_ep1_nanjo1() {
 
 #[test]
 fn snapshot_ep1_nanjo2() {
+    if !fonts_available() {
+        return;
+    }
     // here we have a pretty long message with multiple Waits and spanning multiple lines
     let snapshot = make_snapshot(MessageTextLayout::Justify, MessageboxType::Ushiromiya, "南條\u{3000}輝正@r@v19/11900003.「…………金蔵さん。@k@v19/11900004.…あんたの体が一見調子がいいのは薬が効いてるからだ。@k@v19/11900005.だが、そんな強い酒を飲み続けては薬の意味もなくなってしまう。@k@v19/11900006.…悪いことは言わん。@k@v19/11900007.酒は控えなさい」");
 
@@ -23,6 +29,9 @@ fn snapshot_ep1_nanjo2() {
 
 #[test]
 fn snapshot_ep1_kinzo1() {
+    if !fonts_available() {
+        return;
+    }
     // here we have rubi text that is smaller than the base text
     let snapshot = make_snapshot(MessageTextLayout::Justify, MessageboxType::Ushiromiya, "右代宮\u{3000}金蔵@r@v01/11500012.「はっはっはっは…。@k@v01/11500013.お前とて、指し間違えた手を待てと言っても聞かぬではないか。@k@v01/11500014.ならば@bあいこ.@<相子@>というものだろう」");
 
@@ -31,6 +40,9 @@ fn snapshot_ep1_kinzo1() {
 
 #[test]
 fn snapshot_ep1_kumasawa_nvl() {
+    if !fonts_available() {
+        return;
+    }
     // tests novel mode, and, apparently, kinsoku shori-forbidden character on start of the line
     let snapshot = make_snapshot(MessageTextLayout::Justify, MessageboxType::Novel, "熊沢\u{3000}チヨ@r@v18/11800041_1.……おいたわしや、紗音さん、嘉音さん…。@k@r@v18/11800041_2.あの二人がいじめられる理由は何もないのです。@k@r@v18/11800041_3.…しかし、郷田さんに嫌われているのは紛れもない事実…。");
 
@@ -39,6 +51,9 @@ fn snapshot_ep1_kumasawa_nvl() {
 
 #[test]
 fn snapshot_ep2_beatrice_red_truth() {
+    if !fonts_available() {
+        return;
+    }
     // tests red truth (instant text + color change), as well as section & sync commands, used to issue VM commands at certain points in the message
     let snapshot = make_snapshot(MessageTextLayout::Justify, MessageboxType::WitchSpace, "ベアトリーチェ@r@v27/20700938.「そうだ。@k@v27/20700939.だから妾はこれより、@v27/20700940.@|@y@c900.@[真実を語る時、赤を使うことにする@]@c.」");
 
@@ -47,6 +62,9 @@ fn snapshot_ep2_beatrice_red_truth() {
 
 #[test]
 fn snapshot_ep4_beatrice_blue_truth() {
+    if !fonts_available() {
+        return;
+    }
     // tests 2 blue truths in one message
     let snapshot = make_snapshot(MessageTextLayout::Justify, MessageboxType::Novel, "ベアトリーチェ@r@v27/40700828.@|@y@c279.@[以上の復唱要求、並びに復唱拒否から、@]@k@v27/40700829.@|@y@[妾はそなたに対戦相手の資格がないことを宣言する。@]@c.");
 
@@ -55,6 +73,9 @@ fn snapshot_ep4_beatrice_blue_truth() {
 
 #[test]
 fn snapshot_ep1_novel_centered() {
+    if !fonts_available() {
+        return;
+    }
     // test centered text in NVL mode
     let snapshot = make_snapshot(
         MessageTextLayout::Center,
@@ -67,6 +88,9 @@ fn snapshot_ep1_novel_centered() {
 
 #[test]
 fn snapshot_ep1_narrator1() {
+    if !fonts_available() {
+        return;
+    }
     // this tests a non-novel message without a character name
     let snapshot = make_snapshot(
         MessageTextLayout::Justify,
@@ -79,6 +103,9 @@ fn snapshot_ep1_narrator1() {
 
 #[test]
 fn snapshot_ep1_kinzo2() {
+    if !fonts_available() {
+        return;
+    }
     // tests the correct implementation of multiline quoted text
     let snapshot = make_snapshot(
         MessageTextLayout::Justify,
@@ -91,6 +118,9 @@ fn snapshot_ep1_kinzo2() {
 
 #[test]
 fn snapshot_ep1_battler1() {
+    if !fonts_available() {
+        return;
+    }
     // tests the correct handling of prohibition rules in combination with rubi text
     let snapshot = make_snapshot(
         MessageTextLayout::Justify,
@@ -103,6 +133,9 @@ fn snapshot_ep1_battler1() {
 
 #[test]
 fn snapshot_ep1_narrator2() {
+    if !fonts_available() {
+        return;
+    }
     // tests the correctness of time reflowing when rubi and base texts have equal width
     let snapshot = make_snapshot(
         MessageTextLayout::Justify,
@@ -115,6 +148,9 @@ fn snapshot_ep1_narrator2() {
 
 #[test]
 fn snapshot_ep1_kinzo3() {
+    if !fonts_available() {
+        return;
+    }
     // tests correctness of squish/justify selection when max_width = layout_width
     let snapshot = make_snapshot(
         MessageTextLayout::Justify,
@@ -127,6 +163,9 @@ fn snapshot_ep1_kinzo3() {
 
 #[test]
 fn snapshot_ep2_narrator1() {
+    if !fonts_available() {
+        return;
+    }
     // tests for correct classification of space for line prohibition rules
     let snapshot = make_snapshot(
         MessageTextLayout::Justify,

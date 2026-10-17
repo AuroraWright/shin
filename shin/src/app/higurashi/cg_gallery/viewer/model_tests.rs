@@ -3,11 +3,11 @@ use crate::adv::higurashi::mode_stack::{Mode, ModePush, ModeStack};
 use std::collections::VecDeque;
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-viewer-model-capture/input.txt"
+    "/../test-fixtures/higurashi/cg-gallery-viewer-model-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-viewer-model-capture/output.txt"
+    "/../test-fixtures/higurashi/cg-gallery-viewer-model-capture/output.txt"
 ));
 struct Native {
     op: char,

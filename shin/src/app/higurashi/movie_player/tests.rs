@@ -20,11 +20,11 @@ use std::{
 
 const MODEL: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/movie-gallery-model-native-corpus/output.txt"
+    "/../test-fixtures/higurashi/movie-gallery-model-native-corpus/output.txt"
 ));
 const RENDER: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/movie-gallery-render-capture/output.txt"
+    "/../test-fixtures/higurashi/movie-gallery-render-capture/output.txt"
 ));
 fn words(value: &serde_json::Value) -> Vec<u32> {
     value

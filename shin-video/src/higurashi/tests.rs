@@ -48,7 +48,7 @@ fn parse_native_states(output: &str) -> Vec<(usize, [u64; 26])> {
 }
 fn native_states() -> Vec<(usize, [u64; 26])> {
     parse_native_states(include_str!(
-        "../../../reverse-engineering/higurashi/live-movie-capture/output.txt"
+        "../../../test-fixtures/higurashi/live-movie-capture/output.txt"
     ))
 }
 
@@ -118,7 +118,7 @@ fn native_64_frame_clock_jump_polls_through_elapsed_output_without_a_read_cap() 
     // NEW capture executes the frozen original player with all64 decoded
     // frames queued, then jumps directly across25 and60 earlier frames.
     let original: Vec<_> = parse_native_states(include_str!(
-        "../../../reverse-engineering/higurashi/live-movie-jump-capture/output.txt"
+        "../../../test-fixtures/higurashi/live-movie-jump-capture/output.txt"
     ))
     .into_iter()
     .filter_map(|(_, state)| (state[9] != 0).then_some((state[21], state[10], state[0])))
@@ -193,7 +193,7 @@ fn supplied_b_frame_movies_match_normalized_presentation_time_in_actual_codec_or
     // first96 outputs while excluding the artificial EOF flush tail.
     // The shared ordinal timestamp grid is compatible for these files because
     // their sorted CTTS grid starts at the authored video edit origin2002.
-    let trace = include_str!("../../../reverse-engineering/higurashi/live-movie-codec-order.tsv");
+    let trace = include_str!("../../../test-fixtures/higurashi/live-movie-codec-order.tsv");
     let mut movies = std::collections::HashSet::new();
     let mut comparisons = 0;
     let mut reordered = 0;

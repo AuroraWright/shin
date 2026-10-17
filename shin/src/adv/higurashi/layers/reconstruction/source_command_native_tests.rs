@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 const CORPUS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/reconstruction-source-command-capture/parsed.json"
+    "/../test-fixtures/higurashi/reconstruction-source-command-capture/parsed.json"
 ));
 type Row = (i32, u32, u32, u32, u32, u64);
 #[derive(Debug, Deserialize)]

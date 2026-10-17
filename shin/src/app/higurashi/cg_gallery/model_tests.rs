@@ -4,15 +4,15 @@ use shin_core::format::scenario::types::{U8String, U16SmallList};
 use std::collections::VecDeque;
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-model-capture/input.txt"
+    "/../test-fixtures/higurashi/cg-gallery-model-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-model-capture/output.txt"
+    "/../test-fixtures/higurashi/cg-gallery-model-capture/output.txt"
 ));
 const TABLES: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-tables.txt"
+    "/../test-fixtures/higurashi/cg-gallery-tables.txt"
 ));
 pub(super) fn catalog() -> Vec<PictureBoxInfoItem> {
     TABLES

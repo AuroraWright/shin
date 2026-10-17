@@ -32,7 +32,7 @@ fn scalar_lanes(values: [u32; 4]) -> [u32; 16] {
 }
 
 fn cases() -> Vec<Case> {
-    let base = root().join("reverse-engineering/higurashi/tile-gamma-partial-nan-capture");
+    let base = root().join("test-fixtures/higurashi/tile-gamma-partial-nan-capture");
     let input = fs::read(base.join("input.txt")).unwrap();
     pinned(&input, 902_400, 0x2799_b1f5_c57a_f015);
     let output = fs::read(base.join("output.txt")).unwrap();

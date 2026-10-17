@@ -22,6 +22,23 @@ pub struct TestFonts {
     normal_font: FontInfo,
 }
 
+const FONT_PATHS: [&str; 2] = [
+    "test_assets/newrodin-medium.fnt",
+    "test_assets/newrodin-bold.fnt",
+];
+
+/// The test fonts are game data and are not distributed with the repository;
+/// tests that lay out text are skipped without them.
+pub fn fonts_available() -> bool {
+    let available = FONT_PATHS
+        .iter()
+        .all(|path| std::path::Path::new(path).is_file());
+    if !available {
+        eprintln!("skipping: the test fonts are not in shin-core/test_assets");
+    }
+    available
+}
+
 pub fn read_fonts() -> TestFonts {
     fn read_font(path: &str) -> FontInfo {
         let font = File::open(path).unwrap();
@@ -29,8 +46,8 @@ pub fn read_fonts() -> TestFonts {
         shin_core::format::font::read_font_metrics(&mut font).unwrap()
     }
 
-    let normal = read_font("test_assets/newrodin-medium.fnt");
-    let bold = read_font("test_assets/newrodin-bold.fnt");
+    let normal = read_font(FONT_PATHS[0]);
+    let bold = read_font(FONT_PATHS[1]);
     // let system = read_font("test_assets/system.fnt");
 
     TestFonts {
@@ -90,6 +107,9 @@ pub fn make_snapshot(
 
 #[test]
 fn disabled_kinsoku_allows_a_ruby_base_to_cross_a_soft_break() {
+    if !fonts_available() {
+        return;
+    }
     use crate::layout::MessageTextLayouter;
     let fonts = read_fonts();
     let layout = |kinsoku| {
@@ -131,6 +151,9 @@ fn disabled_kinsoku_allows_a_ruby_base_to_cross_a_soft_break() {
 
 #[test]
 fn zero_message_color_and_default_reset_preserve_native_command_words() {
+    if !fonts_available() {
+        return;
+    }
     use crate::layout::MessageTextLayouter;
     let fonts = read_fonts();
     for (default, expected_default) in [(-1, 0), (0, 0), (900, 0xff0000ff)] {
@@ -160,6 +183,9 @@ fn zero_message_color_and_default_reset_preserve_native_command_words() {
 
 #[test]
 fn click_wait_resumes_after_the_longest_parallel_branch() {
+    if !fonts_available() {
+        return;
+    }
     let fonts = read_fonts();
     let (commands, _, _) = MessageLayerLayouter::new(
         &fonts.normal_font,
@@ -206,6 +232,9 @@ fn click_wait_resumes_after_the_longest_parallel_branch() {
 
 #[test]
 fn backlog_finalization_keeps_the_closing_bracket_at_the_final_wait_time() {
+    if !fonts_available() {
+        return;
+    }
     use crate::layout::BacklogTextLayouter;
     let fonts = read_fonts();
     let (commands, _, _) = BacklogTextLayouter::new(

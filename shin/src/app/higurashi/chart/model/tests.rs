@@ -358,11 +358,17 @@ impl Fixture {
         );
     }
 }
-fn catalog() -> Arc<Catalog> {
+/// The updated scenario's Chart catalog, or `None` (skipping the test) when
+/// the Higurashi game files are not available.
+fn catalog() -> Option<Arc<Catalog>> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let dir = std::env::var_os("SHIN_HIGURASHI_ASSETS")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("higurashi"));
+    if !dir.join("patch.rom").is_file() {
+        eprintln!("skipping: Higurashi patch.rom is not available");
+        return None;
+    }
     let mut r = RomReader::new(
         StatelessFile::new(std::fs::File::open(dir.join("patch.rom")).unwrap()).unwrap(),
     )
@@ -372,7 +378,9 @@ fn catalog() -> Arc<Catalog> {
         .unwrap()
         .read_to_end(&mut b)
         .unwrap();
-    Arc::new(Catalog::from_scenario(&HigurashiScenario::new(b.into()).unwrap()).unwrap())
+    Some(Arc::new(
+        Catalog::from_scenario(&HigurashiScenario::new(b.into()).unwrap()).unwrap(),
+    ))
 }
 #[test]
 fn higurashi_chart_model_matches_actual_authored_native_owners() {
@@ -386,11 +394,13 @@ fn higurashi_chart_wheel_matches_original_scroll_steps_and_following_state() {
 
 fn compare_chart_capture(wheel: bool) {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../reverse-engineering/higurashi/chart-catalog-model-capture");
+        .join("../test-fixtures/higurashi/chart-catalog-model-capture");
     let input = std::fs::read_to_string(root.join("input.txt")).unwrap();
     let output = std::fs::read_to_string(root.join("output.txt")).unwrap();
     let mut original = output.lines();
-    let catalog = catalog();
+    let Some(catalog) = catalog() else {
+        return;
+    };
     let mut f = None;
     let mut profiles = 0;
     let mut observations = 0;
@@ -525,7 +535,9 @@ fn higurashi_chart_fractional_wheel_preserves_cursor_bounds_and_input_priority()
         m.take_actions();
         m
     }
-    let c = catalog();
+    let Some(c) = catalog() else {
+        return;
+    };
     let mut m = fresh(c.clone());
     let cursor = m.group().y.value();
     // A half-pixel trackpad movement survives the byte-axis boundary.

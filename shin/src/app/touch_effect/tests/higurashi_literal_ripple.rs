@@ -25,11 +25,11 @@ use wgpu::util::DeviceExt;
 
 const VERTEX: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/touch-effects-port/higurashi-program19.vertex.glsl"
+    "/../test-fixtures/higurashi/touch-effects-port/higurashi-program19.vertex.glsl"
 ));
 const FRAGMENT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/touch-effects-port/higurashi-program19.fragment.glsl"
+    "/../test-fixtures/higurashi/touch-effects-port/higurashi-program19.fragment.glsl"
 ));
 const INPUT: &str = "0 0 1 2 960 540 960 540 0\n\
                     1 3.75 1 0 960 540 960 540 1\n\

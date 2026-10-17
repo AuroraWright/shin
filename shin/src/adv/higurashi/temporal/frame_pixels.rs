@@ -167,7 +167,7 @@ pub(crate) fn corpus() -> Corpus {
         std::env::var("SHIN_HIGURASHI_LIVE_AFTERIMAGE_CAPTURE").unwrap_or_else(|_| {
             concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/../reverse-engineering/higurashi/live-afterimage-frames-capture"
+                "/../test-fixtures/higurashi/live-afterimage-frames-capture"
             )
             .into()
         }),

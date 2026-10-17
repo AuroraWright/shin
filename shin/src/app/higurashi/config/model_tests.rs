@@ -423,9 +423,9 @@ impl Fixture {
 #[test]
 fn higurashi_config_matches_original_141_owners_4231_states() {
     let input =
-        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/config-model-capture/input.txt"));
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/config-model-capture/input.txt"));
     let output = include_str!(
-        concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/config-model-capture/output.txt")
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/config-model-capture/output.txt")
     );
     let mut fixture: Option<Fixture> = None;
     let mut first_status = 2;
@@ -569,7 +569,7 @@ fn higurashi_config_original_cpu_capture_is_reproducible() {
         .unwrap();
     use std::io::Write;
     let input =
-        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/config-model-capture/input.txt"));
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/config-model-capture/input.txt"));
     let mut stdin = child.stdin.take().unwrap();
     let bytes = input.as_bytes().to_vec();
     let writer = std::thread::spawn(move || {
@@ -585,7 +585,7 @@ fn higurashi_config_original_cpu_capture_is_reproducible() {
     assert_eq!(
         initialized_native_capture(&result.stdout),
         initialized_native_capture(include_bytes!(
-            concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/config-model-capture/output.txt")
+            concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/config-model-capture/output.txt")
         ))
     );
 }

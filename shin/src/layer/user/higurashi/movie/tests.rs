@@ -4,11 +4,11 @@ use std::collections::VecDeque;
 
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-movie-capture/input.txt"
+    "/../test-fixtures/higurashi/live-movie-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-movie-capture/output.txt"
+    "/../test-fixtures/higurashi/live-movie-capture/output.txt"
 ));
 
 struct Profile {

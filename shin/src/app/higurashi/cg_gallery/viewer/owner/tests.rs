@@ -236,7 +236,7 @@ fn reference_cg_viewer_default_long_press_still_releases_next_variant() {
 fn reference_cg_owner_original14_lifetime_order_profiles() {
     let output = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/cg-gallery-owner-capture/output.txt"
+        "/../test-fixtures/higurashi/cg-gallery-owner-capture/output.txt"
     ));
     let (mut owners, mut events, mut seeds, mut captures) = (0, 0, 0, 0);
     let mut names = Vec::new();
@@ -295,7 +295,7 @@ fn reference_cg_owner_original_order_reexecution() {
         .unwrap()
         .write_all(include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../reverse-engineering/higurashi/cg-gallery-owner-capture/input.txt"
+            "/../test-fixtures/higurashi/cg-gallery-owner-capture/input.txt"
         )))
         .unwrap();
     let output = child.wait_with_output().unwrap();
@@ -308,7 +308,7 @@ fn reference_cg_owner_original_order_reexecution() {
         output.stdout,
         include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../reverse-engineering/higurashi/cg-gallery-owner-capture/output.txt"
+            "/../test-fixtures/higurashi/cg-gallery-owner-capture/output.txt"
         ))
     );
 }

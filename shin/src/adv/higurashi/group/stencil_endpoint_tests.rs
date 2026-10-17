@@ -5,12 +5,12 @@ use shin_core::time::Ticks;
 fn higurashi_ordinary_group_stencil_wrap_matches_original_endpoint() {
     let profiles: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/group-stencil-ordinary-capture/profiles.json"
+        "/../test-fixtures/higurashi/group-stencil-ordinary-capture/profiles.json"
     )))
     .unwrap();
     let output = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/group-stencil-ordinary-capture/output.txt"
+        "/../test-fixtures/higurashi/group-stencil-ordinary-capture/output.txt"
     ));
     let mut visits = 0;
     for (profile, line) in profiles.as_array().unwrap().iter().zip(output.lines()) {

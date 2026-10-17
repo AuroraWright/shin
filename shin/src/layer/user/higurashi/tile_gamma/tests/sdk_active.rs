@@ -12,7 +12,7 @@ use shin_render::{
 };
 
 fn directory() -> PathBuf {
-    root().join("reverse-engineering/higurashi/tile-gamma-active-clip-20261014/allocation-closure/whole-tile-domains")
+    root().join("test-fixtures/higurashi/tile-gamma-active-clip-20261014/allocation-closure/whole-tile-domains")
 }
 fn words(v: &serde_json::Value) -> Vec<u32> {
     v.as_array()

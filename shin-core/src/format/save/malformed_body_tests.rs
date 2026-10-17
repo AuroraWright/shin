@@ -2,7 +2,7 @@
 use super::*;
 
 fn check_case(name: &str) {
-    let case = include_str!("../../../../reverse-engineering/malformed-save-body-fixtures.txt")
+    let case = include_str!("../../../../test-fixtures/malformed-save-body-fixtures.txt")
         .lines()
         .map(|line| line.split_ascii_whitespace().collect::<Vec<_>>())
         .find(|case| case[0] == name)

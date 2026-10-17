@@ -6,7 +6,7 @@ use serde_json::Value;
 use std::{fs, path::PathBuf};
 
 fn directory() -> PathBuf {
-    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../reverse-engineering/umineko-sdk-audit-20261015/actual-sdk/tile-state/whole-tile/domains")
+    PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../test-fixtures/umineko-sdk-audit-20261015/actual-sdk/tile-state/whole-tile/domains")
 }
 fn word(bytes: &[u8], at: usize) -> u32 {
     u32::from_le_bytes(bytes[at..at + 4].try_into().unwrap())

@@ -16,7 +16,7 @@ fn hash(bytes: &[u8]) -> String {
 fn higurashi_movie_roster_natural_eof_drains_and_restores_gallery() {
     let metadata: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/movie-roster-eof-20261014/metadata.json"
+        "/../test-fixtures/higurashi/movie-roster-eof-20261014/metadata.json"
     ))).unwrap();
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

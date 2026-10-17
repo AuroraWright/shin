@@ -3,7 +3,7 @@ use super::*;
 
 fn packets() -> Vec<(&'static str, &'static str)> {
     let lines: Vec<_> =
-        include_str!("../../../../reverse-engineering/native-game-data-codec-golden.txt")
+        include_str!("../../../../test-fixtures/native-game-data-codec-golden.txt")
             .lines()
             .collect();
     assert_eq!(lines.len(), 256);
@@ -115,7 +115,7 @@ fn encrypted_progress_preserves_both_entries_across_all_save_slots() {
 fn encrypted_progress_matches_complete_native_savegame_worker_files() {
     let inputs = packets();
     let files: Vec<_> =
-        include_str!("../../../../reverse-engineering/native-save-write-worker-golden.txt")
+        include_str!("../../../../test-fixtures/native-save-write-worker-golden.txt")
             .lines()
             .collect();
     assert_eq!(files.len(), inputs.len());

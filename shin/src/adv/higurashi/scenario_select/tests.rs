@@ -267,13 +267,13 @@ impl Profile {
 }
 
 const CAPTURE_INPUT: &str = include_str!(
-    concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/scenario-select-command-capture/input.txt")
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/scenario-select-command-capture/input.txt")
 );
 const CAPTURE_OUTPUT: &str = include_str!(
-    concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/scenario-select-command-capture/original-stdout.txt")
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/scenario-select-command-capture/original-stdout.txt")
 );
 const CAPTURE_STDERR: &str = include_str!(
-    concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/higurashi/scenario-select-command-capture/original-stderr.txt")
+    concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/higurashi/scenario-select-command-capture/original-stderr.txt")
 );
 
 #[test]

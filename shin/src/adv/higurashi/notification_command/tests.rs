@@ -9,11 +9,11 @@ use std::fmt::Write as _;
 
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/notification-command-capture/input.txt"
+    "/../test-fixtures/higurashi/notification-command-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/notification-command-capture/output.txt"
+    "/../test-fixtures/higurashi/notification-command-capture/output.txt"
 ));
 fn hex(word: &str) -> u32 {
     u32::from_str_radix(word, 16).unwrap()

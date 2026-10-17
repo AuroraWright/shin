@@ -225,7 +225,7 @@ mod tests {
         }
         let initial = SaveData::decode(include_bytes!(concat!(
             env!("CARGO_MANIFEST_DIR"),
-            "/../reverse-engineering/higurashi/old-save-20261015/supplied-v1.dat"
+            "/../test-fixtures/higurashi/old-save-20261015/supplied-v1.dat"
         )))
         .unwrap();
         let data = RuntimeGameData::from(initial.auto_save_slot.clone().unwrap());

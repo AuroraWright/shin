@@ -27,7 +27,7 @@ fn reference_directory() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../reverse-engineering/higurashi/framebuffer-color-combinations-capture")
+                .join("../test-fixtures/higurashi/framebuffer-color-combinations-capture")
         })
 }
 #[test]

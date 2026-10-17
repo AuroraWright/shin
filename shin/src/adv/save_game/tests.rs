@@ -27,7 +27,7 @@ fn opens_before_one_worker_and_notifies_after_exit_and_cooldown() {
 #[test]
 fn pending_dialog_matches_complete_original_and_updated_native_traces() {
     let golden =
-        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/native-save-dialog-timing-golden.txt"));
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/native-save-dialog-timing-golden.txt"));
     let mut lines = golden.lines();
     for case in 0..128 {
         let input: Vec<_> = lines.next().unwrap().split_whitespace().collect();

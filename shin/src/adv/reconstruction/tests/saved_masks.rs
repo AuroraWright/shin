@@ -207,7 +207,7 @@ pub(super) fn verify<'a>(
         "Use the exact previously verified native script/metadata"
     );
     let golden =
-        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/native-save-mask-desktop-golden.txt"))
+        include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/native-save-mask-desktop-golden.txt"))
             .lines()
             .map(|l| l.split_whitespace().collect::<Vec<_>>())
             .collect::<Vec<_>>();

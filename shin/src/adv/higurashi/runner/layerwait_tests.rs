@@ -57,7 +57,7 @@ fn higurashi_runner_layerwait_runs_authored_bonus_helper_and_resumes_exactly_onc
     let authored = shin_tasks::block_on(assets.load::<HigurashiScenario, _>("/main.snr")).unwrap();
     let source = include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/layerwait-authored-helper-disassembly.txt"
+        "/../test-fixtures/higurashi/layerwait-authored-helper-disassembly.txt"
     ));
     let mut checked_bytes = 0;
     for line in source.lines() {

@@ -10,7 +10,7 @@ use std::{
 
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/system-menu-fragment-corpus/input.txt"
+    "/../test-fixtures/higurashi/system-menu-fragment-corpus/input.txt"
 ));
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct Record {

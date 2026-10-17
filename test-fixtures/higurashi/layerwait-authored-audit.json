@@ -1,0 +1,916 @@
+{
+  "scope": "Updated static closure plus bounded CPU-only HigurashiScripter traces; no live/native engine effect execution",
+  "scenario": {
+    "path": "/tmp/higurashi-scenario-patch.rom.snr",
+    "sha256": "7578e0c610c5d87d74653beed41fe317fc64d9ccf7fc226f76259c277430a5b0",
+    "bytes": 26104192
+  },
+  "sdu": {
+    "path": "target/debug/sdu",
+    "sha256": "8b855cbb0fe5b474d2b5eac1018d5a5e85e78a8f167862df8c74dcdc1636340c"
+  },
+  "listing": {
+    "path": "/tmp/layerwait-authored-disassembly.txt",
+    "sha256": "af3f0d3d6d6eac645d3ed20405e1bc55ba42e81a536984b17fdbfba5d2b327fe",
+    "instructions": 1758001,
+    "sorted_spans_sha256": "fa79b8dca2a060f8a53c1611865609bfb43235987033c2041bd5515319430f57",
+    "matches_accepted_bytecode_histogram": true
+  },
+  "static_counts": {
+    "LAYERWAIT": 11083,
+    "LOGSET": 204,
+    "TROPHY": 33,
+    "DEBUGOUT": 1,
+    "FEELICON": 0,
+    "LAYERSWAP": 0,
+    "FAKESELECT": 1,
+    "UNLOCK": 6
+  },
+  "first_occurrences": {
+    "LAYERWAIT": [
+      {
+        "start": "00025f3d",
+        "end": "00025f41",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "000262ee",
+        "end": "000262f2",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "0002694e",
+        "end": "00026952",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "000269cd",
+        "end": "000269d1",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "00026fb6",
+        "end": "00026fba",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "00027037",
+        "end": "0002703b",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "000270b8",
+        "end": "000270bc",
+        "raw": "c4010101",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([1]) })"
+      },
+      {
+        "start": "0002786f",
+        "end": "00027873",
+        "raw": "c4010100",
+        "decoded": "Command(LAYERWAIT { id: 1, properties: U8SmallList([0]) })"
+      }
+    ],
+    "LOGSET": [
+      {
+        "start": "0006202c",
+        "end": "00062090",
+        "raw": "8c6100407240765331302f34302f3433303130303034372ebac98e538c8082aaa482c7b3bcc38b4ebabbdac0c9b6a1407240765331302f34302f3433303130303034382e8e84c0c182beb982c5ca4072905e918ac68e8ad9bac482aab6c5b2cfbedda100",
+        "decoded": "Command(LOGSET { text: ScriptString(\"@r@vS10/40/430100047.この惨劇が、どうして起こされたのか。@r@vS10/40/430100048.私たちだけでは@r真相に至ることがかないません。\") })"
+      },
+      {
+        "start": "000621b2",
+        "end": "0006222b",
+        "raw": "8c7600407240765331302f34302f3433303130303034392e82c7b3b6badaa693c7dd82beb1c5c0a1407240765331302f34302f3433303130303035302e905e918aa689f0b796beb6bcc3b882bebbb2a1407240765331302f34302f3433303130303035312ebfda82beb982aa8e84c0c1c98ae8b282c5bda100",
+        "decoded": "Command(LOGSET { text: ScriptString(\"@r@vS10/40/430100049.どうかこれを読んだあなた。@r@vS10/40/430100050.真相を解き明かしてください。@r@vS10/40/430100051.それだけが私たちの願いです。\") })"
+      },
+      {
+        "start": "0008879a",
+        "end": "00088823",
+        "raw": "8c8600407240765331332f34382f3535303130303135372ebfdaca8facbbc58bb9c68f68d9a491e5b7c58c8888d3a1407240765331332f34382f3535303130303135382e906cc996bd82aaa4d3bcd3926e8b85d6d88f64b2c5d7a1407240765331332f34382f3535303130303135392e8e84c98facbbc58c8888d3caa4926e8b85d6d8d38f64b2a100",
+        "decoded": "Command(LOGSET { text: ScriptString(\"@r@vS13/48/550100157.それは小さな胸に宿る、大きな決意。@r@vS13/48/550100158.人の命が、もしも地球より重いなら。@r@vS13/48/550100159.私の小さな決意は、地球よりも重い。\") })"
+      },
+      {
+        "start": "00088fbe",
+        "end": "00089049",
+        "raw": "8c8800407240765331332f30392f3535303530303133342e8ae8b2a690ac8f41bca4965dd196a29788a6966182ae97cda1407240765331332f30392f3535303530303133352e966182aadad98e85c98badbbcaa488d38e75c98badbba1407240765331332f30392f3535303530303133362e8b438d82b88badb78ae8b2ca954b82b88cbb8ec0c4c5d9a100",
+        "decoded": "Command(LOGSET { text: ScriptString(\"@r@vS13/09/550500134.願いを成就し、望む未来を紡ぐ力。@r@vS13/09/550500135.紡がれる糸の強さは、意志の強さ。@r@vS13/09/550500136.気高く強き願いは必ず現実となる。\") })"
+      },
+      {
+        "start": "00089957",
+        "end": "00089a16",
+        "raw": "8cbc00407240765331332f30392f3535303530303134332e8ec08cbbc996f191a9bbdac08ae8b2caa4d3cad48ae8b2c4ca8cc482cec5b2a1407240765331332f30392f3535303530303134342ebfdacac2cfd8a4d3cad4895e96bda1407240765331332f30392f3535303530303134352e8e8482aa966182aec9caa4895e96bda1407240765331332f30392f3535303530303134362e895e96bdca8cc2906c82beb982b6acc5b8a4906ca690a28a45a68e78947abdd990e291cec997cda100",
+        "decoded": "Command(LOGSET { text: ScriptString(\"@r@vS13/09/550500143.実現の約束された願いは、もはや願いとは呼ばない。@r@vS13/09/550500144.それはつまり、もはや運命。@r@vS13/09/550500145.私が紡ぐのは、運命。@r@vS13/09/550500146.運命は個人だけじゃなく、人を世界を支配する絶対の力。\") })"
+      },
+      {
+        "start": "00116e55",
+        "end": "00116e8d",
+        "raw": "8c3500894893fc407240765332302f31322f56544b325f68616e7975323033382ea2815c815c8aef90d582aaa4954b977682c5bdb6dfa300",
+        "decoded": "Command(LOGSET { text: ScriptString(\"羽入@r@vS20/12/VTK2_hanyu2038.「――奇跡が、必要ですか？」\") })"
+      },
+      {
+        "start": "0017105f",
+        "end": "00171089",
+        "raw": "8c2700926d8c62407240765331342f32322f3232313430303030332ea2834a838cb0969c8dcededea300",
+        "decoded": "Command(LOGSET { text: ScriptString(\"知恵@r@vS14/22/221400003.「カレー万歳！！」\") })"
+      },
+      {
+        "start": "001710a6",
+        "end": "001710da",
+        "raw": "8c3100926d8c62407240765332332f32322f484348495f303030302ea2b1c5c0c691abd8c5b2d3c9ca834a838cb082c5bddea300",
+        "decoded": "Command(LOGSET { text: ScriptString(\"知恵@r@vS23/22/HCHI_0000.「あなたに足りないものはカレーです！」\") })"
+      }
+    ],
+    "TROPHY": [
+      {
+        "start": "0005a9ec",
+        "end": "0005a9ee",
+        "raw": "b001",
+        "decoded": "Command(TROPHY { id: 1 })"
+      },
+      {
+        "start": "00191745",
+        "end": "00191747",
+        "raw": "b002",
+        "decoded": "Command(TROPHY { id: 2 })"
+      },
+      {
+        "start": "00191813",
+        "end": "00191815",
+        "raw": "b003",
+        "decoded": "Command(TROPHY { id: 3 })"
+      },
+      {
+        "start": "001918e1",
+        "end": "001918e3",
+        "raw": "b004",
+        "decoded": "Command(TROPHY { id: 4 })"
+      },
+      {
+        "start": "001919d3",
+        "end": "001919d5",
+        "raw": "b005",
+        "decoded": "Command(TROPHY { id: 5 })"
+      },
+      {
+        "start": "0019284f",
+        "end": "00192851",
+        "raw": "b006",
+        "decoded": "Command(TROPHY { id: 6 })"
+      },
+      {
+        "start": "001928e2",
+        "end": "001928e4",
+        "raw": "b007",
+        "decoded": "Command(TROPHY { id: 7 })"
+      },
+      {
+        "start": "0019297f",
+        "end": "00192981",
+        "raw": "b008",
+        "decoded": "Command(TROPHY { id: 8 })"
+      }
+    ],
+    "DEBUGOUT": [
+      {
+        "start": "00057891",
+        "end": "000578b2",
+        "raw": "ff1e42474d82aa8ba38d8782b582c482a282e989c2945c90ab8341838a81490000",
+        "decoded": "Command(DEBUGOUT { format: ScriptString(\"BGMが競合している可能性アリ！\"), args: U8SmallList([]) })"
+      }
+    ],
+    "FEELICON": [],
+    "LAYERSWAP": [],
+    "FAKESELECT": [
+      {
+        "start": "00b0484e",
+        "end": "00b0484f",
+        "raw": "d8",
+        "decoded": "Command(FAKESELECT)"
+      }
+    ],
+    "UNLOCK": [
+      {
+        "start": "0014c66b",
+        "end": "0014c672",
+        "raw": "d9010280508067",
+        "decoded": "Command(UNLOCK { kind: 1, ids: U8SmallList([80, 103]) })"
+      },
+      {
+        "start": "0018aa21",
+        "end": "0018aa44",
+        "raw": "d90010840484058406840784088409840a840b840c840d840e840f8410841184878488",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1159, 1160]) })"
+      },
+      {
+        "start": "001928d5",
+        "end": "001928e2",
+        "raw": "d9000584128413841484158416",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1042, 1043, 1044, 1045, 1046]) })"
+      },
+      {
+        "start": "0019296a",
+        "end": "0019297f",
+        "raw": "d90009841784188419841a841b841c841d841e841f",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1047, 1048, 1049, 1050, 1051, 1052, 1053, 1054, 1055]) })"
+      },
+      {
+        "start": "00192a07",
+        "end": "00192a2a",
+        "raw": "d900108420842184228423842484258426842784288429842a842b842c842d842e842f",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1056, 1057, 1058, 1059, 1060, 1061, 1062, 1063, 1064, 1065, 1066, 1067, 1068, 1069, 1070, 1071]) })"
+      },
+      {
+        "start": "010718a4",
+        "end": "010718ab",
+        "raw": "d90102808f8090",
+        "decoded": "Command(UNLOCK { kind: 1, ids: U8SmallList([143, 144]) })"
+      }
+    ]
+  },
+  "layerwait_histogram": {
+    "id": {
+      "1": 30,
+      "5": 35,
+      "-2": 10815,
+      "2": 30,
+      "8": 46,
+      "$a0": 3,
+      "255": 1,
+      "-3": 5,
+      "-1": 1,
+      "7": 19,
+      "6": 66,
+      "9": 16,
+      "17": 1,
+      "16": 3,
+      "10": 1,
+      "14": 5,
+      "15": 1,
+      "20": 3,
+      "0": 2
+    },
+    "properties": {
+      "[1]": 92,
+      "[0]": 120,
+      "[28]": 5409,
+      "[31]": 5409,
+      "[0, 1]": 1,
+      "[0, 1, 9]": 1,
+      "[50]": 1,
+      "[28, 31]": 3,
+      "[12, 13]": 1,
+      "[9]": 19,
+      "[12]": 15,
+      "[13]": 4,
+      "[6]": 8
+    }
+  },
+  "all_low_count_occurrences": {
+    "TROPHY": [
+      {
+        "start": "0005a9ec",
+        "end": "0005a9ee",
+        "raw": "b001",
+        "decoded": "Command(TROPHY { id: 1 })"
+      },
+      {
+        "start": "00191745",
+        "end": "00191747",
+        "raw": "b002",
+        "decoded": "Command(TROPHY { id: 2 })"
+      },
+      {
+        "start": "00191813",
+        "end": "00191815",
+        "raw": "b003",
+        "decoded": "Command(TROPHY { id: 3 })"
+      },
+      {
+        "start": "001918e1",
+        "end": "001918e3",
+        "raw": "b004",
+        "decoded": "Command(TROPHY { id: 4 })"
+      },
+      {
+        "start": "001919d3",
+        "end": "001919d5",
+        "raw": "b005",
+        "decoded": "Command(TROPHY { id: 5 })"
+      },
+      {
+        "start": "0019284f",
+        "end": "00192851",
+        "raw": "b006",
+        "decoded": "Command(TROPHY { id: 6 })"
+      },
+      {
+        "start": "001928e2",
+        "end": "001928e4",
+        "raw": "b007",
+        "decoded": "Command(TROPHY { id: 7 })"
+      },
+      {
+        "start": "0019297f",
+        "end": "00192981",
+        "raw": "b008",
+        "decoded": "Command(TROPHY { id: 8 })"
+      },
+      {
+        "start": "00192a2a",
+        "end": "00192a2c",
+        "raw": "b009",
+        "decoded": "Command(TROPHY { id: 9 })"
+      },
+      {
+        "start": "003e4f32",
+        "end": "003e4f34",
+        "raw": "b00a",
+        "decoded": "Command(TROPHY { id: 10 })"
+      },
+      {
+        "start": "004659ab",
+        "end": "004659ad",
+        "raw": "b00b",
+        "decoded": "Command(TROPHY { id: 11 })"
+      },
+      {
+        "start": "004e7119",
+        "end": "004e711b",
+        "raw": "b00c",
+        "decoded": "Command(TROPHY { id: 12 })"
+      },
+      {
+        "start": "0054e611",
+        "end": "0054e613",
+        "raw": "b00f",
+        "decoded": "Command(TROPHY { id: 15 })"
+      },
+      {
+        "start": "00580f08",
+        "end": "00580f0a",
+        "raw": "b00e",
+        "decoded": "Command(TROPHY { id: 14 })"
+      },
+      {
+        "start": "005ed0d0",
+        "end": "005ed0d2",
+        "raw": "b00d",
+        "decoded": "Command(TROPHY { id: 13 })"
+      },
+      {
+        "start": "0064666b",
+        "end": "0064666d",
+        "raw": "b010",
+        "decoded": "Command(TROPHY { id: 16 })"
+      },
+      {
+        "start": "0071945a",
+        "end": "0071945c",
+        "raw": "b011",
+        "decoded": "Command(TROPHY { id: 17 })"
+      },
+      {
+        "start": "00759223",
+        "end": "00759225",
+        "raw": "b012",
+        "decoded": "Command(TROPHY { id: 18 })"
+      },
+      {
+        "start": "0080f148",
+        "end": "0080f14a",
+        "raw": "b013",
+        "decoded": "Command(TROPHY { id: 19 })"
+      },
+      {
+        "start": "009222bd",
+        "end": "009222bf",
+        "raw": "b014",
+        "decoded": "Command(TROPHY { id: 20 })"
+      },
+      {
+        "start": "009f893f",
+        "end": "009f8941",
+        "raw": "b015",
+        "decoded": "Command(TROPHY { id: 21 })"
+      },
+      {
+        "start": "00b17e47",
+        "end": "00b17e49",
+        "raw": "b017",
+        "decoded": "Command(TROPHY { id: 23 })"
+      },
+      {
+        "start": "00b8f2ed",
+        "end": "00b8f2ef",
+        "raw": "b016",
+        "decoded": "Command(TROPHY { id: 22 })"
+      },
+      {
+        "start": "00c64689",
+        "end": "00c6468b",
+        "raw": "b018",
+        "decoded": "Command(TROPHY { id: 24 })"
+      },
+      {
+        "start": "00dc1ed7",
+        "end": "00dc1ed9",
+        "raw": "b019",
+        "decoded": "Command(TROPHY { id: 25 })"
+      },
+      {
+        "start": "00ee28d1",
+        "end": "00ee28d3",
+        "raw": "b01a",
+        "decoded": "Command(TROPHY { id: 26 })"
+      },
+      {
+        "start": "00f21c52",
+        "end": "00f21c54",
+        "raw": "b01b",
+        "decoded": "Command(TROPHY { id: 27 })"
+      },
+      {
+        "start": "00feb48d",
+        "end": "00feb48f",
+        "raw": "b01c",
+        "decoded": "Command(TROPHY { id: 28 })"
+      },
+      {
+        "start": "0101549c",
+        "end": "0101549e",
+        "raw": "b01d",
+        "decoded": "Command(TROPHY { id: 29 })"
+      },
+      {
+        "start": "01031691",
+        "end": "01031693",
+        "raw": "b01e",
+        "decoded": "Command(TROPHY { id: 30 })"
+      },
+      {
+        "start": "010718b9",
+        "end": "010718bb",
+        "raw": "b01f",
+        "decoded": "Command(TROPHY { id: 31 })"
+      },
+      {
+        "start": "010a29ab",
+        "end": "010a29ad",
+        "raw": "b020",
+        "decoded": "Command(TROPHY { id: 32 })"
+      },
+      {
+        "start": "010b6a8a",
+        "end": "010b6a8c",
+        "raw": "b021",
+        "decoded": "Command(TROPHY { id: 33 })"
+      }
+    ],
+    "DEBUGOUT": [
+      {
+        "start": "00057891",
+        "end": "000578b2",
+        "raw": "ff1e42474d82aa8ba38d8782b582c482a282e989c2945c90ab8341838a81490000",
+        "decoded": "Command(DEBUGOUT { format: ScriptString(\"BGMが競合している可能性アリ！\"), args: U8SmallList([]) })"
+      }
+    ],
+    "FEELICON": [],
+    "LAYERSWAP": [],
+    "FAKESELECT": [
+      {
+        "start": "00b0484e",
+        "end": "00b0484f",
+        "raw": "d8",
+        "decoded": "Command(FAKESELECT)"
+      }
+    ],
+    "UNLOCK": [
+      {
+        "start": "0014c66b",
+        "end": "0014c672",
+        "raw": "d9010280508067",
+        "decoded": "Command(UNLOCK { kind: 1, ids: U8SmallList([80, 103]) })"
+      },
+      {
+        "start": "0018aa21",
+        "end": "0018aa44",
+        "raw": "d90010840484058406840784088409840a840b840c840d840e840f8410841184878488",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1028, 1029, 1030, 1031, 1032, 1033, 1034, 1035, 1036, 1037, 1038, 1039, 1040, 1041, 1159, 1160]) })"
+      },
+      {
+        "start": "001928d5",
+        "end": "001928e2",
+        "raw": "d9000584128413841484158416",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1042, 1043, 1044, 1045, 1046]) })"
+      },
+      {
+        "start": "0019296a",
+        "end": "0019297f",
+        "raw": "d90009841784188419841a841b841c841d841e841f",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1047, 1048, 1049, 1050, 1051, 1052, 1053, 1054, 1055]) })"
+      },
+      {
+        "start": "00192a07",
+        "end": "00192a2a",
+        "raw": "d900108420842184228423842484258426842784288429842a842b842c842d842e842f",
+        "decoded": "Command(UNLOCK { kind: 0, ids: U8SmallList([1056, 1057, 1058, 1059, 1060, 1061, 1062, 1063, 1064, 1065, 1066, 1067, 1068, 1069, 1070, 1071]) })"
+      },
+      {
+        "start": "010718a4",
+        "end": "010718ab",
+        "raw": "d90102808f8090",
+        "decoded": "Command(UNLOCK { kind: 1, ids: U8SmallList([143, 144]) })"
+      }
+    ]
+  },
+  "traces": [
+    {
+      "name": "0",
+      "path": "/tmp/layerwait-authored-trace-0.txt",
+      "sha256": "fc902d7f3a4755d69789dd3512a3dbf03b7cdda55475a5d12af414571b36930b",
+      "commands": 2,
+      "termination": "# stopped: explicit response required for $v1; use --reply 0001f78f=VALUE",
+      "explicit_replies": [],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 0,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "0-progress0",
+      "path": "/tmp/layerwait-authored-trace-0-progress0.txt",
+      "sha256": "cfb81e282f769e781eb4995e1926063c1ab6d48a889d5117f653be7e79409909",
+      "commands": 306,
+      "termination": "# stopped: explicit response required for $v12; use --reply 0005a9ee=VALUE",
+      "explicit_replies": [
+        "# explicit reply: $v1 = 0"
+      ],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 1,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [
+          {
+            "command": 305,
+            "start": "0005a9ec",
+            "end": "0005a9ee",
+            "raw": "b001",
+            "decoded": "0005a9ec next=0005a9ee seed=fff7209b TROPHY { id: 1 }"
+          }
+        ],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "0-progress0-prologue0",
+      "path": "/tmp/layerwait-authored-trace-0-progress0-prologue0.txt",
+      "sha256": "62ecb5c92d399469a964b4a8cd6c226ab18dab90d11547c45a8dc6250ccb7908",
+      "commands": 308,
+      "termination": "# stopped: explicit response required for $v12; use --reply 0005a9fa=VALUE",
+      "explicit_replies": [
+        "# explicit reply: $v1 = 0",
+        "# explicit reply: $v12 = 0"
+      ],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 1,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [
+          {
+            "command": 305,
+            "start": "0005a9ec",
+            "end": "0005a9ee",
+            "raw": "b001",
+            "decoded": "0005a9ec next=0005a9ee seed=fff7209b TROPHY { id: 1 }"
+          }
+        ],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "1",
+      "path": "/tmp/layerwait-authored-trace-1.txt",
+      "sha256": "bf7c5c50c0e7755674c3061b5a3fbef42da4003a0d5f40d24a6a39d5b7175ae9",
+      "commands": 2,
+      "termination": "# stopped: explicit response required for $v1; use --reply 0001f7c0=VALUE",
+      "explicit_replies": [],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 0,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "1000",
+      "path": "/tmp/layerwait-authored-trace-1000.txt",
+      "sha256": "f31ac6479b54431ff6bc95bf058594a82ed11c2f987be5d1880c78f9cc6cfd7b",
+      "commands": 628,
+      "termination": "# stopped: EXIT",
+      "explicit_replies": [],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 0,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "2001",
+      "path": "/tmp/layerwait-authored-trace-2001.txt",
+      "sha256": "2fc1a5af802cd06eaa574056e85aa6d4c0c8452594b28936ab54c604bc38f9ce",
+      "commands": 703,
+      "termination": "# stopped: explicit response required for $v11; use --reply 00094b6e=VALUE",
+      "explicit_replies": [],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 0,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "10010",
+      "path": "/tmp/layerwait-authored-trace-10010.txt",
+      "sha256": "feae3d0ba2561ee38c233cb74c64849597f5be5b4c941f8760545b8317953afc",
+      "commands": 20000,
+      "termination": "# stopped: command limit 20000",
+      "explicit_replies": [],
+      "target_counts": {
+        "LAYERWAIT": 39,
+        "LOGSET": 0,
+        "TROPHY": 0,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [
+          {
+            "command": 243,
+            "start": "00057e73",
+            "end": "00057e78",
+            "raw": "c4d0021c1f",
+            "decoded": "00057e73 next=00057e78 seed=7995f6d4 LAYERWAIT { id: -1, properties: [28, 31] }"
+          }
+        ],
+        "LOGSET": [],
+        "TROPHY": [],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    },
+    {
+      "name": "12049",
+      "path": "/tmp/layerwait-authored-trace-12049.txt",
+      "sha256": "d7f7789c877267881e059e7352739a8b532a8eaacb162def8f57971fd6a04ec7",
+      "commands": 5,
+      "termination": "# stopped: explicit response required for $v12; use --reply 018982c1=VALUE",
+      "explicit_replies": [],
+      "target_counts": {
+        "LAYERWAIT": 0,
+        "LOGSET": 0,
+        "TROPHY": 0,
+        "DEBUGOUT": 0,
+        "FEELICON": 0,
+        "LAYERSWAP": 0,
+        "FAKESELECT": 0,
+        "UNLOCK": 0
+      },
+      "first_target": {
+        "LAYERWAIT": [],
+        "LOGSET": [],
+        "TROPHY": [],
+        "DEBUGOUT": [],
+        "FEELICON": [],
+        "LAYERSWAP": [],
+        "FAKESELECT": [],
+        "UNLOCK": []
+      }
+    }
+  ],
+  "authored_regression": {
+    "kind": "proposed targeted entry redirect, NOT executed here",
+    "entry": "0001e180",
+    "old_first_five_bytes": "4602b0008d",
+    "new_first_five_bytes": "47230b7501",
+    "target": "01750b23",
+    "first_call": {
+      "span": [
+        "01750b23",
+        "01750b2e"
+      ],
+      "target": "00057e1a",
+      "args": [
+        -3,
+        40,
+        2,
+        8,
+        0
+      ]
+    },
+    "second_call": {
+      "span": [
+        "01750b2e",
+        "01750b39"
+      ],
+      "target": "00057e1a",
+      "args": [
+        -1,
+        40,
+        2,
+        8,
+        1
+      ]
+    },
+    "following": "01750b39 MSGSIGNAL",
+    "helper": {
+      "start": "00057e1a",
+      "end": "00057e79",
+      "raw": "4600d2002f7e05004600d2024d7e050047787e0500c3d01b048100c3d01c05d18100c3d01d05028100c3d01c021e476b7e0500c3d01e048100c3d01f05d18100c3d02005028100c3d01f021e476b7e05004600d400787e0500c4d0021c1f50"
+    },
+    "four_control_span": {
+      "start": "00057e4d",
+      "end": "00057e66",
+      "raw": "c3d01e048100c3d01f05d18100c3d02005028100c3d01f021e"
+    },
+    "wait_span": {
+      "start": "00057e73",
+      "end": "00057e78",
+      "raw": "c4d0021c1f"
+    },
+    "ambient_reads": "Only a0/a1/a2/a4; a3 unused here. Actual root/message owners and host update services remain required."
+  },
+  "coverage": {
+    "timing": "Initial source review before root added LayerWait during this audit; see layerwait-before-sources. This is not a claim about the subsequent candidate.",
+    "live_dispatch_missing_at_review": [
+      "LAYERWAIT",
+      "LOGSET",
+      "TROPHY",
+      "DEBUGOUT",
+      "FEELICON",
+      "LAYERSWAP",
+      "FAKESELECT",
+      "UNLOCK"
+    ],
+    "browser_only": [
+      "LOGSET row construction/worker layout, undefined native argument remains None"
+    ],
+    "replay_supported_constant_complete": [
+      "LAYERWAIT",
+      "LOGSET",
+      "TROPHY",
+      "DEBUGOUT"
+    ],
+    "replay_rejected": [
+      "FEELICON",
+      "LAYERSWAP",
+      "FAKESELECT",
+      "UNLOCK"
+    ],
+    "native_live_polls_statically_verified": {
+      "LOGSET": {
+        "address": "00005604",
+        "words": [
+          "52800020",
+          "d65f03c0"
+        ]
+      },
+      "DEBUGOUT": {
+        "address": "000106a0",
+        "words": [
+          "52800020",
+          "d65f03c0"
+        ]
+      },
+      "TROPHY": {
+        "address": "00008150",
+        "id_load": {
+          "address": "00008158",
+          "word": "b9401800"
+        },
+        "platform_call": {
+          "address": "0000815c",
+          "word": "94038355",
+          "target": "000e8eb0"
+        }
+      }
+    },
+    "limits": [
+      "No native code or engine effects, Cargo, GPU, audio, window or user-save jobs were run.",
+      "Static closure takes branch alternatives and call continuations; zero counts do not certify external roots or unparsed gaps.",
+      "CPU tracer samples seed42, immediately acknowledges commands without destinations and stops at required replies; no effect/wait/audio/render completion or UI reachability is proved.",
+      "init0 replies are explicitly supplied slot2=0 and, only in the longer trace, slot1=0; they are not a loaded-save or real application run.",
+      "10010 is reachable through the separately accepted Bonus EXIT factory, but the new 20k CPU trace is not sustained live10010 playback.",
+      "Missing live dispatch is an acknowledgement/ownership gap; literal constant-complete poll does not establish constructor no-op semantics."
+    ]
+  },
+  "reviewed_source_sha256": {
+    "shin/src/adv/higurashi/frame.rs": "cd731e78b88ed12a9dce2b6a25f655854c82ced17eacf3f68f44c502f6fb8e23",
+    "shin/src/adv/higurashi/scene.rs": "055b1c0701637256ee6aa4a9b3a4d37eabdee8a7b0249a987f86711598e7cb21",
+    "reverse-engineering/higurashi/layerwait-before-sources/shin/src/adv/higurashi/layers.rs": "32640984c45dd3838075f06f689b838e95c0652ad3a0c8992c530268c04e1cc1",
+    "reverse-engineering/higurashi/layerwait-before-sources/shin/src/adv/higurashi/runner.rs": "721f3eca8587609e568ded8cf2ba2327883992c824854b2f0b2ad6b97f7214d3",
+    "shin/src/adv/higurashi/replay.rs": "9a16fe26dc76f88e8f888d3f80fdba631d55898b68e110a1941e1fff036e5171",
+    "shin/src/adv/higurashi/browser_history.rs": "0015dcbd3d81406ff8f707824b5a7cb2e6b3c7828426bd509fd1fa7099bcfd4f",
+    "shin/src/app/higurashi/gameplay.rs": "c07308a1a910416748a03201d2681a2ff077fea57f1557b497cbf1c1b936b07c",
+    "shin/src/app/higurashi/gameplay/bindings.rs": "006454d9a260db6af45019527f7080b8b1c2f131864f88330ab8925e68d43824",
+    "sdu/src/scenario.rs": "2d2cf0c583bff84ae5207bba82e692ae45c28bb8732e3b2ca7eebf0e2e6a01ab",
+    "shin-core/src/format/scenario/higurashi/bytecode.rs": "3aff06d0bce2fd51c896d93171163834174250c1c9f0d67cd249af3b9adda5c7"
+  }
+}

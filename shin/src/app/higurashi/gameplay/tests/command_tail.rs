@@ -49,7 +49,7 @@ const MARKER: &[u8] = &[0x82, 9, 23, 0x83, 0, 0x83, 0xe8, 0, 0, 0];
 fn authored_slice(scenario: &HigurashiScenario, command: &str, index: usize) -> Vec<u8> {
     let evidence: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/layerwait-authored-audit.json"
+        "/../test-fixtures/higurashi/layerwait-authored-audit.json"
     )))
     .unwrap();
     let row = &evidence["first_occurrences"][command][index];

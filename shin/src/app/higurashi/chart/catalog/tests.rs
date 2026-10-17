@@ -8,6 +8,10 @@ fn higurashi_chart_catalog_matches_actual_updated_scenario_decoder() {
     let assets = std::env::var_os("SHIN_HIGURASHI_ASSETS")
         .map(PathBuf::from)
         .unwrap_or_else(|| project.join("higurashi"));
+    if !assets.join("patch.rom").is_file() {
+        eprintln!("skipping: Higurashi patch.rom is not available");
+        return;
+    }
     let mut archive = RomReader::new(
         StatelessFile::new(std::fs::File::open(assets.join("patch.rom")).unwrap()).unwrap(),
     )
@@ -29,7 +33,7 @@ fn higurashi_chart_catalog_matches_actual_updated_scenario_decoder() {
     let capture = std::env::var_os("SHIN_HIGURASHI_CHART_CATALOG_CAPTURE")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
-            project.join("reverse-engineering/higurashi/chart-catalog-capture/output.txt")
+            project.join("test-fixtures/higurashi/chart-catalog-capture/output.txt")
         });
     let original = std::fs::read_to_string(capture).unwrap();
     let mut rows = original.lines();

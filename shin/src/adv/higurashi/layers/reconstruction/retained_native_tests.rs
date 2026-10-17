@@ -12,11 +12,11 @@ use std::{collections::BTreeMap, sync::Weak};
 
 const OBSERVATIONS: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/retained-restoration-capture/parsed.json"
+    "/../test-fixtures/higurashi/retained-restoration-capture/parsed.json"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/retained-restoration-capture/output.txt"
+    "/../test-fixtures/higurashi/retained-restoration-capture/output.txt"
 ));
 
 // [key,remaining bits,diagnostic cookie,native owner ID,refs,canonical base hash].

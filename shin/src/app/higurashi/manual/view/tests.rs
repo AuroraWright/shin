@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use crate::app::higurashi::native_shader_replay::{self as replay, ShaderSet};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/manual-render-capture/input.txt"
+    "/../test-fixtures/higurashi/manual-render-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/manual-render-capture/output.txt"
+    "/../test-fixtures/higurashi/manual-render-capture/output.txt"
 ));
 fn raw_packet(p: &Packet, names: &HashMap<String, u32>) -> Vec<u32> {
     let clip = p.texture.is_empty();

@@ -3,11 +3,11 @@ use super::*;
 use glam::{Mat4, Vec2};
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-viewer-render-capture/input.txt"
+    "/../test-fixtures/higurashi/cg-gallery-viewer-render-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/cg-gallery-viewer-render-capture/output.txt"
+    "/../test-fixtures/higurashi/cg-gallery-viewer-render-capture/output.txt"
 ));
 #[derive(Debug, PartialEq, Eq)]
 enum Event {

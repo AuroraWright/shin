@@ -45,7 +45,7 @@ fn root() -> PathBuf {
 pub(super) fn reference_directory() -> PathBuf {
     std::env::var_os("SHIN_HIGURASHI_TILE_GAMMA_REFERENCE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root().join("reverse-engineering/higurashi/tile-gamma-native-capture"))
+        .unwrap_or_else(|| root().join("test-fixtures/higurashi/tile-gamma-native-capture"))
 }
 
 fn read_input(line: &str, index: usize) -> Case {
@@ -359,7 +359,7 @@ fn higurashi_tile_gamma_fullcover_requires_exact_clip_and_gamma() {
 #[ignore = "Requires the frozen960-profile partial-NaN input corpus; CPU guards only"]
 fn higurashi_tile_gamma_fullcanvas_helper_rejects_every_frozen_partial_nan_profile() {
     let input = fs::read_to_string(
-        root().join("reverse-engineering/higurashi/tile-gamma-partial-nan-capture/input.txt"),
+        root().join("test-fixtures/higurashi/tile-gamma-partial-nan-capture/input.txt"),
     )
     .unwrap();
     let mut count = 0;

@@ -306,7 +306,7 @@ fn check_replay_and_forward(server: &AssetServer) {
     let authored: Arc<HigurashiScenario> = server.load_sync("/main.snr").unwrap();
     let audit: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/layerwait-authored-audit.json"
+        "/../test-fixtures/higurashi/layerwait-authored-audit.json"
     )))
     .unwrap();
     let mut code = Vec::new();

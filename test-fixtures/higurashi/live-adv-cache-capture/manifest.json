@@ -1,0 +1,984 @@
+{
+  "scope": "Actual complete12b68 NULL-VM callback + real cachedGroup/Screen/blankMessage/Tile; checked13140 logical control and platform endpoints",
+  "action_count": 128,
+  "observations": [
+    {
+      "index": 0,
+      "row": 1,
+      "name": "null-cache-outer-skip-native1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 1,
+      "row": 2,
+      "name": "constructor-black-screen-native1080",
+      "kind": "screen_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 2,
+      "row": 3,
+      "name": "initial-black-cache-getter-no-depth-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 3,
+      "row": 4,
+      "name": "initial-black-cache-outer-native1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 4,
+      "row": 5,
+      "name": "opaque-pass-outer-skip-native1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 5,
+      "row": 12,
+      "name": "first-admitted-screen-native1080",
+      "kind": "screen_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 6,
+      "row": 13,
+      "name": "first-admitted-composed-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 7,
+      "row": 14,
+      "name": "first-admitted-outer-native1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 8,
+      "row": 17,
+      "name": "history-admitted-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 9,
+      "row": 23,
+      "name": "changed-tiles-history-screen-native1080",
+      "kind": "screen_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 10,
+      "row": 24,
+      "name": "changed-tiles-history-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 11,
+      "row": 27,
+      "name": "two-enabled-callbacks-no-outer-render-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 12,
+      "row": 28,
+      "name": "two-enabled-callbacks-outer-native1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 13,
+      "row": 30,
+      "name": "standalone-screen-swap-before-prepare-native1080",
+      "kind": "screen_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 14,
+      "row": 31,
+      "name": "composed-cache-retained-across-screen-swap-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 15,
+      "row": 32,
+      "name": "outer-retained-across-screen-swap-native1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 16,
+      "row": 34,
+      "name": "explicit-group-prepare-after-screen-swap-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 17,
+      "row": 36,
+      "name": "repeat-composed-prepare-no-feedback-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 18,
+      "row": 38,
+      "name": "paused-complete-callback-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 19,
+      "row": 40,
+      "name": "disabled-complete-callback-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 20,
+      "row": 42,
+      "name": "modal-entry-old-current-native1080",
+      "kind": "screen_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 21,
+      "row": 43,
+      "name": "modal-entry-old-composed-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 22,
+      "row": 44,
+      "name": "modal-two-native-blur-packets-native1080",
+      "kind": "modal_observation",
+      "extent": [
+        960,
+        540
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 23,
+      "row": 46,
+      "name": "retained-modal-paused-callback-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 24,
+      "row": 49,
+      "name": "resumed-admitted-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 25,
+      "row": 51,
+      "name": "navigation-copied-composed-cache-native1080",
+      "kind": "navigation_observation",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 26,
+      "row": 52,
+      "name": "navigation-source-cache-retained-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 27,
+      "row": 54,
+      "name": "navigation-disabled-callback-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 28,
+      "row": 57,
+      "name": "post-navigation-admitted-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 29,
+      "row": 58,
+      "name": "outer-output-resize-fixed-cache-native1080",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 30,
+      "row": 59,
+      "name": "getter-after-output-resize-fixed-cache-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 31,
+      "row": 62,
+      "name": "history-zero-release-callback-native1080",
+      "kind": "adv_capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 32,
+      "row": 65,
+      "name": "null-cache-outer-skip-explicit720service",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 33,
+      "row": 66,
+      "name": "constructor-black-screen-explicit720service",
+      "kind": "screen_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 34,
+      "row": 67,
+      "name": "initial-black-cache-getter-no-depth-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 35,
+      "row": 68,
+      "name": "initial-black-cache-outer-explicit720service",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 36,
+      "row": 69,
+      "name": "opaque-pass-outer-skip-explicit720service",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 37,
+      "row": 76,
+      "name": "first-admitted-screen-explicit720service",
+      "kind": "screen_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 38,
+      "row": 77,
+      "name": "first-admitted-composed-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 39,
+      "row": 78,
+      "name": "first-admitted-outer-explicit720service",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 40,
+      "row": 81,
+      "name": "history-admitted-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 41,
+      "row": 87,
+      "name": "changed-tiles-history-screen-explicit720service",
+      "kind": "screen_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 42,
+      "row": 88,
+      "name": "changed-tiles-history-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 43,
+      "row": 91,
+      "name": "two-enabled-callbacks-no-outer-render-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 44,
+      "row": 92,
+      "name": "two-enabled-callbacks-outer-explicit720service",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 45,
+      "row": 94,
+      "name": "standalone-screen-swap-before-prepare-explicit720service",
+      "kind": "screen_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 46,
+      "row": 95,
+      "name": "composed-cache-retained-across-screen-swap-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 47,
+      "row": 96,
+      "name": "outer-retained-across-screen-swap-explicit720service",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 48,
+      "row": 98,
+      "name": "explicit-group-prepare-after-screen-swap-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 49,
+      "row": 100,
+      "name": "repeat-composed-prepare-no-feedback-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 50,
+      "row": 102,
+      "name": "paused-complete-callback-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 51,
+      "row": 104,
+      "name": "disabled-complete-callback-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 52,
+      "row": 106,
+      "name": "modal-entry-old-current-explicit720service",
+      "kind": "screen_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 53,
+      "row": 107,
+      "name": "modal-entry-old-composed-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 54,
+      "row": 108,
+      "name": "modal-two-native-blur-packets-explicit720service",
+      "kind": "modal_observation",
+      "extent": [
+        640,
+        360
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 55,
+      "row": 110,
+      "name": "retained-modal-paused-callback-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 56,
+      "row": 113,
+      "name": "resumed-admitted-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 57,
+      "row": 115,
+      "name": "navigation-copied-composed-cache-explicit720service",
+      "kind": "navigation_observation",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 58,
+      "row": 116,
+      "name": "navigation-source-cache-retained-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 59,
+      "row": 118,
+      "name": "navigation-disabled-callback-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 60,
+      "row": 121,
+      "name": "post-navigation-admitted-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 61,
+      "row": 122,
+      "name": "outer-output-resize-fixed-cache-explicit720service",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 62,
+      "row": 123,
+      "name": "getter-after-output-resize-fixed-cache-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 63,
+      "row": 126,
+      "name": "history-zero-release-callback-explicit720service",
+      "kind": "adv_capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    }
+  ],
+  "comparisons": [
+    {
+      "baseline": 1,
+      "effect": 2,
+      "equal": true,
+      "reason": "Both initial retained color resources are explicitly black",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 2,
+      "effect": 3,
+      "equal": true,
+      "reason": "Actual6dfc4 white opaque cached draw",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 5,
+      "effect": 6,
+      "equal": false,
+      "reason": "Real ADV overlay Tile distinguishes composed cache from Screen CURRENT",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 6,
+      "effect": 7,
+      "equal": true,
+      "reason": "Outer render only samples completed composed cache",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 8,
+      "effect": 10,
+      "equal": false,
+      "reason": "Each admitted callback prepares changed Tile source before composition",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 11,
+      "effect": 12,
+      "equal": true,
+      "reason": "Each full12b68 callback prepares; app draw is only an outer copy",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 11,
+      "effect": 14,
+      "equal": true,
+      "reason": "Direct Screen update changes history owners, not ADV cache pixels",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 14,
+      "effect": 15,
+      "equal": true,
+      "reason": "Outer draw cannot implicitly prepare child state",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 16,
+      "effect": 17,
+      "equal": true,
+      "reason": "Each generic prepare clears/rebuilds child CURRENT and composed cache",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 17,
+      "effect": 18,
+      "equal": true,
+      "reason": "3f4 skips BOTH visual update and preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 18,
+      "effect": 19,
+      "equal": true,
+      "reason": "3f1 zero skips BOTH visual update and preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 19,
+      "effect": 21,
+      "equal": true,
+      "reason": "Actual15038 occurs inside early checked logical-control before visual gate",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 21,
+      "effect": 23,
+      "equal": true,
+      "reason": "Retained native modal depth keeps next callback visual gate closed",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 24,
+      "effect": 25,
+      "equal": true,
+      "reason": "Actual14d30 copies6c928 without Screen/group preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 24,
+      "effect": 26,
+      "equal": true,
+      "reason": "Checked18b78 boundary preserves original18bdc visual-disable write",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 26,
+      "effect": 27,
+      "equal": true,
+      "reason": "Following disabled callback still does no visual preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 28,
+      "effect": 30,
+      "equal": true,
+      "reason": "Output resize does not resize stored Group color/depth or Screen history",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 33,
+      "effect": 34,
+      "equal": true,
+      "reason": "Both initial retained color resources are explicitly black",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 34,
+      "effect": 35,
+      "equal": true,
+      "reason": "Actual6dfc4 white opaque cached draw",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 37,
+      "effect": 38,
+      "equal": false,
+      "reason": "Real ADV overlay Tile distinguishes composed cache from Screen CURRENT",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 38,
+      "effect": 39,
+      "equal": true,
+      "reason": "Outer render only samples completed composed cache",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 40,
+      "effect": 42,
+      "equal": false,
+      "reason": "Each admitted callback prepares changed Tile source before composition",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 43,
+      "effect": 44,
+      "equal": true,
+      "reason": "Each full12b68 callback prepares; app draw is only an outer copy",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 43,
+      "effect": 46,
+      "equal": true,
+      "reason": "Direct Screen update changes history owners, not ADV cache pixels",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 46,
+      "effect": 47,
+      "equal": true,
+      "reason": "Outer draw cannot implicitly prepare child state",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 48,
+      "effect": 49,
+      "equal": true,
+      "reason": "Each generic prepare clears/rebuilds child CURRENT and composed cache",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 49,
+      "effect": 50,
+      "equal": true,
+      "reason": "3f4 skips BOTH visual update and preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 50,
+      "effect": 51,
+      "equal": true,
+      "reason": "3f1 zero skips BOTH visual update and preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 51,
+      "effect": 53,
+      "equal": true,
+      "reason": "Actual15038 occurs inside early checked logical-control before visual gate",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 53,
+      "effect": 55,
+      "equal": true,
+      "reason": "Retained native modal depth keeps next callback visual gate closed",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 56,
+      "effect": 57,
+      "equal": true,
+      "reason": "Actual14d30 copies6c928 without Screen/group preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 56,
+      "effect": 58,
+      "equal": true,
+      "reason": "Checked18b78 boundary preserves original18bdc visual-disable write",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 58,
+      "effect": 59,
+      "equal": true,
+      "reason": "Following disabled callback still does no visual preparation",
+      "status": "original packet/resource proof; GPU pixels pending"
+    },
+    {
+      "baseline": 60,
+      "effect": 62,
+      "equal": true,
+      "reason": "Output resize does not resize stored Group color/depth or Screen history",
+      "status": "original packet/resource proof; GPU pixels pending"
+    }
+  ],
+  "profiles": [
+    {
+      "index": 0,
+      "name": "native1080",
+      "dimension_mode": 0,
+      "constructor_extent": [
+        1920,
+        1080
+      ],
+      "first_row": 0,
+      "last_row": 63
+    },
+    {
+      "index": 1,
+      "name": "explicit720service",
+      "dimension_mode": 1,
+      "constructor_extent": [
+        1280,
+        720
+      ],
+      "first_row": 64,
+      "last_row": 127
+    }
+  ],
+  "limits": [
+    "N0 executes actual11eac..11ed0 plus literal cc9a0/cc9b0; N1 deliberately replaces only dimension endpoints for component720 coverage",
+    "Logical13140 request generation is checked; real15038/150b8 and14d30 capture bodies execute within actual12ba8 callback site",
+    "VM+3e8 is NULL, so script/event branches are not executed or certified",
+    "Real blank Message constructor/update/prepare/draw/RTTI run; Messagebox artwork85660 and audio/UI tails are checked services",
+    "ADV overlay artwork is represented by a real partial Tile, not a synthetic UI class",
+    "Navigation18b78 constructor/publication lifetime is an explicit typed endpoint; V is checked retirement/re-enable",
+    "C2/C3 observe actual retained backdrop/navigation resources via checked raw copy; they are not public game getter functions",
+    "Pixel controls are a proposal pending independent GPU replay, not a claim of rendered equality"
+  ]
+}

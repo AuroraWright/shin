@@ -156,7 +156,7 @@ pub(crate) fn corpus() -> Corpus {
         std::env::var("SHIN_HIGURASHI_DERIVED_WIPE_CAPTURE").unwrap_or_else(|_| {
             concat!(
                 env!("CARGO_MANIFEST_DIR"),
-                "/../reverse-engineering/higurashi/nondefault-wipe-render-capture"
+                "/../test-fixtures/higurashi/nondefault-wipe-render-capture"
             )
             .into()
         }),

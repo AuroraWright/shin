@@ -428,7 +428,7 @@ fn native_title_return() -> Vec<Action> {
     // codec oracle or fresh expected generation; strict rerun remains model_tests.
     include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/movie-gallery-model-native-corpus/output.txt"
+        "/../test-fixtures/higurashi/movie-gallery-model-native-corpus/output.txt"
     ))
     .lines()
     .filter_map(|line| {

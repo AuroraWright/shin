@@ -24,7 +24,7 @@ struct Reader {
 
 fn corpus() -> Corpus {
     serde_json::from_str(include_str!(
-        "../../../../../reverse-engineering/higurashi/native-save-codec-golden.json"
+        "../../../../../test-fixtures/higurashi/native-save-codec-golden.json"
     ))
     .unwrap()
 }
@@ -219,10 +219,10 @@ fn supplied_old_save_migrates_all_fields_to_updated_native_v2_output() {
     // produced by the updated executable's actual crypto, CRC, reader and writer
     // at both O0 and O3; see old-save-20261015/native/validation.json.
     let old = include_bytes!(
-        "../../../../../reverse-engineering/higurashi/old-save-20261015/supplied-v1.dat"
+        "../../../../../test-fixtures/higurashi/old-save-20261015/supplied-v1.dat"
     );
     let expected = include_bytes!(
-        "../../../../../reverse-engineering/higurashi/old-save-20261015/native/updated-O0-v2.bin"
+        "../../../../../test-fixtures/higurashi/old-save-20261015/native/updated-O0-v2.bin"
     );
     let raw = super::super::obfuscation::decode(old, GAME_KEY).unwrap();
     assert_eq!(old.len(), 29_700);

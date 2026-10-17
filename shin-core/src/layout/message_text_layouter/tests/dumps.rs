@@ -212,7 +212,14 @@ mod model {
 }
 
 fn check_layout_dump(path: &str) {
-    let decoder = std::fs::File::open(path).unwrap();
+    // The layout dump corpus is not distributed with the repository.
+    let Ok(decoder) = std::fs::File::open(path) else {
+        eprintln!("skipping: layout dump {path} is not available");
+        return;
+    };
+    if !super::fonts_available() {
+        return;
+    }
     let mut decoder = zstd::Decoder::new(decoder).unwrap();
     let mut buf = vec![];
 

@@ -1,0 +1,837 @@
+{
+  "scope": "Real Screen factories/update/prepare/history/rootfilter/outercopy/currentsource capture/wiper/property restoration fragment; checked final GPU transports",
+  "action_count": 178,
+  "display_count": 40,
+  "capture_count": 14,
+  "observations": [
+    {
+      "index": 0,
+      "row": 1,
+      "name": "constructor-black-current-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 1,
+      "row": 2,
+      "name": "constructor-black-outer-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 2,
+      "row": 8,
+      "name": "base-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 3,
+      "row": 9,
+      "name": "base-current-capture-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 4,
+      "row": 13,
+      "name": "history-first-delta0-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 5,
+      "row": 16,
+      "name": "history-second-delta0-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 6,
+      "row": 23,
+      "name": "changed-base-history-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 7,
+      "row": 25,
+      "name": "repeat-prepare-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 8,
+      "row": 26,
+      "name": "repeat-current-capture-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 9,
+      "row": 29,
+      "name": "paused-prepare-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 10,
+      "row": 32,
+      "name": "disabled-prepare-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 11,
+      "row": 36,
+      "name": "two-updates-no-render-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 12,
+      "row": 38,
+      "name": "single-update-before-prepare-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 13,
+      "row": 39,
+      "name": "single-update-current-capture-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 14,
+      "row": 41,
+      "name": "single-update-after-prepare-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 15,
+      "row": 44,
+      "name": "off-before-tick-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 16,
+      "row": 47,
+      "name": "off-after-tick-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 17,
+      "row": 51,
+      "name": "fractional-positive-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 18,
+      "row": 54,
+      "name": "in-place-restored-history-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 19,
+      "row": 55,
+      "name": "restored-current-capture-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 20,
+      "row": 70,
+      "name": "camera-root-fill2-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 21,
+      "row": 78,
+      "name": "wipe-start-history-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 22,
+      "row": 81,
+      "name": "wipe-half-history-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 23,
+      "row": 84,
+      "name": "wipe-retired-history-1280x720",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 24,
+      "row": 85,
+      "name": "wipe-retired-current-capture-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 25,
+      "row": 86,
+      "name": "output-resize-fixed-source-1280x720",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 26,
+      "row": 87,
+      "name": "after-output-resize-fixed-capture-1280x720",
+      "kind": "capture",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 27,
+      "row": 90,
+      "name": "constructor-black-current-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 28,
+      "row": 91,
+      "name": "constructor-black-outer-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": false
+    },
+    {
+      "index": 29,
+      "row": 97,
+      "name": "base-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 30,
+      "row": 98,
+      "name": "base-current-capture-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 31,
+      "row": 102,
+      "name": "history-first-delta0-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 32,
+      "row": 105,
+      "name": "history-second-delta0-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 33,
+      "row": 112,
+      "name": "changed-base-history-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 34,
+      "row": 114,
+      "name": "repeat-prepare-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 35,
+      "row": 115,
+      "name": "repeat-current-capture-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 36,
+      "row": 118,
+      "name": "paused-prepare-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 37,
+      "row": 121,
+      "name": "disabled-prepare-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 38,
+      "row": 125,
+      "name": "two-updates-no-render-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 39,
+      "row": 127,
+      "name": "single-update-before-prepare-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 40,
+      "row": 128,
+      "name": "single-update-current-capture-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 41,
+      "row": 130,
+      "name": "single-update-after-prepare-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 42,
+      "row": 133,
+      "name": "off-before-tick-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 43,
+      "row": 136,
+      "name": "off-after-tick-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 44,
+      "row": 140,
+      "name": "fractional-positive-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 45,
+      "row": 143,
+      "name": "in-place-restored-history-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 46,
+      "row": 144,
+      "name": "restored-current-capture-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 47,
+      "row": 159,
+      "name": "camera-root-fill2-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 48,
+      "row": 167,
+      "name": "wipe-start-history-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 49,
+      "row": 170,
+      "name": "wipe-half-history-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 50,
+      "row": 173,
+      "name": "wipe-retired-history-1920x1080",
+      "kind": "display",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 51,
+      "row": 174,
+      "name": "wipe-retired-current-capture-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 52,
+      "row": 175,
+      "name": "output-resize-fixed-source-1920x1080",
+      "kind": "display",
+      "extent": [
+        1280,
+        720
+      ],
+      "require_visible_pattern": true
+    },
+    {
+      "index": 53,
+      "row": 176,
+      "name": "after-output-resize-fixed-capture-1920x1080",
+      "kind": "capture",
+      "extent": [
+        1920,
+        1080
+      ],
+      "require_visible_pattern": true
+    }
+  ],
+  "comparisons": [
+    {
+      "baseline": 0,
+      "effect": 1,
+      "equal": true,
+      "reason": "constructor black CURRENT and white outer copy"
+    },
+    {
+      "baseline": 2,
+      "effect": 3,
+      "equal": true,
+      "reason": "b9508 current capture equals prepared current"
+    },
+    {
+      "baseline": 5,
+      "effect": 6,
+      "equal": false,
+      "reason": "changed native Tile base before previous accumulation"
+    },
+    {
+      "baseline": 6,
+      "effect": 7,
+      "equal": true,
+      "reason": "same previous and fresh base prevents prepare feedback"
+    },
+    {
+      "baseline": 7,
+      "effect": 8,
+      "equal": true,
+      "reason": "capture copies CURRENT identity"
+    },
+    {
+      "baseline": 7,
+      "effect": 9,
+      "equal": true,
+      "reason": "checked caller paused update performs no history swap"
+    },
+    {
+      "baseline": 7,
+      "effect": 10,
+      "equal": true,
+      "reason": "checked caller disabled update performs no history swap"
+    },
+    {
+      "baseline": 7,
+      "effect": 11,
+      "equal": true,
+      "reason": "two tick-end swaps preserve current/previous parity"
+    },
+    {
+      "baseline": 12,
+      "effect": 13,
+      "equal": true,
+      "reason": "capture follows swapped CURRENT without preparation"
+    },
+    {
+      "baseline": 12,
+      "effect": 14,
+      "equal": false,
+      "reason": "prepare overwrites swapped CURRENT and applies retained previous"
+    },
+    {
+      "baseline": 15,
+      "effect": 16,
+      "equal": true,
+      "reason": "39 zero suppresses draw immediately; update only releases previous"
+    },
+    {
+      "baseline": 16,
+      "effect": 17,
+      "equal": true,
+      "reason": "positive fractional39 allocates/swaps but FCVTZS skips history draw"
+    },
+    {
+      "baseline": 18,
+      "effect": 19,
+      "equal": true,
+      "reason": "19578 target fragment retains Screen current/previous"
+    },
+    {
+      "baseline": 18,
+      "effect": 20,
+      "equal": false,
+      "reason": "history camera precedes root Fill2/tint; framebuffer alpha stays one"
+    },
+    {
+      "baseline": 21,
+      "effect": 22,
+      "equal": false,
+      "reason": "actual default wiper21 interpolation before history"
+    },
+    {
+      "baseline": 23,
+      "effect": 24,
+      "equal": true,
+      "reason": "wiper retirement clears outgoing before history swap and capture"
+    },
+    {
+      "baseline": 23,
+      "effect": 26,
+      "equal": true,
+      "reason": "output resize does not change stored physical current extent"
+    },
+    {
+      "baseline": 27,
+      "effect": 28,
+      "equal": true,
+      "reason": "constructor black CURRENT and white outer copy"
+    },
+    {
+      "baseline": 29,
+      "effect": 30,
+      "equal": true,
+      "reason": "b9508 current capture equals prepared current"
+    },
+    {
+      "baseline": 32,
+      "effect": 33,
+      "equal": false,
+      "reason": "changed native Tile base before previous accumulation"
+    },
+    {
+      "baseline": 33,
+      "effect": 34,
+      "equal": true,
+      "reason": "same previous and fresh base prevents prepare feedback"
+    },
+    {
+      "baseline": 34,
+      "effect": 35,
+      "equal": true,
+      "reason": "capture copies CURRENT identity"
+    },
+    {
+      "baseline": 34,
+      "effect": 36,
+      "equal": true,
+      "reason": "checked caller paused update performs no history swap"
+    },
+    {
+      "baseline": 34,
+      "effect": 37,
+      "equal": true,
+      "reason": "checked caller disabled update performs no history swap"
+    },
+    {
+      "baseline": 34,
+      "effect": 38,
+      "equal": true,
+      "reason": "two tick-end swaps preserve current/previous parity"
+    },
+    {
+      "baseline": 39,
+      "effect": 40,
+      "equal": true,
+      "reason": "capture follows swapped CURRENT without preparation"
+    },
+    {
+      "baseline": 39,
+      "effect": 41,
+      "equal": false,
+      "reason": "prepare overwrites swapped CURRENT and applies retained previous"
+    },
+    {
+      "baseline": 42,
+      "effect": 43,
+      "equal": true,
+      "reason": "39 zero suppresses draw immediately; update only releases previous"
+    },
+    {
+      "baseline": 43,
+      "effect": 44,
+      "equal": true,
+      "reason": "positive fractional39 allocates/swaps but FCVTZS skips history draw"
+    },
+    {
+      "baseline": 45,
+      "effect": 46,
+      "equal": true,
+      "reason": "19578 target fragment retains Screen current/previous"
+    },
+    {
+      "baseline": 45,
+      "effect": 47,
+      "equal": false,
+      "reason": "history camera precedes root Fill2/tint; framebuffer alpha stays one"
+    },
+    {
+      "baseline": 48,
+      "effect": 49,
+      "equal": false,
+      "reason": "actual default wiper21 interpolation before history"
+    },
+    {
+      "baseline": 50,
+      "effect": 51,
+      "equal": true,
+      "reason": "wiper retirement clears outgoing before history swap and capture"
+    },
+    {
+      "baseline": 50,
+      "effect": 53,
+      "equal": true,
+      "reason": "output resize does not change stored physical current extent"
+    }
+  ],
+  "sequences": [
+    {
+      "index": 0,
+      "name": "1280x720",
+      "constructor_extent": [
+        1280,
+        720
+      ],
+      "first_row": 0,
+      "last_row": 88
+    },
+    {
+      "index": 1,
+      "name": "1920x1080",
+      "constructor_extent": [
+        1920,
+        1080
+      ],
+      "first_row": 89,
+      "last_row": 177
+    }
+  ],
+  "limits": [
+    "New lazy previous pixels are not observed before overwrite",
+    "ADV enabled/paused is an explicit checked caller gate",
+    "C is actualb9508 retained current followed by checked a9510 rawcopy, not modalblur150b8",
+    "I executes actual19614..196cc property fragment on the same Screen, not asynchronous slot reconstruction",
+    "Output extent is independent; Screen pair retains native constructor extent"
+  ]
+}

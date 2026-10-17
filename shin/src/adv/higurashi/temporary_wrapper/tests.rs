@@ -9,11 +9,11 @@ use std::{
 
 const INPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-temporary-wrapper-child-capture/input.txt"
+    "/../test-fixtures/higurashi/live-temporary-wrapper-child-capture/input.txt"
 ));
 const OUTPUT: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
-    "/../reverse-engineering/higurashi/live-temporary-wrapper-child-capture/output.txt"
+    "/../test-fixtures/higurashi/live-temporary-wrapper-child-capture/output.txt"
 ));
 fn fresh(counter: &AtomicU32) -> [u32; 4] {
     std::array::from_fn(|_| 0xabc0_0000 | (counter.fetch_add(1, Ordering::SeqCst) + 1))

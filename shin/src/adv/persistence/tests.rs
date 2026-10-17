@@ -644,7 +644,7 @@ fn checksum_valid_malformed_save_bodies_recover_without_losing_bytes() {
             .collect()
     }
     let fixtures: serde_json::Value = serde_json::from_str(include_str!(
-        concat!(env!("CARGO_MANIFEST_DIR"), "/../reverse-engineering/malformed-save-body-fixtures.json")
+        concat!(env!("CARGO_MANIFEST_DIR"), "/../test-fixtures/malformed-save-body-fixtures.json")
     ))
     .unwrap();
     let valid = bytes(&fixtures["valid_packet_hex"]);
