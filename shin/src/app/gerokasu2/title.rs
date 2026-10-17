@@ -455,13 +455,18 @@ mod tests {
         }
     }
 
-    /// Scripted gallery runs: `SHIN_GEROKASU_UNLOCKED_SAVE=<path>`.
+    /// Scripted gallery runs: `SHIN_GEROKASU_UNLOCKED_SAVE=<path>`; set
+    /// `SHIN_GEROKASU_UNLOCK_ALL=1` to also unlock every CG and BGM.
     #[test]
     #[ignore = "writes an Extra-unlocked save for scripted gallery runs"]
     fn write_extra_unlocked_save() {
         let path = std::env::var_os("SHIN_GEROKASU_UNLOCKED_SAVE").unwrap();
         let mut data = SaveData::default();
         data.persist_data.0 = vec![1];
+        if std::env::var_os("SHIN_GEROKASU_UNLOCK_ALL").is_some() {
+            data.save_vectors.unlocked_cgs = vec![u32::MAX; 64];
+            data.save_vectors.unlocked_bgms = vec![u32::MAX; 4];
+        }
         std::fs::write(path, data.encode().unwrap()).unwrap();
     }
 }
