@@ -70,7 +70,6 @@ on `PATH` or next to the engine.
 | `-a`, `--assets-dir <DIR>` | Folder containing `data.rom` (or a `data` folder). Defaults to `assets` next to the executable. |
 | `--save-file <FILE>` | Save file. Defaults to `shin/<game>/SAVEDATA` in the system application data folder. |
 | `--text-websocket <HOST:PORT>` | Serve the displayed text over WebSocket, for example to a text hooker or translation tool. |
-| `--inspect-assets` | Print the scenario and asset information without opening a window or touching saves. |
 
 The default save file is in:
 
@@ -114,7 +113,8 @@ an original string to its replacement:
 
 The [localization](localization/) folder has the full list of strings for
 [Umineko](localization/umineko.localized.toml.example),
-[Higurashi](localization/higurashi.localized.toml.example) and
+[Higurashi](localization/higurashi.localized.toml.example),
+[Gerokasu](localization/gerokasu.localized.toml.example) and
 [Gerokasu2](localization/gerokasu2.localized.toml.example).
 
 It also includes English translations converted from the fan translation

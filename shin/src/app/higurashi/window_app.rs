@@ -21,7 +21,7 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 
 fn validate_cli(cli: &Cli) -> Result<()> {
     ensure!(
-        cli.game == Game::Higurashi && !cli.inspect_assets,
+        cli.game == Game::Higurashi && !cli.inspect_assets(),
         "Higurashi application requires a normal Higurashi launch"
     );
     Ok(())

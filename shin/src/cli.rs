@@ -42,7 +42,9 @@ pub struct Cli {
     /// leave this empty and resolve the same resources during initialization.
     #[clap(skip)]
     pub(crate) higurashi_launch: Option<crate::app::PreparedLaunch>,
-    /// Inspect scenario metadata and asset references without opening a window or writing saves.
+    /// Inspect scenario metadata and asset references without opening a window or
+    /// writing saves (debug builds only).
+    #[cfg(debug_assertions)]
     #[clap(long, conflicts_with_all = ["save_file", "text_websocket"])]
     pub inspect_assets: bool,
     /// Route audio to the Loopback Audio system device for testing (debug builds only).
@@ -85,6 +87,13 @@ impl Cli {
         self.save_file.clone().unwrap_or_else(|| {
             default_save_file(dirs_next::data_dir().unwrap_or_default(), self.game)
         })
+    }
+    /// Asset inspection is a debug-build testing option.
+    pub fn inspect_assets(&self) -> bool {
+        #[cfg(debug_assertions)]
+        return self.inspect_assets;
+        #[cfg(not(debug_assertions))]
+        false
     }
     /// Loopback Audio output is a debug-build testing option.
     pub fn loopback_audio(&self) -> bool {
@@ -153,7 +162,7 @@ mod tests {
         assert_eq!(Cli::try_parse_from(["shin"]).unwrap().game, Game::Umineko);
         let cli = Cli::try_parse_from(["shin", "--game", "gerokasu2", "--inspect-assets"]).unwrap();
         assert_eq!(cli.game, Game::Gerokasu2);
-        assert!(cli.inspect_assets);
+        assert!(cli.inspect_assets());
         assert!(cli.higurashi_launch.is_none());
         assert!(Cli::try_parse_from(["shin", "--game", "unknown"]).is_err());
         for extra in [

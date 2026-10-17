@@ -11,6 +11,7 @@ mod cli;
 mod engine_random;
 #[expect(unused)]
 mod fps_counter;
+#[cfg(debug_assertions)]
 mod game_inspection;
 mod layer;
 mod render;
@@ -41,7 +42,8 @@ fn run(window_probe: bool) -> anyhow::Result<()> {
     let mut cli = cli::Cli::load();
     cli.game.set_current();
 
-    if cli.inspect_assets {
+    #[cfg(debug_assertions)]
+    if cli.inspect_assets() {
         return game_inspection::inspect(&cli);
     }
     // A busy port must not keep the game from starting.
