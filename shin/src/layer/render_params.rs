@@ -51,6 +51,27 @@ impl TransformParams {
             composed_with.camera_position
         };
 
+        if crate::cli::Game::current() == crate::cli::Game::Gerokasu {
+            // Gerokasu 682a0: Z only divides the camera offset (parallax);
+            // camera Z zooms everything by 1 / (1 - z * 0.001).
+            let z = self.transform.w_axis.z * 0.001;
+            let offset = if z > 0.0 {
+                Mat4::from_translation((-some_origin / z).with_z(1.0))
+            } else {
+                Mat4::from_scale(vec3(0.0, 0.0, 1.0))
+            };
+            self.transform = multiply_transforms(offset, self.transform);
+            if some_origin.z != 0.0 {
+                let k = (1000.0 - some_origin.z) * 0.001;
+                let zoom = if k > 0.0 { 1.0 / k } else { 0.0 };
+                self.transform =
+                    multiply_transforms(Mat4::from_scale(vec3(zoom, zoom, 1.0)), self.transform);
+            }
+            self.transform.w_axis.z = 0.0;
+            self.inherit(composed_with, flags);
+            return;
+        }
+
         // extract distance from the camera and apply scaling based on it
         let z_distance = (self.transform.w_axis.z - some_origin.z) * 0.001;
 
@@ -71,7 +92,10 @@ impl TransformParams {
         );
         // the z translation has served its purpose, zero it out
         self.transform.w_axis.z = 0.0;
+        self.inherit(composed_with, flags);
+    }
 
+    fn inherit(&mut self, composed_with: &Self, flags: ComposeFlags) {
         if !flags.contains(ComposeFlags::DONT_INHERIT_TRANSFORM) {
             self.transform = multiply_transforms(composed_with.transform, self.transform);
         }

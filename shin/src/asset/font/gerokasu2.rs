@@ -125,10 +125,16 @@ impl Asset for GpuGerokasu2Font {
         _name: &str,
         data: AssetDataAccessor,
     ) -> Result<Self> {
-        Self::with_cache(
-            read_layout_font(data.read_all().await?)?,
-            context.font_cache.gerokasu2.clone(),
-        )
+        let font = read_layout_font(data.read_all().await?)?;
+        // FNT4 identities are dense per-font glyph indices (Gerokasu ships
+        // /system.fnt and /newrodin.fnt), so they need a cache of their own;
+        // FNT6 identities are distinct across the supplied fonts.
+        let cache = if font.is_fnt4() {
+            Arc::default()
+        } else {
+            context.font_cache.gerokasu2.clone()
+        };
+        Self::with_cache(font, cache)
     }
 }
 

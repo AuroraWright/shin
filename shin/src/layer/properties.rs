@@ -383,6 +383,22 @@ impl LayerPropertiesData {
             self.get_value(TranslateZ),
         );
 
+        // Gerokasu 6b7d0 divides only TranslateX/Y(+2) by TranslateZ*0.001
+        // (zero when not positive); the content itself is not scaled by Z.
+        let total_translation = if crate::cli::Game::current() == crate::cli::Game::Gerokasu {
+            let z = self.get_value(TranslateZ) * 0.001;
+            let divided = |a: f32, b: f32| if z > 0.0 { (a + b) / z } else { 0.0 };
+            vec3(
+                divided(self.get_value(TranslateX), self.get_value(TranslateX2))
+                    - self.get_value(NegatedTranslationX),
+                divided(self.get_value(TranslateY), self.get_value(TranslateY2))
+                    - self.get_value(NegatedTranslationY),
+                total_translation.z,
+            )
+        } else {
+            total_translation
+        };
+
         result = multiply_transforms(Mat4::from_translation(-scale_origin), result);
         result = multiply_transforms(Mat4::from_scale(total_scale.extend(1.0)), result);
         result = multiply_transforms(
