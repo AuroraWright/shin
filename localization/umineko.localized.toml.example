@@ -15,15 +15,15 @@
 "@c900.全ての窓には鉄格子が入っており、窓からの出入りは不可能である。@r@z25.@r@z100.玄関と裏口の２つの扉を封印するだけで屋敷は封印できることにする。@c999." = "@c900.全ての窓には鉄格子が入っており、窓からの出入りは不可能である。@r@z25.@r@z100.玄関と裏口の２つの扉を封印するだけで屋敷は封印できることにする。@c999."
 # shin/src/layer/user/purple_text.rs:260
 "@c900.第一の晩の犯人は確実に６人を殺している。@c999." = "@c900.第一の晩の犯人は確実に６人を殺している。@c999."
-# shin/src/adv/backlog_text.rs:87
+# shin/src/adv/backlog/text.rs:87
 "@r《{title}》@r{text}" = "@r《{title}》@r{text}"
-# shin/src/adv/backlog_text.rs:139
+# shin/src/adv/backlog/text.rs:139
 "@r《クイズ》@r{}" = "@r《クイズ》@r{}"
-# shin/src/adv/backlog_text.rs:142
+# shin/src/adv/backlog/text.rs:142
 "@r《ケーキ選択》" = "@r《ケーキ選択》"
-# shin/src/adv/backlog_text.rs:152
+# shin/src/adv/backlog/text.rs:152
 "@r《最後の選択》@r{}" = "@r《最後の選択》@r{}"
-# shin/src/adv/backlog_text.rs:149
+# shin/src/adv/backlog/text.rs:149
 "@r《犯人当て》@r{answer}" = "@r《犯人当て》@r{answer}"
 # shin/src/layer/user/purple_text.rs:393
 "@z110.■第一の晩@z100.@r「@c649.そこに私が来たのです。@c999.万一のこともあるから、鍵を開けてみたらと勧めたのです」@r@z25.@r@z100.「@c649.絵羽さま、秀吉さま、留弗夫さま、霧江さま、楼座さま、そして源次さんの、計６人が血塗れになって倒れていたのでございます……@c999.」" = "@z110.■第一の晩@z100.@r「@c649.そこに私が来たのです。@c999.万一のこともあるから、鍵を開けてみたらと勧めたのです」@r@z25.@r@z100.「@c649.絵羽さま、秀吉さま、留弗夫さま、霧江さま、楼座さま、そして源次さんの、計６人が血塗れになって倒れていたのでございます……@c999.」"
@@ -47,43 +47,43 @@
 "@z110.■第一の晩@z100.@r「惨たらしい殺され方でした……。@c649.私でなくとも、誰も検死は誤りません@c999.」@r@z25.@r@z100.@z110.■第二の晩@z100.@r「はい。@c649.私が二人の死亡を確認しました。あれは間違いなく即死でした@c999.」@r@z25.@r@z100.「そもそも、屋敷自体を保全するべきではということになりましてな。@c649.屋敷自体にも封印をし、私たちは全員、ゲストハウスへ避難しました@c999.」@r@z25.@r@z100.@z110.■第四の晩@z100.@r「無論、@c649.私も検死し、彼女の死亡を確認しました@c999.」@r@z25.@r@z100.@z110.■第五・六の晩@z100.@r「@c649.郷田さんも熊沢さんも、この傷では即死@c999.だったでしょう。惨たらしい死に方です…」" = "@z110.■第一の晩@z100.@r「惨たらしい殺され方でした……。@c649.私でなくとも、誰も検死は誤りません@c999.」@r@z25.@r@z100.@z110.■第二の晩@z100.@r「はい。@c649.私が二人の死亡を確認しました。あれは間違いなく即死でした@c999.」@r@z25.@r@z100.「そもそも、屋敷自体を保全するべきではということになりましてな。@c649.屋敷自体にも封印をし、私たちは全員、ゲストハウスへ避難しました@c999.」@r@z25.@r@z100.@z110.■第四の晩@z100.@r「無論、@c649.私も検死し、彼女の死亡を確認しました@c999.」@r@z25.@r@z100.@z110.■第五・六の晩@z100.@r「@c649.郷田さんも熊沢さんも、この傷では即死@c999.だったでしょう。惨たらしい死に方です…」"
 # shin/src/layer/user/purple_text.rs:379
 "@z110.■第二の晩@z100.@r「私は何かの手掛りがないか部屋中を探し回ったよ…！　その結果、@c649.窓も扉も完全に施錠されていて、密室だったことがわかった@c999.」@r@z25.@r@z100.「きっとこの部屋に、犯人の何かの手掛りが残ってるはず！　@c649.警察が来るまで絶対、誰の出入りも出来ないようにした！@c999.」@r@z25.@r@z100.@z110.■第四の晩@z100.@r「譲治兄さんが騒ぎ出し、@c649.全員で外に出て紗音たちを探すことになったんだ@c999.」@r@z25.@r@z100.「その後、譲治兄さんにだけはアリバイがあることがわかったんだ。@c649.紗音殺しに限っては、譲治兄さんには不可能なんだ@c999.」@r@z25.@r@z100.@z110.■第五・六の晩@z100.@r「この傷で生きてるわけあるもんか…！　@c649.死んでるよ、郷田さんも熊沢さんも！@c999.」@r@z25.@r@z100.「私たち全員は、……つまり、@c649.いとこ４人と南條先生には、郷田さんと熊沢さんは殺せない@c999.」@r@z25.@r@z100.@z110.■第七の晩@z100.@r「@c649.し、死んでる…。殺されてる……！@c999.」@r@z25.@r@z100.「それはありえない！　状況から判断して、@c649.私にも真里亞にも、戦人にも譲治兄さんにも、南條先生は殺せない！@c999.」" = "@z110.■第二の晩@z100.@r「私は何かの手掛りがないか部屋中を探し回ったよ…！　その結果、@c649.窓も扉も完全に施錠されていて、密室だったことがわかった@c999.」@r@z25.@r@z100.「きっとこの部屋に、犯人の何かの手掛りが残ってるはず！　@c649.警察が来るまで絶対、誰の出入りも出来ないようにした！@c999.」@r@z25.@r@z100.@z110.■第四の晩@z100.@r「譲治兄さんが騒ぎ出し、@c649.全員で外に出て紗音たちを探すことになったんだ@c999.」@r@z25.@r@z100.「その後、譲治兄さんにだけはアリバイがあることがわかったんだ。@c649.紗音殺しに限っては、譲治兄さんには不可能なんだ@c999.」@r@z25.@r@z100.@z110.■第五・六の晩@z100.@r「この傷で生きてるわけあるもんか…！　@c649.死んでるよ、郷田さんも熊沢さんも！@c999.」@r@z25.@r@z100.「私たち全員は、……つまり、@c649.いとこ４人と南條先生には、郷田さんと熊沢さんは殺せない@c999.」@r@z25.@r@z100.@z110.■第七の晩@z100.@r「@c649.し、死んでる…。殺されてる……！@c999.」@r@z25.@r@z100.「それはありえない！　状況から判断して、@c649.私にも真里亞にも、戦人にも譲治兄さんにも、南條先生は殺せない！@c999.」"
-# shin/src/adv/system_menu_view.rs:59
+# shin/src/adv/system_menu/view.rs:59
 "{minutes}分" = "{minutes}分"
-# shin/src/adv/system_menu_view.rs:61
+# shin/src/adv/system_menu/view.rs:61
 "{}時間 {}分" = "{}時間 {}分"
-# shin/src/adv/backlog_rollback.rs:14; shin/src/adv/config_dialog.rs:30; shin/src/adv/save_menu_dialog.rs:44
+# shin/src/adv/backlog/rollback.rs:14; shin/src/adv/config/dialog.rs:30; shin/src/adv/save_menu/dialog.rs:44
 "いいえ" = "いいえ"
-# shin/src/title/scenario_select_scene.rs:186
+# shin/src/title/scenario_select/scene.rs:186
 "このシナリオを開始します。@rよろしいですか？" = "このシナリオを開始します。@rよろしいですか？"
 # shin/src/adv/persistence.rs:57
 "このセーブデータを使用するためには、ソフトをアップデートする必要があります。@rこのままゲームをはじめることもできますが、その場合は現在のセーブデータは削除されます。" = "このセーブデータを使用するためには、ソフトをアップデートする必要があります。@rこのままゲームをはじめることもできますが、その場合は現在のセーブデータは削除されます。"
-# shin/src/adv/save_menu.rs:42
+# shin/src/adv/save_menu.rs:50
 "このセーブデータを削除します。よろしいですか？" = "このセーブデータを削除します。よろしいですか？"
-# shin/src/adv/backlog_rollback.rs:14; shin/src/adv/config_dialog.rs:30; shin/src/adv/save_menu_dialog.rs:44
+# shin/src/adv/backlog/rollback.rs:14; shin/src/adv/config/dialog.rs:30; shin/src/adv/save_menu/dialog.rs:44
 "はい" = "はい"
-# shin/src/adv/config_widgets.rs:173
+# shin/src/adv/config/widgets.rs:173
 "オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。" = "オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。"
-# shin/src/adv/backlog_jump.rs:24
+# shin/src/adv/backlog/jump.rs:24
 "カーソル位置" = "カーソル位置"
-# shin/src/adv/backlog_jump.rs:26
+# shin/src/adv/backlog/jump.rs:26
 "カーソル位置/ゲーム内現在位置" = "カーソル位置/ゲーム内現在位置"
 # shin/src/adv/storage_retry_dialog.rs:32
 "キャンセル" = "キャンセル"
-# shin/src/adv/backlog_jump_view.rs:42
+# shin/src/adv/backlog/jump_view.rs:42
 "クイズ" = "クイズ"
-# shin/src/adv/backlog_jump_view.rs:43
+# shin/src/adv/backlog/jump_view.rs:43
 "ケーキ選択" = "ケーキ選択"
 # shin/src/adv/title_return.rs:11
 "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？" = "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？"
-# shin/src/adv/backlog_jump.rs:25
+# shin/src/adv/backlog/jump.rs:25
 "ゲーム内現在位置" = "ゲーム内現在位置"
 # shin/src/adv/storage_retry_dialog.rs:54
 "シーンを読み込めませんでした。@rゲームデータをご確認ください。" = "シーンを読み込めませんでした。@rゲームデータをご確認ください。"
-# shin/src/adv/backlog_rollback.rs:13
+# shin/src/adv/backlog/rollback.rs:13
 "シーンジャンプを実行します。@rよろしいですか？" = "シーンジャンプを実行します。@rよろしいですか？"
-# shin/src/adv/save_menu.rs:38
+# shin/src/adv/save_menu.rs:46
 "セーブを行います。@r内容は上書きされますが、よろしいですか？" = "セーブを行います。@r内容は上書きされますが、よろしいですか？"
-# shin/src/adv/save_menu.rs:40
+# shin/src/adv/save_menu.rs:48
 "セーブを行います。よろしいですか？" = "セーブを行います。よろしいですか？"
 # shin/src/adv/persistence.rs:54
 "セーブデータが壊れているため、ロードできません。@rはじめからゲームを開始します。" = "セーブデータが壊れているため、ロードできません。@rはじめからゲームを開始します。"
@@ -95,55 +95,55 @@
 "セーブデータを更新中です。@r電源を切ったり、ソフトを終了したりしないでください。" = "セーブデータを更新中です。@r電源を切ったり、ソフトを終了したりしないでください。"
 # shin/src/adv/storage_retry_dialog.rs:64
 "セーブデータを読み込めませんでした。@r保存先をご確認のうえ、再試行してください。" = "セーブデータを読み込めませんでした。@r保存先をご確認のうえ、再試行してください。"
-# shin/src/adv/save_menu_text.rs:15
+# shin/src/adv/save_menu/text.rs:15
 "データがありません" = "データがありません"
-# shin/src/adv/backlog_text.rs:125
+# shin/src/adv/backlog/text.rs:125
 "ヒント：さらにもう１人犯人がいる？" = "ヒント：さらにもう１人犯人がいる？"
-# shin/src/adv/backlog_text.rs:114
+# shin/src/adv/backlog/text.rs:114
 "ヒント：ト書きは真実を語る。" = "ヒント：ト書きは真実を語る。"
-# shin/src/adv/backlog_text.rs:118
+# shin/src/adv/backlog/text.rs:118
 "ヒント：マスターキーが使えない？" = "ヒント：マスターキーが使えない？"
-# shin/src/adv/backlog_text.rs:112
+# shin/src/adv/backlog/text.rs:112
 "ヒント：信用できる紫発言を探せ。" = "ヒント：信用できる紫発言を探せ。"
-# shin/src/adv/backlog_text.rs:122
+# shin/src/adv/backlog/text.rs:122
 "ヒント：共犯の存在。" = "ヒント：共犯の存在。"
-# shin/src/adv/backlog_text.rs:115
+# shin/src/adv/backlog/text.rs:115
 "ヒント：南條と朱志香はシロ！" = "ヒント：南條と朱志香はシロ！"
-# shin/src/adv/backlog_text.rs:130
+# shin/src/adv/backlog/text.rs:130
 "ヒント：大人２人、子供１人。" = "ヒント：大人２人、子供１人。"
-# shin/src/adv/backlog_text.rs:132
+# shin/src/adv/backlog/text.rs:132
 "ヒント：子供の犯人は戦人。" = "ヒント：子供の犯人は戦人。"
-# shin/src/adv/backlog_text.rs:124
+# shin/src/adv/backlog/text.rs:124
 "ヒント：死んだフリをした犯人がいる。そしてもう１人犯人がいる。" = "ヒント：死んだフリをした犯人がいる。そしてもう１人犯人がいる。"
-# shin/src/adv/backlog_text.rs:131
+# shin/src/adv/backlog/text.rs:131
 "ヒント：犯人の３人は家族。" = "ヒント：犯人の３人は家族。"
-# shin/src/adv/backlog_text.rs:121
+# shin/src/adv/backlog/text.rs:121
 "ヒント：犯人は閉じ込められた？" = "ヒント：犯人は閉じ込められた？"
-# shin/src/adv/backlog_text.rs:127
+# shin/src/adv/backlog/text.rs:127
 "ヒント：真里亞犯人説検証。" = "ヒント：真里亞犯人説検証。"
-# shin/src/adv/backlog_text.rs:116
+# shin/src/adv/backlog/text.rs:116
 "ヒント：確実な死者をどんどん探せ。" = "ヒント：確実な死者をどんどん探せ。"
-# shin/src/adv/backlog_text.rs:120
+# shin/src/adv/backlog/text.rs:120
 "ヒント：確実に６人を殺した？" = "ヒント：確実に６人を殺した？"
-# shin/src/adv/backlog_text.rs:123
+# shin/src/adv/backlog/text.rs:123
 "ヒント：紗音は譲治以外の誰にでも殺せる。" = "ヒント：紗音は譲治以外の誰にでも殺せる。"
-# shin/src/adv/backlog_text.rs:113
+# shin/src/adv/backlog/text.rs:113
 "ヒント：絶対に犯人でないのは誰？" = "ヒント：絶対に犯人でないのは誰？"
-# shin/src/adv/backlog_text.rs:126
+# shin/src/adv/backlog/text.rs:126
 "ヒント：譲治と真里亞はニワトリとタマゴ。" = "ヒント：譲治と真里亞はニワトリとタマゴ。"
-# shin/src/adv/backlog_text.rs:129
+# shin/src/adv/backlog/text.rs:129
 "ヒント：譲治の紫発言。" = "ヒント：譲治の紫発言。"
-# shin/src/adv/backlog_text.rs:128
+# shin/src/adv/backlog/text.rs:128
 "ヒント：譲治犯人説検証。" = "ヒント：譲治犯人説検証。"
-# shin/src/adv/backlog_text.rs:119
+# shin/src/adv/backlog/text.rs:119
 "ヒント：赤き真実に違和感？" = "ヒント：赤き真実に違和感？"
-# shin/src/adv/backlog_text.rs:117
+# shin/src/adv/backlog/text.rs:117
 "ヒント：９人の無実。" = "ヒント：９人の無実。"
-# shin/src/adv/save_menu.rs:41
+# shin/src/adv/save_menu.rs:49
 "ロードします。よろしいですか？" = "ロードします。よろしいですか？"
 # shin/src/adv/storage_retry_dialog.rs:100
 "元のセーブデータを保護できませんでした。@r保存先をご確認のうえ、再試行してください。" = "元のセーブデータを保護できませんでした。@r保存先をご確認のうえ、再試行してください。"
-# shin/src/adv/backlog_jump.rs:22
+# shin/src/adv/backlog/jump.rs:22
 "先頭" = "先頭"
 # shin/src/adv/storage_retry_dialog.rs:32; shin/src/adv/storage_retry_dialog.rs:65; shin/src/adv/storage_retry_dialog.rs:101
 "再試行" = "再試行"
@@ -153,7 +153,7 @@
 "南條@r「@c649.郷田さんも熊沢さんも、この傷では即死@c999.だったでしょう。惨たらしい死に方です…」@r@z25.@r@z100.朱志香@r「この傷で生きてるわけあるもんか…！　@c649.死んでるよ、郷田さんも熊沢さんも！@c999.」" = "南條@r「@c649.郷田さんも熊沢さんも、この傷では即死@c999.だったでしょう。惨たらしい死に方です…」@r@z25.@r@z100.朱志香@r「この傷で生きてるわけあるもんか…！　@c649.死んでるよ、郷田さんも熊沢さんも！@c999.」"
 # shin/src/layer/user/purple_text.rs:204
 "夏妃@r「後のトラブルを予防するため、@c649.源次のマスターキーを破壊しておきました@c999.」" = "夏妃@r「後のトラブルを予防するため、@c649.源次のマスターキーを破壊しておきました@c999.」"
-# shin/src/adv/backlog_jump.rs:27
+# shin/src/adv/backlog/jump.rs:27
 "後尾" = "後尾"
 # shin/src/layer/user/purple_text.rs:232
 "戦人@r「@c649.南條先生がすぐ脈を取ったぜ。そして、二人とも即死だったと宣言した@c999.」@r@z25.@r@z100.南條@r「はい。@c649.私が二人の死亡を確認しました。あれは間違いなく即死でした@c999.」@r@z25.@r@z100.朱志香@r「私は何かの手掛りがないか部屋中を探し回ったよ…！　その結果、@c649.窓も扉も完全に施錠されていて、密室だったことがわかった@c999.」" = "戦人@r「@c649.南條先生がすぐ脈を取ったぜ。そして、二人とも即死だったと宣言した@c999.」@r@z25.@r@z100.南條@r「はい。@c649.私が二人の死亡を確認しました。あれは間違いなく即死でした@c999.」@r@z25.@r@z100.朱志香@r「私は何かの手掛りがないか部屋中を探し回ったよ…！　その結果、@c649.窓も扉も完全に施錠されていて、密室だったことがわかった@c999.」"
@@ -161,11 +161,11 @@
 "戦人@r「俺たちは３人でずっと一緒だった！　@c649.俺も譲治の兄貴も真里亞も、朱志香は殺せねぇぞ！@c999.」@r@z25.@r@z100.真里亞@r「うん、@c649.私たち３人に朱志香は殺せない@c999.」@r@z25.@r@z100.譲治@r「真里亞ちゃんが人なんか殺すもんか。@c649.真里亞ちゃんには誰も殺せないよ@c999.」@r@z25.@r@z100.真里亞@r「きひひ、ありがとう。@c649.譲治お兄ちゃんだって、大人は殺せないよ。子供は殺せるけれど。@c999.きひひひひひひ」" = "戦人@r「俺たちは３人でずっと一緒だった！　@c649.俺も譲治の兄貴も真里亞も、朱志香は殺せねぇぞ！@c999.」@r@z25.@r@z100.真里亞@r「うん、@c649.私たち３人に朱志香は殺せない@c999.」@r@z25.@r@z100.譲治@r「真里亞ちゃんが人なんか殺すもんか。@c649.真里亞ちゃんには誰も殺せないよ@c999.」@r@z25.@r@z100.真里亞@r「きひひ、ありがとう。@c649.譲治お兄ちゃんだって、大人は殺せないよ。子供は殺せるけれど。@c999.きひひひひひひ」"
 # shin/src/layer/user/purple_text.rs:323
 "戦人@r「戸締り確認とか見回りとか、色々やってたからな。今回もまた、@c649.俺たちには全員、アリバイがない@c999.」@r@z25.@r@z100.譲治@r「そんなことはないよ。見てごらん。……あんな殺し方をしたら、絶対に犯人は返り血を浴びるはずなんだ」@r@z25.@r@z100.真里亞@r「でも、いとこ全員も、そして南條先生も返り血は浴びてないね」@r@z25.@r@z100.朱志香@r「私たち全員は、……つまり、@c649.いとこ４人と南條先生には、郷田さんと熊沢さんは殺せない@c999.」" = "戦人@r「戸締り確認とか見回りとか、色々やってたからな。今回もまた、@c649.俺たちには全員、アリバイがない@c999.」@r@z25.@r@z100.譲治@r「そんなことはないよ。見てごらん。……あんな殺し方をしたら、絶対に犯人は返り血を浴びるはずなんだ」@r@z25.@r@z100.真里亞@r「でも、いとこ全員も、そして南條先生も返り血は浴びてないね」@r@z25.@r@z100.朱志香@r「私たち全員は、……つまり、@c649.いとこ４人と南條先生には、郷田さんと熊沢さんは殺せない@c999.」"
-# shin/src/adv/backlog_text.rs:153
+# shin/src/adv/backlog/text.rs:153
 "手品" = "手品"
-# shin/src/adv/backlog_jump_view.rs:45
+# shin/src/adv/backlog/jump_view.rs:45
 "最後の選択" = "最後の選択"
-# shin/src/title/scenario_select_scene.rs:31
+# shin/src/title/scenario_select/scene.rs:31
 "本編シナリオの全てと、追加シナリオの一部をアンロックします。よろしいですか？@r@z75.一度アンロックしたら元の状態に戻すことはできません。ご注意ください。" = "本編シナリオの全てと、追加シナリオの一部をアンロックします。よろしいですか？@r@z75.一度アンロックしたら元の状態に戻すことはできません。ご注意ください。"
 # shin/src/layer/user/purple_text.rs:344
 "朱志香@r「@c649.し、死んでる…。殺されてる……！@c999.」@r@z25.@r@z100.譲治@r「僕でさえ、@c649.これは即死だったに違いない@c999.と一目でわかるよ…」@r@z25.@r@z100.真里亞@r「@c649.戸締りは完璧だよ。@c999.密室なのにどうして？」" = "朱志香@r「@c649.し、死んでる…。殺されてる……！@c999.」@r@z25.@r@z100.譲治@r「僕でさえ、@c649.これは即死だったに違いない@c999.と一目でわかるよ…」@r@z25.@r@z100.真里亞@r「@c649.戸締りは完璧だよ。@c999.密室なのにどうして？」"
@@ -179,43 +179,43 @@
 "次のチャプター、未読メッセージ、選択肢まで@rスキップします。よろしいですか？" = "次のチャプター、未読メッセージ、選択肢まで@rスキップします。よろしいですか？"
 # shin/src/adv/chapter_navigation.rs:18
 "次のチャプターか選択肢までスキップします。@rよろしいですか？" = "次のチャプターか選択肢までスキップします。@rよろしいですか？"
-# shin/src/adv/backlog_text.rs:106
+# shin/src/adv/backlog/text.rs:106
 "物語を再読：第一の晩" = "物語を再読：第一の晩"
-# shin/src/adv/backlog_text.rs:110
+# shin/src/adv/backlog/text.rs:110
 "物語を再読：第七の晩" = "物語を再読：第七の晩"
-# shin/src/adv/backlog_text.rs:107
+# shin/src/adv/backlog/text.rs:107
 "物語を再読：第二の晩" = "物語を再読：第二の晩"
-# shin/src/adv/backlog_text.rs:109
+# shin/src/adv/backlog/text.rs:109
 "物語を再読：第五・六の晩" = "物語を再読：第五・六の晩"
-# shin/src/adv/backlog_text.rs:111
+# shin/src/adv/backlog/text.rs:111
 "物語を再読：第八の晩" = "物語を再読：第八の晩"
-# shin/src/adv/backlog_text.rs:108
+# shin/src/adv/backlog/text.rs:108
 "物語を再読：第四の晩" = "物語を再読：第四の晩"
-# shin/src/adv/backlog_jump_view.rs:44
+# shin/src/adv/backlog/jump_view.rs:44
 "犯人当て" = "犯人当て"
-# shin/src/adv/backlog_text.rs:145
+# shin/src/adv/backlog/text.rs:145
 "犯人特定：失敗" = "犯人特定：失敗"
-# shin/src/adv/backlog_text.rs:133
+# shin/src/adv/backlog/text.rs:133
 "犯人特定：成功" = "犯人特定：成功"
 # shin/src/layer/user/purple_text.rs:246
 "真里亞@r「@c649.外からガムテープでベタベタと、窓や扉を封印したよ！@c999.」@r@z25.@r@z100.朱志香@r「きっとこの部屋に、犯人の何かの手掛りが残ってるはず！　@c649.警察が来るまで絶対、誰の出入りも出来ないようにした！@c999.」@r@z25.@r@z100.戦人@r「となりゃ、食堂も同じだ。@c649.俺たちはさらに食堂も同様に封印した@c999.」@r@z25.@r@z100.南條@r「そもそも、屋敷自体を保全するべきではということになりましてな。@c649.屋敷自体にも封印をし、私たちは全員、ゲストハウスへ避難しました@c999.」" = "真里亞@r「@c649.外からガムテープでベタベタと、窓や扉を封印したよ！@c999.」@r@z25.@r@z100.朱志香@r「きっとこの部屋に、犯人の何かの手掛りが残ってるはず！　@c649.警察が来るまで絶対、誰の出入りも出来ないようにした！@c999.」@r@z25.@r@z100.戦人@r「となりゃ、食堂も同じだ。@c649.俺たちはさらに食堂も同様に封印した@c999.」@r@z25.@r@z100.南條@r「そもそも、屋敷自体を保全するべきではということになりましてな。@c649.屋敷自体にも封印をし、私たちは全員、ゲストハウスへ避難しました@c999.」"
-# shin/src/adv/config_dialog.rs:31; shin/src/adv/save_game.rs:102; shin/src/adv/storage_retry_dialog.rs:55; +2 more
+# shin/src/adv/config/dialog.rs:31; shin/src/adv/save_game.rs:102; shin/src/adv/storage_retry_dialog.rs:55; +2 more
 "確認" = "確認"
 # shin/src/layer/user/purple_text.rs:239
 "紗音@r「@c649.私たち使用人全員は、常に一緒におりました@c999.」@r@z25.@r@z100.嘉音@r「@c649.僕たち使用人全員は、それぞれが使用人全員のアリバイを証明できます@c999.」" = "紗音@r「@c649.私たち使用人全員は、常に一緒におりました@c999.」@r@z25.@r@z100.嘉音@r「@c649.僕たち使用人全員は、それぞれが使用人全員のアリバイを証明できます@c999.」"
-# shin/src/adv/backlog_text.rs:103
+# shin/src/adv/backlog/text.rs:103
 "絵羽おばさんに相談" = "絵羽おばさんに相談"
 # shin/src/layer/user/purple_text.rs:197
 "蔵臼@r「@c649.食堂内を調べた結果、扉も窓も、全て施錠され、密室であったことがわかった@c999.」@r@z25.@r@z100.戦人@r「そして、@c649.食堂内から、不審なものは何も見つからなかった@c999.」@r@z25.@r@z100.譲治@r「もちろん、@c649.食堂内に何者かが隠れているということもなかったよ@c999.」@r@z25.@r@z100.蔵臼@r「隠れるも何も。私たちは今ここに全員がいるではないかね。@c649.誰も隠れていないことは明白だ@c999.」" = "蔵臼@r「@c649.食堂内を調べた結果、扉も窓も、全て施錠され、密室であったことがわかった@c999.」@r@z25.@r@z100.戦人@r「そして、@c649.食堂内から、不審なものは何も見つからなかった@c999.」@r@z25.@r@z100.譲治@r「もちろん、@c649.食堂内に何者かが隠れているということもなかったよ@c999.」@r@z25.@r@z100.蔵臼@r「隠れるも何も。私たちは今ここに全員がいるではないかね。@c649.誰も隠れていないことは明白だ@c999.」"
-# shin/src/adv/config_dialog.rs:15
+# shin/src/adv/config/dialog.rs:15
 "設定を初期値に戻します。よろしいですか？" = "設定を初期値に戻します。よろしいですか？"
 # shin/src/layer/user/purple_text.rs:330
 "譲治@r「何者かの侵入を疑って調べたけれど、@c649.ゲストハウスの戸締りは完璧だったよ@c999.」@r@z25.@r@z100.南條@r「犯人はやはり、マスターキーを持っているのかもしれません…」@r@z25.@r@z100.戦人@r「それはありえねぇぜ。@c649.マスターキーはもう、ここで死んでる２人の２本以外、存在しない@c999.」" = "譲治@r「何者かの侵入を疑って調べたけれど、@c649.ゲストハウスの戸締りは完璧だったよ@c999.」@r@z25.@r@z100.南條@r「犯人はやはり、マスターキーを持っているのかもしれません…」@r@z25.@r@z100.戦人@r「それはありえねぇぜ。@c649.マスターキーはもう、ここで死んでる２人の２本以外、存在しない@c999.」"
 # shin/src/layer/user/purple_text.rs:365
 "譲治@r「朱志香ちゃん、……可哀想に。@c649.即死だったろう@c999.」@r@z25.@r@z100.真里亞@r「@c649.これで生きているわけがない@c999.もんね。きひひひひ」" = "譲治@r「朱志香ちゃん、……可哀想に。@c649.即死だったろう@c999.」@r@z25.@r@z100.真里亞@r「@c649.これで生きているわけがない@c999.もんね。きひひひひ」"
-# shin/src/title/cg_gallery.rs:148; shin/src/title/movie_gallery.rs:136; shin/src/title/music_gallery.rs:438
+# shin/src/title/cg_gallery.rs:143; shin/src/title/movie_gallery.rs:137; shin/src/title/music_gallery.rs:442
 "達成率:100％" = "達成率:100％"
-# shin/src/title/cg_gallery.rs:150; shin/src/title/movie_gallery.rs:138; shin/src/title/music_gallery.rs:440
+# shin/src/title/cg_gallery.rs:145; shin/src/title/movie_gallery.rs:139; shin/src/title/music_gallery.rs:444
 "達成率:{}.{}％" = "達成率:{}.{}％"
 # shin/src/layer/user/purple_text.rs:225
 "郷田@r「@c649.奥様の部屋は施錠されておりました！@c999.　食堂の時と同じです！」@r@z25.@r@z100.紗音@r「皆さんの許可を得て、@c649.私が鍵を開けました…@c999.」@r@z25.@r@z100.嘉音@r「@c649.部屋の中には、蔵臼さまと夏妃さまが倒れていました@c999.」" = "郷田@r「@c649.奥様の部屋は施錠されておりました！@c999.　食堂の時と同じです！」@r@z25.@r@z100.紗音@r「皆さんの許可を得て、@c649.私が鍵を開けました…@c999.」@r@z25.@r@z100.嘉音@r「@c649.部屋の中には、蔵臼さまと夏妃さまが倒れていました@c999.」"
@@ -225,17 +225,17 @@
 "郷田@r「二人が出掛けた時、私たちはゲストハウスの戸締りを確認するために色々とやっていました。だから、@c649.私たちにはみんな、アリバイがないのです…！@c999.」@r@z25.@r@z100.譲治@r「僕が殺すものか！　僕に殺せるものか！！」@r@z25.@r@z100.真里亞@r「うん。譲治お兄ちゃんには殺せないね、うー」@r@z25.@r@z100.朱志香@r「その後、譲治兄さんにだけはアリバイがあることがわかったんだ。@c649.紗音殺しに限っては、譲治兄さんには不可能なんだ@c999.」@r@z25.@r@z100.戦人@r「逆に言えば。@c649.……譲治の兄貴以外なら誰にでも殺せたわけだ@c999.」" = "郷田@r「二人が出掛けた時、私たちはゲストハウスの戸締りを確認するために色々とやっていました。だから、@c649.私たちにはみんな、アリバイがないのです…！@c999.」@r@z25.@r@z100.譲治@r「僕が殺すものか！　僕に殺せるものか！！」@r@z25.@r@z100.真里亞@r「うん。譲治お兄ちゃんには殺せないね、うー」@r@z25.@r@z100.朱志香@r「その後、譲治兄さんにだけはアリバイがあることがわかったんだ。@c649.紗音殺しに限っては、譲治兄さんには不可能なんだ@c999.」@r@z25.@r@z100.戦人@r「逆に言えば。@c649.……譲治の兄貴以外なら誰にでも殺せたわけだ@c999.」"
 # shin/src/layer/user/purple_text.rs:295
 "郷田@r「犯人に悪用されるのを防ぐため、@c649.紗音さんの持ってたマスターキーは、その場で破壊しました@c999.」" = "郷田@r「犯人に悪用されるのを防ぐため、@c649.紗音さんの持ってたマスターキーは、その場で破壊しました@c999.」"
-# shin/src/adv/backlog_text.rs:153
+# shin/src/adv/backlog/text.rs:153
 "魔法" = "魔法"
-# shin/src/adv/backlog_text.rs:97
+# shin/src/adv/backlog/text.rs:97
 "Ａを選択" = "Ａを選択"
-# shin/src/adv/backlog_text.rs:98
+# shin/src/adv/backlog/text.rs:98
 "Ｂを選択" = "Ｂを選択"
-# shin/src/adv/backlog_text.rs:99
+# shin/src/adv/backlog/text.rs:99
 "Ｃを選択" = "Ｃを選択"
-# shin/src/adv/backlog_text.rs:100
+# shin/src/adv/backlog/text.rs:100
 "Ｄを選択" = "Ｄを選択"
-# shin/src/adv/backlog_text.rs:101
+# shin/src/adv/backlog/text.rs:101
 "Ｅを選択" = "Ｅを選択"
-# shin/src/adv/backlog_text.rs:102
+# shin/src/adv/backlog/text.rs:102
 "Ｆを選択" = "Ｆを選択"

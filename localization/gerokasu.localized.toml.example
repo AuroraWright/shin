@@ -1,0 +1,77 @@
+# gerokasu: identity defaults; copy/edit as localized.toml in the selected asset root.
+# Models, script identities, response indices, texture/voice IDs and save data stay unchanged.
+# Preserve @ markup and format placeholders ({name}, {}, formatting specs) when translating.
+# Exact Japanese keys may contain markup; templates also cover composed/dynamic labels.
+# Repeated keys are emitted once; full path/line occurrences are in reviewer/inventory.json.
+# Code literals only; scenario text and baked image text are outside this example.
+
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:94; shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:96
+">>謎<<" = ">>謎<<"
+# shin/src/adv/gerokasu2/system_menu.rs:328
+"{h}時間 {m}分" = "{h}時間 {m}分"
+# shin/src/adv/gerokasu2/system_menu.rs:326
+"{m}分" = "{m}分"
+# shin/src/adv/config/dialog.rs:30; shin/src/app/gerokasu2/backlog.rs:308; shin/src/app/gerokasu2/chapter_skip.rs:75; +2 more
+"いいえ" = "いいえ"
+# shin/src/adv/gerokasu2/save_menu.rs:46
+"このセーブデータを削除します。よろしいですか？" = "このセーブデータを削除します。よろしいですか？"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:70
+"この組み合わせは既に実行済みです。" = "この組み合わせは既に実行済みです。"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:68
+"この＜死刑囚＞と＜ピエロ＞の組み合わせは実行済みです。" = "この＜死刑囚＞と＜ピエロ＞の組み合わせは実行済みです。"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:65
+"この＜死刑囚＞と＜ピエロ＞の組み合わせは既に実行済みです。" = "この＜死刑囚＞と＜ピエロ＞の組み合わせは既に実行済みです。"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:56
+"これ以上{}に{}を渡すことはできません。" = "これ以上{}に{}を渡すことはできません。"
+# shin/src/adv/config/dialog.rs:30; shin/src/app/gerokasu2/backlog.rs:308; shin/src/app/gerokasu2/chapter_skip.rs:75; +2 more
+"はい" = "はい"
+# shin/src/adv/config/widgets.rs:173
+"オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。" = "オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。"
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:79
+"カーソル位置" = "カーソル位置"
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:81
+"カーソル位置/ゲーム内現在位置" = "カーソル位置/ゲーム内現在位置"
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:93
+"クイズ" = "クイズ"
+# shin/src/adv/gerokasu2/system_menu.rs:11
+"ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？" = "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？"
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:80
+"ゲーム内現在位置" = "ゲーム内現在位置"
+# shin/src/adv/gerokasu2/backlog.rs:12
+"シーンジャンプを実行します。@rよろしいですか？" = "シーンジャンプを実行します。@rよろしいですか？"
+# shin/src/adv/gerokasu2/save_menu.rs:42
+"セーブを行います。@r内容は上書きされますが、よろしいですか？" = "セーブを行います。@r内容は上書きされますが、よろしいですか？"
+# shin/src/adv/gerokasu2/save_menu.rs:44
+"セーブを行います。よろしいですか？" = "セーブを行います。よろしいですか？"
+# shin/src/adv/gerokasu2/save_write.rs:9
+"セーブデータを更新中です。@r電源を切ったり、ソフトを終了したりしないでください。" = "セーブデータを更新中です。@r電源を切ったり、ソフトを終了したりしないでください。"
+# shin/src/app/gerokasu2/load_menu.rs:85
+"データがありません" = "データがありません"
+# shin/src/adv/gerokasu2/save_menu.rs:45
+"ロードします。よろしいですか？" = "ロードします。よろしいですか？"
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:78
+"先頭" = "先頭"
+# shin/src/app/gerokasu2/chapter_skip.rs:18
+"前のチャプターに戻ります。@rよろしいですか？" = "前のチャプターに戻ります。@rよろしいですか？"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:19
+"土麗美" = "土麗美"
+# shin/src/adv/gerokasu2/backlog/chapter/artwork.rs:82
+"後尾" = "後尾"
+# shin/src/app/gerokasu2/chapter_skip.rs:14
+"次のチャプター、未読メッセージ、選択肢まで@rスキップします。よろしいですか？" = "次のチャプター、未読メッセージ、選択肢まで@rスキップします。よろしいですか？"
+# shin/src/app/gerokasu2/chapter_skip.rs:16
+"次のチャプターか選択肢までスキップします。@rよろしいですか？" = "次のチャプターか選択肢までスキップします。@rよろしいですか？"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:19
+"水無" = "水無"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:19
+"火凛" = "火凛"
+# shin/src/adv/config/dialog.rs:31
+"確認" = "確認"
+# shin/src/adv/config/dialog.rs:15
+"設定を初期値に戻します。よろしいですか？" = "設定を初期値に戻します。よろしいですか？"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:19
+"風華" = "風華"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:61
+"＜ピエロ＞" = "＜ピエロ＞"
+# shin/src/adv/gerokasu2/card_select/gerokasu.rs:59
+"＜死刑囚＞" = "＜死刑囚＞"

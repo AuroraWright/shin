@@ -308,6 +308,8 @@ mod tests {
         for source in [
             include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../localization/higurashi.localized.toml.example")),
             include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../localization/umineko.localized.toml.example")),
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../localization/gerokasu2.localized.toml.example")),
+            include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../localization/gerokasu.localized.toml.example")),
         ] {
             let table = TextOverrides::parse(source).unwrap();
             assert!(table.exact.is_empty());

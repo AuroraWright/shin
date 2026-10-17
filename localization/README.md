@@ -26,8 +26,10 @@ are not lookup keys.
 
 The `.localized.toml.example` files list every key with its Japanese text as
 the value. Use them to translate keys the English profiles don't cover.
-Gerokasu2 has only `gerokasu2.localized.toml.example`, without an English
-profile. It covers dialogs, the Load screen's empty and loading rows, the
-play-time clock and the backlog's fixed chapter markers. Story, choice,
-chapter, scene and music titles come from the scenario and keep their original
-text.
+Gerokasu and Gerokasu2 have only `gerokasu.localized.toml.example` and
+`gerokasu2.localized.toml.example`, without English profiles. Both games share
+the same screens, so the two files list the same keys. They cover dialogs, the
+Load screen's empty and loading rows, the play-time clock, the backlog's fixed
+chapter markers, and Gerokasu's card-selection messages, whose heroine names
+and card labels can be translated separately. Story, choice, chapter, scene and
+music titles come from the scenario and keep their original text.

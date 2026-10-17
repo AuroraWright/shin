@@ -115,6 +115,25 @@ fn exhausted_and_completed_pairs_are_rejected() {
 }
 
 #[test]
+fn messages_localize_names_cards_and_sentences() {
+    let table = crate::asset::localization::TextOverrides::parse(
+        "\"風華\" = \"Fuuka\"\n\"＜死刑囚＞\" = \"<Prisoner>\"\n\
+         \"これ以上{}に{}を渡すことはできません。\" = \"You can't give {} any more {}.\"\n\
+         \"この組み合わせは既に実行済みです。\" = \"Already played.\"\n",
+    )
+    .unwrap();
+    let localize = |text: &str| table.translate(text).into_owned();
+    let exhausted = Message::Exhausted { heroine: 0, card: PRISONER };
+    assert_eq!(exhausted.localized_text(localize), "You can't give Fuuka any more <Prisoner>.");
+    assert_eq!(Message::AlreadyPlayed.localized_text(localize), "Already played.");
+    // Missing keys keep the source.
+    assert_eq!(
+        Message::PairDoneForPierrot.localized_text(localize),
+        Message::PairDoneForPierrot.text()
+    );
+}
+
+#[test]
 fn cancel_undoes_last_placement_and_restores_id_order() {
     let mut m = GerokasuCardModel::new(0, 3);
     m.attach_listener();

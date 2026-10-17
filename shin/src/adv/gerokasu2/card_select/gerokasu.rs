@@ -51,15 +51,20 @@ impl Message {
         Self::ALL.iter().position(|m| *m == self).unwrap()
     }
     pub fn text(self) -> String {
-        match self {
+        self.localized_text(|text| text.to_owned())
+    }
+    /// The message with `localize` applied to the name and card label first,
+    /// then to the whole sentence, so `localized.toml` can translate each part.
+    pub fn localized_text(self, localize: impl Fn(&str) -> String) -> String {
+        let sentence = match self {
             Message::Exhausted { heroine, card } => format!(
                 "これ以上{}に{}を渡すことはできません。",
-                NAMES[heroine],
-                if card == PRISONER {
+                localize(NAMES[heroine]),
+                localize(if card == PRISONER {
                     "＜死刑囚＞"
                 } else {
                     "＜ピエロ＞"
-                }
+                })
             ),
             Message::PairDoneForPrisoner => {
                 "この＜死刑囚＞と＜ピエロ＞の組み合わせは既に実行済みです。".into()
@@ -68,7 +73,8 @@ impl Message {
                 "この＜死刑囚＞と＜ピエロ＞の組み合わせは実行済みです。".into()
             }
             Message::AlreadyPlayed => "この組み合わせは既に実行済みです。".into(),
-        }
+        };
+        localize(&sentence)
     }
 }
 

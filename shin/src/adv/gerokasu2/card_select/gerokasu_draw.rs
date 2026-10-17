@@ -114,7 +114,7 @@ impl GerokasuCardResources {
         for message in Message::ALL {
             let (commands, lines, size) =
                 shin_core::layout::gerokasu2::card_message_layouter(font.metrics())
-                    .parse(&message.text());
+                    .parse(&message.localized_text(|text| font.localize(text).into_owned()));
             let text = Text::prepare(
                 &assets.context().wgpu_device,
                 &assets.context().wgpu_queue,

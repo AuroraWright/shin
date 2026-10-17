@@ -22,14 +22,24 @@ impl Dictionary {
         }
         Self(path)
     }
-    fn server(&self, root: &Path, device: &wgpu::Device, queue: &wgpu::Queue) -> AssetServer {
+    fn server(
+        &self,
+        root: &Path,
+        game: Game,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+    ) -> AssetServer {
         let mut io = LayeredAssetIo::new();
-        io.try_with_rom(root.join("gerokasu2/data.rom")).unwrap();
+        io.try_with_rom(root.join(match game {
+            Game::Gerokasu => "gerokasu/data.rom",
+            _ => "gerokasu2/data.rom",
+        }))
+        .unwrap();
         io.with_localized_file(self.0.join("localized.toml"));
         AssetServer::new(
             io.into(),
             AssetLoadContext {
-                game: Game::Gerokasu2,
+                game,
                 wgpu_device: device.clone(),
                 wgpu_queue: queue.clone(),
                 bustup_cache: AssetCache::new(),
@@ -58,12 +68,18 @@ fn ger_dialog_lays_out_localized_code_text_and_keeps_missing_keys() {
     let (device, queue) =
         shin_tasks::block_on(adapter.request_device(&Default::default())).unwrap();
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
+    for game in [Game::Gerokasu2, Game::Gerokasu] {
+        check_dialog(root, game, &device, &queue);
+    }
+}
+
+fn check_dialog(root: &Path, game: Game, device: &wgpu::Device, queue: &wgpu::Queue) {
     let translated = Dictionary::new(Some(
         "\"ロードします。よろしいですか？\" = \"Load this save?@rAre you sure?\"\n\"はい\" = \"Yes\"\n",
     ));
     let original = Dictionary::new(None);
-    let translated = translated.server(root, &device, &queue);
-    let original = original.server(root, &device, &queue);
+    let translated = translated.server(root, game, device, queue);
+    let original = original.server(root, game, device, queue);
     let prompt = "ロードします。よろしいですか？";
     let load = |server: &AssetServer, prompt: &str, yes: &str| {
         GerDialog::load(server, prompt, &[yes, "いいえ"], 0, true, false).unwrap()
@@ -81,7 +97,7 @@ fn ger_dialog_lays_out_localized_code_text_and_keeps_missing_keys() {
     assert_eq!(points(&source.prompt), "ロードします。よろしいですか？");
     assert_eq!(points(&source.answers[0]), "はい");
     println!(
-        "GEROKASU2_LOCALIZED_DIALOG prompt={:?} source={:?} yes={:?}",
+        "{game:?} LOCALIZED_DIALOG prompt={:?} source={:?} yes={:?}",
         localized.prompt.size, source.prompt.size, localized.answers[0].size
     );
 }

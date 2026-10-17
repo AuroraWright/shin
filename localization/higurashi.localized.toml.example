@@ -415,9 +415,9 @@
 "you" = "you"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1442
 "your" = "your"
-# shin/src/adv/higurashi/system_menu.rs:409; shin/src/adv/system_menu_view.rs:59
+# shin/src/adv/higurashi/system_menu.rs:409; shin/src/adv/system_menu/view.rs:59
 "{minutes}分" = "{minutes}分"
-# shin/src/adv/higurashi/system_menu.rs:411; shin/src/adv/system_menu_view.rs:61
+# shin/src/adv/higurashi/system_menu.rs:411; shin/src/adv/system_menu/view.rs:61
 "{}時間 {}分" = "{}時間 {}分"
 # shin/src/app/higurashi/kakera_menu/catalog.rs:513
 "「澪尽し編・表」終了" = "「澪尽し編・表」終了"
@@ -441,7 +441,7 @@
 "あの日へ" = "あの日へ"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1794
 "あら、詩音ちゃん" = "あら、詩音ちゃん"
-# shin/src/adv/backlog_rollback.rs:14; shin/src/adv/config_dialog.rs:30; shin/src/adv/higurashi/browser_lifecycle.rs:18; +6 more
+# shin/src/adv/backlog/rollback.rs:14; shin/src/adv/config/dialog.rs:30; shin/src/adv/higurashi/browser_lifecycle.rs:18; +6 more
 "いいえ" = "いいえ"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:199; shin/src/app/higurashi/quiz_scene/catalog.rs:209; shin/src/app/higurashi/quiz_scene/catalog.rs:451; +4 more
 "いとうかなこ" = "いとうかなこ"
@@ -555,7 +555,7 @@
 "ここのぎ" = "ここのぎ"
 # shin/src/adv/persistence.rs:57; shin/src/app/higurashi/load_game.rs:52
 "このセーブデータを使用するためには、ソフトをアップデートする必要があります。@rこのままゲームをはじめることもできますが、その場合は現在のセーブデータは削除されます。" = "このセーブデータを使用するためには、ソフトをアップデートする必要があります。@rこのままゲームをはじめることもできますが、その場合は現在のセーブデータは削除されます。"
-# shin/src/adv/higurashi/save_menu/model.rs:47; shin/src/adv/save_menu.rs:42
+# shin/src/adv/higurashi/save_menu/model.rs:47; shin/src/adv/save_menu.rs:50
 "このセーブデータを削除します。よろしいですか？" = "このセーブデータを削除します。よろしいですか？"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:858
 "こひぎ" = "こひぎ"
@@ -673,7 +673,7 @@
 "ねこ耳スク水" = "ねこ耳スク水"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1552
 "のきあがり" = "のきあがり"
-# shin/src/adv/backlog_rollback.rs:14; shin/src/adv/config_dialog.rs:30; shin/src/adv/higurashi/browser_lifecycle.rs:18; +6 more
+# shin/src/adv/backlog/rollback.rs:14; shin/src/adv/config/dialog.rs:30; shin/src/adv/higurashi/browser_lifecycle.rs:18; +6 more
 "はい" = "はい"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1432
 "はにゅん" = "はにゅん"
@@ -827,7 +827,7 @@
 "オリバー" = "オリバー"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1935
 "オートキャンプ" = "オートキャンプ"
-# shin/src/adv/config_widgets.rs:173
+# shin/src/adv/config/widgets.rs:173
 "オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。" = "オートモード中とMusicBoxの楽曲再生中は、@r本体の自動スリープ機能が動作しないようになります。"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:786
 "カオティック" = "カオティック"
@@ -861,9 +861,9 @@
 "カレーありがとう" = "カレーありがとう"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1705
 "カレー独身貴族" = "カレー独身貴族"
-# shin/src/adv/backlog_jump.rs:24; shin/src/adv/higurashi/browser_navigation/labels.rs:42
+# shin/src/adv/backlog/jump.rs:24; shin/src/adv/higurashi/browser_navigation/labels.rs:42
 "カーソル位置" = "カーソル位置"
-# shin/src/adv/backlog_jump.rs:26; shin/src/adv/higurashi/browser_navigation/labels.rs:44
+# shin/src/adv/backlog/jump.rs:26; shin/src/adv/higurashi/browser_navigation/labels.rs:44
 "カーソル位置/ゲーム内現在位置" = "カーソル位置/ゲーム内現在位置"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1649
 "カーテンのシャー" = "カーテンのシャー"
@@ -927,9 +927,9 @@
 "ゲロゲロ" = "ゲロゲロ"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:376
 "ゲートボール" = "ゲートボール"
-# shin/src/adv/higurashi/host/system_menu/returns.rs:25; shin/src/adv/title_return.rs:11; shin/src/app/higurashi/scenario_select.rs:15
+# shin/src/adv/higurashi/host/system_menu/returns.rs:25; shin/src/adv/title_return.rs:11; shin/src/app/higurashi/scenario_select.rs:14
 "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？" = "ゲームを終了して、タイトル画面に戻ります。@rよろしいですか？"
-# shin/src/adv/backlog_jump.rs:25; shin/src/adv/higurashi/browser_navigation/labels.rs:43
+# shin/src/adv/backlog/jump.rs:25; shin/src/adv/higurashi/browser_navigation/labels.rs:43
 "ゲーム内現在位置" = "ゲーム内現在位置"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1699
 "ゲーム機" = "ゲーム機"
@@ -983,7 +983,7 @@
 "シーフードカレー" = "シーフードカレー"
 # shin/src/adv/storage_retry_dialog.rs:54
 "シーンを読み込めませんでした。@rゲームデータをご確認ください。" = "シーンを読み込めませんでした。@rゲームデータをご確認ください。"
-# shin/src/adv/backlog_rollback.rs:13; shin/src/adv/higurashi/browser_lifecycle.rs:17
+# shin/src/adv/backlog/rollback.rs:13; shin/src/adv/higurashi/browser_lifecycle.rs:17
 "シーンジャンプを実行します。@rよろしいですか？" = "シーンジャンプを実行します。@rよろしいですか？"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:995; shin/src/app/higurashi/quiz_scene/catalog.rs:1235
 "ジェダ" = "ジェダ"
@@ -1025,9 +1025,9 @@
 "スーパー" = "スーパー"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1799
 "セブンスマート" = "セブンスマート"
-# shin/src/adv/higurashi/save_menu/model.rs:45; shin/src/adv/save_menu.rs:38
+# shin/src/adv/higurashi/save_menu/model.rs:45; shin/src/adv/save_menu.rs:46
 "セーブを行います。@r内容は上書きされますが、よろしいですか？" = "セーブを行います。@r内容は上書きされますが、よろしいですか？"
-# shin/src/adv/higurashi/save_menu/model.rs:44; shin/src/adv/save_menu.rs:40
+# shin/src/adv/higurashi/save_menu/model.rs:44; shin/src/adv/save_menu.rs:48
 "セーブを行います。よろしいですか？" = "セーブを行います。よろしいですか？"
 # shin/src/adv/persistence.rs:54; shin/src/app/higurashi/load_game.rs:49
 "セーブデータが壊れているため、ロードできません。@rはじめからゲームを開始します。" = "セーブデータが壊れているため、ロードできません。@rはじめからゲームを開始します。"
@@ -1099,7 +1099,7 @@
 "デジャヴ" = "デジャヴ"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:723
 "デス" = "デス"
-# shin/src/adv/higurashi/save_menu/view.rs:502; shin/src/adv/save_menu_text.rs:15
+# shin/src/adv/higurashi/save_menu/view.rs:414; shin/src/adv/save_menu/text.rs:15
 "データがありません" = "データがありません"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:471
 "トさカ" = "トさカ"
@@ -1385,7 +1385,7 @@
 "ロース" = "ロース"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1946
 "ロースカツ" = "ロースカツ"
-# shin/src/adv/higurashi/save_menu/model.rs:46; shin/src/adv/save_menu.rs:41
+# shin/src/adv/higurashi/save_menu/model.rs:46; shin/src/adv/save_menu.rs:49
 "ロードします。よろしいですか？" = "ロードします。よろしいですか？"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1971
 "ローラースケート" = "ローラースケート"
@@ -1575,7 +1575,7 @@
 "充" = "充"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1437
 "充電器" = "充電器"
-# shin/src/adv/backlog_jump.rs:22; shin/src/adv/higurashi/browser_navigation/labels.rs:41
+# shin/src/adv/backlog/jump.rs:22; shin/src/adv/higurashi/browser_navigation/labels.rs:41
 "先頭" = "先頭"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:2281
 "光へ" = "光へ"
@@ -2165,7 +2165,7 @@
 "彼氏" = "彼氏"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1111
 "後ろに下がる" = "後ろに下がる"
-# shin/src/adv/backlog_jump.rs:27; shin/src/adv/higurashi/browser_navigation/labels.rs:45
+# shin/src/adv/backlog/jump.rs:27; shin/src/adv/higurashi/browser_navigation/labels.rs:45
 "後尾" = "後尾"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:1497
 "後編" = "後編"
@@ -2813,7 +2813,7 @@
 "石灰岩" = "石灰岩"
 # shin/src/app/higurashi/kakera_menu/catalog.rs:550
 "研究快調" = "研究快調"
-# shin/src/adv/config_dialog.rs:31; shin/src/adv/higurashi/save_menu/model.rs:55; shin/src/adv/save_game.rs:102; +4 more
+# shin/src/adv/config/dialog.rs:31; shin/src/adv/higurashi/save_menu/model.rs:55; shin/src/adv/save_game.rs:102; +4 more
 "確認" = "確認"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:581
 "磯野" = "磯野"
@@ -3121,7 +3121,7 @@
 "解答編" = "解答編"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:2231
 "記憶喪失" = "記憶喪失"
-# shin/src/adv/config_dialog.rs:15; shin/src/app/higurashi/config/owner.rs:30
+# shin/src/adv/config/dialog.rs:15; shin/src/app/higurashi/config/owner.rs:30
 "設定を初期値に戻します。よろしいですか？" = "設定を初期値に戻します。よろしいですか？"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:159
 "詩織" = "詩織"
@@ -3223,7 +3223,7 @@
 "運気による変化" = "運気による変化"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:606
 "道頓堀一成" = "道頓堀一成"
-# shin/src/app/higurashi/tips_menu.rs:154; shin/src/title/cg_gallery.rs:148; shin/src/title/movie_gallery.rs:136; +1 more
+# shin/src/app/higurashi/tips_menu.rs:154; shin/src/title/cg_gallery.rs:143; shin/src/title/movie_gallery.rs:137; +1 more
 "達成率:100％" = "達成率:100％"
 # shin/src/app/higurashi/cg_gallery.rs:192
 "達成率:{completion}％" = "達成率:{completion}％"
@@ -3231,7 +3231,7 @@
 "達成率:{percentage}％" = "達成率:{percentage}％"
 # shin/src/app/higurashi/movie_gallery.rs:197; shin/src/app/higurashi/music_gallery.rs:163
 "達成率:{percent}％" = "達成率:{percent}％"
-# shin/src/app/higurashi/tips_menu.rs:156; shin/src/title/cg_gallery.rs:150; shin/src/title/movie_gallery.rs:138; +1 more
+# shin/src/app/higurashi/tips_menu.rs:156; shin/src/title/cg_gallery.rs:145; shin/src/title/movie_gallery.rs:139; +1 more
 "達成率:{}.{}％" = "達成率:{}.{}％"
 # shin/src/app/higurashi/quiz_scene/catalog.rs:2026
 "部活メンバー" = "部活メンバー"
