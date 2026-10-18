@@ -1,8 +1,6 @@
 //! Updated1a8bc/1b628 SystemMenu. Child modes, modal backdrop/audio scope and
 //! text/GPU resources are supplied by their owners; this owns rows and input.
-use crate::adv::input_area::{
-    InputArea, InputAreaTarget, MouseRelease, PointerFrame, desktop_gesture_vector,
-};
+use crate::adv::input_area::{InputArea, InputAreaTarget, MouseRelease, PointerFrame};
 use crate::layer::higurashi_properties::HigurashiTweener;
 use glam::Vec2;
 use shin_core::time::Ticks;
@@ -358,21 +356,8 @@ impl<S: MenuServices> InputAreaTarget for Contact<'_, S> {
     fn drag(&mut self, _: Vec2, _: Vec2) {
         self.state.cancel_pointer();
     }
+    /// Original1d86c/1d870 are RET: no swipe closes the menu, by touch or mouse.
     fn gesture(&mut self, _: Vec2) {}
-    fn mouse_gesture(&mut self, displacement: Vec2, velocity: Vec2) {
-        // Original1d86c/1d870 are RET. Keep the native callback unchanged;
-        // desktop mouse closing deliberately reuses the story-menu policy.
-        let candidate = desktop_gesture_vector(displacement, velocity);
-        let left = |vector: Vec2| {
-            let angle = vector.y.atan2(vector.x) / f32::from_bits(0x40490fd8) * 180.0;
-            angle > 150.0 || angle < -150.0
-        };
-        if (candidate.length() >= 64.0 && left(candidate))
-            || (velocity.length() > 20.0 && left(velocity))
-        {
-            self.state.close(self.setting, self.services);
-        }
-    }
     fn cancel(&mut self) {
         self.state.cancel_pointer();
     }

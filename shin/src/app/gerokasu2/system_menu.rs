@@ -11,7 +11,7 @@ use crate::{
                 artwork::{self, TextKind},
             },
         },
-        input_area::{InputArea, InputAreaTarget, PointerSampler},
+        input_area::{InputArea, InputAreaTarget, PointerSampler, desktop_gesture_vector},
     },
     asset::{font::gerokasu2::GpuGerokasu2Font, system::AssetServer},
     audio::SystemSoundPlayer,
@@ -355,5 +355,41 @@ impl InputAreaTarget for Contact<'_> {
     }
     fn gesture(&mut self, v: Vec2) {
         self.0.gesture(v.to_array());
+    }
+    /// Like the root's overlay swipe, a slow mouse drag closes by displacement.
+    fn mouse_gesture(&mut self, displacement: Vec2, velocity: Vec2) {
+        self.gesture(desktop_gesture_vector(displacement, velocity));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use glam::vec2;
+
+    fn ready() -> Controller {
+        let mut m = Controller::new();
+        m.update(30., true, false, Default::default(), 0.);
+        m.take_sounds();
+        m
+    }
+
+    #[test]
+    fn slow_left_mouse_drag_closes_like_a_touch_flick() {
+        let mut m = ready();
+        let phase = m.phase;
+        Contact(&mut m).mouse_gesture(vec2(-128., 0.), vec2(-5., 0.));
+        assert_eq!(m.phase, phase + 1);
+        assert_eq!(m.take_sounds(), ["cancel"]);
+        for (displacement, velocity) in [
+            (vec2(128., 0.), vec2(5., 0.)),
+            (vec2(0., -128.), vec2(0., -5.)),
+            (vec2(-12., 0.), vec2(-5., 0.)),
+        ] {
+            let mut m = ready();
+            let phase = m.phase;
+            Contact(&mut m).mouse_gesture(displacement, velocity);
+            assert_eq!(m.phase, phase, "{displacement:?}");
+        }
     }
 }
