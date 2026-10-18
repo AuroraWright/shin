@@ -1,6 +1,6 @@
 [package]
 name = "shin-input"
-version = "1.0.2-fork"
+version = "1.0.3-fork"
 edition = "2024"
 
 [dependencies]

@@ -1,6 +1,6 @@
 [package]
 name = "shin"
-version = "1.0.2-fork"
+version = "1.0.3-fork"
 edition = "2024"
 description = "A visual novel engine used by some entergram games"
 repository = "https://github.com/AuroraWright/shin"
