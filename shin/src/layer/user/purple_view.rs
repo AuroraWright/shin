@@ -235,7 +235,7 @@ pub(crate) fn reference_transcript_colors_render(
         .parent()
         .unwrap();
     for name in ["uncompressed_executable", "uncompressed_executable_update"] {
-        let executable = std::fs::read(root.join("umineko_switch_files").join(name)).unwrap();
+        let executable = std::fs::read(root.join("game-data/umineko").join(name)).unwrap();
         for text in [CHAPTERS[5].text, CHAPTERS[1].text, PERSON_TEXT[0]] {
             assert!(
                 executable

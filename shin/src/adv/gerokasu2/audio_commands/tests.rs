@@ -188,7 +188,7 @@ fn ger_audio_commands_match_native_callbacks_and_retained_polls() {
     let binary = folder.join("native-audio-commands");
     let c = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-audio-commands.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-audio-commands.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -250,7 +250,7 @@ fn ger_audio_commands_match_native_callbacks_and_retained_polls() {
     let request = folder.join("request.bin");
     fs::write(&request, input).unwrap();
     let output = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(request).unwrap()))

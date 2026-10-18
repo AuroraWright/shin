@@ -150,7 +150,7 @@ mod tests {
             .map(PathBuf::from)
             .unwrap_or_else(|| {
                 PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                    .join("../umineko_switch_files/uncompressed_executable")
+                    .join("../game-data/umineko/uncompressed_executable")
             });
         let data = std::fs::read(path).unwrap();
         let u32_at = |address: usize| {

@@ -225,7 +225,7 @@ fn ger_native_backlog_lifecycle_tasks_and_callback_order_match() {
         });
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

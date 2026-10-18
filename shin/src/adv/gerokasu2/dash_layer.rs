@@ -120,7 +120,7 @@ mod gpu_tests {
     /// Renders the three dash frames from the ROM's effects.txa; set
     /// `SHIN_GEROKASU_DASH_FRAMES=<dir>` to keep `.rgba` review dumps.
     #[test]
-    #[ignore = "requires gerokasu/data.rom and Metal; renders the dash frames offscreen"]
+    #[ignore = "requires game-data/gerokasu/data.rom and Metal; renders the dash frames offscreen"]
     fn gerokasu_dash_frames_cover_screen_and_cycle() {
         let gpu = Offscreen::new();
         let assets = assets(&gpu);

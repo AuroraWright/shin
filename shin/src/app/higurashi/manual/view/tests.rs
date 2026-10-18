@@ -147,7 +147,7 @@ fn reference_updated_manual_render_frozen_original_reexecution() {
         .unwrap_or_else(|_| "/tmp/higurashi-newrodin.fnt".into());
     use std::io::Write;
     let mut child = std::process::Command::new(exe)
-        .arg(root.join("higurashi/uncompressed_executable_update"))
+        .arg(root.join("game-data/higurashi/uncompressed_executable_update"))
         .arg(font)
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())

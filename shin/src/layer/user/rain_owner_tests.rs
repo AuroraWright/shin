@@ -240,10 +240,10 @@ fn reference_native_rain_clone_group_slot_and_final_retirement() {
     let mut total = 0;
     for version in ["original", "1.03"] {
         let mut io = LayeredAssetIo::new();
-        io.try_with_rom(root.join("umineko_switch_files/data.rom"))
+        io.try_with_rom(root.join("game-data/umineko/data.rom"))
             .unwrap();
         if version == "1.03" {
-            io.try_with_rom(root.join("umineko_switch_files/patch.rom"))
+            io.try_with_rom(root.join("game-data/umineko/patch.rom"))
                 .unwrap();
         }
         let server = AssetServer::new(

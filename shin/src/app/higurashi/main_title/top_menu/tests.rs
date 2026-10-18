@@ -119,7 +119,7 @@ impl Reference {
 fn native(protocol: String) -> String {
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_TOP_MENU").unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())

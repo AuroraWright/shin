@@ -13,7 +13,7 @@ fn ger_native_replay_worker_threshold_refork_cancellation_and_mutation_guards() 
     let binary = folder.join("native-replay-worker");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-replay-worker.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-replay-worker.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -26,7 +26,7 @@ fn ger_native_replay_worker_threshold_refork_cancellation_and_mutation_guards() 
     let run = |mutant: Option<&str>| {
         let mut command = Command::new(&binary);
         command
-            .arg(root.join("gerokasu2/uncompressed_executable"))
+            .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
             .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
             .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .env_remove("SHIN_GER_REPLAY_WORKER_MUTANT");

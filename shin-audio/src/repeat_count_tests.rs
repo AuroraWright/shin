@@ -186,7 +186,7 @@ fn reference_native_audio_repeat_worker() {
         ("uncompressed_executable", 0),
         ("uncompressed_executable_update", 0x730),
     ] {
-        let exe = root.join("umineko_switch_files").join(name);
+        let exe = root.join("game-data/umineko").join(name);
         let mut child = Command::new(&binary)
             .arg(&exe)
             .stdin(Stdio::piped())

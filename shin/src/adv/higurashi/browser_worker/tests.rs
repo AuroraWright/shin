@@ -152,7 +152,10 @@ fn higurashi_browser_worker_matches_native_outward_measurement_and_cancel() {
     }
     assert!(ready_while_active);
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_BROWSER_WORKER").unwrap())
-        .args(["higurashi/uncompressed_executable_update", &fontpath])
+        .args([
+            "game-data/higurashi/uncompressed_executable_update",
+            &fontpath,
+        ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

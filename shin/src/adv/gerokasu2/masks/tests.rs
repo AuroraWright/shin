@@ -230,7 +230,7 @@ fn ger_native_masks_captured_plane_callbacks_raw_permission_and_init_minus5() {
     let binary = folder.join("native-masks");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-masks.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-masks.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -241,7 +241,7 @@ fn ger_native_masks_captured_plane_callbacks_raw_permission_and_init_minus5() {
         String::from_utf8_lossy(&compile.stderr)
     );
     let mut child = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())

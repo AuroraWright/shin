@@ -366,7 +366,7 @@ fn reference_native_cake_input_focus_flash_clocks_match_model() {
     let input = commands.join("\n") + "\n";
     for name in ["uncompressed_executable", "uncompressed_executable_update"] {
         let mut child = Command::new(&binary)
-            .arg(root.join("umineko_switch_files").join(name))
+            .arg(root.join("game-data/umineko").join(name))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())

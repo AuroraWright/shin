@@ -50,7 +50,7 @@ fn ger_native_switch_trophy_and_gallery_unlocks_match_shared_index_sets() {
     let binary = folder.join("native-gallery");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-gallery.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-gallery.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -108,7 +108,7 @@ fn ger_native_switch_trophy_and_gallery_unlocks_match_shared_index_sets() {
     let input = folder.join("request.bin");
     fs::write(&input, request).unwrap();
     let output = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

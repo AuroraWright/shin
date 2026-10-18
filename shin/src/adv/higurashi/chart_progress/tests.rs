@@ -37,7 +37,7 @@ fn snapshot(result: u32, memory: &CheckpointMemory, progress: &ProgressMemory) -
 }
 fn native(tool: &str, font: bool, input: String) -> String {
     let mut command = Command::new(std::env::var(tool).unwrap());
-    command.arg("higurashi/uncompressed_executable_update");
+    command.arg("game-data/higurashi/uncompressed_executable_update");
     if font {
         command.arg("/tmp/higurashi-newrodin.fnt");
     }

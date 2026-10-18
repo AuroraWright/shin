@@ -427,7 +427,8 @@ fn patchless_kakera_actual_base_atlas_keeps_normal_cards_and_allows_escape_from_
         .parent()
         .unwrap();
     let mut io = LayeredAssetIo::new();
-    io.try_with_rom(root.join("higurashi/data.rom")).unwrap();
+    io.try_with_rom(root.join("game-data/higurashi/data.rom"))
+        .unwrap();
     let server = AssetServer::new(
         io.into(),
         AssetLoadContext {

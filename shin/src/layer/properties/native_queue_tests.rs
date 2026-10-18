@@ -98,7 +98,7 @@ fn reference_native_property_queue_dispatch() {
         ("1.03", "uncompressed_executable_update"),
     ] {
         let output = Command::new(&binary)
-            .arg(root.join("umineko_switch_files").join(executable))
+            .arg(root.join("game-data/umineko").join(executable))
             .stdin(Stdio::from(fs::File::open(&input).unwrap()))
             .output()
             .unwrap();

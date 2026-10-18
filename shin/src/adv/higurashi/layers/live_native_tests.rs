@@ -326,7 +326,7 @@ fn higurashi_live_factory_and_reconstruction_match_actual_native_owners() {
     }
     let mut process = Command::new(exe)
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())

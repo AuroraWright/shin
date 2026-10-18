@@ -145,10 +145,10 @@ fn reference_native_resource_layer_clone_and_final_retirement() {
         .unwrap();
         let scenario = Scenario::new(snr.into()).unwrap();
         let mut io = LayeredAssetIo::new();
-        io.try_with_rom(root.join("umineko_switch_files/data.rom"))
+        io.try_with_rom(root.join("game-data/umineko/data.rom"))
             .unwrap();
         if version == "1.03" {
-            io.try_with_rom(root.join("umineko_switch_files/patch.rom"))
+            io.try_with_rom(root.join("game-data/umineko/patch.rom"))
                 .unwrap();
         }
         let server = AssetServer::new(

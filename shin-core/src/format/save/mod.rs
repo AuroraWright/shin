@@ -682,7 +682,7 @@ mod tests {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
-            .join("umineko_switch_files/uncompressed_executable");
+            .join("game-data/umineko/uncompressed_executable");
         let executable = std::fs::read(path).unwrap();
         let instruction = |address: usize| {
             u32::from_le_bytes(executable[address + 256..address + 260].try_into().unwrap())

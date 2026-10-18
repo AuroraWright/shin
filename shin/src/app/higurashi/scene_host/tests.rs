@@ -82,7 +82,7 @@ fn higurashi_scene_host_dispatch_and_clock_match_native() {
     }
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_SCENE_HOST").unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())

@@ -15,7 +15,7 @@ fn ger_native_reconstruction_resource_worker_reuses_generations_and_checks_cance
     let binary = folder.join("native-reconstruction-resources");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-reconstruction-resources.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-reconstruction-resources.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -26,7 +26,7 @@ fn ger_native_reconstruction_resource_worker_reuses_generations_and_checks_cance
         String::from_utf8_lossy(&compile.stderr)
     );
     let mut child = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())

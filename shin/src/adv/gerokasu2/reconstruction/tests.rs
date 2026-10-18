@@ -99,7 +99,9 @@ mod native {
             let binary: PathBuf = folder.join(format!("native-reconstruction-{name}"));
             let compile = Command::new("clang")
                 .args(["-std=c11", "-O2"])
-                .arg(root.join(format!("gerokasu2/native-reconstruction-{name}.c")))
+                .arg(root.join(format!(
+                    "reverse-engineering/gerokasu2/native-reconstruction-{name}.c"
+                )))
                 .arg("-o")
                 .arg(&binary)
                 .output()
@@ -110,7 +112,7 @@ mod native {
                 String::from_utf8_lossy(&compile.stderr)
             );
             let mut child = Command::new(binary)
-                .arg(root.join("gerokasu2/uncompressed_executable"))
+                .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
                 .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
                 .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
                 .stdin(Stdio::piped())

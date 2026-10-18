@@ -137,7 +137,7 @@ fn reference_last_native_draw_commands_and_full_atlas_frames() {
         String::from_utf8_lossy(&compiled.stderr)
     );
     let updated = std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some();
-    let executable = root.join("umineko_switch_files").join(if updated {
+    let executable = root.join("game-data/umineko").join(if updated {
         "uncompressed_executable_update"
     } else {
         "uncompressed_executable"

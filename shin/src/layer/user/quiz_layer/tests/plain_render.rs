@@ -246,7 +246,7 @@ fn reference_plain_quiz_cake_native_draws_and_properties() {
     let _audio = shin_audio::AudioManager::new_for_tests();
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
     let updated = std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some();
-    let executable = root.join("umineko_switch_files").join(if updated { "uncompressed_executable_update" } else { "uncompressed_executable" });
+    let executable = root.join("game-data/umineko").join(if updated { "uncompressed_executable_update" } else { "uncompressed_executable" });
     let mut host = PlainDrawHost::new();
     let mut cases = Vec::new();
     for mask in 1..=127 {

@@ -199,7 +199,7 @@ fn reference_native_layer_property_transform_extraction() {
         (false, "uncompressed_executable"),
         (true, "uncompressed_executable_update"),
     ] {
-        let executable = root.join("umineko_switch_files").join(name);
+        let executable = root.join("game-data/umineko").join(name);
         let mut child = Command::new(&binary)
             .arg(&executable)
             .stdin(Stdio::piped())

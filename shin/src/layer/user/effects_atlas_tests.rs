@@ -91,10 +91,10 @@ fn reference_shared_effects_atlas_identity_publication_and_retirement() {
     let mut cases = 0;
     for updated in [false, true] {
         let mut io = LayeredAssetIo::new();
-        io.try_with_rom(root.join("umineko_switch_files/data.rom"))
+        io.try_with_rom(root.join("game-data/umineko/data.rom"))
             .unwrap();
         if updated {
-            io.try_with_rom(root.join("umineko_switch_files/patch.rom"))
+            io.try_with_rom(root.join("game-data/umineko/patch.rom"))
                 .unwrap();
         }
         let server = Arc::new(AssetServer::new(

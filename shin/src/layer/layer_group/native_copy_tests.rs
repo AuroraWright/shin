@@ -627,7 +627,7 @@ fn run_native_populated_layer_copy(workload: usize) {
                 "SHIN_ACTIVE_SCREEN_CAPTURE",
                 if captured { "1" } else { "0" },
             )
-            .arg(root.join("umineko_switch_files").join(executable))
+            .arg(root.join("game-data/umineko").join(executable))
             .stdin(Stdio::from(fs::File::open(&request).unwrap()))
             .output()
             .unwrap();

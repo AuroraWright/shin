@@ -31,8 +31,8 @@ impl Dictionary {
     ) -> AssetServer {
         let mut io = LayeredAssetIo::new();
         io.try_with_rom(root.join(match game {
-            Game::Gerokasu => "gerokasu/data.rom",
-            _ => "gerokasu2/data.rom",
+            Game::Gerokasu => "game-data/gerokasu/data.rom",
+            _ => "game-data/gerokasu2/data.rom",
         }))
         .unwrap();
         io.with_localized_file(self.0.join("localized.toml"));

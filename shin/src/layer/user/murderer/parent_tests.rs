@@ -145,7 +145,7 @@ fn reference_native_murderer_parent_properties_capture_and_passes() {
     }
     for name in ["uncompressed_executable", "uncompressed_executable_update"] {
         let mut child = Command::new(&binary)
-            .arg(root.join("umineko_switch_files").join(name))
+            .arg(root.join("game-data/umineko").join(name))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -255,7 +255,7 @@ fn reference_native_murderer_parent_properties_capture_and_passes() {
             assert_eq!(offset, words.len());
         }
         // The whole-image guard rejects a mutant before native execution.
-        let mut bytes = std::fs::read(root.join("umineko_switch_files").join(name)).unwrap();
+        let mut bytes = std::fs::read(root.join("game-data/umineko").join(name)).unwrap();
         let last = bytes.len() - 1;
         bytes[last] ^= 1;
         let mutant = binary.with_extension("mutant");

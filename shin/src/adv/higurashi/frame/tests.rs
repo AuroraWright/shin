@@ -309,7 +309,7 @@ fn higurashi_choice_overlay_draw_order_matches_native_three_children() {
     }
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_CHOICE_ORDER").unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())

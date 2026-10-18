@@ -549,7 +549,7 @@ fn higurashi_root_touch_matches_updated_callbacks_and_contacts() {
     }
     let input = c.commands;
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_ROOT_TOUCH").unwrap())
-        .arg("higurashi/uncompressed_executable_update")
+        .arg("game-data/higurashi/uncompressed_executable_update")
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

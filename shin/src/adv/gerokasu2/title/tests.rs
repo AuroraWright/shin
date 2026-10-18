@@ -150,12 +150,15 @@ mod native {
         let manifest = PathBuf::from(option_env!("CARGO_MANIFEST_DIR").unwrap_or("."));
         let root = manifest
             .ancestors()
-            .find(|path| path.join("gerokasu2/native-title.c").is_file())
+            .find(|path| {
+                path.join("reverse-engineering/gerokasu2/native-title.c")
+                    .is_file()
+            })
             .expect("Ger title probe source root")
             .to_owned();
         let executable = std::env::var_os("SHIN_GEROKASU2_EXECUTABLE")
             .map(PathBuf::from)
-            .unwrap_or_else(|| root.join("gerokasu2/uncompressed_executable"));
+            .unwrap_or_else(|| root.join("game-data/gerokasu2/uncompressed_executable"));
         let normal = std::env::var_os("SHIN_GEROKASU2_MEDIUM_FONT")
             .map(PathBuf::from)
             .unwrap_or_else(|| root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"));
@@ -179,7 +182,7 @@ mod native {
             assert!(
                 Command::new("clang")
                     .args(["-std=c11", "-O2"])
-                    .arg(root.join(format!("gerokasu2/{source}.c")))
+                    .arg(root.join(format!("reverse-engineering/gerokasu2/{source}.c")))
                     .arg("-o")
                     .arg(&binary)
                     .status()

@@ -107,7 +107,7 @@ fn ger_native_adv_banks_complete_headers_generations_properties_and_interactions
     let binary = folder.join("native-layer-adv-banks");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-layer-adv-banks.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-layer-adv-banks.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -118,7 +118,7 @@ fn ger_native_adv_banks_complete_headers_generations_properties_and_interactions
         String::from_utf8_lossy(&compile.stderr)
     );
     let mut child = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())

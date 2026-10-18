@@ -247,7 +247,7 @@ fn ger_native_save_preview_replay_callbacks_and_label_export_match() {
     std::fs::write(out.join("corpus.input"), &input).unwrap();
     let mut child = Command::new(oracle)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
         ])

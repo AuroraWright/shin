@@ -22,7 +22,7 @@ fn native(kind: &str, input: &str) -> String {
     .map(PathBuf::from)
     .unwrap_or_else(|| d.join(format!("native-system-menu-{kind}")));
     let o = Command::new(bin)
-        .arg(r.join("gerokasu2/uncompressed_executable"))
+        .arg(r.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(r.join("test-fixtures/gerokasu2/system.fnt"))
         .arg(r.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .stdin(Stdio::from(fs::File::open(path).unwrap()))

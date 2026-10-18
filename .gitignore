@@ -14,10 +14,7 @@ heaptrack.*.zst
 # Game data, local builds, reverse-engineering evidence and recovery data.
 # No trailing slash, so symlinked folders are ignored too.
 /builds
-/umineko_switch_files
-/higurashi
-/gerokasu
-/gerokasu2
+/game-data
 /reverse-engineering
 /.local
 /.workspace-recovery-*
@@ -28,13 +25,7 @@ heaptrack.*.zst
 
 # Agent working files
 AGENTS.md
-CLAUDE.md
-/HANDOFF*.md
-WORKTREE.md
-/instructions.xlsx
-/.claude/
-/.codex/
-/.agents/
+/.claude
 
 # Game fonts used by Gerokasu2 tests; copied from the game data, never tracked.
 /test-fixtures/gerokasu2/*.fnt

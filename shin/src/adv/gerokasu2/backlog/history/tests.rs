@@ -127,7 +127,7 @@ fn ger_native_backlog_history_adapter_routes_layout_and_first_match() {
         });
     let mut native = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

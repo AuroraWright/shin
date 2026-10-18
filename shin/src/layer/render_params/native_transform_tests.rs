@@ -98,7 +98,7 @@ fn reference_native_transform_composition_and_projection() {
         (false, "uncompressed_executable"),
         (true, "uncompressed_executable_update"),
     ] {
-        let executable = root.join("umineko_switch_files").join(name);
+        let executable = root.join("game-data/umineko").join(name);
         let mut child = Command::new(&binary)
             .arg(&executable)
             .stdin(Stdio::piped())

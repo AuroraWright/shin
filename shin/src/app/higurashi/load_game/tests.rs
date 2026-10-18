@@ -25,7 +25,7 @@ use std::{
 fn native(variable: &str, protocol: String) -> Vec<String> {
     let mut child = Command::new(std::env::var(variable).unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())

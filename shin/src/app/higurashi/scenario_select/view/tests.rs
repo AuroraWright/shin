@@ -183,7 +183,7 @@ fn reference_updated_scenario_select_renderer_frozen_original_reexecution() {
         .unwrap_or_else(|_| "/tmp/higurashi-scenario-patch.rom.snr".into());
     use std::io::Write;
     let mut child = std::process::Command::new(exe)
-        .arg(root.join("higurashi/uncompressed_executable_update"))
+        .arg(root.join("game-data/higurashi/uncompressed_executable_update"))
         .arg(font)
         .arg(snr)
         .stdin(std::process::Stdio::piped())

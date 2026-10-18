@@ -224,7 +224,7 @@ impl Compare {
     }
     fn verify(self) {
         let exe = std::env::var("SHIN_HIGURASHI_EXECUTABLE")
-            .unwrap_or_else(|_| "higurashi/uncompressed_executable_update".into());
+            .unwrap_or_else(|_| "game-data/higurashi/uncompressed_executable_update".into());
         let font = std::env::var("SHIN_HIGURASHI_FONT")
             .unwrap_or_else(|_| "/tmp/higurashi-newrodin.fnt".into());
         let mut child = Command::new(

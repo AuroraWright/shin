@@ -19,7 +19,7 @@ fn oracle(variable: &str, fallback: &str, input: &[u8], font_args: bool) -> Vec<
                 .join(fallback)
         });
     let mut command = Command::new(binary);
-    command.arg(root.join("gerokasu2/uncompressed_executable"));
+    command.arg(root.join("game-data/gerokasu2/uncompressed_executable"));
     if font_args {
         command
             .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))

@@ -238,10 +238,10 @@ fn reference_native_movie_composed_clone_and_final_owners() {
         .unwrap();
         let scenario = Scenario::new(bytes.into()).unwrap();
         let mut io = LayeredAssetIo::new();
-        io.try_with_rom(workspace.join("umineko_switch_files/data.rom"))
+        io.try_with_rom(workspace.join("game-data/umineko/data.rom"))
             .unwrap();
         if version == "1.03" {
-            io.try_with_rom(workspace.join("umineko_switch_files/patch.rom"))
+            io.try_with_rom(workspace.join("game-data/umineko/patch.rom"))
                 .unwrap();
         }
         let server = Arc::new(AssetServer::new(

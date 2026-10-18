@@ -267,7 +267,7 @@ fn reference_native_property_copy_and_final_owner_retirement() {
     ] {
         let run = |mutant: Option<&str>| {
             let mut cmd = Command::new(&binary);
-            cmd.arg(root.join("umineko_switch_files").join(executable))
+            cmd.arg(root.join("game-data/umineko").join(executable))
                 .stdin(Stdio::from(fs::File::open(&input).unwrap()));
             if let Some(m) = mutant {
                 cmd.env("SHIN_PROPERTY_COPY_MUTANT", m);

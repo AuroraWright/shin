@@ -77,7 +77,7 @@ fn ger_native_backlog_history_rows_routes_and_initial_geometry() {
         });
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

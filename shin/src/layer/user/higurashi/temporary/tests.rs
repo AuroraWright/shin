@@ -737,7 +737,7 @@ fn patchless_notification_missing_title_banks_keep_acquisition_and_common_rows()
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
-        .join("higurashi");
+        .join("game-data/higurashi");
     for patch in [false, true] {
         let mut io = LayeredAssetIo::new();
         if patch {

@@ -32,7 +32,7 @@ fn run(name: &str, input: &str) -> String {
         assert!(
             Command::new("clang")
                 .args(["-std=c11", "-O2"])
-                .arg(root.join(format!("gerokasu2/{name}.c")))
+                .arg(root.join(format!("reverse-engineering/gerokasu2/{name}.c")))
                 .arg("-o")
                 .arg(&binary)
                 .status()
@@ -43,7 +43,7 @@ fn run(name: &str, input: &str) -> String {
     std::fs::write(out.join(format!("{name}.input")), input).unwrap();
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
         ])

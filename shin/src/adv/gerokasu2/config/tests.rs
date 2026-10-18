@@ -80,7 +80,7 @@ fn ger_native_config_schema_widgets_and_controller() {
     let binary = local.join("native-config-model-test");
     let compile = Command::new("clang")
         .args(["-O2", "-arch", "arm64"])
-        .arg(root.join("gerokasu2/native-config-model.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-config-model.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -196,7 +196,7 @@ fn ger_native_config_schema_widgets_and_controller() {
     let input_path = local.join("controller-input.txt");
     std::fs::write(&input_path, &source).unwrap();
     let mut child = Command::new(&binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
@@ -268,7 +268,7 @@ fn ger_native_config_original_parent_row_artwork() {
     let binary = local.join("native-config-render-test");
     let compile = Command::new("clang")
         .args(["-O2", "-arch", "arm64"])
-        .arg(root.join("gerokasu2/native-config-render.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-config-render.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -281,7 +281,7 @@ fn ger_native_config_original_parent_row_artwork() {
     let mut quads = 0;
     for selected in 0..13 {
         let mut child = Command::new(&binary)
-            .arg(root.join("gerokasu2/uncompressed_executable"))
+            .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
             .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
             .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .stdin(Stdio::piped())
@@ -358,7 +358,7 @@ fn ger_native_config_pointer_edges() {
     let binary = local.join("native-config-pointer-test");
     let compile = Command::new("clang")
         .args(["-O2", "-arch", "arm64"])
-        .arg(root.join("gerokasu2/native-config-model.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-config-model.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -383,7 +383,7 @@ fn ger_native_config_pointer_edges() {
         }
     }
     let mut child = Command::new(&binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
@@ -440,7 +440,7 @@ fn ger_native_config_original_open_close_clocks() {
     let binary = local.join("native-config-clock-test");
     let compile = Command::new("clang")
         .args(["-O2", "-arch", "arm64"])
-        .arg(root.join("gerokasu2/native-config-model.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-config-model.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -470,7 +470,7 @@ fn ger_native_config_original_open_close_clocks() {
         }
     }
     let mut child = Command::new(&binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())

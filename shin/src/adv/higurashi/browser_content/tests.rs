@@ -79,7 +79,7 @@ fn array<const N: usize>(w: &mut std::str::SplitWhitespace<'_>) -> [u32; N] {
 fn native(input: &str) -> Vec<Packet> {
     let mut child = Process::new(std::env::var("SHIN_HIGURASHI_NATIVE_BROWSER_CONTENT").unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())

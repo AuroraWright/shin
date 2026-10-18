@@ -300,7 +300,7 @@ fn reference_native_murderer_fast_forward() {
     }
     for image in ["uncompressed_executable", "uncompressed_executable_update"] {
         let mut native = Command::new(&binary)
-            .arg(root.join("umineko_switch_files").join(image))
+            .arg(root.join("game-data/umineko").join(image))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -326,7 +326,7 @@ fn reference_native_murderer_fast_forward() {
                 .collect();
             assert_eq!(&actual, expected, "{image}: case{index}");
         }
-        let mut mutated = std::fs::read(root.join("umineko_switch_files").join(image)).unwrap();
+        let mut mutated = std::fs::read(root.join("game-data/umineko").join(image)).unwrap();
         let end = mutated.len() - 1;
         mutated[end] ^= 1;
         let mutant = binary.with_extension("mutant");

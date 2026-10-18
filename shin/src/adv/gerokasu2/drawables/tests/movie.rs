@@ -43,14 +43,14 @@ impl Native {
         let binary = root.join("reverse-engineering/gerokasu2/movie/native-movie");
         let c = Command::new("clang")
             .args(["-std=c11", "-O2"])
-            .arg(root.join("gerokasu2/native-movie.c"))
+            .arg(root.join("reverse-engineering/gerokasu2/native-movie.c"))
             .arg("-o")
             .arg(&binary)
             .output()
             .unwrap();
         assert!(c.status.success(), "{}", String::from_utf8_lossy(&c.stderr));
         let mut child = Command::new(binary)
-            .arg(root.join("gerokasu2/uncompressed_executable"))
+            .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
             .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
             .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .stdin(Stdio::piped())

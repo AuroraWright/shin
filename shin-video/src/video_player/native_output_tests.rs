@@ -302,7 +302,7 @@ fn compare_port_silence(case: Case, native_samples: usize) {
 #[ignore = "requires supplied original/1.03 executables, ROM and libavformat/libavcodec; CPU only"]
 fn reference_native_movie_output_queues_eof_pause_and_retirement() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let supplied = root.join("umineko_switch_files");
+    let supplied = root.join("game-data/umineko");
     let out = std::env::var_os("SHIN_NATIVE_MOVIE_OUTPUT_WORKER_DIR")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {

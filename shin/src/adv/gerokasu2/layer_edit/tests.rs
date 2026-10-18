@@ -192,7 +192,7 @@ fn ger_native_layer_edit_callbacks_and_retained_vectors() {
     let binary = folder.join("native-layer-edits");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-layer-edits.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-layer-edits.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -276,7 +276,7 @@ fn ger_native_layer_edit_callbacks_and_retained_vectors() {
     let input = folder.join("request.bin");
     fs::write(&input, request).unwrap();
     let output = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

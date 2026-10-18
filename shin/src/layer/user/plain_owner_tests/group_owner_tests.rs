@@ -175,10 +175,10 @@ fn reference_native_plain_group_slot_clone_and_final_retirement() {
         let mut rows = Vec::new();
         for kind in 0..3 {
             let mut io = LayeredAssetIo::new();
-            io.try_with_rom(workspace.join("umineko_switch_files/data.rom"))
+            io.try_with_rom(workspace.join("game-data/umineko/data.rom"))
                 .unwrap();
             if version == "1.03" {
-                io.try_with_rom(workspace.join("umineko_switch_files/patch.rom"))
+                io.try_with_rom(workspace.join("game-data/umineko/patch.rom"))
                     .unwrap();
             }
             let server = AssetServer::new(

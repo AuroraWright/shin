@@ -120,7 +120,7 @@ fn ger_native_question_cached_draw_packets_and_palette_match() {
     assert!(
         Command::new("clang")
             .args(["-std=c11", "-O2"])
-            .arg(root.join("gerokasu2/native-question-render.c"))
+            .arg(root.join("reverse-engineering/gerokasu2/native-question-render.c"))
             .arg("-o")
             .arg(&binary)
             .status()
@@ -192,7 +192,7 @@ fn ger_native_question_cached_draw_packets_and_palette_match() {
     std::fs::write(out.join("native-question-render.input"), &input).unwrap();
     let mut child = Command::new(&binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

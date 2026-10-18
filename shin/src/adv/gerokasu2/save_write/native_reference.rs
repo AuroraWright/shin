@@ -150,7 +150,7 @@ fn ger_native_save_write_notification_and_coordinator_match() {
     }
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

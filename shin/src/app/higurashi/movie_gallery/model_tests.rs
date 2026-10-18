@@ -34,7 +34,7 @@ fn rerun_original() -> String {
     );
     for run in 0..2 {
         let mut child = Command::new(required("SHIN_HIGURASHI_MOVIE_GALLERY_MODEL_NATIVE"))
-            .arg(root().join("higurashi/uncompressed_executable_update"))
+            .arg(root().join("game-data/higurashi/uncompressed_executable_update"))
             .arg(required("SHIN_HIGURASHI_MOVIE_GALLERY_FONT"))
             .arg(required("SHIN_HIGURASHI_MOVIE_GALLERY_SCENARIO"))
             .stdin(Stdio::piped())

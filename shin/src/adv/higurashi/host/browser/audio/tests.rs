@@ -144,7 +144,7 @@ fn higurashi_browser_audio_matches_native_sequence_and_cue_names() {
     }
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_BROWSER_AUDIO").unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(Stdio::piped())
@@ -172,7 +172,7 @@ fn higurashi_browser_audio_matches_native_sequence_and_cue_names() {
         assert_eq!(&native, words, "replay observation{i}");
     }
     // Follow the original two relocation indirections, as in shared Umineko cue proofs.
-    let exe = std::fs::read("higurashi/uncompressed_executable_update").unwrap();
+    let exe = std::fs::read("game-data/higurashi/uncompressed_executable_update").unwrap();
     let raw = &exe[256..];
     let relocation = |address: u64| {
         raw[0xee040..0xee040 + 295920]

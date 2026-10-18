@@ -32,7 +32,7 @@ fn compare_artwork(mode: crate::adv::gerokasu2::save_menu::Mode) {
         assert!(
             Command::new("clang")
                 .args(["-std=c11", "-O2"])
-                .arg(root.join("gerokasu2/native-save-menu-render.c"))
+                .arg(root.join("reverse-engineering/gerokasu2/native-save-menu-render.c"))
                 .arg("-o")
                 .arg(&binary)
                 .status()
@@ -86,7 +86,7 @@ fn compare_artwork(mode: crate::adv::gerokasu2::save_menu::Mode) {
     let mut child = Command::new(&binary)
         .env("SHIN_GEROKASU2_SAVE_RENDER_MODE", (mode as u8).to_string())
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

@@ -128,7 +128,9 @@ fn corpus() -> (Manifest, Vec<Original>, HashMap<(u32, u32), String>) {
 fn catalog() -> Arc<Catalog> {
     let dir = std::env::var_os("SHIN_HIGURASHI_ASSETS")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../higurashi"));
+        .unwrap_or_else(|| {
+            PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../game-data/higurashi")
+        });
     let mut rom = RomReader::new(
         StatelessFile::new(std::fs::File::open(dir.join("patch.rom")).unwrap()).unwrap(),
     )

@@ -221,7 +221,7 @@ fn ger_native_previous_root_capture_blocked_command_update_prepare_and_draw() {
     }
     std::fs::write(out.join("native-back-root.input"), &input).unwrap();
     let mut child = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .stdin(Stdio::piped())

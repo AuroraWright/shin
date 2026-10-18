@@ -204,7 +204,7 @@ fn ger_native_save_delete_questions_write_completion_and_rollback() {
         }
     }
     let mut child = Command::new(oracle)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())

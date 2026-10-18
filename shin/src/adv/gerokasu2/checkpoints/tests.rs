@@ -50,7 +50,7 @@ fn ger_native_checkpoint_archive_clone_restore_unsigned_predecessor_and_pruning(
     let binary = folder.join("native-checkpoint-fork");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-checkpoint-fork.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-checkpoint-fork.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -62,7 +62,7 @@ fn ger_native_checkpoint_archive_clone_restore_unsigned_predecessor_and_pruning(
     );
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

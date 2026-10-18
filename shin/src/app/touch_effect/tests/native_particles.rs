@@ -16,7 +16,7 @@ fn reference_native_touch_particle_records() {
     let images = std::env::var_os("SHIN_REFERENCE_ROM")
         .map(std::path::PathBuf::from)
         .and_then(|path| path.parent().map(std::path::Path::to_path_buf))
-        .unwrap_or_else(|| root.join("umineko_switch_files"));
+        .unwrap_or_else(|| root.join("game-data/umineko"));
     let binary = std::env::temp_dir().join(format!(
         "shin-native-touch-particles-{}",
         std::process::id()

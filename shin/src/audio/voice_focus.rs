@@ -93,7 +93,7 @@ mod tests {
         assert!(
             Command::new("clang")
                 .args(["-O2", "-std=c11"])
-                .arg(root.join("gerokasu2/native-adv-title-focus.c"))
+                .arg(root.join("reverse-engineering/gerokasu2/native-adv-title-focus.c"))
                 .arg("-o")
                 .arg(&binary)
                 .status()
@@ -145,7 +145,7 @@ mod tests {
         std::fs::write(&corpus, &input).unwrap();
         let output = Command::new(binary)
             .args([
-                root.join("gerokasu2/uncompressed_executable"),
+                root.join("game-data/gerokasu2/uncompressed_executable"),
                 root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
                 root.join("test-fixtures/gerokasu2/system.fnt"),
             ])

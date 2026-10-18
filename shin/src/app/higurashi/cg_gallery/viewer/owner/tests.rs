@@ -281,7 +281,7 @@ fn reference_cg_owner_original_order_reexecution() {
     let exe = std::env::var("SHIN_HIGURASHI_CG_OWNER_CAPTURE")
         .unwrap_or_else(|_| "/tmp/higurashi-cg-gallery-owner-native-new".into());
     let mut child = Command::new(exe)
-        .arg(root.join("higurashi/uncompressed_executable_update"))
+        .arg(root.join("game-data/higurashi/uncompressed_executable_update"))
         .arg("/tmp/higurashi-newrodin.fnt")
         .arg("/tmp/higurashi-scenario-patch.rom.snr")
         .stdin(Stdio::piped())

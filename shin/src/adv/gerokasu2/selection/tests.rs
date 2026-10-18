@@ -142,7 +142,7 @@ fn ger_native_select_layer_filtered_shuffle_tweens_input_and_result_match_shared
     let binary = folder.join("native-model");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-selection-model.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-selection-model.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -154,7 +154,7 @@ fn ger_native_select_layer_filtered_shuffle_tweens_input_and_result_match_shared
     );
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
@@ -375,14 +375,15 @@ fn ger_native_select_command_constructor_capture_history_route_feedback_and_comp
     let binary = folder.join("native-command");
     let c = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-selection.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-selection.c"))
         .arg("-o")
         .arg(&binary)
         .output()
         .unwrap();
     assert!(c.status.success(), "{}", String::from_utf8_lossy(&c.stderr));
     let mut rom = RomReader::new(
-        StatelessFile::new(fs::File::open(root.join("gerokasu2/data.rom")).unwrap()).unwrap(),
+        StatelessFile::new(fs::File::open(root.join("game-data/gerokasu2/data.rom")).unwrap())
+            .unwrap(),
     )
     .unwrap();
     let entry = rom.find_file("/main.snr").unwrap();
@@ -396,7 +397,7 @@ fn ger_native_select_command_constructor_capture_history_route_feedback_and_comp
     let layers = super::super::layers::Gerokasu2Layers::default();
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

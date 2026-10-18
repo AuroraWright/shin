@@ -16,7 +16,7 @@ fn gerokasu2_native_root_copy_retains_message_and_copies_screen() {
     let binary = folder.join("native-root");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-root.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-root.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -26,7 +26,7 @@ fn gerokasu2_native_root_copy_retains_message_and_copies_screen() {
         "{}",
         String::from_utf8_lossy(&compile.stderr)
     );
-    let raw = fs::read(root.join("gerokasu2/uncompressed_executable")).unwrap();
+    let raw = fs::read(root.join("game-data/gerokasu2/uncompressed_executable")).unwrap();
     let word = |at: usize| u32::from_le_bytes(raw[256 + at..260 + at].try_into().unwrap());
     assert_eq!(word(0xf5dc), 0x2a1f03e1); // Screen root storage ID0
     assert_eq!(word(0xf74c), 0x52800021); // Message root storage ID1
@@ -90,7 +90,7 @@ fn gerokasu2_native_root_copy_retains_message_and_copies_screen() {
     let input = folder.join("request.bin");
     fs::write(&input, request).unwrap();
     let output = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

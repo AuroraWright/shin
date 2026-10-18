@@ -193,7 +193,7 @@ fn higurashi_character_selection_state_and_input_match_native() {
     let mut child =
         Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_CHARACTER_SELECTION").unwrap())
             .args([
-                "higurashi/uncompressed_executable_update",
+                "game-data/higurashi/uncompressed_executable_update",
                 "/tmp/higurashi-newrodin.fnt",
             ])
             .stdin(Stdio::piped())

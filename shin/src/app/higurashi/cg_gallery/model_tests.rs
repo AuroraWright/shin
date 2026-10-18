@@ -474,7 +474,7 @@ fn reference_updated_cg_gallery_frozen_original_reexecution() {
         .unwrap();
     let mut child = std::process::Command::new(exe)
         .args([
-            root.join("higurashi/uncompressed_executable_update"),
+            root.join("game-data/higurashi/uncompressed_executable_update"),
             std::env::var_os("SHIN_HIGURASHI_FONT")
                 .map(std::path::PathBuf::from)
                 .unwrap_or_else(|| "/tmp/higurashi-newrodin.fnt".into()),

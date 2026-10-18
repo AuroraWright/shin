@@ -138,7 +138,7 @@ fn reference_native_retained_murderer_copy_and_retirement() {
     let mut io = LayeredAssetIo::new();
     // This task concerns CPU ownership, not changed ROM artwork. Prepare once;
     // reuse the same real resources for every independent model construction.
-    io.try_with_rom(root.join("umineko_switch_files/data.rom"))
+    io.try_with_rom(root.join("game-data/umineko/data.rom"))
         .unwrap();
     let server = AssetServer::new(
         io.into(),
@@ -271,7 +271,7 @@ fn reference_native_retained_murderer_copy_and_retirement() {
         ("1.03", "uncompressed_executable_update"),
     ] {
         let run = Command::new(&oracle)
-            .arg(root.join("umineko_switch_files").join(name))
+            .arg(root.join("game-data/umineko").join(name))
             .stdin(Stdio::from(fs::File::open(&request_file).unwrap()))
             .output()
             .unwrap();

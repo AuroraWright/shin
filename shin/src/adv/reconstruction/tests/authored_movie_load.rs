@@ -139,7 +139,7 @@ pub(super) fn verify<'a>(
     let payload = format!("0 0 55 {}\n0 0 57 {}\n", "aa".repeat(128), "aa".repeat(128));
     std::fs::write(output.join("input.txt"), &payload).unwrap();
     let mut child = Command::new(&helper)
-        .arg(root.join("umineko_switch_files").join(if updated {
+        .arg(root.join("game-data/umineko").join(if updated {
             "uncompressed_executable_update"
         } else {
             "uncompressed_executable"
@@ -374,7 +374,7 @@ fn verify_concurrent_movies<'a>(
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
     let updated = std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some();
     let label = if updated { "1.03" } else { "original" };
-    let executable = root.join("umineko_switch_files").join(if updated {
+    let executable = root.join("game-data/umineko").join(if updated {
         "uncompressed_executable_update"
     } else { "uncompressed_executable" });
     let output = std::path::PathBuf::from(std::env::var_os("SHIN_REFERENCE_AUTHORED_MOVIE_OUTPUT").unwrap(),
@@ -579,7 +579,7 @@ fn verify_saved_movies<'a>(
     // File input avoids pipe deadlock when native output is larger than
     // a pipe while the five long route packets are still being written.
     let native = Command::new(&helper)
-        .arg(root.join("umineko_switch_files").join(if updated {
+        .arg(root.join("game-data/umineko").join(if updated {
             "uncompressed_executable_update"
         } else { "uncompressed_executable" }))
         .arg(&source).stdin(Stdio::from(std::fs::File::open(input_path).unwrap()))

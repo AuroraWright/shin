@@ -51,7 +51,7 @@ pub(super) fn unlocks(profile: u32) -> Vec<u32> {
 pub(super) fn reexecute(kind: &str, variable: &str) -> String {
     let dir = evidence().join(format!("music-gallery-{kind}-capture"));
     let mut child = Command::new(required(variable))
-        .arg(root().join("higurashi/uncompressed_executable_update"))
+        .arg(root().join("game-data/higurashi/uncompressed_executable_update"))
         .arg(required("SHIN_HIGURASHI_MUSIC_FONT"))
         .arg(required("SHIN_HIGURASHI_MUSIC_SCENARIO"))
         .stdin(Stdio::piped())

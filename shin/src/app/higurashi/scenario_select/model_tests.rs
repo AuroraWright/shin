@@ -572,7 +572,7 @@ fn reference_updated_scenario_select_frozen_original_reexecution() {
         .unwrap_or_else(|_| "/tmp/higurashi-scenario-patch.rom.snr".into());
     use std::io::Write;
     let mut child = std::process::Command::new(exe)
-        .arg(root.join("higurashi/uncompressed_executable_update"))
+        .arg(root.join("game-data/higurashi/uncompressed_executable_update"))
         .arg(font)
         .arg(snr)
         .stdin(std::process::Stdio::piped())
@@ -646,7 +646,7 @@ fn patchless_original_snr_standard_picker_preflight_keeps_append_and_origin_unav
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let Ok(mut rom) = std::fs::File::open(root.join("higurashi/data.rom")) else {
+    let Ok(mut rom) = std::fs::File::open(root.join("game-data/higurashi/data.rom")) else {
         eprintln!("skipping: Higurashi data.rom is not available");
         return;
     };

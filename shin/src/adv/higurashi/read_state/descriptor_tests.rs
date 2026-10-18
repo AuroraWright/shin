@@ -259,7 +259,7 @@ fn higurashi_descriptors_match_native_constructors_snapshots_and_select_boundari
     let executable =
         std::env::var("HIGURASHI_NATIVE_DESCRIPTORS").expect("build native-descriptors.c first");
     let image = std::env::var("HIGURASHI_NATIVE_IMAGE")
-        .unwrap_or_else(|_| "higurashi/uncompressed_executable_update".into());
+        .unwrap_or_else(|_| "game-data/higurashi/uncompressed_executable_update".into());
     let mut child = Command::new(executable)
         .arg(image)
         .stdin(Stdio::piped())

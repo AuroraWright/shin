@@ -81,7 +81,7 @@ pub(crate) fn reference_rule_draw(context: &mut PreRenderContext, server: &Arc<A
         .parent()
         .unwrap();
     let updated = std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some();
-    let executable = root.join("umineko_switch_files").join(if updated {
+    let executable = root.join("game-data/umineko").join(if updated {
         "uncompressed_executable_update"
     } else {
         "uncompressed_executable"

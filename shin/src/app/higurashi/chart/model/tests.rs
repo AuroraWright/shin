@@ -364,7 +364,7 @@ fn catalog() -> Option<Arc<Catalog>> {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let dir = std::env::var_os("SHIN_HIGURASHI_ASSETS")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("higurashi"));
+        .unwrap_or_else(|| root.join("game-data/higurashi"));
     if !dir.join("patch.rom").is_file() {
         eprintln!("skipping: Higurashi patch.rom is not available");
         return None;

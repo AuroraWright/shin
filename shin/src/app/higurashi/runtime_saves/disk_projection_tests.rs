@@ -9,7 +9,7 @@ fn higurashi_runtime_choice_bytes_use_native_four_bit_disk_projection() {
             .unwrap_or_else(|_| "/tmp/higurashi-native-save-choice-bytes".into()),
     )
     .args([
-        "higurashi/uncompressed_executable_update",
+        "game-data/higurashi/uncompressed_executable_update",
         "/tmp/higurashi-newrodin.fnt",
     ])
     .output()

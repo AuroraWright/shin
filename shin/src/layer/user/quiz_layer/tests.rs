@@ -1214,7 +1214,7 @@ fn reference_cake_input_feedback_atlas_gpu() {
         String::from_utf8_lossy(&output.stderr)
     );
     let updated = std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some();
-    let executable = root.join("umineko_switch_files").join(if updated {
+    let executable = root.join("game-data/umineko").join(if updated {
         "uncompressed_executable_update"
     } else {
         "uncompressed_executable"
@@ -1459,7 +1459,7 @@ fn reference_quiz_controller_feedback_native_fields_and_atlas_gpu() {
         String::from_utf8_lossy(&compile.stderr)
     );
     let updated = std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some();
-    let executable = root.join("umineko_switch_files").join(if updated {
+    let executable = root.join("game-data/umineko").join(if updated {
         "uncompressed_executable_update"
     } else {
         "uncompressed_executable"

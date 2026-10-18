@@ -62,7 +62,7 @@ mod tests {
         use std::{collections::HashMap, fs::File, io::BufReader, path::Path};
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
         let executable =
-            std::fs::read(root.join("umineko_switch_files/uncompressed_executable")).unwrap();
+            std::fs::read(root.join("game-data/umineko/uncompressed_executable")).unwrap();
         let u64_at = |address: usize| {
             u64::from_le_bytes(executable[address + 256..address + 264].try_into().unwrap())
         };

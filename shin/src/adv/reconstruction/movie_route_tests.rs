@@ -188,7 +188,7 @@ fn reference_authored_episode8_recorded_movie_checkpoints() {
 
 fn verify() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let files = root.join("umineko_switch_files");
+    let files = root.join("game-data/umineko");
     let output =
         std::path::PathBuf::from(std::env::var_os("SHIN_EPISODE8_MOVIE_SCAN_OUTPUT").unwrap());
     std::fs::create_dir_all(&output).unwrap();

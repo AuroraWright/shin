@@ -119,7 +119,7 @@ fn ger_native_quiz_ctor_live_boundaries_result_and_six_bit_route() {
     let binary = folder.join("native-quiz");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-quiz.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-quiz.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -182,7 +182,7 @@ fn ger_native_quiz_ctor_live_boundaries_result_and_six_bit_route() {
     let input = folder.join("quiz-request.bin");
     fs::write(&input, requests).unwrap();
     let run = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

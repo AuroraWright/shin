@@ -13,7 +13,7 @@ fn reference_native_font_decode_upload_and_cache_lifecycle() {
     use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
     use std::io::Read;
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let supplied = root.join("umineko_switch_files");
+    let supplied = root.join("game-data/umineko");
     let out = std::env::var_os("SHIN_NATIVE_FONT_OUTPUT")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| {

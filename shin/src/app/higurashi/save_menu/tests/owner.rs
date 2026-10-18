@@ -144,7 +144,7 @@ impl Native {
                 .unwrap_or_else(|_| "/tmp/higurashi-native-save-menu-owner".into()),
         )
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             &std::env::var("HIGURASHI_NEWRODIN_FNT")
                 .unwrap_or_else(|_| "/tmp/higurashi-newrodin.fnt".into()),
         ])

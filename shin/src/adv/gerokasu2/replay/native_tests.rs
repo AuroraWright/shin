@@ -14,7 +14,7 @@ fn ger_native_replay_poll_constructor_route_publication_and_unsigned_retention()
     let binary = root.join("reverse-engineering/gerokasu2/replay/native-replay-polls");
     let c = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-replay-polls.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-replay-polls.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -22,7 +22,7 @@ fn ger_native_replay_poll_constructor_route_publication_and_unsigned_retention()
     assert!(c.status.success(), "{}", String::from_utf8_lossy(&c.stderr));
     let mut child = Command::new(binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

@@ -1,6 +1,6 @@
 //! Offscreen frames of the Gerokasu CardSelect for visual review. Writes
 //! debug-capture `.rgba` dumps (see shin-window debug_capture) to
-//! `SHIN_GEROKASU_CARD_FRAMES`; convert with `gerokasu/tools/rgba2png.py`.
+//! `SHIN_GEROKASU_CARD_FRAMES`; convert with `reverse-engineering/gerokasu/tools/rgba2png.py`.
 use super::*;
 use crate::{
     asset::{
@@ -25,7 +25,7 @@ const H: u32 = 1080;
 
 pub(crate) fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
     let rom = std::env::var_os("SHIN_GEROKASU_ROM").map_or_else(
-        || std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../gerokasu/data.rom"),
+        || std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../game-data/gerokasu/data.rom"),
         std::path::PathBuf::from,
     );
     let mut io = LayeredAssetIo::new();
@@ -153,7 +153,7 @@ pub(crate) fn save(dir: &std::path::Path, name: &str, pixels: &[u8]) {
 }
 
 #[test]
-#[ignore = "requires gerokasu/data.rom, Metal and exact Loopback Audio; writes review frames"]
+#[ignore = "requires game-data/gerokasu/data.rom, Metal and exact Loopback Audio; writes review frames"]
 fn gerokasu_card_select_review_frames() {
     let dir = std::path::PathBuf::from(
         std::env::var_os("SHIN_GEROKASU_CARD_FRAMES").expect("SHIN_GEROKASU_CARD_FRAMES"),

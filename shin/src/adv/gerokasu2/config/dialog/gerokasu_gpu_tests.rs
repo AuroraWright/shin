@@ -16,13 +16,15 @@ use shin_render::{
 };
 
 #[test]
-#[ignore = "requires gerokasu/data.rom, Metal and exact Loopback Audio; writes a review frame"]
+#[ignore = "requires game-data/gerokasu/data.rom, Metal and exact Loopback Audio; writes a review frame"]
 fn gerokasu_dialog_reserves_and_paints_logo_strip() {
     let out = std::env::var_os("SHIN_GEROKASU_DIALOG_FRAME").map(std::path::PathBuf::from);
     let gpu = Offscreen::new();
     let mut io = LayeredAssetIo::new();
-    io.try_with_rom(std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../gerokasu/data.rom"))
-        .unwrap();
+    io.try_with_rom(
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../game-data/gerokasu/data.rom"),
+    )
+    .unwrap();
     let server = AssetServer::new(
         io.into(),
         AssetLoadContext {

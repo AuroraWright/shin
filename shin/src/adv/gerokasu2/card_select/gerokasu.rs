@@ -1,5 +1,5 @@
 //! Gerokasu (first game) prisoner/pierrot CardSelect, native layer type 9
-//! (constructor 42A60, vtable 17C3F8). See `gerokasu/CARD-SELECT.md`.
+//! (constructor 42A60, vtable 17C3F8). See `reverse-engineering/gerokasu/CARD-SELECT.md`.
 //!
 //! The mask holds the pairings already played (`$v(90+i)`); QUIZ returns the
 //! new pairing index `T[prisoner*4 + pierrot]`.

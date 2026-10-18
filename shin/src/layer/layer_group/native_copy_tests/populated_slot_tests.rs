@@ -321,7 +321,7 @@ fn reference_native_populated_slot_copy_and_retirement() {
         ("1.03", "uncompressed_executable_update"),
     ] {
         let output = Command::new(&oracle)
-            .arg(root.join("umineko_switch_files").join(executable))
+            .arg(root.join("game-data/umineko").join(executable))
             .stdin(Stdio::from(fs::File::open(&request).unwrap()))
             .output()
             .unwrap();

@@ -153,7 +153,7 @@ impl Native {
         let binary = folder.join("native-gallery-hooks");
         let compiled = Command::new("clang")
             .args(["-std=c11", "-O2"])
-            .arg(root.join("gerokasu2/native-gallery-hooks.c"))
+            .arg(root.join("reverse-engineering/gerokasu2/native-gallery-hooks.c"))
             .arg("-o")
             .arg(&binary)
             .output()
@@ -164,7 +164,7 @@ impl Native {
             String::from_utf8_lossy(&compiled.stderr)
         );
         let mut child = Command::new(binary)
-            .arg(root.join("gerokasu2/uncompressed_executable"))
+            .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
             .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
             .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .stdin(Stdio::piped())
@@ -329,7 +329,7 @@ fn ger_native_loaded_resource_gallery_hooks_match_all_metadata_branches() {
     }
     let rom_path = std::env::var_os("SHIN_GEROKASU2_ROM")
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/data.rom"));
+        .unwrap_or_else(|| root.join("game-data/gerokasu2/data.rom"));
     let mut rom =
         RomReader::new(StatelessFile::new(std::fs::File::open(rom_path).unwrap()).unwrap())
             .unwrap();

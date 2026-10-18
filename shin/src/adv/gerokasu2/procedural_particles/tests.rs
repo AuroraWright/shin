@@ -218,7 +218,7 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
     let binary = folder.join("native-procedural");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-procedural.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-procedural.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -365,7 +365,7 @@ fn ger_native_procedural_constructors_fused_particles_warmup_and_focus_tweens() 
         command
             .env("SHIN_GER_PROCEDURAL_ROTATION", rotation_profile)
             .args([
-                root.join("gerokasu2/uncompressed_executable"),
+                root.join("game-data/gerokasu2/uncompressed_executable"),
                 root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
                 root.join("test-fixtures/gerokasu2/system.fnt"),
             ])
@@ -503,7 +503,7 @@ fn ger_native_engine_mt_matches_shared_stream_across_four_wraps() {
     let binary = folder.join("native-procedural-prng");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-procedural-prng.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-procedural-prng.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -524,7 +524,7 @@ fn ger_native_engine_mt_matches_shared_stream_across_four_wraps() {
     }
     let mut child = Command::new(&binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

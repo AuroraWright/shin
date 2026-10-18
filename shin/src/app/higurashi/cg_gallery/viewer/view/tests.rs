@@ -182,7 +182,7 @@ fn reference_updated_cg_viewer_renderer_frozen_original_reexecution() {
         .unwrap();
     use std::io::Write;
     let mut child = std::process::Command::new(exe)
-        .arg(root.join("higurashi/uncompressed_executable_update"))
+        .arg(root.join("game-data/higurashi/uncompressed_executable_update"))
         .arg("/tmp/higurashi-newrodin.fnt")
         .arg("/tmp/higurashi-scenario-patch.rom.snr")
         .stdin(std::process::Stdio::piped())

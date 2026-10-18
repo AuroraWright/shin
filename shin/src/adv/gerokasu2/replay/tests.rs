@@ -350,7 +350,8 @@ fn ger_replay_authored_boundaries_and_sparse_restore_redecode_without_hardware()
         .parent()
         .unwrap();
     let mut rom = RomReader::new(
-        StatelessFile::new(std::fs::File::open(root.join("gerokasu2/data.rom")).unwrap()).unwrap(),
+        StatelessFile::new(std::fs::File::open(root.join("game-data/gerokasu2/data.rom")).unwrap())
+            .unwrap(),
     )
     .unwrap();
     let file = rom.find_file("/main.snr").unwrap();

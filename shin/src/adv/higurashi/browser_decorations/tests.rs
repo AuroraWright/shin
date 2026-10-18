@@ -24,7 +24,7 @@ fn native(cases: &[Case]) -> Vec<Vec<Draw>> {
     let mut child =
         Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_BROWSER_DECORATION").unwrap())
             .args([
-                "higurashi/uncompressed_executable_update",
+                "game-data/higurashi/uncompressed_executable_update",
                 "/tmp/higurashi-newrodin.fnt",
             ])
             .stdin(Stdio::piped())

@@ -214,7 +214,7 @@ fn ger_native_save_metadata_autosave_message_boundaries_and_two_progress_entries
     let binary = folder.join("native-save-commands");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-save-commands.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-save-commands.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -322,7 +322,7 @@ fn ger_native_save_metadata_autosave_message_boundaries_and_two_progress_entries
     let input = folder.join("request.bin");
     fs::write(&input, request).unwrap();
     let output = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

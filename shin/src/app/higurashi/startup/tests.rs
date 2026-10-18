@@ -58,7 +58,7 @@ fn higurashi_startup_transition_matches_native_loaded_globals_notice_and_title_q
     let mut child =
         Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_STARTUP_TRANSITION").unwrap())
             .args([
-                "higurashi/uncompressed_executable_update",
+                "game-data/higurashi/uncompressed_executable_update",
                 "/tmp/higurashi-newrodin.fnt",
             ])
             .stdin(Stdio::piped())

@@ -174,7 +174,7 @@ fn higurashi_music_title_matches_native_clock_and_glyph_packets() {
     }
     let mut child = Command::new(std::env::var("SHIN_HIGURASHI_NATIVE_BGM_TITLE").unwrap())
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             &std::env::var("SHIN_HIGURASHI_TITLE_FONT").unwrap(),
         ])
         .stdin(Stdio::piped())

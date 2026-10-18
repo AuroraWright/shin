@@ -559,7 +559,7 @@ fn higurashi_config_original_cpu_capture_is_reproducible() {
         .expect("native-config-model executable");
     let mut child = std::process::Command::new(exe)
         .args([
-            "higurashi/uncompressed_executable_update",
+            "game-data/higurashi/uncompressed_executable_update",
             "/tmp/higurashi-newrodin.fnt",
         ])
         .stdin(std::process::Stdio::piped())

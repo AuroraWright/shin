@@ -27,7 +27,7 @@ fn ger_native_movie_wait_two_status_bits_and_captured_bank_lists() {
     let binary = folder.join("native-movie");
     let c = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-movie.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-movie.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -85,7 +85,7 @@ fn ger_native_movie_wait_two_status_bits_and_captured_bank_lists() {
     let input = folder.join("wait-request.bin");
     fs::write(&input, request).unwrap();
     let run = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

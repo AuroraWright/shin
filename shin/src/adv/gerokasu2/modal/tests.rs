@@ -56,7 +56,7 @@ fn ger_modal_scope_matches_native_nested_pause_conceal_order_and_fades() {
     assert!(
         Command::new("clang")
             .args(["-std=c11", "-O2"])
-            .arg(root.join("gerokasu2/native-modal.c"))
+            .arg(root.join("reverse-engineering/gerokasu2/native-modal.c"))
             .arg("-o")
             .arg(&binary)
             .status()
@@ -153,7 +153,7 @@ fn ger_modal_scope_matches_native_nested_pause_conceal_order_and_fades() {
     std::fs::write(&stdin, &input).unwrap();
     let native = Command::new(&binary)
         .args([
-            root.join("gerokasu2/uncompressed_executable"),
+            root.join("game-data/gerokasu2/uncompressed_executable"),
             root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
             root.join("test-fixtures/gerokasu2/system.fnt"),
         ])

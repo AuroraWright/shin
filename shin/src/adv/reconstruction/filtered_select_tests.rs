@@ -249,7 +249,7 @@ fn reach_mask(
 #[ignore = "requires actual original/1.03 executables/ROMs;native filtered SELECT,CPU only"]
 fn reference_native_filtered_select_completion() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let files = root.join("umineko_switch_files");
+    let files = root.join("game-data/umineko");
     let out = std::env::var_os("SHIN_FILTERED_SELECT_OUTPUT")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join("shin-native-filtered-select"));

@@ -27,7 +27,7 @@ fn run(source: &str, input: String) -> Vec<Vec<i64>> {
     assert!(
         Command::new("clang")
             .args(["-std=c11", "-O2"])
-            .arg(root.join(format!("gerokasu2/{source}.c")))
+            .arg(root.join(format!("reverse-engineering/gerokasu2/{source}.c")))
             .arg("-o")
             .arg(&binary)
             .status()
@@ -36,7 +36,7 @@ fn run(source: &str, input: String) -> Vec<Vec<i64>> {
     );
     let executable = std::env::var_os("SHIN_GEROKASU2_EXECUTABLE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/uncompressed_executable"));
+        .unwrap_or_else(|| root.join("game-data/gerokasu2/uncompressed_executable"));
     let medium = std::env::var_os("SHIN_GEROKASU2_MEDIUM_FONT")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"));

@@ -1,4 +1,4 @@
-//! Gerokasu BustupMode catalog (see gerokasu/BUPMODE.md). The executable
+//! Gerokasu BustupMode catalog (see reverse-engineering/gerokasu/BUPMODE.md). The executable
 //! hard-codes it (character table 0x17b930, backgrounds 0x17b970) instead of
 //! reading scenario character-box metadata, and adds a global size row.
 use super::catalog::{Background, Catalog, Character, Outfit, Pose};

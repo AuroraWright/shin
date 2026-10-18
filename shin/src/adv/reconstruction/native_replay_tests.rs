@@ -560,7 +560,7 @@ fn reference_native_authored_select_saved_replay() {
     }
 
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let files = root.join("umineko_switch_files");
+    let files = root.join("game-data/umineko");
     let out = std::env::var_os("SHIN_SELECT_REPLAY_OUTPUT")
         .map(std::path::PathBuf::from)
         .unwrap_or_else(|| std::env::temp_dir().join("shin-native-select-replay"));
@@ -927,7 +927,7 @@ fn reference_native_authored_select_saved_replay() {
 fn reference_native_saved_movie_load_checkpoint_selection() {
     use shin_core::format::save::{GameData, RouteData};
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let files = root.join("umineko_switch_files");
+    let files = root.join("game-data/umineko");
     let out = std::path::PathBuf::from(std::env::var_os("SHIN_MOVIE_LOAD_CHECKPOINT_OUTPUT").unwrap());
     assert!(out.starts_with("/private/tmp"));
     std::fs::create_dir_all(&out).unwrap();

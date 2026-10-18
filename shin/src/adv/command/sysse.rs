@@ -46,7 +46,7 @@ mod tests {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap();
-        let exe = std::fs::read(root.join("umineko_switch_files/uncompressed_executable")).unwrap();
+        let exe = std::fs::read(root.join("game-data/umineko/uncompressed_executable")).unwrap();
         let relocations: std::collections::HashMap<_, _> = exe[0x11e040 + 256..0x152eb8 + 256]
             .chunks_exact(24)
             .map(|r| {

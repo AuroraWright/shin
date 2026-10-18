@@ -14,7 +14,7 @@ fn ger_native_reconstruction_cache_enumerates_plane_bank_targets_and_excludes_in
     let binary = folder.join("native-reconstruction-enumeration");
     let compile = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-reconstruction-enumeration.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-reconstruction-enumeration.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -25,7 +25,7 @@ fn ger_native_reconstruction_cache_enumerates_plane_bank_targets_and_excludes_in
         String::from_utf8_lossy(&compile.stderr)
     );
     let mut child = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())

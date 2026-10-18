@@ -234,7 +234,7 @@ impl Drop for NativeLoader {
 #[ignore = "requires original/1.03 native executables and supplied ROMs; CPU only"]
 fn reference_native_complete_picture_loading() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-    let files = root.join("umineko_switch_files");
+    let files = root.join("game-data/umineko");
     let out = std::env::var_os("SHIN_NATIVE_PICTURE_OUTPUT")
         .map(PathBuf::from)
         .unwrap_or_else(|| {

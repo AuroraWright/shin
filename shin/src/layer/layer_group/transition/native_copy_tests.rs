@@ -132,7 +132,7 @@ fn reference_native_nested_slot_property_aliases() {
         ("1.03", "uncompressed_executable_update"),
     ] {
         let output = Command::new(&binary)
-            .arg(root.join("umineko_switch_files").join(name))
+            .arg(root.join("game-data/umineko").join(name))
             .output()
             .unwrap();
         assert!(

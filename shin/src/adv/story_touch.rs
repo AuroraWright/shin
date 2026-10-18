@@ -1010,7 +1010,7 @@ mod tests {
         std::fs::write(out.join("input.txt"), &input).unwrap();
         for filename in ["uncompressed_executable", "uncompressed_executable_update"] {
             let mut child = Command::new(&helper)
-                .arg(root.join("umineko_switch_files").join(filename))
+                .arg(root.join("game-data/umineko").join(filename))
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

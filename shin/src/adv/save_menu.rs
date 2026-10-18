@@ -729,7 +729,7 @@ mod tests {
     #[ignore = "requires supplied decrypted Switch executable"]
     fn reference_native_save_menu_navigation_callback_phases_and_geometry() {
         let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../umineko_switch_files/uncompressed_executable");
+            .join("../game-data/umineko/uncompressed_executable");
         let bytes = std::fs::read(path).unwrap();
         for (address, expected) in [
             (0xd9630, 0x37c00269u32),

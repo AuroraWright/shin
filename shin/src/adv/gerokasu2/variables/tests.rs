@@ -86,7 +86,7 @@ fn ger_native_event_variables_commit_and_interleaved_response_stream() {
     let binary = folder.join("native-event-variables");
     let c = Command::new("clang")
         .args(["-std=c11", "-O2"])
-        .arg(root.join("gerokasu2/native-event-variables.c"))
+        .arg(root.join("reverse-engineering/gerokasu2/native-event-variables.c"))
         .arg("-o")
         .arg(&binary)
         .output()
@@ -281,7 +281,7 @@ fn ger_native_event_variables_commit_and_interleaved_response_stream() {
     let input = folder.join("event-variables-request.bin");
     fs::write(&input, request).unwrap();
     let output = Command::new(binary)
-        .arg(root.join("gerokasu2/uncompressed_executable"))
+        .arg(root.join("game-data/gerokasu2/uncompressed_executable"))
         .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))

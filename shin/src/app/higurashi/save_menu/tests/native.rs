@@ -297,7 +297,7 @@ fn higurashi_live_save_menu_preparation_copies_vm2530_without_commits_or_date_re
     let font = std::env::var("HIGURASHI_NEWRODIN_FNT")
         .unwrap_or_else(|_| "/tmp/higurashi-newrodin.fnt".into());
     let mut child = Command::new(native)
-        .args(["higurashi/uncompressed_executable_update", &font])
+        .args(["game-data/higurashi/uncompressed_executable_update", &font])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
