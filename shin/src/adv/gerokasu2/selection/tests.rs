@@ -137,7 +137,7 @@ fn ger_native_select_layer_filtered_shuffle_tweens_input_and_result_match_shared
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/selection");
+    let folder = root.join("reverse-engineering/gerokasu2/selection");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-model");
     let compile = Command::new("clang")
@@ -155,8 +155,8 @@ fn ger_native_select_layer_filtered_shuffle_tweens_input_and_result_match_shared
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -370,7 +370,7 @@ fn ger_native_select_command_constructor_capture_history_route_feedback_and_comp
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/selection");
+    let folder = root.join("reverse-engineering/gerokasu2/selection");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-command");
     let c = Command::new("clang")
@@ -397,8 +397,8 @@ fn ger_native_select_command_constructor_capture_history_route_feedback_and_comp
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

@@ -60,7 +60,7 @@ fn directory() -> PathBuf {
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("../reverse-engineering/higurashi/chart-render-native-corpus")
+                .join("../test-fixtures/higurashi/chart-render-native-corpus")
         })
 }
 fn words(line: &str) -> Vec<u32> {

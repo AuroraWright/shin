@@ -373,7 +373,7 @@ impl ShortMedia {
         ));
         std::fs::create_dir_all(directory.join("movie")).unwrap();
         let source = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("../reverse-engineering/higurashi/live-movie-owner-fixtures")
+            .join("../test-fixtures/higurashi/live-movie-owner-fixtures")
             .join(if audio {
                 "short-aac.mp4"
             } else {

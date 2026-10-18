@@ -35,3 +35,6 @@ WORKTREE.md
 /.claude/
 /.codex/
 /.agents/
+
+# Game fonts used by Gerokasu2 tests; copied from the game data, never tracked.
+/test-fixtures/gerokasu2/*.fnt

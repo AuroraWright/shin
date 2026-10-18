@@ -1156,7 +1156,7 @@ fn gerokasu2_vm_supplied_boot_prefix_matches_native_state() {
             let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
                 .parent()
                 .unwrap()
-                .join("gerokasu2/.local/audio/supplied-prefix.txt");
+                .join("reverse-engineering/gerokasu2/audio/supplied-prefix.txt");
             std::fs::write(path, inventory.join("\n") + "\n").unwrap();
         }
     }

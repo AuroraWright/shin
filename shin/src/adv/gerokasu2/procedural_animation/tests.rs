@@ -204,7 +204,7 @@ struct Native {
 }
 impl Native {
     fn new(root: &std::path::Path) -> Self {
-        let folder = root.join("gerokasu2/.local/procedural-animation");
+        let folder = root.join("reverse-engineering/gerokasu2/procedural-animation");
         std::fs::create_dir_all(&folder).unwrap();
         let binary = folder.join("native-procedural-animation");
         let compiled = Command::new("clang")
@@ -221,8 +221,8 @@ impl Native {
         );
         let mut child = Command::new(binary)
             .arg(root.join("gerokasu2/uncompressed_executable"))
-            .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-            .arg(root.join("gerokasu2/.local/system.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())

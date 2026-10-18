@@ -220,12 +220,14 @@ fn ger_native_backlog_lifecycle_tasks_and_callback_order_match() {
         .unwrap_or_else(|| PathBuf::from(env!("PWD")));
     let binary = std::env::var_os("SHIN_GEROKASU2_BACKLOG_LIFECYCLE_ORACLE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/backlog-lifecycle/native-lifecycle"));
+        .unwrap_or_else(|| {
+            root.join("reverse-engineering/gerokasu2/backlog-lifecycle/native-lifecycle")
+        });
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

@@ -1,0 +1,1 @@
+TileGammaFiniteSentinel:392 profiles/192 Tile packets/8 getter-only noncover controls; untouched/observed packet+clip+global+FP equality; no active finite clip/SDK/GPU/audio/window/save/threads

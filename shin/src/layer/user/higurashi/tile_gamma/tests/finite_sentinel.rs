@@ -38,7 +38,7 @@ fn scalar_lanes(words: [u32; 4]) -> [u32; 16] {
 }
 
 fn load() -> (Vec<Case>, Vec<Case>) {
-    let base = root().join("reverse-engineering/higurashi");
+    let base = root().join("test-fixtures/higurashi");
     let input =
         fs::read(base.join("tile-gamma-finite-sentinel-candidate-inputs/input.txt")).unwrap();
     pinned(&input, INPUT_BYTES, INPUT_FNV, "finite input");

@@ -102,7 +102,7 @@ fn ger_native_adv_banks_complete_headers_generations_properties_and_interactions
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/adv-banks");
+    let folder = root.join("reverse-engineering/gerokasu2/adv-banks");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-layer-adv-banks");
     let compile = Command::new("clang")
@@ -119,8 +119,8 @@ fn ger_native_adv_banks_complete_headers_generations_properties_and_interactions
     );
     let mut child = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())

@@ -196,7 +196,11 @@ fn observe(result: bool, m: &Model, s: &State, h: u64) -> String {
 #[ignore = "original ab700 complete101-row snapshots,alias-free copies and SaveGame phase/predicate/final callback with prepared native child/future boundaries"]
 fn higurashi_save_task_full_settings_snapshots_and_lifecycle_match_native() {
     let golden: serde_json::Value = serde_json::from_slice(
-        &std::fs::read("reverse-engineering/higurashi/native-save-codec-golden.json").unwrap(),
+        &std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../test-fixtures/higurashi/native-save-codec-golden.json"
+        ))
+        .unwrap(),
     )
     .unwrap();
     let mut input = String::new();

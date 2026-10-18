@@ -11,7 +11,7 @@ fn root() -> PathBuf {
 }
 fn native(kind: &str, input: &str) -> String {
     let r = root();
-    let d = r.join("gerokasu2/.local/bustup-gallery");
+    let d = r.join("reverse-engineering/gerokasu2/bustup-gallery");
     fs::create_dir_all(&d).unwrap();
     let path = d.join(format!("{kind}-{}-input.txt", input.len()));
     fs::write(&path, input).unwrap();
@@ -21,8 +21,8 @@ fn native(kind: &str, input: &str) -> String {
         .unwrap_or_else(|| d.join(format!("native-bustup-{kind}")));
     let o = Command::new(bin)
         .arg(r.join("gerokasu2/uncompressed_executable"))
-        .arg(r.join("gerokasu2/.local/system.fnt"))
-        .arg(r.join("gerokasu2/.local/newrodin-medium.fnt"))
+        .arg(r.join("test-fixtures/gerokasu2/system.fnt"))
+        .arg(r.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .stdin(Stdio::from(fs::File::open(path).unwrap()))
         .output()
         .unwrap();

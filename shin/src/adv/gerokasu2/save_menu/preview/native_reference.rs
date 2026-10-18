@@ -19,7 +19,7 @@ fn root() -> PathBuf {
 
 fn run(name: &str, input: &str) -> String {
     let root = root();
-    let out = root.join("gerokasu2/.local/save-preview");
+    let out = root.join("reverse-engineering/gerokasu2/save-preview");
     std::fs::create_dir_all(&out).unwrap();
     let binary = std::env::var_os(if name.ends_with("-render") {
         "SHIN_GEROKASU2_SAVE_PREVIEW_RENDER_NATIVE"
@@ -44,8 +44,8 @@ fn run(name: &str, input: &str) -> String {
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/system.fnt"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

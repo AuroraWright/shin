@@ -114,7 +114,7 @@ fn ger_native_quiz_ctor_live_boundaries_result_and_six_bit_route() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/card-select");
+    let folder = root.join("reverse-engineering/gerokasu2/card-select");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-quiz");
     let compile = Command::new("clang")
@@ -183,8 +183,8 @@ fn ger_native_quiz_ctor_live_boundaries_result_and_six_bit_route() {
     fs::write(&input, requests).unwrap();
     let run = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))
         .output()
         .unwrap();

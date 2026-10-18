@@ -40,7 +40,7 @@ impl Native {
         let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap();
-        let binary = root.join("gerokasu2/.local/movie/native-movie");
+        let binary = root.join("reverse-engineering/gerokasu2/movie/native-movie");
         let c = Command::new("clang")
             .args(["-std=c11", "-O2"])
             .arg(root.join("gerokasu2/native-movie.c"))
@@ -51,8 +51,8 @@ impl Native {
         assert!(c.status.success(), "{}", String::from_utf8_lossy(&c.stderr));
         let mut child = Command::new(binary)
             .arg(root.join("gerokasu2/uncompressed_executable"))
-            .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-            .arg(root.join("gerokasu2/.local/system.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .spawn()

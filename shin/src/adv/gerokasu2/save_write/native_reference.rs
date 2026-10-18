@@ -17,7 +17,7 @@ fn ger_native_save_write_notification_and_coordinator_match() {
         .to_owned();
     let binary = std::env::var_os("SHIN_GEROKASU2_SAVE_WRITE_ORACLE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/save-write/native-save-write"));
+        .unwrap_or_else(|| root.join("reverse-engineering/gerokasu2/save-write/native-save-write"));
     let mut script = String::new();
     let mut expected: Vec<Vec<i64>> = Vec::new();
     let mut profiles = 0;
@@ -151,8 +151,8 @@ fn ger_native_save_write_notification_and_coordinator_match() {
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

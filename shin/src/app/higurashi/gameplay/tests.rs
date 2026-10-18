@@ -75,7 +75,11 @@ fn payload(d: &GameData) -> Vec<u64> {
 #[ignore = "original First ctor/copied native decoded SaveData/progress/date/u16/response/readiness/mode0 transfer"]
 fn higurashi_gameplay_loaded_bindings_match_native_first() {
     let golden: serde_json::Value = serde_json::from_slice(
-        &std::fs::read("reverse-engineering/higurashi/native-save-codec-golden.json").unwrap(),
+        &std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../test-fixtures/higurashi/native-save-codec-golden.json"
+        ))
+        .unwrap(),
     )
     .unwrap();
     let mut protocol = String::new();
@@ -226,7 +230,11 @@ fn higurashi_live_autosave_publishes_native_slot_without_discarding_saved_data()
         }
     }
     let golden: serde_json::Value = serde_json::from_slice(
-        &std::fs::read("reverse-engineering/higurashi/native-save-codec-golden.json").unwrap(),
+        &std::fs::read(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../test-fixtures/higurashi/native-save-codec-golden.json"
+        ))
+        .unwrap(),
     )
     .unwrap();
     let mut protocol = String::new();

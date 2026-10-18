@@ -9,7 +9,7 @@ const TEMPLATE_FNV: u64 = 0x83007166ab0dfcf0;
 fn template() -> (SaveData, Vec<u8>) {
     let path = std::env::var("SHIN_HIGURASHI_ORIGIN_TEMPLATE").unwrap_or_else(|_| {
         concat!(env!("CARGO_MANIFEST_DIR"),
-            "/../reverse-engineering/higurashi/chapter-playthrough-20261015/unlocked-input.dat").into()
+            "/../test-fixtures/higurashi/chapter-playthrough-20261015/unlocked-input.dat").into()
     });
     let bytes = std::fs::read(path).unwrap();
     assert_eq!(bytes.len(), TEMPLATE_BYTES);

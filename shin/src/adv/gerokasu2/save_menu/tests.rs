@@ -310,8 +310,8 @@ fn ger_native_save_menu_constructor_input_hit_and_final_callback() {
     }
     let mut child = Command::new(oracle)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())

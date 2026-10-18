@@ -50,7 +50,7 @@ fn ger_modal_scope_matches_native_nested_pause_conceal_order_and_fades() {
         .parent()
         .unwrap()
         .to_owned();
-    let out = root.join("gerokasu2/.local/modal");
+    let out = root.join("reverse-engineering/gerokasu2/modal");
     std::fs::create_dir_all(&out).unwrap();
     let binary = out.join("native-modal");
     assert!(
@@ -154,8 +154,8 @@ fn ger_modal_scope_matches_native_nested_pause_conceal_order_and_fades() {
     let native = Command::new(&binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(std::fs::File::open(&stdin).unwrap())
         .output()

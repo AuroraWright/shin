@@ -55,7 +55,7 @@ fn ger_native_playback_predicates_sys_permission_and_message_read_growth() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/playback");
+    let folder = root.join("reverse-engineering/gerokasu2/playback");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-playback");
     let compile = Command::new("clang")
@@ -73,8 +73,8 @@ fn ger_native_playback_predicates_sys_permission_and_message_read_growth() {
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

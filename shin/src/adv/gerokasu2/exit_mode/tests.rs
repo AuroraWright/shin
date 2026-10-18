@@ -51,7 +51,9 @@ fn ger_native_exit_wait_gates_save_completion_focus_and_title() {
         .unwrap_or_else(|| std::env::current_dir().unwrap());
     let binary = std::env::var_os("SHIN_GEROKASU2_ADV_TITLE_EXIT")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/adv-title-transition/native-exit"));
+        .unwrap_or_else(|| {
+            root.join("reverse-engineering/gerokasu2/adv-title-transition/native-exit")
+        });
     let (mut script, mut expected, mut profiles) = (String::new(), vec![], 0);
     for hidden in [false, true] {
         for delta in [0., 0.25, 1., 2.5, 30., 1000.] {
@@ -151,8 +153,8 @@ fn ger_native_exit_wait_gates_save_completion_focus_and_title() {
     }
     let mut child = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

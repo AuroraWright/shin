@@ -194,7 +194,7 @@ fn ger_native_backlog_controls_match() {
         .unwrap_or_else(|| PathBuf::from(env!("PWD")));
     let native = std::env::var_os("SHIN_GEROKASU2_BACKLOG_ORACLE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/backlog/native-controls"));
+        .unwrap_or_else(|| root.join("reverse-engineering/gerokasu2/backlog/native-controls"));
     let mut script = String::new();
     let mut expected = Vec::new();
     let mut profiles = 0;
@@ -467,8 +467,8 @@ fn ger_native_backlog_controls_match() {
     let mut child = Command::new(native)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

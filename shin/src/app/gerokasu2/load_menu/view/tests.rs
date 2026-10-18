@@ -20,9 +20,9 @@ fn compare_artwork(mode: crate::adv::gerokasu2::save_menu::Mode) {
         .unwrap()
         .to_owned();
     let dir = root.join(if mode == crate::adv::gerokasu2::save_menu::Mode::Load {
-        "gerokasu2/.local/save-menu-render"
+        "reverse-engineering/gerokasu2/save-menu-render"
     } else {
-        "gerokasu2/.local/save-menu-render/save"
+        "reverse-engineering/gerokasu2/save-menu-render/save"
     });
     std::fs::create_dir_all(&dir).unwrap();
     let binary = std::env::var_os("SHIN_GEROKASU2_SAVE_RENDER_ORACLE")
@@ -87,8 +87,8 @@ fn compare_artwork(mode: crate::adv::gerokasu2::save_menu::Mode) {
         .env("SHIN_GEROKASU2_SAVE_RENDER_MODE", (mode as u8).to_string())
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(std::fs::File::create(&output_path).unwrap())

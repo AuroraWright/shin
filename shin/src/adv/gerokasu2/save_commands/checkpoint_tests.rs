@@ -78,7 +78,7 @@ fn ger_native_checkpoint_full_capture_sparse_schedule_and_save_key() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/checkpoint");
+    let folder = root.join("reverse-engineering/gerokasu2/checkpoint");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-checkpoint");
     let compile = Command::new("clang")
@@ -95,8 +95,8 @@ fn ger_native_checkpoint_full_capture_sparse_schedule_and_save_key() {
     );
     let run = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .output()
         .unwrap();
     assert!(

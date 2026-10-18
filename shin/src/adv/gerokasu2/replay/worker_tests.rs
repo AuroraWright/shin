@@ -8,7 +8,7 @@ fn ger_native_replay_worker_threshold_refork_cancellation_and_mutation_guards() 
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/replay-worker");
+    let folder = root.join("reverse-engineering/gerokasu2/replay-worker");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-replay-worker");
     let compile = Command::new("clang")
@@ -27,8 +27,8 @@ fn ger_native_replay_worker_threshold_refork_cancellation_and_mutation_guards() 
         let mut command = Command::new(&binary);
         command
             .arg(root.join("gerokasu2/uncompressed_executable"))
-            .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-            .arg(root.join("gerokasu2/.local/system.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .env_remove("SHIN_GER_REPLAY_WORKER_MUTANT");
         if let Some(mutant) = mutant {
             command.env("SHIN_GER_REPLAY_WORKER_MUTANT", mutant);

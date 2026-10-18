@@ -46,7 +46,7 @@ fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
 fn evidence() -> PathBuf {
-    root().join("reverse-engineering/higurashi/movie-gallery-render-capture")
+    root().join("test-fixtures/higurashi/movie-gallery-render-capture")
 }
 fn required(name: &str) -> PathBuf {
     std::env::var_os(name)

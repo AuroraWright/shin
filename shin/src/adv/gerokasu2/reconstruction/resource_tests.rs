@@ -10,7 +10,7 @@ fn ger_native_reconstruction_resource_worker_reuses_generations_and_checks_cance
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/reconstruction");
+    let folder = root.join("reverse-engineering/gerokasu2/reconstruction");
     std::fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-reconstruction-resources");
     let compile = Command::new("clang")
@@ -27,8 +27,8 @@ fn ger_native_reconstruction_resource_worker_reuses_generations_and_checks_cance
     );
     let mut child = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::inherit())

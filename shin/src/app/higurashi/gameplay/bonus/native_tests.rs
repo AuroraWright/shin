@@ -91,7 +91,7 @@ fn deterministic_unwritten_adapter(
 #[ignore = "actual448c/11a94/17490/275b0 fresh Bonus/one-seed/gates/committed byte52;requires parent-frozen original runner/output, no GPU/audio/window/save"]
 fn higurashi_bonus_fresh_assigned_data_matches_original_exit_factory() {
     let folder = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../reverse-engineering/higurashi/bonus-exit-capture");
+        .join("../test-fixtures/higurashi/bonus-exit-capture");
     let input = std::fs::read(folder.join("input.txt")).unwrap();
     let profiles: Vec<Profile> =
         serde_json::from_slice(&std::fs::read(folder.join("profiles.json")).unwrap()).unwrap();

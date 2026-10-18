@@ -129,7 +129,7 @@ fn ger_audio_restore_matches_native_float_targets_slots_and_stopping_entries() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/live-reconstruction");
+    let folder = root.join("reverse-engineering/gerokasu2/live-reconstruction");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-live-reconstruction");
     let output = Command::new("clang")
@@ -147,8 +147,8 @@ fn ger_audio_restore_matches_native_float_targets_slots_and_stopping_entries() {
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

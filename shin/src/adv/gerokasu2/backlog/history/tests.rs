@@ -109,25 +109,27 @@ fn ger_native_backlog_history_adapter_routes_layout_and_first_match() {
         .parent()
         .unwrap();
     let normal = Gerokasu2Font::new(
-        std::fs::read(root.join("gerokasu2/.local/newrodin-medium.fnt"))
+        std::fs::read(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
             .unwrap()
             .into(),
     )
     .unwrap();
     let bold = Gerokasu2Font::new(
-        std::fs::read(root.join("gerokasu2/.local/system.fnt"))
+        std::fs::read(root.join("test-fixtures/gerokasu2/system.fnt"))
             .unwrap()
             .into(),
     )
     .unwrap();
     let binary = std::env::var_os("SHIN_GEROKASU2_BACKLOG_HISTORY_ORACLE")
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/backlog-history/native-history"));
+        .unwrap_or_else(|| {
+            root.join("reverse-engineering/gerokasu2/backlog-history/native-history")
+        });
     let mut native = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

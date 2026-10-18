@@ -72,12 +72,14 @@ fn ger_native_backlog_history_rows_routes_and_initial_geometry() {
     );
     let binary = std::env::var_os("SHIN_GEROKASU2_BACKLOG_HISTORY_ORACLE")
         .map(std::path::PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/backlog-history/native-history"));
+        .unwrap_or_else(|| {
+            root.join("reverse-engineering/gerokasu2/backlog-history/native-history")
+        });
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

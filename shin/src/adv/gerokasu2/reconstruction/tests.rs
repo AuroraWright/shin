@@ -94,7 +94,7 @@ mod native {
     impl Oracle {
         fn new(name: &str) -> Self {
             let root = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();
-            let folder = root.join("gerokasu2/.local/reconstruction");
+            let folder = root.join("reverse-engineering/gerokasu2/reconstruction");
             std::fs::create_dir_all(&folder).unwrap();
             let binary: PathBuf = folder.join(format!("native-reconstruction-{name}"));
             let compile = Command::new("clang")
@@ -111,8 +111,8 @@ mod native {
             );
             let mut child = Command::new(binary)
                 .arg(root.join("gerokasu2/uncompressed_executable"))
-                .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-                .arg(root.join("gerokasu2/.local/system.fnt"))
+                .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+                .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .stderr(Stdio::inherit())

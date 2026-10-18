@@ -135,6 +135,7 @@ fn reference_updated_manual_original128_frames1599_packets() {
     assert!(output.all(|s| s.starts_with("T ")));
 }
 #[test]
+#[ignore = "requires SHIN_HIGURASHI_MANUAL_RENDER_CAPTURE and the updated Higurashi executable"]
 fn reference_updated_manual_render_frozen_original_reexecution() {
     let Ok(exe) = std::env::var("SHIN_HIGURASHI_MANUAL_RENDER_CAPTURE") else {
         return;

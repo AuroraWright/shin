@@ -234,7 +234,7 @@ fn gerokasu2_native_layer_control_and_wait_helpers() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/controls");
+    let folder = root.join("reverse-engineering/gerokasu2/controls");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-layer-controls");
     let compile = Command::new("clang")
@@ -362,8 +362,8 @@ fn gerokasu2_native_layer_control_and_wait_helpers() {
     fs::write(&input, request).unwrap();
     let output = Command::new(&binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))
         .output()
         .unwrap();

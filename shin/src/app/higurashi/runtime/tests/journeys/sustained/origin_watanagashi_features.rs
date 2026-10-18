@@ -9,7 +9,7 @@ const LEVELS: [f32; 4] = [666., 466., 266., 66.];
 fn template() -> (SaveData, Vec<u8>) {
     let bytes = std::fs::read(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/chapter-playthrough-20261015/unlocked-input.dat"
+        "/../test-fixtures/higurashi/chapter-playthrough-20261015/unlocked-input.dat"
     ))
     .unwrap();
     assert_eq!(bytes.len(), 31748);

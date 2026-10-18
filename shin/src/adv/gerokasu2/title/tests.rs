@@ -158,11 +158,11 @@ mod native {
             .unwrap_or_else(|| root.join("gerokasu2/uncompressed_executable"));
         let normal = std::env::var_os("SHIN_GEROKASU2_MEDIUM_FONT")
             .map(PathBuf::from)
-            .unwrap_or_else(|| root.join("gerokasu2/.local/newrodin-medium.fnt"));
+            .unwrap_or_else(|| root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"));
         let system = std::env::var_os("SHIN_GEROKASU2_SYSTEM_FONT")
             .map(PathBuf::from)
-            .unwrap_or_else(|| root.join("gerokasu2/.local/system.fnt"));
-        let output_dir = root.join("gerokasu2/.local/title");
+            .unwrap_or_else(|| root.join("test-fixtures/gerokasu2/system.fnt"));
+        let output_dir = root.join("reverse-engineering/gerokasu2/title");
         std::fs::create_dir_all(&output_dir).unwrap();
         let override_binary = match source {
             "native-title-return-rows" => {
@@ -208,7 +208,7 @@ mod native {
         );
         let output = String::from_utf8(output.stdout).unwrap();
         if source == "native-title-return-rows" || source == "native-title-first" {
-            let directory = root.join("gerokasu2/.local/title-return");
+            let directory = root.join("reverse-engineering/gerokasu2/title-return");
             std::fs::create_dir_all(&directory).unwrap();
             let name = if source == "native-title-first" {
                 "first-output.txt"
@@ -245,7 +245,7 @@ mod native {
         let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
-            .join("gerokasu2/.local/title-return");
+            .join("reverse-engineering/gerokasu2/title-return");
         std::fs::create_dir_all(&directory).unwrap();
         std::fs::write(directory.join("first-profiles.txt"), &input).unwrap();
         let output = native("native-title-first", &input);
@@ -347,7 +347,7 @@ mod native {
         let directory = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .parent()
             .unwrap()
-            .join("gerokasu2/.local/title-return");
+            .join("reverse-engineering/gerokasu2/title-return");
         std::fs::create_dir_all(&directory).unwrap();
         std::fs::write(directory.join("profiles.txt"), &protocol).unwrap();
         let output = native("native-title-return-rows", &protocol);

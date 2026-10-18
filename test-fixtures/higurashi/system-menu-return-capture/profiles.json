@@ -1,0 +1,2802 @@
+[
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 0,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 1,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 2,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 3,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 4,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 5,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 6,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 0,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 1,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 2,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 3,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 4,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 5,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 6,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 7,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 0,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 1,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 2,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 3,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 4,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 0,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 0,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 4,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 5,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 6,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 7,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 0,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 1,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 2,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 3,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 4,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 5,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 6,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 7,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 0,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 1,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 2,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 3,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 4,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 5,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 6,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 7,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 0,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 4,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 5,
+    "active": 1,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 0,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 1,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 2,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 3,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 4,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 5,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 6,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 0,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 1,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 2,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 3,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 4,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 5,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 6,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 7,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 0,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 1,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 2,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 3,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 4,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 0,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 0,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 4,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 5,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 6,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 7,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 0,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 1,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 2,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 3,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 4,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 5,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 6,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 7,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 0,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 1,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 2,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 3,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 4,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 5,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 6,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 7,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 0,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 4,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 999,
+    "active": 1,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 0,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 1,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 2,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 3,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 4,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 5,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 6,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 0,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 1,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 2,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 3,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 4,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 5,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 6,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 7,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 0,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 1,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 2,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 3,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 4,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 0,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 4,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 5,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 6,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 7,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 0,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 1,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 2,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 3,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 4,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 5,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 6,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 7,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 0,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 1,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 2,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 3,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 4,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 5,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 6,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 7,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 0,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 4,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 0,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 1,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 2,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 3,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 4,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 5,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 6,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 0,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 1,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 2,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 3,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 4,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 5,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 6,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 7,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 0,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 1,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 2,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 3,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 4,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 0,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 4,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 5,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 6,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 7,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 0,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 1,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 2,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 3,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 4,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 5,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 6,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 7,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 0,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 1,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 2,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 3,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 4,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 5,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 6,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 7,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 0,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 4,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 0,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 1,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 2,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 3,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 4,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 5,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 6,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 0,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 1,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 2,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 3,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 4,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 5,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 6,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 7,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 0,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 1,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 2,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 3,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 4,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 0,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 4,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 5,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 6,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 7,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 0,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 1,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 2,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 3,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 4,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 5,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 6,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 7,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 0,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 1,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 2,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 3,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 4,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 5,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 6,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 7,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 0,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 4,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 0,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 1,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 2,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 3,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 4,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 5,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 6,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 0,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 1,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 2,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 3,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 4,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 5,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 6,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 7,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 0,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 1,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 2,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 3,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 4,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 0,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 4,
+    "stage": 0,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 5,
+    "stage": 0,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 6,
+    "stage": 0,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 7,
+    "stage": 0,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 0,
+    "stage": 0,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 1,
+    "stage": 0,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 2,
+    "stage": 0,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 3,
+    "stage": 1,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 4,
+    "stage": 1,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 5,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 6,
+    "stage": 1,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 7,
+    "stage": 1,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 0,
+    "stage": 1,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 1,
+    "stage": 1,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 2,
+    "stage": 2,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 3,
+    "stage": 2,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 4,
+    "stage": 2,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 5,
+    "stage": 2,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 6,
+    "stage": 2,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 7,
+    "stage": 2,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 0,
+    "stage": 2,
+    "button": 2147483647
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 1,
+    "stage": 4294967295,
+    "button": -2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 2,
+    "stage": 4294967295,
+    "button": -1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 3,
+    "stage": 4294967295,
+    "button": 0
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 4,
+    "stage": 4294967295,
+    "button": 1
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 5,
+    "stage": 4294967295,
+    "button": 2
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 6,
+    "stage": 4294967295,
+    "button": -2147483648
+  },
+  {
+    "kind": "callback",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 7,
+    "stage": 4294967295,
+    "button": 2147483647
+  },
+  {
+    "kind": "complete",
+    "scenario": 5,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 5,
+    "active": 1,
+    "salt": 8,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 999,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 999,
+    "active": 1,
+    "salt": 8,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 1000,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 1000,
+    "active": 1,
+    "salt": 8,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 2000,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 2000,
+    "active": 1,
+    "salt": 8,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 10000,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 10000,
+    "active": 1,
+    "salt": 8,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 12049,
+    "active": 0,
+    "salt": 7,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "complete",
+    "scenario": 12049,
+    "active": 1,
+    "salt": 8,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "cancel-question",
+    "scenario": 999,
+    "active": 1,
+    "salt": 31,
+    "stage": 1,
+    "button": 0
+  },
+  {
+    "kind": "cancel-save",
+    "scenario": 999,
+    "active": 1,
+    "salt": 31,
+    "stage": 1,
+    "button": 0
+  }
+]

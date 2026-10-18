@@ -14,13 +14,16 @@ fn oracle(variable: &str, fallback: &str, input: &[u8], font_args: bool) -> Vec<
     let root = root();
     let binary = std::env::var_os(variable)
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/backlog-view").join(fallback));
+        .unwrap_or_else(|| {
+            root.join("reverse-engineering/gerokasu2/backlog-view")
+                .join(fallback)
+        });
     let mut command = Command::new(binary);
     command.arg(root.join("gerokasu2/uncompressed_executable"));
     if font_args {
         command
-            .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-            .arg(root.join("gerokasu2/.local/system.fnt"));
+            .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/system.fnt"));
     }
     let mut child = command
         .stdin(Stdio::piped())
@@ -73,7 +76,8 @@ fn encoded(p: &Packet) -> Vec<u32> {
 #[test]
 #[ignore = "executes original Ger80DB0 and83620 CPU oracle"]
 fn ger_native_backlog_view_packets_and_hover_match() {
-    let input = std::fs::read(root().join("gerokasu2/.local/backlog-view/render.input")).unwrap();
+    let input =
+        std::fs::read(root().join("test-fixtures/gerokasu2/backlog-view/render.input")).unwrap();
     let output = String::from_utf8(oracle(
         "SHIN_GEROKASU2_BACKLOG_VIEW_RENDER_ORACLE",
         "native-view",
@@ -173,7 +177,8 @@ fn ger_native_backlog_view_packets_and_hover_match() {
             packet_count += 1;
         }
     }
-    let input = std::fs::read(root().join("gerokasu2/.local/backlog-view/input.input")).unwrap();
+    let input =
+        std::fs::read(root().join("test-fixtures/gerokasu2/backlog-view/input.input")).unwrap();
     let input = std::str::from_utf8(&input)
         .unwrap()
         .lines()

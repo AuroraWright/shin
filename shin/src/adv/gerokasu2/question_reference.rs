@@ -21,7 +21,7 @@ fn run(source: &str, input: String) -> Vec<Vec<i64>> {
         .parent()
         .unwrap()
         .to_owned();
-    let folder = root.join("gerokasu2/.local/question");
+    let folder = root.join("reverse-engineering/gerokasu2/question");
     std::fs::create_dir_all(&folder).unwrap();
     let binary = folder.join(source);
     assert!(
@@ -39,10 +39,10 @@ fn run(source: &str, input: String) -> Vec<Vec<i64>> {
         .unwrap_or_else(|| root.join("gerokasu2/uncompressed_executable"));
     let medium = std::env::var_os("SHIN_GEROKASU2_MEDIUM_FONT")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/newrodin-medium.fnt"));
+        .unwrap_or_else(|| root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"));
     let system = std::env::var_os("SHIN_GEROKASU2_SYSTEM_FONT")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/system.fnt"));
+        .unwrap_or_else(|| root.join("test-fixtures/gerokasu2/system.fnt"));
     let mut child = Command::new(&binary)
         .args([executable, medium, system])
         .stdin(Stdio::piped())

@@ -88,11 +88,15 @@ fn native(kind: &str, input: String) -> Vec<String> {
     let root = root();
     let binary = std::env::var_os(format!("SHIN_GEROKASU2_MUSIC_{}", kind.to_uppercase()))
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join(format!("gerokasu2/.local/music-gallery/native-{kind}")));
+        .unwrap_or_else(|| {
+            root.join(format!(
+                "reverse-engineering/gerokasu2/music-gallery/native-{kind}"
+            ))
+        });
     let mut child = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

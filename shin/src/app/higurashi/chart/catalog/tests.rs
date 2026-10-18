@@ -3,6 +3,7 @@ use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessF
 use std::{io::Read, path::PathBuf};
 
 #[test]
+#[ignore = "requires the Higurashi patch.rom (SHIN_HIGURASHI_ASSETS or higurashi/)"]
 fn higurashi_chart_catalog_matches_actual_updated_scenario_decoder() {
     let project = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..");
     let assets = std::env::var_os("SHIN_HIGURASHI_ASSETS")

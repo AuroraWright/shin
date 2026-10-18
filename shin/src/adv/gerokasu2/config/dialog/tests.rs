@@ -114,7 +114,7 @@ fn ger_native_question_cached_draw_packets_and_palette_match() {
         .parent()
         .unwrap()
         .to_owned();
-    let out = root.join("gerokasu2/.local/question-render");
+    let out = root.join("reverse-engineering/gerokasu2/question-render");
     std::fs::create_dir_all(&out).unwrap();
     let binary = out.join("native-question-render");
     assert!(
@@ -193,8 +193,8 @@ fn ger_native_question_cached_draw_packets_and_palette_match() {
     let mut child = Command::new(&binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

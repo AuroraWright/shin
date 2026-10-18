@@ -137,7 +137,7 @@ fn run_original(input: &[u8], run: usize) -> Output {
 #[ignore = "strict actual item5 prompt/callback/full native SaveGame snapshot/Title(-1,-1);requires parent-validated original runner+frozen output, no GPU/audio/window/user saves"]
 fn higurashi_system_menu_title_prompt_save_and_staged_return_match_native() {
     let folder = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../reverse-engineering/higurashi/system-menu-return-capture");
+        .join("../test-fixtures/higurashi/system-menu-return-capture");
     let input = std::fs::read(folder.join("input.txt")).unwrap();
     let profiles: Vec<Profile> =
         serde_json::from_slice(&std::fs::read(folder.join("profiles.json")).unwrap()).unwrap();

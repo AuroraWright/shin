@@ -111,7 +111,7 @@ impl Program {
 #[ignore = "whole original D5A10/D5B80/C11B0 specialized callbacks/export; CPU only"]
 fn ger_native_save_preview_replay_callbacks_and_label_export_match() {
     let root = PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROOT").unwrap());
-    let out = root.join("gerokasu2/.local/save-preview-replay");
+    let out = root.join("reverse-engineering/gerokasu2/save-preview-replay");
     let oracle = std::env::var_os("SHIN_GEROKASU2_SAVE_PREVIEW_REPLAY_ORACLE")
         .map(PathBuf::from)
         .unwrap_or_else(|| out.join("native-save-preview-replay"));
@@ -248,8 +248,8 @@ fn ger_native_save_preview_replay_callbacks_and_label_export_match() {
     let mut child = Command::new(oracle)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/system.fnt"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

@@ -106,6 +106,7 @@ fn ger_replay_resume_blocks_and_bookmark_fork_rewinds_both_targets() {
     ));
 }
 #[test]
+#[ignore = "requires the Gerokasu2 ROM (SHIN_GEROKASU2_ROM)"]
 fn ger_authored_layer_init_operands_inventory_has_no_message_minus5_address() {
     use shin_core::format::{
         rom::RomReader,

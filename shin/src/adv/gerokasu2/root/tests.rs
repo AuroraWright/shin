@@ -11,7 +11,7 @@ fn gerokasu2_native_root_copy_retains_message_and_copies_screen() {
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let folder = root.join("gerokasu2/.local/root");
+    let folder = root.join("reverse-engineering/gerokasu2/root");
     fs::create_dir_all(&folder).unwrap();
     let binary = folder.join("native-root");
     let compile = Command::new("clang")
@@ -91,8 +91,8 @@ fn gerokasu2_native_root_copy_retains_message_and_copies_screen() {
     fs::write(&input, request).unwrap();
     let output = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::from(fs::File::open(input).unwrap()))
         .output()
         .unwrap();

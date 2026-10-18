@@ -9,7 +9,7 @@ const PLAN: [(u32, usize); 3] = [(0x893988, 1), (0x8e1c28, 0), (0x908fcc, 1)];
 fn template() -> (SaveData, Vec<u8>) {
     let bytes = std::fs::read(concat!(
         env!("CARGO_MANIFEST_DIR"),
-        "/../reverse-engineering/higurashi/chapter-playthrough-20261015/unlocked-input.dat"
+        "/../test-fixtures/higurashi/chapter-playthrough-20261015/unlocked-input.dat"
     ))
     .unwrap();
     assert_eq!(bytes.len(), 31748);

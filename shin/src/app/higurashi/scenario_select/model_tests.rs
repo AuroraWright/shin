@@ -639,6 +639,7 @@ fn patchless_picker_standard_art_bands_and_missing_origin_rows_cannot_activate()
 }
 
 #[test]
+#[ignore = "requires the Higurashi data.rom"]
 fn patchless_original_snr_standard_picker_preflight_keeps_append_and_origin_unavailable() {
     use shin_core::format::scenario::higurashi::{HigurashiScenario, HigurashiVariant};
     use std::io::{Read, Seek, SeekFrom};

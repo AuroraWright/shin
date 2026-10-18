@@ -98,7 +98,7 @@ fn gerokasu_supplied_route_exploration_covers_script() {
     );
 }
 
-/// Explores every route; writes `<dir>/.local/playability/routes-seed*.txt`
+/// Explores every route; writes `reverse-engineering/<dir>/playability/routes-seed*.txt`
 /// and the command inventory. `prefix` names the seed/playthrough variables.
 fn explore(scenario: &Arc<Gerokasu2Scenario>, dir: &str, prefix: &str) {
     let gerokasu = scenario.dialect == crate::format::scenario::gerokasu2::Dialect::Gerokasu;
@@ -355,8 +355,9 @@ fn explore(scenario: &Arc<Gerokasu2Scenario>, dir: &str, prefix: &str) {
     let out_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap()
+        .join("reverse-engineering")
         .join(dir)
-        .join(".local/playability");
+        .join("playability");
     std::fs::create_dir_all(&out_dir).unwrap();
     let mut file = std::fs::File::create(out_dir.join(format!("routes-seed{seed}.txt"))).unwrap();
     writeln!(

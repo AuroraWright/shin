@@ -13,7 +13,7 @@ fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
 fn evidence() -> PathBuf {
-    root().join("reverse-engineering/higurashi/movie-gallery-model-native-corpus")
+    root().join("test-fixtures/higurashi/movie-gallery-model-native-corpus")
 }
 fn required(name: &str) -> PathBuf {
     std::env::var_os(name)

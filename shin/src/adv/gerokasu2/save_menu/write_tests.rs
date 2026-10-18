@@ -68,7 +68,7 @@ fn ger_native_save_delete_questions_write_completion_and_rollback() {
         .unwrap_or_else(|| std::env::current_dir().unwrap());
     let oracle = std::env::var_os("SHIN_GEROKASU2_SAVE_WRITE_ORACLE")
         .map(PathBuf::from)
-        .unwrap_or_else(|| root.join("gerokasu2/.local/save-menu-write/native-write"));
+        .unwrap_or_else(|| root.join("reverse-engineering/gerokasu2/save-menu-write/native-write"));
     struct Host {
         remembered: u8,
         before: u8,
@@ -205,8 +205,8 @@ fn ger_native_save_delete_questions_write_completion_and_rollback() {
     }
     let mut child = Command::new(oracle)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

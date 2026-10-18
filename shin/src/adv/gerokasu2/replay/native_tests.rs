@@ -11,7 +11,7 @@ fn ger_native_replay_poll_constructor_route_publication_and_unsigned_retention()
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .unwrap();
-    let binary = root.join("gerokasu2/.local/replay/native-replay-polls");
+    let binary = root.join("reverse-engineering/gerokasu2/replay/native-replay-polls");
     let c = Command::new("clang")
         .args(["-std=c11", "-O2"])
         .arg(root.join("gerokasu2/native-replay-polls.c"))
@@ -23,8 +23,8 @@ fn ger_native_replay_poll_constructor_route_publication_and_unsigned_retention()
     let mut child = Command::new(binary)
         .args([
             root.join("gerokasu2/uncompressed_executable"),
-            root.join("gerokasu2/.local/newrodin-medium.fnt"),
-            root.join("gerokasu2/.local/system.fnt"),
+            root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"),
+            root.join("test-fixtures/gerokasu2/system.fnt"),
         ])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())

@@ -13,7 +13,7 @@ pub(super) fn root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("..")
 }
 pub(super) fn evidence() -> PathBuf {
-    root().join("reverse-engineering/higurashi")
+    root().join("test-fixtures/higurashi")
 }
 pub(super) fn required(name: &str) -> PathBuf {
     PathBuf::from(

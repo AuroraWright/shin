@@ -75,7 +75,7 @@ fn ger_native_config_schema_widgets_and_controller() {
         .parent()
         .unwrap()
         .to_owned();
-    let local = root.join("gerokasu2/.local/config");
+    let local = root.join("reverse-engineering/gerokasu2/config");
     std::fs::create_dir_all(&local).unwrap();
     let binary = local.join("native-config-model-test");
     let compile = Command::new("clang")
@@ -197,8 +197,8 @@ fn ger_native_config_schema_widgets_and_controller() {
     std::fs::write(&input_path, &source).unwrap();
     let mut child = Command::new(&binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(std::fs::File::create(local.join("controller-output.txt")).unwrap())
         .stderr(Stdio::piped())
@@ -263,7 +263,7 @@ fn ger_native_config_original_parent_row_artwork() {
         .parent()
         .unwrap()
         .to_owned();
-    let local = root.join("gerokasu2/.local/config");
+    let local = root.join("reverse-engineering/gerokasu2/config");
     std::fs::create_dir_all(&local).unwrap();
     let binary = local.join("native-config-render-test");
     let compile = Command::new("clang")
@@ -282,8 +282,8 @@ fn ger_native_config_original_parent_row_artwork() {
     for selected in 0..13 {
         let mut child = Command::new(&binary)
             .arg(root.join("gerokasu2/uncompressed_executable"))
-            .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-            .arg(root.join("gerokasu2/.local/system.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+            .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
@@ -353,7 +353,7 @@ fn ger_native_config_pointer_edges() {
         .parent()
         .unwrap()
         .to_owned();
-    let local = root.join("gerokasu2/.local/config");
+    let local = root.join("reverse-engineering/gerokasu2/config");
     std::fs::create_dir_all(&local).unwrap();
     let binary = local.join("native-config-pointer-test");
     let compile = Command::new("clang")
@@ -384,8 +384,8 @@ fn ger_native_config_pointer_edges() {
     }
     let mut child = Command::new(&binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(std::fs::File::create(local.join("pointer-output.txt")).unwrap())
         .stderr(Stdio::piped())
@@ -435,7 +435,7 @@ fn ger_native_config_original_open_close_clocks() {
         .parent()
         .unwrap()
         .to_owned();
-    let local = root.join("gerokasu2/.local/config");
+    let local = root.join("reverse-engineering/gerokasu2/config");
     std::fs::create_dir_all(&local).unwrap();
     let binary = local.join("native-config-clock-test");
     let compile = Command::new("clang")
@@ -471,8 +471,8 @@ fn ger_native_config_original_open_close_clocks() {
     }
     let mut child = Command::new(&binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
         .stdin(Stdio::piped())
         .stdout(std::fs::File::create(local.join("clock-output.txt")).unwrap())
         .stderr(Stdio::piped())

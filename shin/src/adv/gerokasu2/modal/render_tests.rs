@@ -63,7 +63,7 @@ fn packet(
 #[ignore = "requires original executable/fonts and standalone native-modal-render CPU probe"]
 fn ger_native_modal_capture_and_backdrop_packets_match() {
     let root = PathBuf::from(std::env::var("GER_MODAL_ROOT").unwrap());
-    let out = root.join("gerokasu2/.local/modal-render");
+    let out = root.join("reverse-engineering/gerokasu2/modal-render");
     let binary = std::env::var_os("GER_MODAL_NATIVE")
         .map(PathBuf::from)
         .unwrap_or_else(|| out.join("native-modal-render"));
@@ -104,8 +104,8 @@ fn ger_native_modal_capture_and_backdrop_packets_match() {
     let mut command = Command::new(binary);
     command
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());

@@ -257,6 +257,7 @@ fn reference_updated_manual_original78_owners826_observations() {
     assert!(output.next().is_none());
 }
 #[test]
+#[ignore = "requires SHIN_HIGURASHI_MANUAL_MODEL_CAPTURE and the updated Higurashi executable"]
 fn reference_updated_manual_frozen_original_reexecution() {
     let Ok(exe) = std::env::var("SHIN_HIGURASHI_MANUAL_MODEL_CAPTURE") else {
         return;

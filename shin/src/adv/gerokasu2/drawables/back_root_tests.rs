@@ -157,7 +157,7 @@ fn previous_root_retains_first_capture_and_drops_only_on_enabled_block() {
 #[ignore = "requires original Ger executable/fonts and standalone native-back-root CPU probe"]
 fn ger_native_previous_root_capture_blocked_command_update_prepare_and_draw() {
     let root = PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROOT").unwrap());
-    let out = root.join("gerokasu2/.local/back-root");
+    let out = root.join("reverse-engineering/gerokasu2/back-root");
     let binary = std::env::var_os("SHIN_GEROKASU2_BACK_ROOT_NATIVE")
         .map(PathBuf::from)
         .unwrap_or_else(|| out.join("native-back-root"));
@@ -222,8 +222,8 @@ fn ger_native_previous_root_capture_blocked_command_update_prepare_and_draw() {
     std::fs::write(out.join("native-back-root.input"), &input).unwrap();
     let mut child = Command::new(binary)
         .arg(root.join("gerokasu2/uncompressed_executable"))
-        .arg(root.join("gerokasu2/.local/system.fnt"))
-        .arg(root.join("gerokasu2/.local/newrodin-medium.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/system.fnt"))
+        .arg(root.join("test-fixtures/gerokasu2/newrodin-medium.fnt"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())

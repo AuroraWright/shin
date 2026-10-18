@@ -12,7 +12,7 @@ const CHOICE_PC:u32=0xa15692;
 fn template()->(SaveData,Vec<u8>){
     let path=std::env::var("SHIN_HIGURASHI_CHAPTER_TEMPLATE").unwrap_or_else(|_|
         concat!(env!("CARGO_MANIFEST_DIR"),
-            "/../reverse-engineering/higurashi/chapter-playthrough-20261015/unlocked-input.dat").into());
+            "/../test-fixtures/higurashi/chapter-playthrough-20261015/unlocked-input.dat").into());
     let bytes=std::fs::read(path).unwrap();assert_eq!(bytes.len(),31748);
     let fnv=bytes.iter().fold(0xcbf29ce484222325u64,
         |h,b|(h^u64::from(*b)).wrapping_mul(0x100000001b3));
