@@ -283,15 +283,20 @@ pub async fn init_wgpu<'window>(
         .map_err(|e| anyhow::Error::msg(format!("Failed to create wgpu device: {:?}", e)))
         .context("Failed to create wgpu device")?;
 
-    // we DON'T want sRGB-correctness, as the original game doesn't have it
-    let surface_texture_format = *surface
-        .get_capabilities(&adapter)
-        .formats
-        .iter()
-        .find(|f| !f.is_srgb())
-        .unwrap();
+    // we DON'T want sRGB-correctness, as the original game doesn't have it.
+    // Prefer plain 8-bit formats: compositors treat float (and some 10-bit)
+    // surfaces as linear or HDR, which washes the game's colors out.
+    let formats = surface.get_capabilities(&adapter).formats;
+    let surface_texture_format = [
+        wgpu::TextureFormat::Bgra8Unorm,
+        wgpu::TextureFormat::Rgba8Unorm,
+    ]
+    .into_iter()
+    .find(|format| formats.contains(format))
+    .or_else(|| formats.iter().copied().find(|f| !f.is_srgb()))
+    .unwrap();
 
-    debug!(
+    info!(
         "Picked {:?} as the surface texture format",
         surface_texture_format
     );

@@ -523,8 +523,10 @@ fn find_entrypoints(wgsl_dir: &Path, wgsl_schema: &WgslSchema) -> Vec<ShaderWith
                 &module_info,
                 &naga::back::spv::Options {
                     lang_version: (1, 0),
+                    // No ADJUST_COORDINATE_SPACE: wgpu's Vulkan backend already
+                    // flips Y with a negative viewport, so flipping here too
+                    // turned direct-to-screen passthrough draws upside down.
                     flags: naga::back::spv::WriterFlags::DEBUG
-                        | naga::back::spv::WriterFlags::ADJUST_COORDINATE_SPACE
                         | naga::back::spv::WriterFlags::LABEL_VARYINGS
                         | naga::back::spv::WriterFlags::CLAMP_FRAG_DEPTH,
                     binding_map: naga::back::spv::BindingMap::default(),
