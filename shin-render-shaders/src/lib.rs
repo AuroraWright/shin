@@ -113,6 +113,19 @@ impl ShaderDescriptor {
                     device.create_shader_module_passthrough(
                         wgpu::ShaderModuleDescriptorPassthrough {
                         label: Some(&format!("{} shader module", self.name)),
+                            // wgpu cannot reflect passthrough SPIR-V; pipelines
+                            // only find the entry points listed here.
+                            entry_points: vec![
+                                wgpu::PassthroughShaderEntryPoint {
+                                    name: self.vertex_entry.into(),
+                                    workgroup_size: (0, 0, 0),
+                                },
+                                wgpu::PassthroughShaderEntryPoint {
+                                    name: self.fragment_entry.into(),
+                                    workgroup_size: (0, 0, 0),
+                                },
+                            ]
+                            .into(),
                             spirv: Some(self.spirv.into()),
                             ..Default::default()
                         },
