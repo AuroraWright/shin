@@ -5812,6 +5812,7 @@ dependencies = [
  "tracy-client",
  "web-sys",
  "wgpu 30.0.1",
+ "windows-sys 0.52.0",
  "winit",
 ]
 

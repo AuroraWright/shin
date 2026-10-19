@@ -160,6 +160,34 @@ fn centered_window(
     )
 }
 
+/// The monitor's work area: the part not covered by the taskbar or docked
+/// app bars, in physical pixels.
+#[cfg(target_os = "windows")]
+fn work_area(
+    monitor: &winit::monitor::MonitorHandle,
+) -> Option<(
+    winit::dpi::PhysicalSize<u32>,
+    winit::dpi::PhysicalPosition<i32>,
+)> {
+    use windows_sys::Win32::Graphics::Gdi::{GetMonitorInfoW, MONITORINFO};
+    use winit::platform::windows::MonitorHandleExtWindows;
+    // SAFETY: MONITORINFO is plain data; all zeroes is a valid value.
+    let mut info: MONITORINFO = unsafe { std::mem::zeroed() };
+    info.cbSize = size_of::<MONITORINFO>() as u32;
+    // SAFETY: winit's handle is a live HMONITOR and cbSize matches `info`.
+    if unsafe { GetMonitorInfoW(monitor.hmonitor(), &mut info) } == 0 {
+        return None;
+    }
+    let work = info.rcWork;
+    Some((
+        winit::dpi::PhysicalSize::new(
+            (work.right - work.left).max(0) as u32,
+            (work.bottom - work.top).max(0) as u32,
+        ),
+        winit::dpi::PhysicalPosition::new(work.left, work.top),
+    ))
+}
+
 pub struct WindowState {
     #[cfg(target_os = "macos")]
     quit_handler: Option<macos_quit::QuitHandler>,
@@ -646,6 +674,8 @@ impl WindowState {
     pub fn new<A: ShinApp>(event_loop: &ActiveEventLoop) -> Self {
         #[allow(unused_mut)]
         let mut attributes = Window::default_attributes().with_title(A::window_title());
+        #[cfg(target_os = "windows")]
+        let mut centering_area = None;
 
         #[cfg(not(any(target_arch = "wasm32", target_os = "android")))]
         {
@@ -657,9 +687,21 @@ impl WindowState {
                 .primary_monitor()
                 .or_else(|| event_loop.available_monitors().next());
             if let Some(monitor) = monitor {
+                #[cfg(target_os = "windows")]
+                let area = work_area(&monitor);
+                #[cfg(not(target_os = "windows"))]
+                let area = None;
+                let (area_size, area_position) =
+                    area.unwrap_or_else(|| (monitor.size(), monitor.position()));
                 let (size, position) =
-                    centered_window(monitor.size(), monitor.position(), monitor.scale_factor());
+                    centered_window(area_size, area_position, monitor.scale_factor());
                 attributes = attributes.with_inner_size(size).with_position(position);
+                #[cfg(target_os = "windows")]
+                {
+                    // Shown once the frame is centered below.
+                    attributes = attributes.with_visible(false);
+                    centering_area = Some((area_size, area_position));
+                }
             }
         }
 
@@ -690,6 +732,18 @@ impl WindowState {
         }
 
         let window = Arc::new(event_loop.create_window(attributes).unwrap());
+        // The position places the frame's corner, so center the whole frame
+        // (title bar and borders) now that its size is known.
+        #[cfg(target_os = "windows")]
+        if let Some((area_size, area_position)) = centering_area {
+            let outer = window.outer_size();
+            let offset = |area: u32, outer: u32| ((area as i32 - outer as i32) / 2).max(0);
+            window.set_outer_position(winit::dpi::PhysicalPosition::new(
+                area_position.x + offset(area_size.width, outer.width),
+                area_position.y + offset(area_size.height, outer.height),
+            ));
+            window.set_visible(true);
+        }
 
         let size = A::map_canvas_size(window.inner_size());
 

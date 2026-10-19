@@ -46,6 +46,10 @@ web-sys = { version = "0.3.106", features = ["Document"] }
 [target.'cfg(target_os = "macos")'.dependencies]
 objc2 = "0.6.5"
 
+# The version winit uses, so HMONITOR matches.
+[target.'cfg(target_os = "windows")'.dependencies]
+windows-sys = { version = "0.52.0", features = ["Win32_Foundation", "Win32_Graphics_Gdi"] }
+
 [features]
 tracy = ["tracing-tracy/enable"]
 
