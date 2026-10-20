@@ -1,6 +1,6 @@
 [package]
 name = "shin-render-shader-types"
-version = "1.0.4-fork"
+version = "1.0.5-fork"
 edition = "2024"
 
 [dependencies]
