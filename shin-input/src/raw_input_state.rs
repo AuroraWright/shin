@@ -1,15 +1,16 @@
 use enum_map::{EnumMap, enum_map};
-use gilrs::{EventType, GamepadId, Gilrs};
 use glam::{Vec2, vec2};
 use indexmap::IndexMap;
 use petitset::PetitSet;
-use tracing::{error, warn};
 use winit::{
     event::{ElementState, WindowEvent},
     keyboard::{KeyCode, PhysicalKey},
 };
 
-use crate::inputs::{GamepadAxis, GamepadButton, MouseButton, VirtualGamepadButton};
+use crate::{
+    gamepad_backend::{GamepadBackend, Gamepads},
+    inputs::{GamepadAxis, GamepadButton, MouseButton, VirtualGamepadButton},
+};
 
 #[derive(Clone)]
 pub struct MouseState {
@@ -95,7 +96,7 @@ impl UnifiedGamepadState {
 
 #[derive(Clone)]
 pub struct GamepadsState {
-    pub gamepads: IndexMap<GamepadId, UnifiedGamepadState>,
+    pub gamepads: Gamepads,
     pub unified: UnifiedGamepadState,
 }
 
@@ -117,7 +118,7 @@ impl GamepadsState {
 }
 
 pub struct RawInputAccumulator {
-    gilrs: Option<Gilrs>,
+    gamepad_backend: Option<GamepadBackend>,
     state: RawInputState,
     mouse_scale_factor: f64,
 }
@@ -126,17 +127,7 @@ impl RawInputAccumulator {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
-            gilrs: match Gilrs::new() {
-                Ok(gilrs) => Some(gilrs),
-                Err(gilrs::Error::NotImplemented(gilrs)) => {
-                    warn!("Gamepad input is not implemented on this platform");
-                    Some(gilrs)
-                }
-                Err(err) => {
-                    error!("Failed to initialize gamepad input: {:?}", err);
-                    None
-                }
-            },
+            gamepad_backend: GamepadBackend::new(),
             state: RawInputState::new(),
             mouse_scale_factor: 1.0,
         }
@@ -210,44 +201,9 @@ impl RawInputAccumulator {
     }
 
     pub fn start_frame(&mut self) -> RawInputState {
-        if let Some(gilrs) = &mut self.gilrs {
+        if let Some(backend) = &mut self.gamepad_backend {
             let gamepads = &mut self.state.gamepads;
-            while let Some(event) = gilrs.next_event() {
-                let gamepad = gamepads.gamepads.entry(event.id).or_default();
-                match event.event {
-                    EventType::ButtonPressed(button, _) => {
-                        if let Some(button) = GamepadButton::from_gilrs(button) {
-                            gamepad.buttons[button] = true;
-                        }
-                    }
-                    EventType::ButtonRepeated(_button, _) => {
-                        // we do not handle repeated events, our input system has its own way of synthesizing these
-                    }
-                    EventType::ButtonReleased(button, _) => {
-                        if let Some(button) = GamepadButton::from_gilrs(button) {
-                            gamepad.buttons[button] = false;
-                        }
-                    }
-                    EventType::ButtonChanged(_button, _value, _) => {
-                        // we do not support analog buttons
-                    }
-                    EventType::AxisChanged(axis, value, _) => {
-                        if let Some(axis) = GamepadAxis::from_gilrs(axis) {
-                            gamepad.axes[axis] = value;
-                        }
-                    }
-                    EventType::Connected | EventType::Disconnected => {
-                        // reset the state just in case
-                        *gamepad = UnifiedGamepadState::new();
-                    }
-                    EventType::Dropped | EventType::ForceFeedbackEffectCompleted => {
-                        // nothing to do here
-                    }
-                    _ => {
-                        // ignore events added in the future
-                    }
-                }
-            }
+            backend.read(&mut gamepads.gamepads);
 
             for (_, gamepad) in &mut gamepads.gamepads {
                 gamepad.update_virtual_keys();
@@ -369,7 +325,7 @@ mod tests {
             event::{MouseScrollDelta, TouchPhase},
         };
         let mut input = RawInputAccumulator {
-            gilrs: None,
+            gamepad_backend: None,
             state: RawInputState::new(),
             mouse_scale_factor: 1.0,
         };
@@ -427,7 +383,7 @@ mod tests {
         for scale in [1.0, 2.0, 3.0] {
             for packets_per_frame in [1, 4, 16] {
                 let mut input = RawInputAccumulator {
-                    gilrs: None,
+                    gamepad_backend: None,
                     state: RawInputState::new(),
                     mouse_scale_factor: scale,
                 };
@@ -451,7 +407,7 @@ mod tests {
     fn losing_focus_clears_captured_mouse_buttons_and_scroll() {
         use super::*;
         let mut input = RawInputAccumulator {
-            gilrs: None,
+            gamepad_backend: None,
             state: RawInputState::new(),
             mouse_scale_factor: 1.0,
         };

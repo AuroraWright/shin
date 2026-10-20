@@ -10,8 +10,15 @@ enum-map = { workspace = true }
 petitset = "0.2.1"
 winit = { workspace = true }
 glam = { workspace = true }
-gilrs = "0.11.2"
 indexmap = { workspace = true }
+
+[target.'cfg(not(target_os = "macos"))'.dependencies]
+gilrs = "0.11.2"
+
+# macOS polls the GameController framework instead of gilrs (see gamepad_backend.rs).
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2-foundation = { version = "0.3.2", default-features = false, features = ["std", "NSArray", "NSEnumerator", "NSString"] }
+objc2-game-controller = { version = "0.3.2", default-features = false, features = ["std", "GCController", "GCDevice", "GCExtendedGamepad", "GCPhysicalInputProfile", "GCControllerButtonInput", "GCControllerDirectionPad", "GCControllerAxisInput", "GCControllerElement"] }
 
 [dev-dependencies]
 shin-primitives = { path = "../shin-primitives" }

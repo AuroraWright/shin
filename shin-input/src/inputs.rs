@@ -13,6 +13,7 @@ pub enum GamepadAxis {
     RightTrigger,
 }
 
+#[cfg(not(target_os = "macos"))]
 impl GamepadAxis {
     pub fn from_gilrs(axis: gilrs::Axis) -> Option<Self> {
         use gilrs::Axis::*;
@@ -61,6 +62,7 @@ pub enum VirtualGamepadButton {
     StickRRight,
 }
 
+#[cfg(not(target_os = "macos"))]
 impl GamepadButton {
     pub fn from_gilrs(button: gilrs::Button) -> Option<Self> {
         use gilrs::Button::*;
@@ -104,7 +106,7 @@ pub enum MouseButton {
     // Other(u16),
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(target_os = "macos")))]
 mod tests {
     use super::*;
     #[test]
