@@ -24,7 +24,7 @@ use std::{
 // Focused actual ADV confirmation/input and mode0 publication checks. Reuses
 // the supplied-resource offscreen fixture without repeating its other tests.
 #[test]
-#[ignore = "requires supplied ROMs, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, Metal and the default audio output"]
 fn reference_chapter_confirmation_and_scene_installation() {
     assert!(std::env::var_os("SHIN_REFERENCE_CHAPTER_NAVIGATION_ONLY").is_some());
     std::thread::Builder::new()

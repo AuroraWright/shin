@@ -62,7 +62,7 @@ fn wait_question(game: &mut Gameplay, number: &mut u32) {
     }
 }
 #[test]
-#[ignore = "concrete Gameplay previous-message and chapter question/No/B/Yes/native searches/reconstruction at720p/1080p;offscreen Metal/exact Loopback Audio"]
+#[ignore = "concrete Gameplay previous-message and chapter question/No/B/Yes/native searches/reconstruction at720p/1080p;offscreen Metal/the default audio output"]
 fn higurashi_gameplay_navigation_rewinds_messages_and_confirms_chapters() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

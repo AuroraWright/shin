@@ -287,7 +287,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted Hima output+PASS required;ordinary Category1/SNRSEL1row2/scenario202/actualpersist32gatedoriginal1/GoodEND/TIP111/protectedBGM98credits/TIP112113114/EXIT1f997 save+Title;realassets/offscreenMetal/exactLoopbackAudio;temporaryPaths only;twohour observation allowance"]
+#[ignore = "actual accepted Hima output+PASS required;ordinary Category1/SNRSEL1row2/scenario202/actualpersist32gatedoriginal1/GoodEND/TIP111/protectedBGM98credits/TIP112113114/EXIT1f997 save+Title;realassets/offscreenMetal/audio output;temporaryPaths only;twohour observation allowance"]
 fn higurashi_runtime_sustained_earned_category_reaches_full_meakashi_exit_and_title() {
     let (saved, initial_file) = earned();
     let persistent32 = saved.persist_data.get(32);

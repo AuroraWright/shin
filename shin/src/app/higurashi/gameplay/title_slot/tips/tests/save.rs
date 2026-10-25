@@ -40,12 +40,12 @@ impl Storage for Store {
 }
 
 #[test]
-#[ignore = "actual active0 TIPS EXIT,odd completion bit,frozen101 slots,held temporary atomic writer,no-answer notification,post-save dcf00 and next-frame scene retirement at720p/1080p;exact Loopback Audio,no window/user saves"]
+#[ignore = "actual active0 TIPS EXIT,odd completion bit,frozen101 slots,held temporary atomic writer,no-answer notification,post-save dcf00 and next-frame scene retirement at720p/1080p;the default audio output,no window/user saves"]
 fn higurashi_primary_tips_exit_saves_completion_before_source_free_browser() {
     primary_save(false);
 }
 #[test]
-#[ignore = "actual SystemMenu item6 stage1 Yes15c64(unlock0)/active0 frozen settings and101 runtime rows/held temporary atomic writer/minimum one second/source-free browser at720p/1080p;exact Loopback Audio,no window/user saves"]
+#[ignore = "actual SystemMenu item6 stage1 Yes15c64(unlock0)/active0 frozen settings and101 runtime rows/held temporary atomic writer/minimum one second/source-free browser at720p/1080p;the default audio output,no window/user saves"]
 fn higurashi_system_menu_primary_tip_saves_without_marking_unfinished_completion() {
     primary_save(true);
 }

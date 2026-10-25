@@ -1,6 +1,6 @@
 //! Full Runtime journeys complement the existing native/component contracts.
 //! Input enters through RawInputState; asset, scene and storage work uses the
-//! actual asynchronous owners, offscreen Metal and exact Loopback Audio.
+//! actual asynchronous owners, offscreen Metal and the default audio output.
 use super::*;
 use std::path::PathBuf;
 

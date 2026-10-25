@@ -543,7 +543,7 @@ fn native_stopping_voice_uses_fused_decay_and_saved_category_gain() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM/executable, Metal GPU and exact Loopback Audio"]
+#[ignore = "requires supplied ROM/executable, Metal GPU and the default audio output"]
 fn supplied_voice_transport_drives_message_waits_and_releases_playback() {
     use super::super::{
         message_clock::{MessageClock, MessageParams},
@@ -775,6 +775,6 @@ fn supplied_voice_transport_drives_message_waits_and_releases_playback() {
     assert_eq!(commands.poll(&voice), MessageCommandStatus::Complete);
     voice.update(Ticks::from_f32(10.0));
     println!(
-        "GEROKASU2_VOICE_GPU authored_voices=2 audio=Loopback Audio Metal real_NXA_async_segment_clock_pause_lipsync_muting_cancellation_EOF_missing_load_owner_effects_explicit_commands=verified"
+        "GEROKASU2_VOICE_GPU authored_voices=2 audio=default output Metal real_NXA_async_segment_clock_pause_lipsync_muting_cancellation_EOF_missing_load_owner_effects_explicit_commands=verified"
     );
 }

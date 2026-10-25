@@ -1,5 +1,5 @@
 //! Real Manual loader scheduling/ownership checks. Root runs these serialized
-//! with supplied assets, offscreen GPU and EXACT Loopback Audio. Rendering here
+//! with supplied assets, offscreen GPU and the default audio output. Rendering here
 //! exercises publication/purity; frozen native packet/literal-shader evidence
 //! remains the independent math oracle. Native progress0 may be offscreen.
 use super::*;
@@ -236,7 +236,7 @@ fn first_pending(owner: &Owner, published: bool) {
 }
 
 #[test]
-#[ignore = "real Manual atlas publication between update/render, completion-only18-page discovery, First/Open/Input/close callbacks,720p1080p GPU transport; exact Loopback"]
+#[ignore = "real Manual atlas publication between update/render, completion-only18-page discovery, First/Open/Input/close callbacks,720p1080p GPU transport; audio"]
 fn higurashi_manual_publication_before_completion_and_retained_first_prune() {
     let fixture = Fixture::new();
     let (before_tx, before_rx) = mpsc::channel();
@@ -413,7 +413,7 @@ impl Drop for TailDrop {
     }
 }
 #[test]
-#[ignore = "real Manual pre/post publication and completed-unobserved cancellation, nested scoped cleanup and weak resource lifetimes; exact Loopback, no window/user saves"]
+#[ignore = "real Manual pre/post publication and completed-unobserved cancellation, nested scoped cleanup and weak resource lifetimes; audio, no window/user saves"]
 fn higurashi_manual_publication_cancellation_drains_before_parent_atlas_release() {
     let fixture = Fixture::new();
     for (published, completed_unobserved) in [(false, false), (true, false), (true, true)] {

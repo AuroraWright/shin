@@ -86,7 +86,7 @@ impl ReadServices for Reads {
     }
 }
 #[test]
-#[ignore = "real native host/controller/message before WAIT order, post-poll auto/read skip policy and protected UI clocks;offscreen Metal/exact Loopback Audio"]
+#[ignore = "real native host/controller/message before WAIT order, post-poll auto/read skip policy and protected UI clocks;offscreen Metal/the default audio output"]
 fn higurashi_gameplay_controls_drive_owned_messages_and_post_poll_skip() {
     use crate::adv::higurashi::{audio::HigurashiAudio, reference_gpu_assets};
     let (_, _, assets) = reference_gpu_assets();

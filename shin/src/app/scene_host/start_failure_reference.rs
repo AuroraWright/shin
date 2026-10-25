@@ -20,7 +20,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio;temporary assets/progress only"]
+#[ignore = "requires supplied ROM,Metal and the default audio output;temporary assets/progress only"]
 fn reference_start_factory_and_artwork_failure_recovers_title() {
     std::thread::Builder::new()
         .name("start-recovery".into())
@@ -438,7 +438,7 @@ fn run() {
     }
     std::fs::write(output.join("start-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({
         "cases":cases,"cases_passed":cases.len(),"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
-        "window_created":false,"working_progress_written":false,"audio_device":"exact Loopback Audio"
+        "window_created":false,"working_progress_written":false,"audio_device":"default output"
     })).unwrap()).unwrap();
 }
 fn wait_active<'a>(

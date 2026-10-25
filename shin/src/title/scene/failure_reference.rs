@@ -12,7 +12,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary assets/progress only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary assets/progress only"]
 fn reference_title_child_failure_preserves_globals_and_retries() {
     std::thread::Builder::new()
         .name("title-child-recovery".into())
@@ -458,7 +458,7 @@ fn run() {
     std::fs::remove_file(file).unwrap();
     std::fs::write(output.join("title-child-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({"cases_passed":cases.len(),"cases":cases,
         "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"window_created":false,"working_progress_written":false,
-        "audio_device":"exact Loopback Audio","storage":"isolated temporary progress files","save_mode_unused_load_caption_accepted":true})).unwrap()).unwrap();
+        "audio_device":"default output","storage":"isolated temporary progress files","save_mode_unused_load_caption_accepted":true})).unwrap()).unwrap();
     println!(
         "{} actual Title child failures preserve globals/parent and retry;dirty Config retry persists settings",
         cases.len()

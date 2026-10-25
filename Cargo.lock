@@ -5587,7 +5587,6 @@ name = "shin-audio"
 version = "1.0.5-fork"
 dependencies = [
  "anyhow",
- "cpal",
  "kira",
  "parking_lot",
  "ringbuf",

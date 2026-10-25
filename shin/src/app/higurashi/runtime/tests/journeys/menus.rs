@@ -146,7 +146,7 @@ fn pure_composition_with_visibility(journey: &mut Journey, require_visible: bool
 }
 
 #[test]
-#[ignore = "actual normal Runtime/raw input Top6→TIPS→Title/full101 rows/cached720p+1080p captures;real assets/offscreen Metal/exact Loopback Audio;temporary progress only"]
+#[ignore = "actual normal Runtime/raw input Top6→TIPS→Title/full101 rows/cached720p+1080p captures;real assets/offscreen Metal/the default audio output;temporary progress only"]
 fn higurashi_runtime_title_tips_returns_through_actual_deferred_factories() {
     let initial = saved_rows();
     let mut journey = Journey::new("title-tips", &initial);
@@ -296,7 +296,7 @@ fn higurashi_runtime_title_tips_returns_through_actual_deferred_factories() {
 }
 
 #[test]
-#[ignore = "full3600 admitted Runtime Top callbacks→real idle MP4→Title return/retained Slot/full101 rows/cached720p+1080p captures;offscreen Metal/exact Loopback Audio;temporary progress only"]
+#[ignore = "full3600 admitted Runtime Top callbacks→real idle MP4→Title return/retained Slot/full101 rows/cached720p+1080p captures;offscreen Metal/the default audio output;temporary progress only"]
 fn higurashi_runtime_full_idle_demo_cycle_preserves_the_vacant_slot_and_globals() {
     let initial = saved_rows();
     let mut journey = Journey::new("idle-demo", &initial);

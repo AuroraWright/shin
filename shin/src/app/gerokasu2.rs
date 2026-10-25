@@ -936,14 +936,7 @@ impl ShinApp for Gerokasu2App {
                 font_cache: Default::default(),
             },
         ));
-        #[cfg(not(test))]
-        let audio = Arc::new(if cli.loopback_audio() {
-            AudioManager::new_for_tests()
-        } else {
-            AudioManager::new()
-        });
-        #[cfg(test)]
-        let audio = Arc::new(AudioManager::new_for_tests());
+        let audio = Arc::new(AudioManager::new());
         let menu_bgm = Arc::new(parking_lot::Mutex::new(menu_audio::MenuMusic::new(
             audio.clone(),
             &scenario,
@@ -1013,13 +1006,6 @@ impl ShinApp for Gerokasu2App {
         })
     }
     fn custom_event(&mut self, _: AppContext<Self>, _: ()) {}
-    /// Config's 自動スリープの抑制 row (settings v18, serialized under its
-    /// historical name) keeps playing while unfocused, as in Umineko.
-    fn run_in_background(&self) -> bool {
-        self.save_store
-            .as_ref()
-            .is_some_and(|store| store.data.settings.v18_showsongtitle)
-    }
     fn focus_lost(&mut self) {
         self.touch_effect.cancel_contact();
         if let Some(backlog) = self.backlog.as_mut() {

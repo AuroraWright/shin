@@ -226,7 +226,7 @@ fn loaded(voice: &mut HigurashiVoicePlayer) {
 }
 
 #[test]
-#[ignore = "requires supplied Higurashi assets, offscreen Metal and exact Loopback Audio"]
+#[ignore = "requires supplied Higurashi assets, offscreen Metal and the default audio output"]
 fn higurashi_voice_transport_plays_authored_nxa_and_releases_waits() {
     let (_, _, assets) = super::super::message_glyphs::tests::gpu::gpu_assets();
     let assets = Arc::new(assets);
@@ -306,6 +306,6 @@ fn higurashi_voice_transport_plays_authored_nxa_and_releases_waits() {
     loaded(&mut voice);
     assert!(voice.wait_status().is_empty());
     println!(
-        "Higurashi voice transport:exact Loopback Audio; authored0001/0002 NXA async load/segment/pause/clock/lipsync, EOF/stop waits, canceled replacement, character muting and failed-load retirement pass"
+        "Higurashi voice transport:the default audio output; authored0001/0002 NXA async load/segment/pause/clock/lipsync, EOF/stop waits, canceled replacement, character muting and failed-load retirement pass"
     );
 }

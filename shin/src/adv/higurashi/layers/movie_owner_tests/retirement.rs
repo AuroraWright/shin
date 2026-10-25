@@ -4,7 +4,7 @@ use super::*;
 use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
 
 #[test]
-#[ignore = "real short H264/AAC delayed owners and scoped retirement; offscreen Metal720p/1080p, exact Loopback Audio, no windows/saves"]
+#[ignore = "real short H264/AAC delayed owners and scoped retirement; offscreen Metal720p/1080p, the default audio output, no windows/saves"]
 fn higurashi_live_movie_delayed_unload_keeps_render_update_and_retires_workers() {
     let (device, queue, _) = crate::adv::higurashi::reference_gpu_assets();
     let scenario = scenario();
@@ -170,6 +170,6 @@ fn higurashi_live_movie_delayed_unload_keeps_render_update_and_retires_workers()
     }
     assert_eq!(frames, 16);
     eprintln!(
-        "Live delayed Movie:4 actual silent/AAC timer/skip owners;16 byte-identical720p/1080p before/retiring frames; constructor/keyed wait separation,same media identity,retained clock update,complete scoped codec/PCM retirement; exact Loopback Audio,no window/save"
+        "Live delayed Movie:4 actual silent/AAC timer/skip owners;16 byte-identical720p/1080p before/retiring frames; constructor/keyed wait separation,same media identity,retained clock update,complete scoped codec/PCM retirement; the default audio output,no window/save"
     );
 }

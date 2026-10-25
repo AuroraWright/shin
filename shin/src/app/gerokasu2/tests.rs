@@ -228,7 +228,7 @@ fn held(action: AppAction) -> EnumMap<AppAction, ActionState> {
     input
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_app_pointer_capture_focus_suspend_and_actual_quiz_result() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -330,13 +330,13 @@ fn ger_app_pointer_capture_focus_suspend_and_actual_quiz_result() {
         2
     );
     println!(
-        "GEROKASU2_APP_INPUT commands=4 bar_press_focus_cancel_suspend_inherited_confirm_real_pointer_QUIZ_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_APP_INPUT commands=4 bar_press_focus_cancel_suspend_inherited_confirm_real_pointer_QUIZ_EXIT=verified frames={} channels={} audio=default output",
         frames.frames,
         frames.frames * 320 * 180 * 4
     );
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_app_authored_prologue_keyboard_and_root_render_without_external_ack() {
     let gpu = Offscreen::new();
     let mut host = host(&gpu, bytes());
@@ -380,7 +380,7 @@ fn ger_app_authored_prologue_keyboard_and_root_render_without_external_ack() {
     assert_eq!(titles, ["プロローグ"]);
     assert!(captures >= messages + 1);
     println!(
-        "GEROKASU2_APP_STORY commands={} messages={messages} captures={captures} title=1 fresh_story_keyboard_root_render_no_external_ack=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_APP_STORY commands={} messages={messages} captures={captures} title=1 fresh_story_keyboard_root_render_no_external_ack=verified frames={} channels={} audio=default output",
         host.scene.runner().completed_commands(),
         frames.frames,
         frames.frames * 320 * 180 * 4
@@ -409,7 +409,7 @@ fn retained(host: &GerHost) -> String {
         .to_owned()
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_app_native_read_skip_autoplay_sys_gates_and_new_message_recheck() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -542,7 +542,7 @@ fn ger_app_native_read_skip_autoplay_sys_gates_and_new_message_recheck() {
     assert_eq!(host.scene.runner().completed_commands(), 10);
     frames.draw(&gpu, &mut host);
     println!(
-        "GEROKASU2_PLAYBACK_SCENE commands=10 message_installs=4 seen_ids=3 unread_stop_post_pump_recheck_autoplay_SYS_modes_CTRL_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_PLAYBACK_SCENE commands=10 message_installs=4 seen_ids=3 unread_stop_post_pump_recheck_autoplay_SYS_modes_CTRL_EXIT=verified frames={} channels={} audio=default output",
         frames.frames,
         frames.frames * 320 * 180 * 4
     );
@@ -563,7 +563,7 @@ fn choice(d: &mut Vec<u8>, base: u16, index: u16, dest: u16, mask: i32) {
     d.extend([0, 0]);
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_app_select_overlay_keyboard_pointer_focus_history_save_feedback_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -669,7 +669,7 @@ fn ger_app_select_overlay_keyboard_pointer_focus_history_save_feedback_and_exit(
     assert_eq!(save.progress.active_entry().responses[0], 0x22);
     assert_eq!(captures, 4);
     println!(
-        "GEROKASU2_SELECTION_APP commands=3 choices=2 results=2,2 route_bits=8 captures=4 genuine_keyboard_pointer_focus_history_filtered_index_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_SELECTION_APP commands=3 choices=2 results=2,2 route_bits=8 captures=4 genuine_keyboard_pointer_focus_history_filtered_index_EXIT=verified frames={} channels={} audio=default output",
         frames.frames,
         frames.frames * 320 * 180 * 4
     );

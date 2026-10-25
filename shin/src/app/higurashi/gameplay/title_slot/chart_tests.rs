@@ -1,5 +1,5 @@
 //! NEW unregistered actual Title/ADV Chart-wrapper acceptance candidates.
-//! Root owns compilation and all GPU/exact-Loopback execution. Capture checks
+//! Root owns compilation and all GPU/exact-audio execution. Capture checks
 //! here prove retained composition transport, not independent fragment math.
 use super::{Pending, TitleSlot};
 use crate::{
@@ -100,7 +100,7 @@ impl Fixture {
         }
     }
     fn globals(&self, common: Arc<CommonAssets>) -> (Globals, Arc<MemoryStorage>, Vec<u8>) {
-        let manager = Arc::new(shin_audio::AudioManager::new_for_tests()); // EXACT Loopback Audio.
+        let manager = Arc::new(shin_audio::AudioManager::new_for_tests()); // the default audio output.
         let catalog = Catalog::from_scenario(&common.scenario).unwrap();
         assert_eq!(catalog.records.len(), 1449);
         let max = catalog
@@ -657,7 +657,7 @@ fn finish_factory(
 }
 
 #[test]
-#[ignore = "actual Top3 Chart modal/Return0+1/real Question stage1/deferred full ADV/capture/fault retry720p1080p;offscreen GPU/exact Loopback Audio;no user saves/window"]
+#[ignore = "actual Top3 Chart modal/Return0+1/real Question stage1/deferred full ADV/capture/fault retry720p1080p;offscreen GPU/the default audio output;no user saves/window"]
 fn higurashi_chart_title_wrapper_retains_source_and_full_shortcut_factory() {
     let fixture = Fixture::new();
     for extent in EXTENTS {
@@ -738,7 +738,7 @@ fn higurashi_chart_title_wrapper_retains_source_and_full_shortcut_factory() {
 }
 
 #[test]
-#[ignore = "actual mapped Y/SystemMenu4/Chart source resume,paused VM and pending queues,Question stage1/full fresh flags0 ADV/fault retry720p1080p;offscreen GPU/exact Loopback Audio;no user saves/window"]
+#[ignore = "actual mapped Y/SystemMenu4/Chart source resume,paused VM and pending queues,Question stage1/full fresh flags0 ADV/fault retry720p1080p;offscreen GPU/the default audio output;no user saves/window"]
 fn higurashi_chart_system_menu_wrapper_preserves_paused_source_and_shortcut_payload() {
     let fixture = Fixture::new();
     for extent in EXTENTS {
@@ -870,7 +870,7 @@ fn higurashi_chart_system_menu_wrapper_preserves_paused_source_and_shortcut_payl
 }
 
 #[test]
-#[ignore = "real Title/ADV Chart wheel bridge, fractional motion/Question/permission/one-shot720p1080p; offscreen GPU/exact Loopback Audio; no user saves"]
+#[ignore = "real Title/ADV Chart wheel bridge, fractional motion/Question/permission/one-shot720p1080p; offscreen GPU/the default audio output; no user saves"]
 fn higurashi_chart_wheel_reaches_title_and_gameplay_without_replay_or_modal_leak() {
     use crate::app::higurashi::input_bridge::Input;
     use shin_input::RawInputState;

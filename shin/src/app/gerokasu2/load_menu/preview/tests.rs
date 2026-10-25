@@ -154,7 +154,7 @@ fn data() -> SaveData {
 }
 
 #[test]
-#[ignore = "actual SaveMenu saved-script replay/private resource scene/thumbnails/scroll invalidation and worker failure on Metal/exact Loopback Audio; temporary missing-assets directory only"]
+#[ignore = "actual SaveMenu saved-script replay/private resource scene/thumbnails/scroll invalidation and worker failure on Metal/the default audio output; temporary missing-assets directory only"]
 fn ger_save_previews_render_private_scenes_retain_snapshots_and_retire_textures() {
     let mut gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -382,7 +382,7 @@ fn ger_save_previews_render_private_scenes_retain_snapshots_and_retire_textures(
     assert!(failed.previews.snapshots[2].is_some());
     drop(failed);
     println!(
-        "GER_SAVE_PREVIEW_HOST rows=3 movie={movie} linked_picture={picture} captures=10 menu_frames={} private_replay_two_workers_real_assets_three_stage_capture_hidden_cache_slot_invalidation_discard_black_fallback_retirement=verified audio=Loopback Audio",
+        "GER_SAVE_PREVIEW_HOST rows=3 movie={movie} linked_picture={picture} captures=10 menu_frames={} private_replay_two_workers_real_assets_three_stage_capture_hidden_cache_slot_invalidation_discard_black_fallback_retirement=verified audio=default output",
         frames.rendered
     );
 }

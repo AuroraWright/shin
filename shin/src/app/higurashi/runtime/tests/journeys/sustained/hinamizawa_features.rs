@@ -147,7 +147,7 @@ fn story_step(
 }
 
 #[test]
-#[ignore = "Ordinary Category4row2/502; protectedBGM145/actual BGMVOL lifecycle/fullEND443/commonEXITsaveTitle; immutable unlocked input, exactLoopback/Metal"]
+#[ignore = "Ordinary Category4row2/502; protectedBGM145/actual BGMVOL lifecycle/fullEND443/commonEXITsaveTitle; immutable unlocked input, audio/Metal"]
 fn higurashi_runtime_hinamizawa_unlocked_template_full_volume_and_protected_end() {
     let (saved, initial) = template();
     let out = PathBuf::from(

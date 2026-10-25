@@ -2346,7 +2346,7 @@ fn verify_live_authored_interactive_checkpoint<'a>(
         );
     }
     eprintln!(
-        "Live authored entry7 (Episode8) kind{kind} pc{checkpoint_pc:x} response{expected_response}: actual checkpoint restore/assets/root pixels, normal input focus/confirm and real QUIZ historical response/continuation pass on Loopback Audio"
+        "Live authored entry7 (Episode8) kind{kind} pc{checkpoint_pc:x} response{expected_response}: actual checkpoint restore/assets/root pixels, normal input focus/confirm and real QUIZ historical response/continuation pass on the default audio output"
     );
 }
 
@@ -3174,7 +3174,7 @@ fn verify_live_authored_skip_playback<'a>(
                 "Continuous actual ADV update/assets/render/audio/commands under normal held skip and simulated six-tick frames; no dummy completions or saved checkpoint jumps. This does not prove native timing/framebuffer equivalence."
             };
             let status = format!(
-                "start_save={start_save:?}\nentry={scenario_id}\nlast_choice={last_choice}\nfinished={}\nframes={frames}\nwall_seconds={:.3}\npc=0x{:08x}\nsave_position={}\ncommand={command}\ninteractive_checkpoints={decisions:?}\naudio_device=Loopback Audio\nupdated_103={updated}\nscope={scope}\n",
+                "start_save={start_save:?}\nentry={scenario_id}\nlast_choice={last_choice}\nfinished={}\nframes={frames}\nwall_seconds={:.3}\npc=0x{:08x}\nsave_position={}\ncommand={command}\ninteractive_checkpoints={decisions:?}\naudio_device=the default audio output\nupdated_103={updated}\nscope={scope}\n",
                 live.is_finished(),
                 begin.elapsed().as_secs_f64(),
                 live.scripter.position().0,
@@ -6204,7 +6204,7 @@ mod save_context;
 
 #[cfg(target_os = "macos")]
 #[test]
-#[ignore = "requires supplied ROMs, explicit syscall interposer, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, explicit syscall interposer, Metal and the default audio output"]
 fn reference_asset_io_loader_failure_recovery() {
     assert!(std::env::var_os("SHIN_REFERENCE_ASSET_IO_ERRORS_ONLY").is_some());
     std::thread::Builder::new()
@@ -6217,7 +6217,7 @@ fn reference_asset_io_loader_failure_recovery() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, exact Loopback Audio and SHIN_REFERENCE_POST_INSTALL_FAILURE_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_POST_INSTALL_FAILURE_ONLY"]
 fn reference_post_install_movie_command_failure_retirement() {
     assert!(std::env::var_os("SHIN_REFERENCE_POST_INSTALL_FAILURE_ONLY").is_some());
     std::thread::Builder::new()
@@ -6230,7 +6230,7 @@ fn reference_post_install_movie_command_failure_retirement() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal and exact Loopback Audio; temporary saves only"]
+#[ignore = "requires original/1.03 ROM, Metal and the default audio output; temporary saves only"]
 fn reference_scene_load_error_title_mouse_resume_and_retry() {
     assert!(std::env::var_os("SHIN_REFERENCE_RESTORE_ERROR_ONLY").is_some());
     std::thread::Builder::new()
@@ -6243,7 +6243,7 @@ fn reference_scene_load_error_title_mouse_resume_and_retry() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, exact Loopback Audio and SHIN_REFERENCE_MIXED_RESTORE_ONLY"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output and SHIN_REFERENCE_MIXED_RESTORE_ONLY"]
 fn reference_mixed_saved_scene_publication_and_retirement() {
     assert!(std::env::var_os("SHIN_REFERENCE_MIXED_RESTORE_ONLY").is_some());
     std::thread::Builder::new()
@@ -6256,7 +6256,7 @@ fn reference_mixed_saved_scene_publication_and_retirement() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, exact Loopback Audio and native mask hydration output"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output and native mask hydration output"]
 fn reference_desktop_saved_mask_publication() {
     assert!(std::env::var_os("SHIN_REFERENCE_MASK_RESTORE_ONLY").is_some());
     std::thread::Builder::new()
@@ -6269,7 +6269,7 @@ fn reference_desktop_saved_mask_publication() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, exact Loopback Audio and SHIN_REFERENCE_SCENE_REUSE_ONLY"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output and SHIN_REFERENCE_SCENE_REUSE_ONLY"]
 fn reference_saved_scene_drawable_reuse() {
     assert!(std::env::var_os("SHIN_REFERENCE_SCENE_REUSE_ONLY").is_some());
     std::thread::Builder::new()
@@ -6282,7 +6282,7 @@ fn reference_saved_scene_drawable_reuse() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, exact Loopback Audio and SHIN_REFERENCE_ACTIVE_RESTORE_ONLY"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output and SHIN_REFERENCE_ACTIVE_RESTORE_ONLY"]
 fn reference_save_load_during_active_movie_wipe_and_requests() {
     assert!(std::env::var_os("SHIN_REFERENCE_ACTIVE_RESTORE_ONLY").is_some());
     std::thread::Builder::new()
@@ -6309,7 +6309,7 @@ fn reference_quiz_layer_saved_scene_restores_with_supplied_assets() {
 }
 
 #[test]
-#[ignore = "requires supplied original/updated ROM, Metal, Loopback Audio and SHIN_REFERENCE_BACKLOG_ONLY"]
+#[ignore = "requires supplied original/updated ROM, Metal, the default audio output and SHIN_REFERENCE_BACKLOG_ONLY"]
 fn reference_live_backlog_input_replay_and_rollback() {
     assert!(std::env::var_os("SHIN_REFERENCE_BACKLOG_ONLY").is_some());
     std::thread::Builder::new()
@@ -6322,7 +6322,7 @@ fn reference_live_backlog_input_replay_and_rollback() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, GPU, Loopback Audio and SHIN_REFERENCE_LIVE_ENTRY"]
+#[ignore = "requires supplied ROM, GPU, the default audio output and SHIN_REFERENCE_LIVE_ENTRY"]
 fn reference_live_authored_entry_skip_playback() {
     std::env::var("SHIN_REFERENCE_LIVE_ENTRY").expect("Set the actual authored entry ID");
     std::thread::Builder::new()
@@ -6335,7 +6335,7 @@ fn reference_live_authored_entry_skip_playback() {
 }
 
 #[test]
-#[ignore = "requires supplied patch ROM, GPU, Loopback Audio and SHIN_REFERENCE_UPDATED_INTERACTIVE_ONLY"]
+#[ignore = "requires supplied patch ROM, GPU, the default audio output and SHIN_REFERENCE_UPDATED_INTERACTIVE_ONLY"]
 fn reference_updated_authored_interactive_checkpoint_restoration() {
     assert!(std::env::var_os("SHIN_REFERENCE_UPDATED_INTERACTIVE_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some());
@@ -6350,7 +6350,7 @@ fn reference_updated_authored_interactive_checkpoint_restoration() {
 }
 
 #[test]
-#[ignore = "requires original ROM, Metal, Loopback Audio and SHIN_REFERENCE_ORIGINAL_INTERACTIVE_ONLY"]
+#[ignore = "requires original ROM, Metal, the default audio output and SHIN_REFERENCE_ORIGINAL_INTERACTIVE_ONLY"]
 fn reference_original_authored_interactive_checkpoint_restoration() {
     assert!(std::env::var_os("SHIN_REFERENCE_ORIGINAL_INTERACTIVE_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_none());
@@ -6366,7 +6366,7 @@ fn reference_original_authored_interactive_checkpoint_restoration() {
 }
 
 #[test]
-#[ignore = "requires original ROM, Metal, Loopback Audio and SHIN_REFERENCE_INTERACTIVE_PUBLICATION_ONLY"]
+#[ignore = "requires original ROM, Metal, the default audio output and SHIN_REFERENCE_INTERACTIVE_PUBLICATION_ONLY"]
 fn reference_interactive_layer_publication_and_ownership() {
     assert!(std::env::var_os("SHIN_REFERENCE_INTERACTIVE_PUBLICATION_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_none());
@@ -6381,7 +6381,7 @@ fn reference_interactive_layer_publication_and_ownership() {
 
 #[cfg(unix)]
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, exact Loopback Audio; temporary storage only"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output; temporary storage only"]
 fn reference_automatic_save_failure_visible_and_preserves_latest_progress() {
     assert!(std::env::var_os("SHIN_REFERENCE_SAVE_PENDING_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_AUTO_SAVE_FAILURE_ONLY").is_some());
@@ -6395,7 +6395,7 @@ fn reference_automatic_save_failure_visible_and_preserves_latest_progress() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal and exact Loopback Audio; temporary save only"]
+#[ignore = "requires original/1.03 ROM, Metal and the default audio output; temporary save only"]
 fn reference_scenario_return_save_notification_and_long_fade() {
     assert!(std::env::var_os("SHIN_REFERENCE_SAVE_PENDING_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_TITLE_RETURN_FADE_ONLY").is_some());
@@ -6409,7 +6409,7 @@ fn reference_scenario_return_save_notification_and_long_fade() {
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal and exact Loopback Audio; no save writes"]
+#[ignore = "requires original/1.03 ROM, Metal and the default audio output; no save writes"]
 fn reference_episode_two_character_scrollbar_and_keys() {
     assert!(std::env::var_os("SHIN_REFERENCE_SAVE_PENDING_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_CHARACTER_SCROLL_ONLY").is_some());
@@ -8544,7 +8544,7 @@ fn assert_reference_quiz_layer_saved_scene_restores_with_supplied_assets() {
         std::thread::sleep(std::time::Duration::from_millis(2));
     }
     eprintln!(
-        "BGMSYNC integer microsecond clock: real loading wait, paused source clock, resumed one-second deadline and actual token completion pass on Loopback Audio"
+        "BGMSYNC integer microsecond clock: real loading wait, paused source clock, resumed one-second deadline and actual token completion pass on the default audio output"
     );
     let movie_id = info
         .movie_info
@@ -10995,7 +10995,7 @@ fn assert_reference_quiz_layer_saved_scene_restores_with_supplied_assets() {
                     .property_tweener_mut(LayerProperty::TranslateX)
                     .fast_forward_to(480.0);
                 println!(
-                    "Actual ADV Loopback voice: front/back shared-owner pan order, disabled back mouth gate and duplicate frame callback suppression pass"
+                    "Actual ADV audio voice: front/back shared-owner pan order, disabled back mouth gate and duplicate frame callback suppression pass"
                 );
             }
             adv.adv_state.message_layer_mut().voice_player_mut().stop();

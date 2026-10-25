@@ -170,13 +170,13 @@ fn skip_frame(j: &mut Journey, viewport: InputViewport, temporary: bool) {
 }
 
 #[test]
-#[ignore = "normal Runtime/Top8/actual Origin7 Matsuribayashi10008/unmodified quote183284/actual WAIT0(42,48) helpers/canonical J skip;real assets/offscreen Metal/exact Loopback Audio;synthetic initial unlock/temp writes only"]
+#[ignore = "normal Runtime/Top8/actual Origin7 Matsuribayashi10008/unmodified quote183284/actual WAIT0(42,48) helpers/canonical J skip;real assets/offscreen Metal/the default audio output;synthetic initial unlock/temp writes only"]
 fn higurashi_runtime_origin_skip_retires_both_authored_quote_pauses_on_following_poll() {
     origin_quote_skip(false);
 }
 
 #[test]
-#[ignore = "real Runtime raw Ctrl/Origin Matsuribayashi quote WAIT0, release and unchanged latched modes; offscreen Metal/exact Loopback Audio"]
+#[ignore = "real Runtime raw Ctrl/Origin Matsuribayashi quote WAIT0, release and unchanged latched modes; offscreen Metal/the default audio output"]
 fn higurashi_runtime_ctrl_skip_retires_authored_pauses_without_latching() {
     origin_quote_skip(true);
 }

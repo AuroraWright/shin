@@ -507,7 +507,7 @@ pub(super) fn assert_reference_render_and_live<'a>(
         );
         live.sample_modal_pointer(Vec2::ZERO, (1920, 1080), false, 0.0);
         eprintln!(
-            "Live authored movie event skip: long_tap{long_tap}, real MOVIEWAIT, boundary{} -> {end_position}, Loopback Audio",
+            "Live authored movie event skip: long_tap{long_tap}, real MOVIEWAIT, boundary{} -> {end_position}, the default audio output",
             entry.save_position
         );
     }

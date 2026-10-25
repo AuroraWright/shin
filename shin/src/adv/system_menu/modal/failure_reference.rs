@@ -24,7 +24,7 @@ use std::{
 mod save_preparation_reference;
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary artwork only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary artwork only"]
 fn reference_system_menu_child_failure_preserves_parent_and_retries() {
     std::thread::Builder::new()
         .name("menu-recovery".into())
@@ -457,7 +457,7 @@ fn run() {
     }
     std::fs::write(output.join("menu-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({
         "cases_passed":cases.len(),"cases":cases,"showchars_cases_passed":command_cases.len(),"showchars_cases":command_cases,"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
-        "window_created":false,"working_progress_written":false,"audio_device":"exact Loopback Audio"
+        "window_created":false,"working_progress_written":false,"audio_device":"default output"
     })).unwrap()).unwrap();
     println!(
         "{} real ADV child failures preserve parent/story/progress and retry",

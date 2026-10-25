@@ -589,7 +589,7 @@ impl Fixture {
 }
 
 #[test]
-#[ignore = "whole retained SaveMenu with original native callback/snapshot oracle, real archive/dialog/preview resources, offscreen Metal/exact Loopback Audio and unique temporary gated save storage"]
+#[ignore = "whole retained SaveMenu with original native callback/snapshot oracle, real archive/dialog/preview resources, offscreen Metal/the default audio output and unique temporary gated save storage"]
 fn higurashi_live_save_menu_owner_matches_native_dialogs_writes_snapshots_and_returns() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

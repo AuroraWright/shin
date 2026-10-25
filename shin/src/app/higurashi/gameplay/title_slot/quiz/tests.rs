@@ -205,7 +205,7 @@ fn assert_manual(actual: &Slots, expected: &Slots) {
 }
 
 #[test]
-#[ignore = "actual next-frame Gameplay/Quiz/ADV transfers/full records/manual-autosave-histories/seed-clock owners/source retirement/exact captures/score replay at720p/1080p on offscreen Metal/exact Loopback Audio;no window/saves"]
+#[ignore = "actual next-frame Gameplay/Quiz/ADV transfers/full records/manual-autosave-histories/seed-clock owners/source retirement/exact captures/score replay at720p/1080p on offscreen Metal/the default audio output;no window/saves"]
 fn higurashi_quiz_scene_roundtrips_preserve_runtime_owners_captures_and_script_score() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -607,6 +607,6 @@ fn higurashi_quiz_scene_roundtrips_preserve_runtime_owners_captures_and_script_s
         }
     }
     println!(
-        "Quiz live scenes:4 real ten-question roundtrips/both active records/score0 and10 at720p/1080p;{captures} byte-identical whole composed capture/transfer checks,source producer retirement/preflight rejection,full records/manual-autosave/history-choice/seed-clock/mode owners/global music focus and four-bit/full-register script replay pass;offscreen Metal/exact Loopback Audio,no window/saves"
+        "Quiz live scenes:4 real ten-question roundtrips/both active records/score0 and10 at720p/1080p;{captures} byte-identical whole composed capture/transfer checks,source producer retirement/preflight rejection,full records/manual-autosave/history-choice/seed-clock/mode owners/global music focus and four-bit/full-register script replay pass;offscreen Metal/the default audio output,no window/saves"
     );
 }

@@ -11,7 +11,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary atlas only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary atlas only"]
 fn reference_notification_artwork_failure_preserves_state_and_retries() {
     std::thread::Builder::new()
         .name("notification-recovery".into())
@@ -193,7 +193,7 @@ fn run() {
     std::fs::write(
         output.join("notification-recovery.json"),
         serde_json::to_vec_pretty(&serde_json::json!({
-            "cases_passed":cases.len(),"cases":cases,"audio_device":"exact Loopback Audio",
+            "cases_passed":cases.len(),"cases":cases,"audio_device":"default output",
             "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
             "window_created":false,"archives_modified":false,"working_progress_written":false
         }))
@@ -201,7 +201,7 @@ fn run() {
     )
     .unwrap();
     println!(
-        "{} actual ADV notification artwork failures preserve story/progress/toast timing and retry with exact Loopback Audio cues",
+        "{} actual ADV notification artwork failures preserve story/progress/toast timing and retry with the default audio output cues",
         cases.len()
     );
 }

@@ -4,7 +4,7 @@ use super::*;
 use std::sync::mpsc;
 
 #[test]
-#[ignore = "actual Runtime title/story/MSGSET text over a local WebSocket;real assets/offscreen Metal/exact Loopback Audio;temporary progress only"]
+#[ignore = "actual Runtime title/story/MSGSET text over a local WebSocket;real assets/offscreen Metal/the default audio output;temporary progress only"]
 fn higurashi_runtime_streams_authored_messages_to_websocket_clients() {
     let local = crate::text_stream::start("127.0.0.1:0").unwrap();
     let (sender, received) = mpsc::channel();

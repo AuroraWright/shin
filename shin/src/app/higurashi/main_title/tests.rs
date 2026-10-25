@@ -164,7 +164,7 @@ fn higurashi_main_title_opening_matches_native() {
 }
 
 #[test]
-#[ignore = "actual bootstrap handoff/title atlas/mask/BGM/title call and captured transition at720p/1080p;offscreen Metal and exact Loopback Audio"]
+#[ignore = "actual bootstrap handoff/title atlas/mask/BGM/title call and captured transition at720p/1080p;offscreen Metal and the default audio output"]
 fn higurashi_main_title_opening_uses_real_handoff_assets_audio_and_capture() {
     use crate::{
         adv::higurashi::{

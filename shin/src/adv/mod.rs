@@ -378,9 +378,6 @@ impl Adv {
         }
         Ok(())
     }
-    pub(crate) fn run_in_background(&self) -> bool {
-        self.vm_state.settings.v18_showsongtitle
-    }
     pub(crate) fn touch_effects_enabled(&self) -> bool {
         self.vm_state.settings.v17_showscenetitle
     }

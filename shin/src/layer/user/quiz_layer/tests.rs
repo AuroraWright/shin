@@ -888,7 +888,7 @@ fn reference_consultation_hover_white_highlight_and_independent_blink_gpu() {
 }
 
 #[test]
-#[ignore = "requires supplied Murderer atlas, Metal GPU and Loopback Audio"]
+#[ignore = "requires supplied Murderer atlas, Metal GPU and the default audio output"]
 fn reference_completed_murderer_restoration_atlas_gpu() {
     crate::init_test_task_pools();
     let _audio = shin_audio::AudioManager::new_for_tests();
@@ -1094,7 +1094,7 @@ fn reference_completed_murderer_restoration_atlas_gpu() {
 }
 
 #[test]
-#[ignore = "requires supplied Cake atlas, Metal GPU and Loopback Audio"]
+#[ignore = "requires supplied Cake atlas, Metal GPU and the default audio output"]
 fn reference_completed_cake_restoration_atlas_gpu() {
     crate::init_test_task_pools();
     let _audio = shin_audio::AudioManager::new_for_tests();
@@ -1187,7 +1187,7 @@ fn reference_completed_cake_restoration_atlas_gpu() {
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
-#[ignore = "requires supplied Cake atlas, native executable, Metal and Loopback Audio"]
+#[ignore = "requires supplied Cake atlas, native executable, Metal and the default audio output"]
 fn reference_cake_input_feedback_atlas_gpu() {
     use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
     use std::{
@@ -1432,7 +1432,7 @@ fn reference_cake_input_feedback_atlas_gpu() {
 }
 
 #[test]
-#[ignore = "requires supplied original/1.03 executable, quiz atlas, Metal and Loopback Audio"]
+#[ignore = "requires supplied original/1.03 executable, quiz atlas, Metal and the default audio output"]
 fn reference_quiz_controller_feedback_native_fields_and_atlas_gpu() {
     crate::init_test_task_pools();
     let _audio = shin_audio::AudioManager::new_for_tests();

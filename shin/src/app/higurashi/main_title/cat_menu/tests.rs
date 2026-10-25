@@ -565,7 +565,7 @@ fn higurashi_cat_menu_pixels_match_original_render_packets() {
 }
 
 #[test]
-#[ignore = "real startup/title-owned Top-Cat-Top navigation,physical pointer capture/gallery request and story90-tick handoff;exact Loopback Audio/offscreen Metal"]
+#[ignore = "real startup/title-owned Top-Cat-Top navigation,physical pointer capture/gallery request and story90-tick handoff;the default audio output/offscreen Metal"]
 fn higurashi_cat_menu_real_owner_navigates_and_gates_story() {
     use super::super::{CategorySceneRequest, Opening, Phase};
     use crate::{

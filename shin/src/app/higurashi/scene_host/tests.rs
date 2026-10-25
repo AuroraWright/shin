@@ -173,7 +173,7 @@ fn demo(host: &SceneHost) -> &TitleDemo {
 }
 
 #[test]
-#[ignore = "actual startup/save/mandatory question/deferred opening movie/main-title owner handoff;offscreen Metal and exact Loopback Audio"]
+#[ignore = "actual startup/save/mandatory question/deferred opening movie/main-title owner handoff;offscreen Metal and the default audio output"]
 fn higurashi_scene_host_runs_boot_movie_and_owned_title_handoff() {
     use crate::adv::higurashi::{
         reference_gpu_assets as gpu_assets, reference_render_to_texture as render_to_texture,

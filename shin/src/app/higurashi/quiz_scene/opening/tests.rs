@@ -97,7 +97,7 @@ fn direction(answer: usize) -> u32 {
 }
 
 #[test]
-#[ignore = "real quiz resources/voice/BGM/cues/input/captured First/full ten-question score factory at720p/1080p on offscreen Metal/exact Loopback Audio;no window/saves"]
+#[ignore = "real quiz resources/voice/BGM/cues/input/captured First/full ten-question score factory at720p/1080p on offscreen Metal/the default audio output;no window/saves"]
 fn higurashi_quiz_opening_owns_real_resources_input_audio_and_score_factory() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -259,6 +259,6 @@ fn higurashi_quiz_opening_owns_real_resources_input_audio_and_score_factory() {
     drop(opening);
     assert!(retirement.is_finished());
     println!(
-        "Quiz retained Opening:two complete ten-question owners,720p/1080p actual resources/text/BUP/atlas frames,controller/contact capture/denied reset,scene S99 voice/cues/global BGM Finish gate/real final EOF/score10/full independent data return and early worker retirement pass;offscreen Metal/exact Loopback Audio,no window/saves;live scene-slot attachment remains pending"
+        "Quiz retained Opening:two complete ten-question owners,720p/1080p actual resources/text/BUP/atlas frames,controller/contact capture/denied reset,scene S99 voice/cues/global BGM Finish gate/real final EOF/score10/full independent data return and early worker retirement pass;offscreen Metal/the default audio output,no window/saves;live scene-slot attachment remains pending"
     );
 }

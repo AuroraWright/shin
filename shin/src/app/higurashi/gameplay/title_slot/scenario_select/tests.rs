@@ -216,7 +216,7 @@ fn wait_pending(
 }
 
 #[test]
-#[ignore = "actual SNRSEL/next-frame picker/factory retries/full runtime ADV or title returns at720p/1080p;offscreen Metal/exact Loopback,no saves/window"]
+#[ignore = "actual SNRSEL/next-frame picker/factory retries/full runtime ADV or title returns at720p/1080p;offscreen Metal/audio,no saves/window"]
 fn higurashi_scenario_select_slot_owns_six_factories_and_native_returns() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -498,7 +498,7 @@ fn higurashi_scenario_select_slot_owns_six_factories_and_native_returns() {
 }
 
 #[test]
-#[ignore = "actual Title Origin/Tips/Origin/title flows with real menus,one fresh constructor seed and retained retry at720p/1080p;offscreen Metal/exact Loopback,no window/saves"]
+#[ignore = "actual Title Origin/Tips/Origin/title flows with real menus,one fresh constructor seed and retained retry at720p/1080p;offscreen Metal/audio,no window/saves"]
 fn higurashi_origin_slot_roundtrips_title_and_alternate_tips_with_one_fresh_seed() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

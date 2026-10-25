@@ -19,7 +19,7 @@ fn step(d: &mut system_menu::Driver<'_>, input: EnumMap<AppAction, ActionState>,
 }
 
 #[test]
-#[ignore = "actual boot TitleDemo movie, Enter exit fade and Title publication on Metal/exact Loopback Audio"]
+#[ignore = "actual boot TitleDemo movie, Enter exit fade and Title publication on Metal/the default audio output"]
 fn ger_app_boot_title_demo_plays_opening_and_enter_fades_to_title() {
     let gpu = Offscreen::new();
     let (_temporary, _path, mut d) = driver(&gpu, false);
@@ -116,7 +116,7 @@ fn changed(
 }
 
 #[test]
-#[ignore = "actual scene-title and BGM-title notifications composed over ADV on Metal/exact Loopback Audio"]
+#[ignore = "actual scene-title and BGM-title notifications composed over ADV on Metal/the default audio output"]
 fn ger_app_scene_and_bgm_title_notifications_compose_over_adv() {
     let gpu = Offscreen::new();
     let (_temporary, _path, mut d) = driver(&gpu, false);

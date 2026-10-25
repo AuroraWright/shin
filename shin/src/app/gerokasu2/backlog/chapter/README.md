@@ -38,7 +38,7 @@ unchanged. Nine pure tests include two new contact-order checks. Host tests
 cover shared InputArea close origin/order, gradient channel conversion,
 clip state and padded anchor. The ignored actual-assets test
 `ger_backlog_chapter_host_renders_native_panel_clip_labels_and_retains_cache_order`
-performs three320×180 captures with the exact Loopback Audio test fixture:
+performs three320×180 captures with the default audio output:
 labels must differ only within y40..160, the left panel must retain an alpha
 gradient, and reverse scrolling must append recreated row0 after retained rows.
 Root owns Cargo/hardware execution and records its result in the integration

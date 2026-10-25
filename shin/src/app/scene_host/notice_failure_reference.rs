@@ -19,7 +19,7 @@ pub(super) fn override_notice(io: &mut LayeredAssetIo) -> PathBuf {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary saves/assets only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary saves/assets only"]
 fn reference_startup_storage_failure_without_dialog_artwork() {
     super::storage_read_reference::run_startup_storage_failure(true);
 }
@@ -27,13 +27,13 @@ fn reference_startup_storage_failure_without_dialog_artwork() {
 pub(super) use crate::adv::reference_tests::storage_notice_failure::assert_notice_pixels;
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary saves/assets only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary saves/assets only"]
 fn reference_shutdown_storage_failure_without_dialog_artwork() {
     super::shutdown_reference::run_shutdown_failure(true);
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary saves/assets only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary saves/assets only"]
 fn reference_adv_storage_failure_without_dialog_artwork() {
     use crate::{
         adv::assets::AdvAssets,

@@ -272,7 +272,7 @@ fn short_tap(f: &mut Fixture, viewport: InputViewport, hz: u32, at: Vec2) {
 }
 
 #[test]
-#[ignore = "normal Runtime authored message with slow held raw-mouse toolbar/menu/hide/restore gestures at720p1080p and60/120Hz,feedback on/off;real assets/offscreen GPU/exact Loopback Audio;temporary progress only"]
+#[ignore = "normal Runtime authored message with slow held raw-mouse toolbar/menu/hide/restore gestures at720p1080p and60/120Hz,feedback on/off;real assets/offscreen GPU/the default audio output;temporary progress only"]
 fn higurashi_runtime_desktop_gestures_work_independently_of_visual_feedback() {
     use shin_core::vm::higurashi::command::HigurashiRuntimeCommand as Cmd;
     for enabled in [false, true] {
@@ -593,7 +593,7 @@ fn reset_question(runtime: &Runtime) -> Option<(i32, i32)> {
 }
 
 #[test]
-#[ignore = "actual normal Runtime touch feedback/config/reset/cancel,exact720p1080p clean/presentation/capture comparison;real assets/offscreen GPU/exact Loopback Audio;temporary progress only"]
+#[ignore = "actual normal Runtime touch feedback/config/reset/cancel,exact720p1080p clean/presentation/capture comparison;real assets/offscreen GPU/the default audio output;temporary progress only"]
 fn higurashi_runtime_touch_feedback_preserves_clean_sources_and_live_config_binding() {
     let mut f = Fixture::new("feedback");
     let small = viewport((1280, 720));

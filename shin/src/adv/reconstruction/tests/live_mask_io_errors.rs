@@ -16,7 +16,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROMs, explicit pread interposer, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, explicit pread interposer, Metal and the default audio output"]
 fn reference_live_mask_commands_io_error_recovery() {
     assert!(std::env::var_os("SHIN_REFERENCE_LIVE_MASK_IO_ONLY").is_some());
     std::thread::Builder::new()

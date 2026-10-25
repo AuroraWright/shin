@@ -250,7 +250,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted cumulative Tatar disk/Runtime/earned Chart40/Satoshi original1/absence original0/protected preview3/full Tsuki/TIP116/native EXIT1f997 save+Title;real assets/offscreen Metal/exact Loopback Audio;temporary writes only;up to two hours"]
+#[ignore = "actual accepted cumulative Tatar disk/Runtime/earned Chart40/Satoshi original1/absence original0/protected preview3/full Tsuki/TIP116/native EXIT1f997 save+Title;real assets/offscreen Metal/the default audio output;temporary writes only;up to two hours"]
 fn higurashi_runtime_sustained_earned_chart_satoshi_reaches_full_tsukiotoshi_exit_and_title() {
     let (saved, initial_file) = earned();
     let started = Instant::now();

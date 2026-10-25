@@ -1,7 +1,7 @@
 use super::*;
 use crate::layer::DrawableLayer;
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_app_message_layer_minus5_controls_render_and_capture_without_changing_screen() {
     use shin_core::vm::command::types::LayerProperty;
     let gpu = Offscreen::new();
@@ -62,7 +62,7 @@ fn ger_app_message_layer_minus5_controls_render_and_capture_without_changing_scr
     assert!(hidden && visible);
     assert_eq!(host.scene.runner().completed_commands(), 7);
     println!(
-        "GEROKASU2_MESSAGE_PROPERTY_APP commands=7 minus5_opacity_hide_restore_descriptors_screen_preservation_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_MESSAGE_PROPERTY_APP commands=7 minus5_opacity_hide_restore_descriptors_screen_preservation_EXIT=verified frames={} channels={} audio=default output",
         frames.frames,
         frames.frames * 320 * 180 * 4
     );

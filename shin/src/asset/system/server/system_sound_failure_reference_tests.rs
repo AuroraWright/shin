@@ -1,4 +1,4 @@
-//! Menu cue recovery using the real bank loader and exact Loopback Audio.
+//! Menu cue recovery using the real bank loader and the default audio output.
 use super::*;
 use crate::audio::SystemSoundPlayer;
 use shin_core::{format::sysse::SysSe, vm::command::types::Volume};
@@ -11,7 +11,7 @@ fn set_word(bytes: &mut [u8], offset: usize, value: usize) {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary bank only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary bank only"]
 fn reference_system_sound_bank_error_recovery() {
     crate::init_test_task_pools();
     let output = PathBuf::from(std::env::var_os("SHIN_REFERENCE_SYSTEM_SOUND_OUTPUT").unwrap());
@@ -113,7 +113,7 @@ fn reference_system_sound_bank_error_recovery() {
         while player.sounds[0].position_samples() == 0 {
             assert!(
                 std::time::Instant::now() < deadline,
-                "Restored cue did not advance on exact Loopback Audio"
+                "Restored cue did not advance on the default audio output"
             );
             std::thread::sleep(std::time::Duration::from_millis(5));
         }
@@ -136,7 +136,7 @@ fn reference_system_sound_bank_error_recovery() {
         "cases_passed":cases.len(),"cases":cases,"cue":cue,"cue_samples":expected_samples,
         "bank_bytes":bytes.len(),"bank_sound_count":bank.sounds.len(),
         "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
-        "audio_device":"exact Loopback Audio","window_created":false,
+        "audio_device":"default output","window_created":false,
         "archives_modified":false,"working_progress_written":false
     });
     std::fs::write(
@@ -145,7 +145,7 @@ fn reference_system_sound_bank_error_recovery() {
     )
     .unwrap();
     println!(
-        "{} system-bank failures return from menu cue callbacks; exact Loopback Audio retries and missing-name recovery pass",
+        "{} system-bank failures return from menu cue callbacks; the default audio output retries and missing-name recovery pass",
         cases.len()
     );
 }

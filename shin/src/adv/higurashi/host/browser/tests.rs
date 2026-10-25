@@ -23,7 +23,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "real browser independent replay/global cues/music over exact Loopback Audio and offscreen Metal"]
+#[ignore = "real browser independent replay/global cues/music over the default audio output and offscreen Metal"]
 fn higurashi_browser_audio_plays_while_story_paused_and_restores_music() {
     use crate::adv::higurashi::message_playback::MessageVoice;
     use crate::adv::higurashi::voice_commands::VoiceCommands;
@@ -409,7 +409,7 @@ fn compare_native(protocol: &str, expected: &[Vec<u32>]) {
     );
 }
 #[test]
-#[ignore = "original14744/7db60/76448/1803c scope and real retained browser/capture; offscreen Metal plus exact Loopback Audio only"]
+#[ignore = "original14744/7db60/76448/1803c scope and real retained browser/capture; offscreen Metal plus the default audio output only"]
 fn higurashi_browser_host_matches_native_preflight_and_early_return_scope() {
     let (device, queue, assets) = gpu_assets();
     let assets = Arc::new(assets);
@@ -533,7 +533,7 @@ fn input_context() -> Context {
     }
 }
 #[test]
-#[ignore = "real host input/browser/async children/closing and borrowed render snapshot on offscreen Metal plus exact Loopback Audio only"]
+#[ignore = "real host input/browser/async children/closing and borrowed render snapshot on offscreen Metal plus the default audio output only"]
 fn higurashi_browser_host_retains_input_children_and_releases_before_closing_finishes() {
     let (device, queue, assets) = gpu_assets();
     let assets = Arc::new(assets);

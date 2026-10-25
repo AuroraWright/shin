@@ -71,7 +71,7 @@ fn update(slot: &mut TitleSlot, number: &mut u32, buttons: Buttons) -> Status {
     .unwrap()
 }
 #[test]
-#[ignore = "actual EXIT/SaveGame no-answer dialog/held atomic writer/one-second producer/final title(-1,-1) callback and next-frame retirement on offscreen Metal/exact Loopback Audio;only temporary files"]
+#[ignore = "actual EXIT/SaveGame no-answer dialog/held atomic writer/one-second producer/final title(-1,-1) callback and next-frame retirement on offscreen Metal/the default audio output;only temporary files"]
 fn higurashi_exit_saves_frozen_full_slots_then_returns_to_real_title() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

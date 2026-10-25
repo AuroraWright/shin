@@ -302,7 +302,7 @@ fn ready_menu(runtime: &Runtime, kind: &str) -> bool {
 }
 
 #[test]
-#[ignore = "normal Runtime boot/mandatory pointer notice/720p→1080p resize/TitleDemo/title/authored story/pure composed presentation and held close-writer failure/retry; offscreen Metal/exact Loopback Audio; temporary progress only"]
+#[ignore = "normal Runtime boot/mandatory pointer notice/720p→1080p resize/TitleDemo/title/authored story/pure composed presentation and held close-writer failure/retry; offscreen Metal/the default audio output; temporary progress only"]
 fn higurashi_runtime_runs_normal_boot_story_and_frozen_close_retry() {
     let (device, queue, server) = crate::adv::higurashi::reference_gpu_assets();
     let server = Arc::new(server);

@@ -399,7 +399,7 @@ fn higurashi_top_menu_matches_native_state_input_and_destinations() {
 }
 
 #[test]
-#[ignore = "actual retained title top menu input/draw/confirmation at720p/1080p and exact Loopback Audio"]
+#[ignore = "actual retained title top menu input/draw/confirmation at720p/1080p and the default audio output"]
 fn higurashi_top_menu_real_owner_accepts_pointer_and_queues_config() {
     use crate::{
         adv::higurashi::{

@@ -1305,7 +1305,7 @@ fn reference_title_gpu_artwork_rows_and_background_cover() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_MUSIC_REPEAT_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_MUSIC_REPEAT_ONLY"]
 fn reference_music_repeat_gallery_audio_and_scene_roundtrip() {
     assert!(std::env::var_os("SHIN_REFERENCE_MUSIC_REPEAT_ONLY").is_some());
     reference_title_gpu_artwork_rows_and_background_cover();
@@ -1319,7 +1319,7 @@ fn reference_saved_backlog_latency() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; no save writes"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; no save writes"]
 fn reference_gallery_return_fade_and_pointer_handoff() {
     assert!(std::env::var_os("SHIN_REFERENCE_GALLERY_RETURN_ONLY").is_some());
     reference_title_gpu_artwork_rows_and_background_cover();

@@ -6,7 +6,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, ffmpeg and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal, ffmpeg and the default audio output"]
 fn reference_movie_player_worker_late_frame_and_loop_failures_retire() {
     crate::init_test_task_pools();
     let adapter =

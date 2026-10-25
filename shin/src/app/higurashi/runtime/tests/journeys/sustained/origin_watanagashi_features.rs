@@ -171,7 +171,7 @@ fn story_step(
 }
 
 #[test]
-#[ignore = "Exact unlocked template; ordinary Originpickerrow1/full10002; canonicalnoCtrl epilogue/fourMono screen stages/realWAIT+WIPE boundaries/actualEXIT+saveTitle; requires real assets; exactLoopback/Metal"]
+#[ignore = "Exact unlocked template; ordinary Originpickerrow1/full10002; canonicalnoCtrl epilogue/fourMono screen stages/realWAIT+WIPE boundaries/actualEXIT+saveTitle; requires real assets; audio/Metal"]
 fn higurashi_runtime_origin_watanagashi_unlocked_template_full_mono_epilogue() {
     let (saved, initial) = template();
     let out = PathBuf::from(

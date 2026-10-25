@@ -16,7 +16,7 @@ use shin_render::{
 };
 
 #[test]
-#[ignore = "real short Movie retained RGBA and original clip/material shaders at720p/1080p;offscreen Metal/exact Loopback Audio,no windows/saves"]
+#[ignore = "real short Movie retained RGBA and original clip/material shaders at720p/1080p;offscreen Metal/the default audio output,no windows/saves"]
 fn higurashi_live_movie_authored_clips_match_original_shader_transport() {
     let (device, queue, _) = reference_gpu_assets();
     let scenario = scenario();
@@ -147,6 +147,6 @@ fn higurashi_live_movie_authored_clips_match_original_shader_transport() {
     drop(layers);
     assert!(retirement.is_finished());
     eprintln!(
-        "Live Movie clipping:20 exact720p/1080p authored full/reversed/partial/zero/exterior frames atopaque/transparent gates;real retained short-media RGBA/exact Loopback Audio;native masks/material GLSL,scoped retirement,no windows/saves"
+        "Live Movie clipping:20 exact720p/1080p authored full/reversed/partial/zero/exterior frames atopaque/transparent gates;real retained short-media RGBA/the default audio output;native masks/material GLSL,scoped retirement,no windows/saves"
     );
 }

@@ -17,7 +17,7 @@ use shin_core::{format::scenario::higurashi::HigurashiScenario, primitives::colo
 use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
 use std::time::{Duration, Instant};
 #[test]
-#[ignore = "actual authored BGM->Gameplay event consumption->title rendering/settings at720p1080p; offscreen Metal/exact Loopback Audio, no window or user saves"]
+#[ignore = "actual authored BGM->Gameplay event consumption->title rendering/settings at720p1080p; offscreen Metal/the default audio output, no window or user saves"]
 fn higurashi_gameplay_music_title_uses_live_bgm_events_and_setting() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

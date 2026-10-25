@@ -38,7 +38,7 @@ fn assets(gpu: &Offscreen) -> Arc<AssetServer> {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn utf8_gpu_portrait_publication_replacement_clear_error_and_frames() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -273,6 +273,6 @@ fn utf8_gpu_portrait_publication_replacement_clear_error_and_frames() {
     drop(orphan);
     assert!(!shin_tasks::block_on(acquire(job, assets.clone())).unwrap());
     println!(
-        "GEROKASU2_PORTRAIT_GPU utf8=2 frames=5 channels=4608000 authored_voice=1 publication_replacement_clear_error_shared_blocks_voice_feedback_native_pass_gates=verified audio=Loopback Audio"
+        "GEROKASU2_PORTRAIT_GPU utf8=2 frames=5 channels=4608000 authored_voice=1 publication_replacement_clear_error_shared_blocks_voice_feedback_native_pass_gates=verified audio=default output"
     );
 }

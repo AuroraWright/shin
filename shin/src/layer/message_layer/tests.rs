@@ -162,7 +162,7 @@ pub(crate) fn reference_live_msgsync<'a>(
     assert_eq!(adv.message_layer().total_voices_count, 0);
     assert!(!adv.message_layer().voice_sync_is_waiting(99, -1));
     eprintln!(
-        "Native MSGSYNC: parsed voice count, future/current index, loading clock, actual100ms segment origin, unsigned negative wait, skip policy and stop completion pass on Loopback Audio"
+        "Native MSGSYNC: parsed voice count, future/current index, loading clock, actual100ms segment origin, unsigned negative wait, skip policy and stop completion pass on the default audio output"
     );
 }
 
@@ -951,7 +951,7 @@ pub(crate) fn reference_live_msgset<'a>(
         while manager.kira_manager().lock().num_sub_tracks() != 0 {
             assert!(
                 std::time::Instant::now() < deadline,
-                "Loopback callback did not retire scene tracks"
+                "audio callback did not retire scene tracks"
             );
             std::thread::sleep(std::time::Duration::from_millis(2));
         }
@@ -1021,6 +1021,6 @@ pub(crate) fn reference_live_msgset<'a>(
         let _ = draw(adv, context); // Submit actual root and retire per-case resources.
     }
     eprintln!(
-        "Actual ADV MSGSET: {root_cases} no-input/CTRL/S read-to-unread and unread-to-read transitions pass on Loopback Audio"
+        "Actual ADV MSGSET: {root_cases} no-input/CTRL/S read-to-unread and unread-to-read transitions pass on the default audio output"
     );
 }

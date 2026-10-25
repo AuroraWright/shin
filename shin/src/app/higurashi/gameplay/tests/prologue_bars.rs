@@ -10,7 +10,7 @@ use shin_core::{
 use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
 
 #[test]
-#[ignore = "unmodified normal prologue/live autoskip and exact quoted-line frame captures; offscreen Metal/exact Loopback Audio, no window/user saves"]
+#[ignore = "unmodified normal prologue/live autoskip and exact quoted-line frame captures; offscreen Metal/the default audio output, no window/user saves"]
 fn higurashi_gameplay_prologue_autoskip_has_no_wait_frame_after_last_message() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

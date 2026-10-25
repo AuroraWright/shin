@@ -202,7 +202,7 @@ fn choose(
 }
 
 #[test]
-#[ignore = "Exact unlocked template; normal Category3/SNRSEL3 row3/403;11explicit choices/two score gates/protected natural Movie1/BGM90credits/END371/commonEXIT+Title; real assets/Metal/exactLoopback; no earned unlock,KAKERAGET65 or physical HID claim"]
+#[ignore = "Exact unlocked template; normal Category3/SNRSEL3 row3/403;11explicit choices/two score gates/protected natural Movie1/BGM90credits/END371/commonEXIT+Title; real assets/Metal/audio; no earned unlock,KAKERAGET65 or physical HID claim"]
 fn higurashi_runtime_miotsukushi_omote_unlocked_template_full_good_end() {
     let (saved, initial) = template();
     let out = PathBuf::from(

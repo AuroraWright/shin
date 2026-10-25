@@ -11,7 +11,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires copied progress, supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires copied progress, supplied ROM, Metal and the default audio output"]
 fn reference_live_picture_survives_retiring_producer() {
     assert!(std::env::var_os("SHIN_REFERENCE_SHARED_PICTURE_HANDOFF_ONLY").is_some());
     std::thread::Builder::new()

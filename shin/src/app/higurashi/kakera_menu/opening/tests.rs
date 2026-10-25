@@ -69,7 +69,7 @@ fn ready(opening: &mut Opening, number: &mut u32) {
 }
 
 #[test]
-#[ignore = "real Kakera ROM atlas/default mask loader/First/full parent/controller/contact/standard exit question/ADV payload and pending producer retirement on offscreen Metal/exact Loopback Audio;no window/saves"]
+#[ignore = "real Kakera ROM atlas/default mask loader/First/full parent/controller/contact/standard exit question/ADV payload and pending producer retirement on offscreen Metal/the default audio output;no window/saves"]
 fn higurashi_kakera_opening_loads_real_resources_and_owns_input_question_and_adv_request() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

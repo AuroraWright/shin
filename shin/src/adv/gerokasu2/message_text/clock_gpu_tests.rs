@@ -34,7 +34,7 @@ impl MessageEffects for Effects {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM, GPU and the default audio output"]
 fn native_clock_updates_click_fast_forward_and_owned_glyph_fades_render_offscreen() {
     let mut gpu = Offscreen::new();
     let mut rom = RomReader::new(
@@ -160,7 +160,7 @@ fn native_clock_updates_click_fast_forward_and_owned_glyph_fades_render_offscree
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_MESSAGE_CLOCK_GPU fonts=2 modes=6 frames_per_mode=8 draw_cases={cases} pixels_per_case=64 channels_per_pixel=4 audio=Loopback Audio controller_tick_click_fast_forward_owned_fade_render=verified"
+        "GEROKASU2_MESSAGE_CLOCK_GPU fonts=2 modes=6 frames_per_mode=8 draw_cases={cases} pixels_per_case=64 channels_per_pixel=4 audio=default output controller_tick_click_fast_forward_owned_fade_render=verified"
     );
 }
 
@@ -208,7 +208,7 @@ fn verify_current_glyph(gpu: &mut Offscreen, message: &Gerokasu2Message) {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM, GPU and the default audio output"]
 fn replacing_prepared_messages_preserves_frame_and_window_state_and_renders_new_font_buffer() {
     let mut gpu = Offscreen::new();
     let mut rom = RomReader::new(
@@ -315,6 +315,6 @@ fn replacing_prepared_messages_preserves_frame_and_window_state_and_renders_new_
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_MESSAGE_INSTALL_GPU fonts=2 font_orders=2 replacement_pairs=6 draw_cases={cases} pixels_per_case=64 channels_per_pixel=4 audio=Loopback Audio prepared_replacement_retained_frame_window_new_font_buffer=verified"
+        "GEROKASU2_MESSAGE_INSTALL_GPU fonts=2 font_orders=2 replacement_pairs=6 draw_cases={cases} pixels_per_case=64 channels_per_pixel=4 audio=default output prepared_replacement_retained_frame_window_new_font_buffer=verified"
     );
 }

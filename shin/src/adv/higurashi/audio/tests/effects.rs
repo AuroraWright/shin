@@ -23,7 +23,7 @@ fn loaded(a: &mut HigurashiAudio, slot: i32) {
     }
 }
 #[test]
-#[ignore = "actual looping SE/exact Loopback Audio;idempotent skip bursts must not fill the audio queue or swallow later authored volume/pan/reuse changes"]
+#[ignore = "actual looping SE/the default audio output;idempotent skip bursts must not fill the audio queue or swallow later authored volume/pan/reuse changes"]
 fn higurashi_repeated_effect_skip_coalesces_until_authored_parameters_change() {
     let (_, _, assets)=super::super::super::message_glyphs::tests::gpu::gpu_assets();
     let assets=Arc::new(assets);
@@ -71,10 +71,10 @@ fn higurashi_repeated_effect_skip_coalesces_until_authored_parameters_change() {
     assert_ne!(audio.effect_status(0)&16,0,"skip must preserve the authored speed tween");
     assert_eq!(audio.effects.position(0),Some(0));
     audio.stop_all_effects(0).unwrap();
-    println!("Higurashi SE skip:12288 consecutive finish requests do not overflow;authored volume/pan and matching repeat invalidate coalescing,preserve FIFO completion/speed tween and paused source position on exact Loopback Audio");
+    println!("Higurashi SE skip:12288 consecutive finish requests do not overflow;authored volume/pan and matching repeat invalidate coalescing,preserve FIFO completion/speed tween and paused source position on the default audio output");
 }
 #[test]
-#[ignore = "actual authored SE through retained VM on offscreen Metal/exact Loopback Audio"]
+#[ignore = "actual authored SE through retained VM on offscreen Metal/the default audio output"]
 fn higurashi_audio_runs_authored_se_with_signed_slots_and_retained_waits() {
     let (_, _, assets) = super::super::super::message_glyphs::tests::gpu::gpu_assets();
     let assets = Arc::new(assets);
@@ -313,6 +313,6 @@ fn higurashi_audio_runs_authored_se_with_signed_slots_and_retained_waits() {
     assert_eq!(audio.effect_status(-7), 0);
     audio.update(Ticks::ZERO, false);
     println!(
-        "Higurashi SE audio: exact Loopback Audio; unchanged authored PLAY at3028b loads Kyupirn;16 real VM commands pass finite EOF, async paused loads, retained PC/status waits, dynamic signed slot64 and negative controls, aggregate descriptor filtering, queued volume/pan, stopping repeat reuse, ONCE reservation/fixed-speed/skip release, stop-all/cancellation and missing/invalid asset retirement; ordinary host policy remains pending"
+        "Higurashi SE audio: the default audio output; unchanged authored PLAY at3028b loads Kyupirn;16 real VM commands pass finite EOF, async paused loads, retained PC/status waits, dynamic signed slot64 and negative controls, aggregate descriptor filtering, queued volume/pan, stopping repeat reuse, ONCE reservation/fixed-speed/skip release, stop-all/cancellation and missing/invalid asset retirement; ordinary host policy remains pending"
     );
 }

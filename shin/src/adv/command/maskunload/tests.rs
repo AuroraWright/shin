@@ -159,6 +159,6 @@ pub(crate) fn reference_live_maskunload<'a>(
     adv.back_layer_group = None;
     adv.allow_running_animations = true;
     eprintln!(
-        "Native MASKUNLOAD: captured plane, selected mask removal, preserved flags/animation permission and retained first back scene pass on Loopback Audio"
+        "Native MASKUNLOAD: captured plane, selected mask removal, preserved flags/animation permission and retained first back scene pass on the default audio output"
     );
 }

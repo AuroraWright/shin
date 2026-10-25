@@ -305,7 +305,7 @@ fn pure_failure_frame(j: &mut Journey) {
 }
 
 #[test]
-#[ignore = "actual Runtime/manual Save+Delete real atomic IO errors/retained Retry-or-Return/raw permission quarantine/frozen snapshots;real assets/offscreen Metal/exact Loopback Audio;temporary Paths only"]
+#[ignore = "actual Runtime/manual Save+Delete real atomic IO errors/retained Retry-or-Return/raw permission quarantine/frozen snapshots;real assets/offscreen Metal/the default audio output;temporary Paths only"]
 fn higurashi_runtime_manual_save_delete_retry_and_return_preserve_frozen_transactions() {
     let saved = initial();
     let initial_file = saved.encode().unwrap();

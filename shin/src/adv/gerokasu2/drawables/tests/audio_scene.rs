@@ -31,7 +31,7 @@ fn policy() -> FramePolicy {
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn decoded_ger_audio_bgm_se_once_real_transport_waits_and_exit() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -149,13 +149,13 @@ fn decoded_ger_audio_bgm_se_once_real_transport_waits_and_exit() {
             .all(|p| p == [0, 0, 0, 255])
     );
     println!(
-        "GEROKASU2_AUDIO_SCENE commands=16 bgm_events=1 real_NXA_BGM_SE_once_raw_loop2_waits_sync_stop_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_AUDIO_SCENE commands=16 bgm_events=1 real_NXA_BGM_SE_once_raw_loop2_waits_sync_stop_EXIT=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_audio_negative_active_slots_volume_pan_stop_and_legacy_bounds() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -216,7 +216,7 @@ fn ger_audio_negative_active_slots_volume_pan_stop_and_legacy_bounds() {
             .all(|p| p == [0, 0, 0, 255])
     );
     println!(
-        "GEROKASU2_AUDIO_NEGATIVE active_once_volume_pan_stop_missing_negative_slot_safe=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_AUDIO_NEGATIVE active_once_volume_pan_stop_missing_negative_slot_safe=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }

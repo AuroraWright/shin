@@ -82,7 +82,7 @@ fn higurashi_first_boot_matches_native_skip_readiness_and_once_only_save_child()
 }
 
 #[test]
-#[ignore = "actual updated archives/GPU resource publication and startup owner retirement;offscreen Metal plus exact Loopback Audio"]
+#[ignore = "actual updated archives/GPU resource publication and startup owner retirement;offscreen Metal plus the default audio output"]
 fn higurashi_first_boot_loads_older_common_assets_and_retires_owned_jobs() {
     use crate::adv::higurashi::{
         reference_gpu_assets as gpu_assets, reference_render_to_texture as render_to_texture,

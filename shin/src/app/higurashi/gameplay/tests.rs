@@ -374,7 +374,7 @@ pub(super) fn audio() -> AudioFramePolicy {
     }
 }
 #[test]
-#[ignore = "actual boot/title/story request to fresh ADV,owned composed capture/adv atlas/no-VM resource gate/masked30 fade/real authored command;offscreen Metal and exact Loopback Audio"]
+#[ignore = "actual boot/title/story request to fresh ADV,owned composed capture/adv atlas/no-VM resource gate/masked30 fade/real authored command;offscreen Metal and the default audio output"]
 fn higurashi_gameplay_real_title_handoff_initializes_authored_vm() {
     use crate::{
         adv::higurashi::{

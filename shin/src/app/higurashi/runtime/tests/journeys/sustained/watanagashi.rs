@@ -218,7 +218,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted-earned disk/normal Runtime/Chart23/Day7 doll0/CHARSELECT original1/Movie7 natural EOF/complete Watan/EXIT1f997 real save+Title;real assets/offscreen Metal/exact Loopback Audio;temporary writes only;up to two hours"]
+#[ignore = "actual accepted-earned disk/normal Runtime/Chart23/Day7 doll0/CHARSELECT original1/Movie7 natural EOF/complete Watan/EXIT1f997 real save+Title;real assets/offscreen Metal/the default audio output;temporary writes only;up to two hours"]
 fn higurashi_runtime_sustained_earned_chart_mion_reaches_full_watanagashi_exit_and_title() {
     let (saved, initial_file) = earned();
     let started = Instant::now();

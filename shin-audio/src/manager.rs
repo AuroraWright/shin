@@ -75,7 +75,6 @@ pub struct AudioManager {
 
 impl AudioManager {
     #[allow(clippy::new_without_default)]
-    #[cfg(not(test))]
     pub fn new() -> Self {
         let manager = kira::AudioManager::new(AudioManagerSettings::default())
             .expect("Failed to create kira audio manager");
@@ -86,46 +85,9 @@ impl AudioManager {
         }
     }
 
-    #[cfg(test)]
-    pub fn new() -> Self {
-        Self::new_for_tests()
-    }
-
-    /// Hardware tests always use the system output named `Loopback Audio`.
-    /// Missing or unusable test devices fail instead of using the default output.
+    /// Tests play through the default output, like the game.
     pub fn new_for_tests() -> Self {
-        use cpal::traits::{DeviceTrait, HostTrait};
-        use kira::backend::cpal::CpalBackendSettings;
-
-        let mut device_names = Vec::new();
-        let device = cpal::default_host()
-            // output_devices() queries every device's stream configuration.
-            // Select the exact test device by name before initializing audio,
-            // so an unrelated output cannot stall the hardware checks.
-            .devices()
-            .expect("Failed to enumerate test audio devices")
-            .find(|device| {
-                let name = device.description().expect("Failed to read test audio device name").name().to_owned();
-                let matches = name == "Loopback Audio";
-                device_names.push(name);
-                matches
-            })
-            .unwrap_or_else(|| {
-                panic!("Tests require the system audio output device named 'Loopback Audio'; available devices: {device_names:?}")
-            });
-        tracing::info!(device = %device.description().expect("Failed to read test audio device name").name().to_owned(), "Using test audio output");
-        let manager = kira::AudioManager::new(AudioManagerSettings {
-            backend_settings: CpalBackendSettings {
-                device: Some(device),
-                ..Default::default()
-            },
-            ..Default::default()
-        })
-        .expect("Failed to create audio manager on the 'Loopback Audio' test output");
-        Self {
-            manager: Mutex::new(manager),
-            suspension: AudioSuspension::default(),
-        }
+        Self::new()
     }
 
     #[cfg(test)]

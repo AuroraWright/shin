@@ -180,7 +180,7 @@ fn reference_episode4_teaparty_ending_continue_checkpoint() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn reference_episode4_teaparty_ending_continue_live() {
     assert!(std::env::var_os("SHIN_REFERENCE_EP4_ENDING_CONTINUE_ONLY").is_some());
     std::thread::Builder::new()
@@ -429,7 +429,7 @@ fn reference_actual_ep4_continue_event_end_capture() {
 }
 
 #[test]
-#[ignore = "requires copied actual progress, supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires copied actual progress, supplied ROM, Metal and the default audio output"]
 fn reference_actual_ep4_event_skip_title_continue() {
     assert!(std::env::var_os("SHIN_REFERENCE_EP4_ACTUAL_SKIP_ONLY").is_some());
     std::thread::Builder::new()

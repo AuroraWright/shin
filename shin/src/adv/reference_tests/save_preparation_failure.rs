@@ -22,7 +22,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves/assets"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; isolated temporary saves/assets"]
 fn reference_exit_save_dialog_failure_preserves_progress_and_retries() {
     std::thread::Builder::new()
         .name("save-preparation-reference".into())
@@ -237,7 +237,7 @@ fn run() {
             "same_scene_preserved":true,"no_unacknowledged_title_return":true,"same_owner_repaired_data_retry":true}));
     }
     std::fs::write(output.join("save-preparation-recovery.json"), serde_json::to_vec_pretty(&serde_json::json!({
-        "cases":cases,"audio_device":"exact Loopback Audio","patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
+        "cases":cases,"audio_device":"default output","patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
         "window_created":false,"working_progress_written":false,"authored_route_claim":false
     })).unwrap()).unwrap();
 }

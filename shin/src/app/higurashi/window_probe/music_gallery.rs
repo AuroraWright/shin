@@ -659,4 +659,4 @@ fn require_no_child(snapshot: &Snapshot) -> Result<()> {
     );
     Ok(())
 }
-// The parent owns registration, compilation and real-window/exactLoopback execution.
+// The parent owns registration, compilation and real-window/audio execution.

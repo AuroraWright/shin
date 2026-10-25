@@ -202,25 +202,6 @@ impl SceneHost {
     ) -> Option<&Arc<crate::adv::characters::view::CharacterTextures>> {
         self.common.as_ref().map(|common| &common._system)
     }
-    pub(super) fn run_in_background(&self) -> bool {
-        let settings = match &self.scene {
-            Some(Scene::Adv(adv)) => return adv.run_in_background(),
-            Some(Scene::Boot(s)) => &s.globals.save().settings,
-            Some(Scene::Demo(s)) => &s.globals.save().settings,
-            Some(Scene::Title(s)) => &s.globals.save().settings,
-            Some(Scene::Picker(s)) => &s.globals.save().settings,
-            Some(Scene::Music(s)) => &s.globals.save().settings,
-            Some(Scene::Movie(s)) => &s.globals.save().settings,
-            Some(Scene::Cg(s)) => &s.globals.save().settings,
-            Some(Scene::Bustup(s)) => &s.globals.save().settings,
-            Some(Scene::Episode(s)) => &s.globals.save().settings,
-            Some(Scene::PreparingAdv(s)) => &s.globals.save().settings,
-            None => return false,
-        };
-        // Serialized legacy name; Config maps this bit to SuppressAutoSleep.
-        settings.v18_showsongtitle
-    }
-
     pub(super) fn suspend_event_input(&mut self) {
         if let Some(Scene::Adv(adv)) = &mut self.scene {
             adv.cancel_event_contact();

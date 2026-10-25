@@ -131,7 +131,7 @@ fn higurashi_title_parent_field_and_draw_packets_match_native() {
 }
 
 #[test]
-#[ignore = "actual title atlas,real startup/movie handoff and original native parent packets at720p/1080p;offscreen Metal and exact Loopback Audio"]
+#[ignore = "actual title atlas,real startup/movie handoff and original native parent packets at720p/1080p;offscreen Metal and the default audio output"]
 fn higurashi_title_parent_real_frames_match_native_packet_composition() {
     use crate::{
         adv::higurashi::{

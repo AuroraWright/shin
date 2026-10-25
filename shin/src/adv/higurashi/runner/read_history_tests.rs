@@ -90,7 +90,7 @@ fn cursor(host: &HigurashiHost) -> (CodeAddress, CodeAddress, u32, u64) {
 }
 
 #[test]
-#[ignore = "real message completion/history/revisit host on offscreen Metal and exact Loopback Audio"]
+#[ignore = "real message completion/history/revisit host on offscreen Metal and the default audio output"]
 fn higurashi_host_publishes_completed_message_history_before_revisit_and_retries_failures() {
     let (_, _, assets) = super::super::message_glyphs::tests::gpu::gpu_assets();
     let assets = Arc::new(assets);
@@ -331,6 +331,6 @@ fn higurashi_host_publishes_completed_message_history_before_revisit_and_retries
     assert_eq!(&services.writes[8..], &[4, 5, 6]);
     assert!(!services.read.history.contains(u32::MAX));
     println!(
-        "Higurashi read-history host:17 real commands, manual/autoplay/skip/fast-forward completions, immediate input/same-frame writes, all4 revisits read, cached current read unchanged, failed write prevents VM advance and retries acknowledged suffix; exact Loopback/offscreen Metal pass"
+        "Higurashi read-history host:17 real commands, manual/autoplay/skip/fast-forward completions, immediate input/same-frame writes, all4 revisits read, cached current read unchanged, failed write prevents VM advance and retries acknowledged suffix; audio/offscreen Metal pass"
     );
 }

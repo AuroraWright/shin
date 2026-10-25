@@ -15,7 +15,7 @@ fn summary(pixels: &[u8]) -> ([u32; 3], usize) {
 }
 
 #[test]
-#[ignore = "actual /splash.txa FirstBoot caution and logo crossfades before the boot gate on Metal/exact Loopback Audio"]
+#[ignore = "actual /splash.txa FirstBoot caution and logo crossfades before the boot gate on Metal/the default audio output"]
 fn ger_app_first_boot_shows_caution_and_logos_then_publishes_title() {
     let gpu = Offscreen::new();
     let (_temporary, _path, mut d) = driver(&gpu, false);

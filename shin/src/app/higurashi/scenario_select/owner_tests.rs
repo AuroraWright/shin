@@ -1,5 +1,5 @@
 //! Concrete owner acceptance candidates. Root alone registers/runs these on
-//! offscreen Metal + exact Loopback Audio. Rendering here checks retained asset
+//! offscreen Metal + the default audio output. Rendering here checks retained asset
 //! transport; independent shader math remains the frozen parent packet tests.
 use super::{
     SceneRequest,
@@ -102,7 +102,6 @@ impl Fixture {
             effects: server.load_sync("/effects.txa").unwrap(),
             sysse: server.load_sync("/sysse.bin").unwrap(),
         });
-        // This API requires EXACT Loopback Audio; it never falls back to default.
         let manager = Arc::new(shin_audio::AudioManager::new_for_tests());
         let mut sounds = SystemSoundPlayer::new(manager.clone());
         sounds.bank = Some(common.sysse.clone());
@@ -368,7 +367,7 @@ fn finish_adv(
 }
 
 #[test]
-#[ignore = "real ScenarioSelect assets/publication/retirement and captured texture transport;offscreen Metal/exact Loopback Audio"]
+#[ignore = "real ScenarioSelect assets/publication/retirement and captured texture transport;offscreen Metal/the default audio output"]
 fn higurashi_scenario_select_owner_real_publication_gates_and_first_retirement() {
     let fixture = Fixture::new();
     let settings = SaveData::default();
@@ -475,7 +474,7 @@ fn higurashi_scenario_select_owner_real_publication_gates_and_first_retirement()
 }
 
 #[test]
-#[ignore = "real ScenarioSelect constructor preservation and all six ADV payloads/entropy sites;offscreen Metal/exact Loopback Audio"]
+#[ignore = "real ScenarioSelect constructor preservation and all six ADV payloads/entropy sites;offscreen Metal/the default audio output"]
 fn higurashi_scenario_select_owner_preflight_and_six_kind_full_adv_payloads() {
     let fixture = Fixture::new();
     let settings = SaveData::default();
@@ -583,7 +582,7 @@ fn higurashi_scenario_select_owner_preflight_and_six_kind_full_adv_payloads() {
 }
 
 #[test]
-#[ignore = "real ScenarioSelect controller/contact/capture denial/cancel/resize dispatch;offscreen Metal/exact Loopback Audio"]
+#[ignore = "real ScenarioSelect controller/contact/capture denial/cancel/resize dispatch;offscreen Metal/the default audio output"]
 fn higurashi_scenario_select_owner_input_priority_locked_rows_and_contact_boundaries() {
     let fixture = Fixture::new();
     for mut extent in EXTENTS {
@@ -728,7 +727,7 @@ fn higurashi_scenario_select_owner_input_priority_locked_rows_and_contact_bounda
 }
 
 #[test]
-#[ignore = "real ScenarioSelect Question glyphs/defaultNo/cancel/Yes stage0 and stage1 retirement;offscreen Metal/exact Loopback Audio"]
+#[ignore = "real ScenarioSelect Question glyphs/defaultNo/cancel/Yes stage0 and stage1 retirement;offscreen Metal/the default audio output"]
 fn higurashi_scenario_select_owner_real_question_back_preserves_full_source_and_stage_order() {
     let fixture = Fixture::new();
     for extent in EXTENTS {
@@ -850,7 +849,7 @@ fn higurashi_scenario_select_owner_real_question_back_preserves_full_source_and_
 }
 
 #[test]
-#[ignore = "real Origin shared owner Tips/Title factories and seed sites;offscreen Metal/exact Loopback Audio"]
+#[ignore = "real Origin shared owner Tips/Title factories and seed sites;offscreen Metal/the default audio output"]
 fn higurashi_scenario_select_owner_origin_tips_and_title_requests() {
     let fixture = Fixture::new();
     for extent in EXTENTS {

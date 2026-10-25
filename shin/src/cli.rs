@@ -47,10 +47,6 @@ pub struct Cli {
     #[cfg(debug_assertions)]
     #[clap(long, conflicts_with_all = ["save_file", "text_websocket"])]
     pub inspect_assets: bool,
-    /// Route audio to the Loopback Audio system device for testing (debug builds only).
-    #[cfg(debug_assertions)]
-    #[clap(long, conflicts_with = "inspect_assets")]
-    pub loopback_audio: bool,
     /// Read global progress and write saves to this engine-format file.
     ///
     /// Defaults to "shin/<game>/SAVEDATA" in the OS application data directory
@@ -92,13 +88,6 @@ impl Cli {
     pub fn inspect_assets(&self) -> bool {
         #[cfg(debug_assertions)]
         return self.inspect_assets;
-        #[cfg(not(debug_assertions))]
-        false
-    }
-    /// Loopback Audio output is a debug-build testing option.
-    pub fn loopback_audio(&self) -> bool {
-        #[cfg(debug_assertions)]
-        return self.loopback_audio;
         #[cfg(not(debug_assertions))]
         false
     }
@@ -168,7 +157,6 @@ mod tests {
         for extra in [
             &["--save-file", "SAVEDATA"][..],
             &["--text-websocket", "127.0.0.1:9001"],
-            &["--loopback-audio"],
         ] {
             let mut args = vec!["shin", "--inspect-assets"];
             args.extend(extra);
@@ -177,11 +165,6 @@ mod tests {
         let cli = Cli::try_parse_from(["shin", "--text-websocket", "127.0.0.1:9001"]).unwrap();
         assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
         assert_eq!(Cli::try_parse_from(["shin"]).unwrap().text_websocket, None);
-        assert!(
-            Cli::try_parse_from(["shin", "--loopback-audio"])
-                .unwrap()
-                .loopback_audio()
-        );
         for removed in [
             "--load-save",
             "--save-slot",
@@ -253,7 +236,7 @@ mod tests {
     fn shin_ini_fills_omitted_options_and_command_line_wins() {
         let folder = Path::new("/games/shin");
         let text = "\u{feff}; comment\n# comment\n[shin]\ngame = gerokasu\nassets-dir = \"assets dir\"\n\
-                    save_file=/abs/progress.dat\nloopback-audio = false\n--text-websocket = 127.0.0.1:9001\n\
+                    save_file=/abs/progress.dat\ninspect-assets = false\n--text-websocket = 127.0.0.1:9001\n\
                     save-file-unused-check =\n";
         assert!(ini::to_args(text, folder, &[]).is_err(), "unknown key");
         let text = text.replace("save-file-unused-check =\n", "");
@@ -264,7 +247,7 @@ mod tests {
         assert_eq!(cli.game, Game::Gerokasu);
         assert_eq!(cli.assets_dir(), folder.join("assets dir"));
         assert_eq!(cli.save_file(), Path::new("/abs/progress.dat"));
-        assert!(!cli.loopback_audio());
+        assert!(!cli.inspect_assets());
         assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
 
         // Options on the command line replace the ini's; empty values stay unset.
@@ -272,7 +255,7 @@ mod tests {
         let mut argv = vec![std::ffi::OsString::from("shin")];
         argv.extend(
             ini::to_args(
-                "game = gerokasu\nassets-dir = a\nloopback-audio = yes\nsave-file =\n",
+                "game = gerokasu\nassets-dir = a\ninspect-assets = yes\nsave-file =\n",
                 folder,
                 &explicit,
             )
@@ -286,14 +269,14 @@ mod tests {
             cli.save_file(),
             default_save_file(dirs_next::data_dir().unwrap(), Game::Higurashi)
         );
-        assert!(cli.loopback_audio());
+        assert!(cli.inspect_assets());
 
         for bad in [
             "unknown = 1",
             "help = true",
             "load-save = save.dat",
             "game",
-            "loopback-audio = maybe",
+            "inspect-assets = maybe",
             "game = umineko\ngame = higurashi",
         ] {
             assert!(ini::to_args(bad, folder, &[]).is_err(), "{bad}");

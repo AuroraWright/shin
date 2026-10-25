@@ -332,7 +332,7 @@ impl Frames {
     }
 }
 #[test]
-#[ignore = "actual owned Gameplay/Kakera/ADV frame dispatcher,original factories/clock,full records,old producer retirement and whole composed capture at720p/1080p;offscreen Metal/exact Loopback Audio,no window/saves"]
+#[ignore = "actual owned Gameplay/Kakera/ADV frame dispatcher,original factories/clock,full records,old producer retirement and whole composed capture at720p/1080p;offscreen Metal/the default audio output,no window/saves"]
 fn higurashi_kakera_scene_roundtrips_preserve_runtime_owners_and_native_dispatch_order() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

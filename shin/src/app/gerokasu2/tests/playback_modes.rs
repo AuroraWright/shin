@@ -30,7 +30,7 @@ fn press_cued(d: &mut system_menu::Driver<'_>, action: AppAction) -> bool {
 }
 
 #[test]
-#[ignore = "real story L/R/A/B/X/Y playback-mode and HiddenWindow controls through the app path on Metal/exact Loopback Audio"]
+#[ignore = "real story L/R/A/B/X/Y playback-mode and HiddenWindow controls through the app path on Metal/the default audio output"]
 fn ger_app_real_story_playback_mode_controls_match_native_dispatch() {
     let gpu = Offscreen::new();
     let scenario = Arc::new(Gerokasu2Scenario::new(bytes().into()).unwrap());
@@ -121,7 +121,7 @@ fn reconstructed(d: &mut system_menu::Driver<'_>, deadline: Instant) {
 }
 
 #[test]
-#[ignore = "real story Plus/Minus chapter Questions and mode-0 reconstruction on Metal/exact Loopback Audio"]
+#[ignore = "real story Plus/Minus chapter Questions and mode-0 reconstruction on Metal/the default audio output"]
 fn ger_app_real_story_chapter_skip_matches_native_dispatch() {
     use crate::adv::gerokasu2::replay::chapter_skip;
     let gpu = Offscreen::new();
@@ -241,7 +241,7 @@ fn region(pixels: &[u8], left: f32, top: f32, right: f32, bottom: f32) -> [u32; 
 }
 
 #[test]
-#[ignore = "real story indicators, navi toolbar, swipes, HiddenWindow tap and touch effects on Metal/exact Loopback Audio"]
+#[ignore = "real story indicators, navi toolbar, swipes, HiddenWindow tap and touch effects on Metal/the default audio output"]
 fn ger_app_real_story_touch_controls_match_native_callbacks() {
     let gpu = Offscreen::new();
     let scenario = Arc::new(Gerokasu2Scenario::new(bytes().into()).unwrap());
@@ -338,7 +338,7 @@ fn ger_app_real_story_touch_controls_match_native_callbacks() {
 }
 
 #[test]
-#[ignore = "real story right swipe SystemMenu, message tap and global touch effects on Metal/exact Loopback Audio"]
+#[ignore = "real story right swipe SystemMenu, message tap and global touch effects on Metal/the default audio output"]
 fn ger_app_real_story_swipe_menu_tap_and_touch_effects() {
     let gpu = Offscreen::new();
     let scenario = Arc::new(Gerokasu2Scenario::new(bytes().into()).unwrap());
@@ -403,12 +403,6 @@ fn ger_app_real_story_swipe_menu_tap_and_touch_effects() {
     effect(&mut d, Vec2::new(500., 500.), false);
     assert!(d.app.touch_background.is_none(), "no ripple during FirstBoot");
     d.app.first_boot = None;
-    // 自動スリープの抑制 (v18) keeps the window running unfocused.
-    use shin_window::ShinApp;
-    d.app.save_store.as_mut().unwrap().data.settings.v18_showsongtitle = false;
-    assert!(!d.app.run_in_background());
-    d.app.save_store.as_mut().unwrap().data.settings.v18_showsongtitle = true;
-    assert!(d.app.run_in_background());
     effect(&mut d, Vec2::new(500., 500.), true);
     effect(&mut d, Vec2::new(500., 500.), false);
     effect(&mut d, Vec2::new(500., 500.), false);
@@ -466,7 +460,7 @@ fn ger_app_real_story_swipe_menu_tap_and_touch_effects() {
 }
 
 #[test]
-#[ignore = "real story Up (13538 mode-1 back) and Down (advance) on Metal/exact Loopback Audio"]
+#[ignore = "real story Up (13538 mode-1 back) and Down (advance) on Metal/the default audio output"]
 fn ger_app_real_story_up_returns_one_message_and_down_advances() {
     let gpu = Offscreen::new();
     let scenario = Arc::new(Gerokasu2Scenario::new(bytes().into()).unwrap());

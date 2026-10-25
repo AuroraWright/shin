@@ -97,7 +97,7 @@ impl Overlay for TouchOwner {
 }
 
 #[test]
-#[ignore = "actual Gameplay root contact/skip/hide/SystemMenu/overlay retirement at720p/1080p;offscreen Metal/exact Loopback Audio"]
+#[ignore = "actual Gameplay root contact/skip/hide/SystemMenu/overlay retirement at720p/1080p;offscreen Metal/the default audio output"]
 fn higurashi_gameplay_touch_drives_owned_messages_and_menus() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

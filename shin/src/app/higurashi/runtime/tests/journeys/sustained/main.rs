@@ -47,7 +47,7 @@ fn message(runtime: &Runtime, pc: u32, id: u32) -> bool {
 }
 
 #[test]
-#[ignore = "actual normal Runtime/new game/prologue/opening Movie0 EOF/complete Days1+2/real TIPSGET Continue/Day3;real assets/offscreen Metal/exact Loopback Audio;temporary progress only"]
+#[ignore = "actual normal Runtime/new game/prologue/opening Movie0 EOF/complete Days1+2/real TIPSGET Continue/Day3;real assets/offscreen Metal/the default audio output;temporary progress only"]
 fn higurashi_runtime_sustained_fresh_main_reaches_day3_through_authored_tips_choice() {
     let mut saved = initial();
     // This unrelated preexisting disk row detects loss of either runtime

@@ -9,7 +9,7 @@ use shin_core::{
 use std::io::Read;
 
 #[test]
-#[ignore = "requires supplied ROM, GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM, GPU and the default audio output"]
 fn shared_layout_cached_handles_owned_quads_and_message_fade_render_offscreen() {
     let mut gpu = Offscreen::new();
     let mut rom = RomReader::new(
@@ -122,12 +122,12 @@ fn shared_layout_cached_handles_owned_quads_and_message_fade_render_offscreen() 
         }
     }
     println!(
-        "GEROKASU2_MESSAGE_TEXT_GPU fonts=2 shared_layout_messages=6 draw_cases={cases} pixels_per_case=64 channels_per_pixel=4 audio=Loopback Audio owned_buffer_fade_outline_fill=verified"
+        "GEROKASU2_MESSAGE_TEXT_GPU fonts=2 shared_layout_messages=6 draw_cases={cases} pixels_per_case=64 channels_per_pixel=4 audio=default output owned_buffer_fade_outline_fill=verified"
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM, GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM, GPU and the default audio output"]
 fn authored_layout_profiles_prepare_every_message_with_cached_native_geometry() {
     use shin_core::format::scenario::{
         gerokasu2::{Gerokasu2Scenario, bytecode::Instruction},
@@ -200,6 +200,6 @@ fn authored_layout_profiles_prepare_every_message_with_cached_native_geometry() 
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_MESSAGE_LAYOUT_UPLOAD messages={messages} characters={characters} collapsed_spaces={collapsed_spaces} profiles=mode0_justify_speed50 original_layout_to_FNT6_cache_owned_buffer=verified audio=Loopback Audio"
+        "GEROKASU2_MESSAGE_LAYOUT_UPLOAD messages={messages} characters={characters} collapsed_spaces={collapsed_spaces} profiles=mode0_justify_speed50 original_layout_to_FNT6_cache_owned_buffer=verified audio=default output"
     );
 }

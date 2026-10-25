@@ -248,7 +248,7 @@ impl Frames {
 }
 
 #[test]
-#[ignore = "requires supplied ROM/native replacement oracle,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM/native replacement oracle,Metal and the default audio output"]
 fn retained_replacements_native_clocks_properties_all_wipers_and_retirement() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -502,13 +502,13 @@ fn retained_replacements_native_clocks_properties_all_wipers_and_retirement() {
             .unwrap()
     );
     println!(
-        "GEROKASU2_REPLACEMENT_GPU kinds=10 frames={} channels={} retained_source_target_captures_keep_copy_share_pause_duplicate_frame_wait_done_notifications_once_registry_retirement_planes_selected_targets=verified audio=Loopback Audio",
+        "GEROKASU2_REPLACEMENT_GPU kinds=10 frames={} channels={} retained_source_target_captures_keep_copy_share_pause_duplicate_frame_wait_done_notifications_once_registry_retirement_planes_selected_targets=verified audio=default output",
         frames.frames, frames.channels
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn real_transset_and_autowipe_commands_wait_in_the_retained_runner() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -664,7 +664,7 @@ fn real_transset_and_autowipe_commands_wait_in_the_retained_runner() {
     let target = frames.draw(&gpu, &mut services.loader, PlaneId::new(0));
     assert!(target.chunks_exact(4).all(|p| p == [0, 0, 255, 255]));
     println!(
-        "GEROKASU2_REPLACEMENT_RUNNER commands=4 frames={} channels={} decoded_TRANSSET_LayerLoad_AUTOWIPE_owned_wait_root_FrameId_update_retirement_EXIT=verified audio=Loopback Audio",
+        "GEROKASU2_REPLACEMENT_RUNNER commands=4 frames={} channels={} decoded_TRANSSET_LayerLoad_AUTOWIPE_owned_wait_root_FrameId_update_retirement_EXIT=verified audio=default output",
         frames.frames, frames.channels
     );
 }

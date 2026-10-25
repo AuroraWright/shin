@@ -192,7 +192,7 @@ fn choose(
 }
 
 #[test]
-#[ignore = "Exact unlocked template; normal Category2/SNRSEL2 row1/301; explicit original choices1,0,1/protected BGM89 credits/finalTIPS130+115/commonEXIT+Title; real assets/Metal/exactLoopback; not earned unlock or physical HID"]
+#[ignore = "Exact unlocked template; normal Category2/SNRSEL2 row1/301; explicit original choices1,0,1/protected BGM89 credits/finalTIPS130+115/commonEXIT+Title; real assets/Metal/audio; not earned unlock or physical HID"]
 fn higurashi_runtime_tsumihoroboshi_unlocked_template_full_good_end() {
     let (saved, initial) = template();
     let out = PathBuf::from(

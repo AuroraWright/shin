@@ -25,7 +25,7 @@ use std::{
 
 // Focused normal saved-load -> authored opening Movie -> B skip -> scenario.
 #[test]
-#[ignore = "requires supplied original/1.03 ROMs, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied original/1.03 ROMs, Metal and the default audio output"]
 fn reference_authored_movie_after_saved_scene() {
     assert!(std::env::var_os("SHIN_REFERENCE_AUTHORED_MOVIE_AFTER_LOAD").is_some());
     std::thread::Builder::new()
@@ -38,7 +38,7 @@ fn reference_authored_movie_after_saved_scene() {
 }
 
 #[test]
-#[ignore = "requires supplied executables/ROMs, Metal, exact Loopback Audio and SHIN_REFERENCE_AUTHORED_SAVED_MOVIE_ONLY"]
+#[ignore = "requires supplied executables/ROMs, Metal, the default audio output and SHIN_REFERENCE_AUTHORED_SAVED_MOVIE_ONLY"]
 fn reference_authored_saved_movie_hydration() {
     assert!(std::env::var_os("SHIN_REFERENCE_AUTHORED_SAVED_MOVIE_ONLY").is_some());
     std::thread::Builder::new()
@@ -49,7 +49,7 @@ fn reference_authored_saved_movie_hydration() {
 }
 
 #[test]
-#[ignore = "requires supplied ROMs, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, Metal and the default audio output"]
 fn reference_authored_concurrent_movies_after_saved_scene() {
     assert!(std::env::var_os("SHIN_REFERENCE_AUTHORED_CONCURRENT_MOVIES_ONLY").is_some());
     std::thread::Builder::new()

@@ -81,7 +81,7 @@ fn acquired_tip314(data: &SaveData) -> bool {
 }
 
 #[test]
-#[ignore = "full unmodified authored Bonus10010 via Runtime TitleLoad/raw J/actual clocks+credits EOF/TIPS314/OTSUGET42/EXIT SaveThenTitle;real assets/offscreen Metal/exact Loopback Audio;temporary initial disk only"]
+#[ignore = "full unmodified authored Bonus10010 via Runtime TitleLoad/raw J/actual clocks+credits EOF/TIPS314/OTSUGET42/EXIT SaveThenTitle;real assets/offscreen Metal/the default audio output;temporary initial disk only"]
 fn higurashi_runtime_bonus_10010_reaches_natural_exit_save_and_title() {
     let saved = saved_bonus();
     let initial_file = saved.encode().unwrap();

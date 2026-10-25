@@ -11,7 +11,7 @@ use shin_render::{RenderRequestBuilder, gpu_texture::GpuTexture};
 use std::sync::Arc;
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn all_transition_requests_acquire_assets_update_and_render() {
     let mut gpu = Offscreen::new();
     let mut scenario = scenario();
@@ -140,6 +140,6 @@ fn all_transition_requests_acquire_assets_update_and_render() {
     );
     assert!(TransitionRequest::resolve(&scenario, 10, 60, [0; 8]).is_none());
     println!(
-        "GEROKASU2_TRANSITION_GPU kinds=10 supplied_masks={supplied} frames={frames} channels={channels} actual_assets_shared_wipers_pause_duplicate_frame_fast_forward_default_blend_metadata_fallback_resource_error=verified audio=Loopback Audio"
+        "GEROKASU2_TRANSITION_GPU kinds=10 supplied_masks={supplied} frames={frames} channels={channels} actual_assets_shared_wipers_pause_duplicate_frame_fast_forward_default_blend_metadata_fallback_resource_error=verified audio=default output"
     );
 }

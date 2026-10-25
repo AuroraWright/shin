@@ -36,7 +36,7 @@ fn press_close(host: &mut HigurashiHost) {
 }
 
 #[test]
-#[ignore = "real PC/CS PIC/BUP reload, retained modal owner and cancellation on offscreen Metal/exact Loopback Audio"]
+#[ignore = "real PC/CS PIC/BUP reload, retained modal owner and cancellation on offscreen Metal/the default audio output"]
 fn higurashi_host_reload_publishes_selected_assets_without_manual_callback() {
     let (device, queue, assets) = gpu_assets();
     let assets = Arc::new(assets);
@@ -273,6 +273,6 @@ fn higurashi_host_reload_publishes_selected_assets_without_manual_callback() {
         assert!(gate.send(()).is_err());
     }
     println!(
-        "Higurashi live LayerReloader:2 real PIC/BUP PC/CS host profiles with native VM LAYERLOAD, {frames} scene frames at720p/1080p, dirty copy/load, retained queues/seeds/VM, automatic closing callback and pending-task retirement; exact Loopback Audio"
+        "Higurashi live LayerReloader:2 real PIC/BUP PC/CS host profiles with native VM LAYERLOAD, {frames} scene frames at720p/1080p, dirty copy/load, retained queues/seeds/VM, automatic closing callback and pending-task retirement; the default audio output"
     );
 }

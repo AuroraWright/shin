@@ -283,7 +283,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted cumulative Tsuki output+record required; real Runtime/earned Chart29/forced Tarai/protected preview4/full Taraimawashi/TIPS52+OTSUGET1/native EXIT save+Title; actual assets/offscreen Metal/exact Loopback Audio; temporary writes only; two hour observation allowance"]
+#[ignore = "actual accepted cumulative Tsuki output+record required; real Runtime/earned Chart29/forced Tarai/protected preview4/full Taraimawashi/TIPS52+OTSUGET1/native EXIT save+Title; actual assets/offscreen Metal/the default audio output; temporary writes only; two hour observation allowance"]
 fn higurashi_runtime_sustained_earned_chart_reaches_full_taraimawashi_exit_and_title() {
     let (saved, initial_file) = earned();
     let started = Instant::now();

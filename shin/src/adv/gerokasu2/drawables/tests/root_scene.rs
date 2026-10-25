@@ -89,7 +89,7 @@ fn scenario() -> Arc<Gerokasu2Scenario> {
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn composed_root_scene_runs_utf8_message_root_controls_wipes_waits_and_exit() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -242,13 +242,13 @@ fn composed_root_scene_runs_utf8_message_root_controls_wipes_waits_and_exit() {
             .same_owner(&message)
     );
     println!(
-        "GEROKASU2_ROOT_SCENE commands=17 installs=1 root_opacity_translation_message_screen_history_shared_fast_skip_close_wipe_wait_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_ROOT_SCENE commands=17 installs=1 root_opacity_translation_message_screen_history_shared_fast_skip_close_wipe_wait_EXIT=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn root_copies_keep_message_properties_graphics_frame_guard_and_lifetime() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -334,6 +334,6 @@ fn root_copies_keep_message_properties_graphics_frame_guard_and_lifetime() {
     assert_eq!(weak(), 0);
     drop(scenario);
     println!(
-        "GEROKASU2_ROOT_COPY message_properties_graphics_shared_parent_properties_independent_frame_once_wrong_owner_rejected_lifetime=verified audio=Loopback Audio"
+        "GEROKASU2_ROOT_COPY message_properties_graphics_shared_parent_properties_independent_frame_once_wrong_owner_rejected_lifetime=verified audio=default output"
     );
 }

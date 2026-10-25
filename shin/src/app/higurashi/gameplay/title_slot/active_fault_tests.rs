@@ -54,7 +54,7 @@ fn original_variant(common: &Arc<CommonAssets>) -> Arc<CommonAssets> {
 }
 
 #[test]
-#[ignore = "real Title/Story/TIPS globals, source retirement, retained constructor fault/retry, full native runtime rows and entropy on offscreen Metal/exact Loopback Audio; no windows/saves"]
+#[ignore = "real Title/Story/TIPS globals, source retirement, retained constructor fault/retry, full native runtime rows and entropy on offscreen Metal/the default audio output; no windows/saves"]
 fn higurashi_active_scene_retains_fresh_story_and_tips_constructor_faults() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

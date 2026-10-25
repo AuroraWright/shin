@@ -328,7 +328,7 @@ pub(crate) fn assert_ending_returns_to_title<'a>(
             "Returned title must render visibly"
         );
         eprintln!(
-            "Ending {mode}: title active and visible, globals/audio/save retained, Loopback Audio"
+            "Ending {mode}: title active and visible, globals/audio/save retained, the default audio output"
         );
         drop(host);
     }

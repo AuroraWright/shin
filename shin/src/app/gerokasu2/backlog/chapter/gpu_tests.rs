@@ -124,7 +124,7 @@ fn history() -> History {
     }
 }
 #[test]
-#[ignore = "actual Ger chapter atlas/system font, gradients, clipped labels and cache reversal on Metal/exact Loopback Audio"]
+#[ignore = "actual Ger chapter atlas/system font, gradients, clipped labels and cache reversal on Metal/the default audio output"]
 fn ger_backlog_chapter_host_renders_native_panel_clip_labels_and_retains_cache_order() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -203,6 +203,6 @@ fn ger_backlog_chapter_host_renders_native_panel_clip_labels_and_retains_cache_o
     let reverse = frames.draw(&gpu, &host);
     assert!(reverse.iter().any(|&b| b != 0));
     println!(
-        "GER_BACKLOG_CHAPTER_HOST frames=3 text_pixels={changed} outside_clip={outside} font=system48 width=1274+6 cache_reversal=retained audio=Loopback Audio"
+        "GER_BACKLOG_CHAPTER_HOST frames=3 text_pixels={changed} outside_clip={outside} font=system48 width=1274+6 cache_reversal=retained audio=default output"
     );
 }

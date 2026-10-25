@@ -27,7 +27,7 @@ use std::{
 // Real FIFO reads and controlled seekable ROM syscall boundaries through the
 // production asset accessors. Both use unchanged supplied BUP bytes/decoders.
 #[test]
-#[ignore = "requires supplied ROMs, macOS sample, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, macOS sample, Metal and the default audio output"]
 fn reference_authored_blocked_read_retirement() {
     assert!(std::env::var_os("SHIN_REFERENCE_BLOCKED_READ_ONLY").is_some());
     std::thread::Builder::new()
@@ -41,7 +41,7 @@ fn reference_authored_blocked_read_retirement() {
 
 #[cfg(target_os = "macos")]
 #[test]
-#[ignore = "requires supplied ROMs, syscall interposer, macOS sample, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, syscall interposer, macOS sample, Metal and the default audio output"]
 fn reference_authored_seekable_read_retirement() {
     assert!(std::env::var_os("SHIN_REFERENCE_SEEKABLE_READ_ONLY").is_some());
     assert!(std::env::var_os("SHIN_REFERENCE_BLOCKED_READ_ONLY").is_some());

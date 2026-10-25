@@ -73,7 +73,7 @@ fn loaded(voice: &mut Voice) {
 }
 
 #[test]
-#[ignore = "actual authored S99 quiz voices through scene-owned player on exact Loopback Audio and offscreen Metal;no window/saves"]
+#[ignore = "actual authored S99 quiz voices through scene-owned player on the default audio output and offscreen Metal;no window/saves"]
 fn higurashi_quiz_voice_plays_authored_s99_requests_and_retains_own_transport() {
     let (_device, _queue, assets) = crate::adv::higurashi::reference_gpu_assets();
     let assets = Arc::new(assets);
@@ -145,6 +145,6 @@ fn higurashi_quiz_voice_plays_authored_s99_requests_and_retains_own_transport() 
     second.advance(Ticks::from_f32(10.0));
     assert_eq!(second.status(), 0);
     eprintln!(
-        "Quiz S99 transport:exact Loopback Audio;authored question/reaction/start/end requests,bit0 lipsync without character muting,pending replacement,independent player ownership,stop/drop and muted running clock pass;no window/saves"
+        "Quiz S99 transport:the default audio output;authored question/reaction/start/end requests,bit0 lipsync without character muting,pending replacement,independent player ownership,stop/drop and muted running clock pass;no window/saves"
     );
 }

@@ -7,7 +7,7 @@ use shin_core::primitives::color::UnormColor;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
-#[ignore = "actual Gameplay QUIZ copy/owned three-argument factory request and replay-stop live skip with real startup/resources on offscreen Metal/exact Loopback Audio;quiz scene remains pending,no window/saves"]
+#[ignore = "actual Gameplay QUIZ copy/owned three-argument factory request and replay-stop live skip with real startup/resources on offscreen Metal/the default audio output;quiz scene remains pending,no window/saves"]
 fn higurashi_gameplay_quiz_queues_owned_current_game_data_and_restores_score_at_saved_boundary() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

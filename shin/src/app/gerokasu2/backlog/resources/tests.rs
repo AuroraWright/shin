@@ -155,7 +155,7 @@ fn different(a: &[u8], b: &[u8]) -> usize {
 }
 
 #[test]
-#[ignore = "supplied Ger atlases/fonts, Japanese row glyphs, overscan and memory payload on Metal/exact Loopback Audio"]
+#[ignore = "supplied Ger atlases/fonts, Japanese row glyphs, overscan and memory payload on Metal/the default audio output"]
 fn ger_backlog_rows_render_text_portraits_chrome_and_retain_native_cache_order() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -273,7 +273,7 @@ fn ger_backlog_rows_render_text_portraits_chrome_and_retain_native_cache_order()
         .is_err()
     );
     println!(
-        "GER_BACKLOG_ROW_RESOURCES rows=16 frames={} text_changed_pixels={text_pixels} portrait_changed_pixels={portrait_pixels} atlas_NewRodin_SDF_fixed220_column_overscan_eviction_revisit_memory_jump_cancel=verified audio=Loopback Audio",
+        "GER_BACKLOG_ROW_RESOURCES rows=16 frames={} text_changed_pixels={text_pixels} portrait_changed_pixels={portrait_pixels} atlas_NewRodin_SDF_fixed220_column_overscan_eviction_revisit_memory_jump_cancel=verified audio=default output",
         frames.count
     );
 }

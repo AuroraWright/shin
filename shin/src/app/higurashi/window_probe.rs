@@ -194,11 +194,10 @@ struct Report {
     music: Option<music_gallery::Report>,
     movie: Option<movie_gallery::Report>,
     movie_focus_callbacks: bool,
-    movie_focus_clock_frozen: bool,
-    movie_focus_media_frozen: bool,
+    movie_focus_kept_playing: bool,
     movie_focus_playback_resumed: bool,
     movie_focus_sample_span_micros: u64,
-    movie_focus_stable_span_micros: u64,
+    movie_focus_media_advance_micros: u64,
     manual_no_save_returns: u32,
     manual_resize_cancelled: u32,
     manual_swipes: u32,
@@ -207,7 +206,7 @@ struct Report {
     origin_resize_cancelled: bool,
     origin_title_returned: bool,
     origin_no_save_return: bool,
-    focus_clock_frozen: bool,
+    focus_kept_playing: bool,
     inherited_enter_blocked: bool,
     close_clock_frozen: bool,
     complete: bool,
@@ -222,14 +221,13 @@ struct Parameters {
 }
 struct MovieFocus {
     checkpoint: Snapshot,
-    suspended: Option<Snapshot>,
     checks: u8,
     first_sample: Option<Instant>,
     last_sample: Option<Instant>,
-    settled_sample: Option<Instant>,
     losses_before: u64,
     suspends_before: u64,
-    frozen_time: Option<u64>,
+    /// Media time at the first unfocused sample.
+    first_time: Option<u64>,
     restore_started: Option<Instant>,
 }
 struct Probe {
@@ -590,14 +588,12 @@ impl Probe {
                     let report = self.report.lock();
                     self.movie_focus = Some(MovieFocus {
                         checkpoint: snapshot.clone(),
-                        suspended: None,
                         checks: 0,
                         first_sample: None,
                         last_sample: None,
-                        settled_sample: None,
                         losses_before: report.focus_losses,
                         suspends_before: report.suspend_calls,
-                        frozen_time: None,
+                        first_time: None,
                         restore_started: None,
                     });
                     drop(report);
@@ -665,7 +661,7 @@ impl Probe {
                 if viewer
                     .time_micros
                     .context("Movie media clock missing after resume")?
-                    >= focus.frozen_time.unwrap().saturating_add(100_000)
+                    >= focus.first_time.unwrap().saturating_add(100_000)
                 {
                     self.movie_journey
                         .as_mut()
@@ -674,7 +670,7 @@ impl Probe {
                     self.report.lock().movie_focus_playback_resumed = true;
                     self.stage = Stage::Movie;
                     eprintln!(
-                        "WINDOW PROBE: actual playing Movie focus froze scene/media and resumed retained Viewer without cancel PASS"
+                        "WINDOW PROBE: actual playing Movie kept playing unfocused and kept its retained Viewer without cancel PASS"
                     );
                 }
             }
@@ -1244,14 +1240,17 @@ impl Probe {
                 .context("missing Movie focus checkpoint")?;
             let report = self.report.lock();
             ensure!(
-                report.focus_losses > focus.losses_before
-                    && report.suspend_calls > focus.suspends_before,
+                report.focus_losses > focus.losses_before,
                 "Movie focus loss did not reach actual callbacks"
+            );
+            ensure!(
+                report.suspend_calls == focus.suspends_before,
+                "Movie focus loss suspended playback"
             );
             drop(report);
             ensure!(
-                self.inner.probe_suspended(),
-                "Movie focus did not suspend actual audio manager"
+                !self.inner.probe_suspended(),
+                "Movie focus loss suspended the actual audio manager"
             );
             let snapshot = self.inner.probe_snapshot()?;
             let current = snapshot
@@ -1277,26 +1276,8 @@ impl Probe {
             let media_time = viewer
                 .time_micros
                 .context("Unfocused Movie clock missing")?;
-            if let Some(baseline) = &focus.suspended {
-                ensure!(
-                    snapshot.frames == baseline.frames
-                        && snapshot.clock == baseline.clock
-                        && snapshot.commands == baseline.commands,
-                    "Unfocused Movie advanced runtime/scene clock/VM"
-                );
-                let mut stable = current.clone();
-                let mut expected = baseline.movie.as_ref().unwrap().clone();
-                stable.viewer.as_mut().unwrap().time_micros = None;
-                expected.viewer.as_mut().unwrap().time_micros = None;
-                ensure!(
-                    stable == expected,
-                    "Unfocused Movie advanced model/tweens/input/scope/retained frame"
-                );
-            } else {
-                focus.suspended = Some(snapshot.clone());
-            }
             // Queued watchdog events can arrive together. Accept media samples
-            // only after100ms of real elapsed time, independently of callbacks.
+            // only after 100ms of real elapsed time, independently of callbacks.
             let sampled_at = Instant::now();
             if focus
                 .last_sample
@@ -1305,33 +1286,30 @@ impl Probe {
                 return Ok(());
             }
             focus.first_sample.get_or_insert(sampled_at);
+            focus.first_time.get_or_insert(media_time);
             focus.last_sample = Some(sampled_at);
-            // Two separated observations settle any in-flight AAC callback;
-            // THREE further observations preserve media position within1ms.
             focus.checks += 1;
-            if focus.checks <= 2 {
-                focus.frozen_time = Some(media_time);
-                focus.settled_sample = Some(sampled_at);
-            } else {
-                ensure!(
-                    media_time.abs_diff(focus.frozen_time.unwrap()) <= 1_000,
-                    "Unfocused Movie media time advanced after suspension settled"
-                );
-            }
             if focus.checks >= 5 {
                 let sample_span = sampled_at.duration_since(focus.first_sample.unwrap());
-                let stable_span = sampled_at.duration_since(focus.settled_sample.unwrap());
+                let advance = media_time.saturating_sub(focus.first_time.unwrap());
                 ensure!(
-                    sample_span >= Duration::from_millis(400)
-                        && stable_span >= Duration::from_millis(300),
+                    sample_span >= Duration::from_millis(400),
                     "Movie focus samples did not span the required real duration"
+                );
+                // Playback runs in real time; allow for decoder buffering.
+                ensure!(
+                    advance as u128 >= sample_span.as_micros() / 2,
+                    "Unfocused Movie media time did not advance ({advance}us in {sample_span:?})"
+                );
+                ensure!(
+                    snapshot.frames > focus.checkpoint.frames,
+                    "Unfocused Movie stopped runtime updates"
                 );
                 let mut report = self.report.lock();
                 report.movie_focus_callbacks = true;
-                report.movie_focus_clock_frozen = true;
-                report.movie_focus_media_frozen = true;
+                report.movie_focus_kept_playing = true;
                 report.movie_focus_sample_span_micros = sample_span.as_micros() as u64;
-                report.movie_focus_stable_span_micros = stable_span.as_micros() as u64;
+                report.movie_focus_media_advance_micros = advance;
                 drop(report);
                 focus.restore_started = Some(Instant::now());
                 self.stage = Stage::MovieFocusRestoring;
@@ -1339,27 +1317,31 @@ impl Probe {
             }
         }
         if matches!(self.stage, Stage::FocusWait) && !context.winit.window.has_focus() {
-            let fresh_callbacks = {
+            let (fresh_callbacks, suspended) = {
                 let report = self.report.lock();
-                report.focus_losses > self.focus_losses_before
-                    && report.suspend_calls > self.focus_suspends_before
+                (
+                    report.focus_losses > self.focus_losses_before,
+                    report.suspend_calls > self.focus_suspends_before,
+                )
             };
             ensure!(fresh_callbacks, "actual focus loss did not reach ShinApp");
             ensure!(
-                self.inner.probe_suspended(),
-                "focus suspension did not freeze audio"
+                !suspended && !self.inner.probe_suspended(),
+                "focus loss suspended playback or audio"
             );
             let snapshot = self.inner.probe_snapshot()?;
-            ensure!(
-                snapshot.clock == self.focus_clock,
-                "unfocused window advanced scene clock"
-            );
             self.focus_checks += 1;
             if self.focus_checks >= 3 {
-                self.report.lock().focus_clock_frozen = true;
+                ensure!(
+                    snapshot.clock != self.focus_clock,
+                    "unfocused window stopped the scene clock"
+                );
+                self.report.lock().focus_kept_playing = true;
                 self.stage = Stage::FocusRestoring;
                 context.winit.window.focus_window();
-                eprintln!("WINDOW PROBE: actual focus loss froze scene/audio; restoring window");
+                eprintln!(
+                    "WINDOW PROBE: actual focus loss kept scene/audio playing; restoring window"
+                );
             }
         }
         Ok(())
@@ -1425,9 +1407,6 @@ impl ShinApp for Probe {
     fn raw_input(&mut self, _: &RawInputState) {
         self.report.lock().raw_samples += 1;
         self.inner.raw_input(&self.next_raw);
-    }
-    fn run_in_background(&self) -> bool {
-        self.inner.run_in_background()
     }
     fn focus_lost(&mut self) {
         self.report.lock().focus_losses += 1;
@@ -1538,7 +1517,6 @@ pub(crate) fn run() -> Result<()> {
         "higurashi-window-probe",
         "--game",
         "higurashi",
-        "--loopback-audio",
         "--assets-dir",
         &assets,
         "--save-file",
@@ -1575,7 +1553,7 @@ pub(crate) fn run() -> Result<()> {
     ensure!(
         report.resize_cancelled
             && report.fresh_pointer_answered
-            && report.focus_clock_frozen
+            && report.focus_kept_playing
             && report.inherited_enter_blocked
             && report.close_clock_frozen,
         "window lifecycle assertions incomplete"
@@ -1636,11 +1614,10 @@ pub(crate) fn run() -> Result<()> {
             .as_ref()
             .is_some_and(movie_gallery::Report::complete)
             && report.movie_focus_callbacks
-            && report.movie_focus_clock_frozen
-            && report.movie_focus_media_frozen
+            && report.movie_focus_kept_playing
             && report.movie_focus_playback_resumed
             && report.movie_focus_sample_span_micros >= 400_000
-            && report.movie_focus_stable_span_micros >= 300_000,
+            && report.movie_focus_media_advance_micros >= 200_000,
         "Movie window/focus journey incomplete"
     );
     let bytes = std::fs::read(&path)?;
@@ -1650,7 +1627,7 @@ pub(crate) fn run() -> Result<()> {
         "production close did not persist loaded progress"
     );
     eprintln!(
-        "WINDOW PROBE PASS: real window/surface,720p→1080p pointer,boot/movie/title/authored message,actual focus/audio pause,held Enter quarantine,pure render,deferred close,temp save; progress={}",
+        "WINDOW PROBE PASS: real window/surface,720p→1080p pointer,boot/movie/title/authored message,unfocused playback,held Enter quarantine,pure render,deferred close,temp save; progress={}",
         PathBuf::from(path).display()
     );
     Ok(())

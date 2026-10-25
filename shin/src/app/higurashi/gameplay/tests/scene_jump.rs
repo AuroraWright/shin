@@ -48,7 +48,7 @@ fn marker(pass: &mut RenderPass) {
 }
 
 #[test]
-#[ignore = "actual Gameplay backlog Yes/deferred whole-scene replacement/First gate/global owners/masked fade at720p/1080p;offscreen Metal/exact Loopback Audio"]
+#[ignore = "actual Gameplay backlog Yes/deferred whole-scene replacement/First gate/global owners/masked fade at720p/1080p;offscreen Metal/the default audio output"]
 fn higurashi_gameplay_browser_jump_preserves_loaded_globals_and_first_gate() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

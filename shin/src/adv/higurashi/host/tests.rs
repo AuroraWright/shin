@@ -149,7 +149,7 @@ fn higurashi_host_matches_native_order_pause_focus_and_elapsed_clamp() {
 }
 
 #[test]
-#[ignore = "real retained VM/voice/SE/BGM host frame on offscreen Metal and exact Loopback Audio"]
+#[ignore = "real retained VM/voice/SE/BGM host frame on offscreen Metal and the default audio output"]
 fn higurashi_host_drives_real_command_clock_and_audio_owners() {
     use super::super::{
         effect_commands::EffectCommands, message_playback::MessageVoice,

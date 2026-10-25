@@ -3,7 +3,7 @@
 use super::*;
 
 #[test]
-#[ignore = "actual Runtime/manual IO recovery plus pending close/Return rollback/shutdown IO failure/Return to same menu;real assets/offscreen Metal/exact Loopback Audio;temporary Paths only"]
+#[ignore = "actual Runtime/manual IO recovery plus pending close/Return rollback/shutdown IO failure/Return to same menu;real assets/offscreen Metal/the default audio output;temporary Paths only"]
 fn higurashi_runtime_close_waits_for_manual_recovery_before_freezing_progress() {
     let saved = initial();
     let initial_file = saved.encode().unwrap();
@@ -240,6 +240,6 @@ fn higurashi_runtime_close_waits_for_manual_recovery_before_freezing_progress() 
     assert!(j.storage.writes.lock().unwrap().is_empty());
     pure_failure_frame(&mut j);
     println!(
-        "Runtime close waits for actual failed manual Save recovery;denied+held A/B do not choose,fresh B/accepted denied close rolls back all101rows before shutdown snapshot;real shutdown IO failure B returns same authored Save menu/source;2 failed attempts/0 successful writes/1 calendar call;offscreen720p/exact Loopback,temporary Paths only"
+        "Runtime close waits for actual failed manual Save recovery;denied+held A/B do not choose,fresh B/accepted denied close rolls back all101rows before shutdown snapshot;real shutdown IO failure B returns same authored Save menu/source;2 failed attempts/0 successful writes/1 calendar call;offscreen720p/audio,temporary Paths only"
     );
 }

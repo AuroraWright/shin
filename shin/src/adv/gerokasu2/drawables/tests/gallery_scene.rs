@@ -25,7 +25,7 @@ fn num(data: &mut Vec<u8>, v: i32) {
     data.extend(out.into_inner());
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_gallery_scene_owns_trophy_unlock_all_sets_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -94,7 +94,7 @@ fn ger_gallery_scene_owns_trophy_unlock_all_sets_and_exit() {
             .all(|p| p == [0, 0, 0, 255])
     );
     println!(
-        "GEROKASU2_GALLERY_SCENE commands=8 loaded_global_gallery_trophy_no_progress_effects_all3_unlock_sets_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_GALLERY_SCENE commands=8 loaded_global_gallery_trophy_no_progress_effects_all3_unlock_sets_EXIT=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }

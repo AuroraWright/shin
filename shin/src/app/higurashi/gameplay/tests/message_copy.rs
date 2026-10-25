@@ -4,7 +4,7 @@ use shin_core::format::scenario::higurashi::HigurashiScenario;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 #[test]
-#[ignore = "live MSGSET11780 clock/copy retry and immediate/waiting messages on offscreen Metal and exact Loopback Audio"]
+#[ignore = "live MSGSET11780 clock/copy retry and immediate/waiting messages on offscreen Metal and the default audio output"]
 fn higurashi_message_start_copies_loaded_progress_once_before_waiting() {
     let (_, _, assets) = reference_gpu_assets();
     let assets = Arc::new(assets);

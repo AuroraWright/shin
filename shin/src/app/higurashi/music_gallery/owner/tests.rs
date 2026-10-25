@@ -131,7 +131,7 @@ fn wait_finished(owner: &Owner) {
 }
 
 #[test]
-#[ignore = "actual Music loader/atlas/mask/glyphs/offscreen720p1080p,independent publication,pending/finished-unobserved join;exact Loopback fixture,no playback/window/user saves"]
+#[ignore = "actual Music loader/atlas/mask/glyphs/offscreen720p1080p,independent publication,pending/finished-unobserved join;audio fixture,no playback/window/user saves"]
 fn higurashi_music_owner_publications_render_before_completion_and_cancel_join() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -217,7 +217,7 @@ fn higurashi_music_owner_publications_render_before_completion_and_cancel_join()
 }
 
 #[test]
-#[ignore = "actual Music First/Input/Close fallible service ordering and retained retry,real asset/capture/Loopback fixture;no playback/window/user saves"]
+#[ignore = "actual Music First/Input/Close fallible service ordering and retained retry,real asset/capture/audio fixture;no playback/window/user saves"]
 fn higurashi_music_owner_service_failures_resume_exact_task_and_clock_suffix() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

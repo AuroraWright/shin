@@ -12,7 +12,7 @@ use crate::adv::higurashi::{
 use shin_core::primitives::color::UnormColor;
 
 #[test]
-#[ignore = "actual nested host modal scopes, retained textures and voice/SE/BGM on Metal/exact Loopback Audio"]
+#[ignore = "actual nested host modal scopes, retained textures and voice/SE/BGM on Metal/the default audio output"]
 fn higurashi_host_modal_pauses_voice_se_keeps_bgm_and_restores_counted_owners() {
     for native in [false, true] {
         run_host_modal(native);
@@ -231,6 +231,6 @@ fn run_host_modal(native: bool) {
     );
     device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
     println!(
-        "Higurashi host modal:exact Loopback Audio; native={native}, real voice/SE pause, global BGM clock continues, nested conceal/pause, independent UI/fade, retained VM/glyphs, gated SE loader, snapshot replacement/retirement at720p/1080p, restoration and failed capture pass; blur pixels remain outside this scope fixture"
+        "Higurashi host modal:the default audio output; native={native}, real voice/SE pause, global BGM clock continues, nested conceal/pause, independent UI/fade, retained VM/glyphs, gated SE loader, snapshot replacement/retirement at720p/1080p, restoration and failed capture pass; blur pixels remain outside this scope fixture"
     );
 }

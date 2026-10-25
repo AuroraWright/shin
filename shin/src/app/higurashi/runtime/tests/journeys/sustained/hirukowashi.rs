@@ -299,7 +299,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted Meakashi save/PASS required;ordinary Category1/SNRSEL1original3/scenario203/Movie10/baseball originals0,0,1,0/protectedBGM97credits/TIP158/EXIT1f997 save+Title;real assets/offscreenMetal/exactLoopbackAudio;temporary Paths only;two-hour observation allowance"]
+#[ignore = "actual accepted Meakashi save/PASS required;ordinary Category1/SNRSEL1original3/scenario203/Movie10/baseball originals0,0,1,0/protectedBGM97credits/TIP158/EXIT1f997 save+Title;real assets/offscreenMetal/audio output;temporary Paths only;two-hour observation allowance"]
 fn higurashi_runtime_sustained_earned_category_reaches_full_hirukowashi_exit_and_title() {
     let (saved, initial_file) = earned();
     let persistent32 = saved.persist_data.get(32);

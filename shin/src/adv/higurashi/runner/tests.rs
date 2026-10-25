@@ -511,7 +511,7 @@ fn higurashi_runner_drives_authored_prologue_and_retains_vm_continuations() {
 }
 
 #[test]
-#[ignore = "runs explicit voice bytecode through retained runner with authored NXA, offscreen Metal and exact Loopback Audio"]
+#[ignore = "runs explicit voice bytecode through retained runner with authored NXA, offscreen Metal and the default audio output"]
 fn higurashi_runner_executes_voice_commands_and_retains_audio_waits() {
     use super::super::{voice::HigurashiVoicePlayer, voice_commands};
     use shin_audio::AudioManager;
@@ -780,6 +780,6 @@ fn higurashi_runner_executes_voice_commands_and_retains_audio_waits() {
     );
     voice.update(Ticks::from_f32(10.0));
     println!(
-        "Higurashi runner voice: exact Loopback Audio;7 real VM commands, authored0001 EOF/zero origin and0002 loading cancellation, retained LOADING/PLAYING waits, pause/skip ownership, mask/flags/lipsync, suppressed filename and failed-load release pass; unchanged first authored explicit PLAY/WAIT bytes at61ff6/6200c load S10/40/430100047 with flags1 and mask0, controlled stop releases WAIT, independent host suppression passes"
+        "Higurashi runner voice: the default audio output;7 real VM commands, authored0001 EOF/zero origin and0002 loading cancellation, retained LOADING/PLAYING waits, pause/skip ownership, mask/flags/lipsync, suppressed filename and failed-load release pass; unchanged first authored explicit PLAY/WAIT bytes at61ff6/6200c load S10/40/430100047 with flags1 and mask0, controlled stop releases WAIT, independent host suppression passes"
     );
 }

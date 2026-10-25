@@ -11,7 +11,7 @@ use shin_core::{
 use std::time::{Duration, Instant};
 
 #[test]
-#[ignore = "actual ROM browser-private serial voice on exact Loopback Audio; no game/save writes"]
+#[ignore = "actual ROM browser-private serial voice on the default audio output; no game/save writes"]
 fn ger_backlog_private_voice_uses_idle_gaps_ignores_character_mute_and_preserves_adv() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -96,6 +96,6 @@ fn ger_backlog_private_voice_uses_idle_gaps_ignores_character_mute_and_preserves
         story.update(Ticks::from_f32(1.));
     }
     println!(
-        "GER_BACKLOG_PRIVATE_VOICE name={name} replay_micros={replay_position} idle10_flags0_private_owner_frozen_ADV_resume_stop=verified audio=Loopback Audio"
+        "GER_BACKLOG_PRIVATE_VOICE name={name} replay_micros={replay_position} idle10_flags0_private_owner_frozen_ADV_resume_stop=verified audio=default output"
     );
 }

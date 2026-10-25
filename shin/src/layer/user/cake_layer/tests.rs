@@ -1,6 +1,6 @@
 use super::*;
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn reference_cake_outside_clicks_play_supplied_error_cue() {
     use crate::{
         adv::input_area::PointerSampler,

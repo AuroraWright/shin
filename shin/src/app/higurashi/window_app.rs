@@ -115,14 +115,7 @@ impl ShinApp for HigurashiApp {
     type ActionType = DummyAction;
     fn init(context: AppContext<Self>, mut cli: Cli) -> Result<Self> {
         let PreparedLaunch { progress, assets } = take_launch(&mut cli)?;
-        #[cfg(not(test))]
-        let manager = Arc::new(if cli.loopback_audio() {
-            shin_audio::AudioManager::new_for_tests()
-        } else {
-            shin_audio::AudioManager::new()
-        });
-        #[cfg(test)]
-        let manager = Arc::new(shin_audio::AudioManager::new_for_tests());
+        let manager = Arc::new(shin_audio::AudioManager::new());
         let server = Arc::new(AssetServer::new(
             assets.into(),
             AssetLoadContext {
@@ -150,11 +143,6 @@ impl ShinApp for HigurashiApp {
     fn custom_event(&mut self, _: AppContext<Self>, _: ()) {}
     fn raw_input(&mut self, raw: &RawInputState) {
         self.runtime.raw_input(raw);
-    }
-    fn run_in_background(&self) -> bool {
-        // Close producers must continue polling without focus. Native touch
-        // byte+f8 is deliberately not interpreted as background-play policy.
-        self.runtime.close_active()
     }
     fn focus_lost(&mut self) {
         self.trace_platform_state("focus_lost_before", Some(false));

@@ -174,7 +174,7 @@ fn input_scene(journey: &mut Journey, viewport: InputViewport, deadline: Instant
 }
 
 #[test]
-#[ignore = "actual Runtime TitleLoad/authoredfragment2000/SystemMenu7/Kakera/card+Back Yes ADV factories at720p1080p;offscreen Metal/exact Loopback;temporary Paths only"]
+#[ignore = "actual Runtime TitleLoad/authoredfragment2000/SystemMenu7/Kakera/card+Back Yes ADV factories at720p1080p;offscreen Metal/audio;temporary Paths only"]
 fn higurashi_runtime_fragment_menu_returns_through_both_actual_kakera_adv_factories() {
     for size in [(1280, 720), (1920, 1080)] {
         let saved = fixture();

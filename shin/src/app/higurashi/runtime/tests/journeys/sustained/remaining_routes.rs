@@ -381,7 +381,7 @@ fn play(label: &str, menu: Menu, row: i32, expected: i32) {
 macro_rules! routes {
     ($($name:ident: $menu:expr, $row:expr, $id:expr;)*) => {$(
         #[test]
-        #[ignore = "Generic full route from the exact unlocked template; offscreen Metal/exact Loopback Audio"]
+        #[ignore = "Generic full route from the exact unlocked template; offscreen Metal/the default audio output"]
         fn $name() {
             play(stringify!($name), $menu, $row, $id);
         }

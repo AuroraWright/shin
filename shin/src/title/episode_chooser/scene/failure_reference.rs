@@ -12,7 +12,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; no window or working save writes"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; no window or working save writes"]
 fn reference_title_viewer_artwork_failure_recovers_and_retries() {
     std::thread::Builder::new()
         .name("title-viewer-recovery".into())

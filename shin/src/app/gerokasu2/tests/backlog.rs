@@ -147,7 +147,7 @@ fn question(d: &mut Driver<'_>) {
 }
 
 #[test]
-#[ignore = "backlog factory failure before modal acquisition on Metal/exact Loopback Audio; temporary missing-assets directory"]
+#[ignore = "backlog factory failure before modal acquisition on Metal/the default audio output; temporary missing-assets directory"]
 fn ger_app_backlog_failed_factory_retains_live_scene_without_modal_side_effects() {
     let gpu = Offscreen::new();
     let (temporary, _path, mut d) = driver_with_scenario(&gpu, scenario());
@@ -215,13 +215,13 @@ fn ger_app_backlog_failed_factory_retains_live_scene_without_modal_side_effects(
     });
     d.draw();
     println!(
-        "GER_BACKLOG_FACTORY_APP failure_no_mode_pause_conceal_capture_mutation_source_retained_retry=verified frames={} audio=Loopback Audio",
+        "GER_BACKLOG_FACTORY_APP failure_no_mode_pause_conceal_capture_mutation_source_retained_retry=verified frames={} audio=default output",
         d.frames.frames
     );
 }
 
 #[test]
-#[ignore = "actual live backlog entry, ChapterSelector/pointer/private voice/early modal return on Metal/exact Loopback Audio; temporary progress"]
+#[ignore = "actual live backlog entry, ChapterSelector/pointer/private voice/early modal return on Metal/the default audio output; temporary progress"]
 fn ger_app_backlog_opens_routes_chapter_voice_pointer_and_resumes_before_retirement() {
     let gpu = Offscreen::new();
     let (_temporary, _path, mut d) = driver_with_scenario(&gpu, scenario());
@@ -406,13 +406,13 @@ fn ger_app_backlog_opens_routes_chapter_voice_pointer_and_resumes_before_retirem
     d.settle(3);
     d.draw();
     println!(
-        "GER_BACKLOG_APP entry_native_input_held_portrait_release_during_reveal_ChapterSelector_stencil_next_sweep_Main_pointer_focus_suspend_private_voice_BGM_focus_source_frozen_early_return_retirement=verified frames={} audio=Loopback Audio",
+        "GER_BACKLOG_APP entry_native_input_held_portrait_release_during_reveal_ChapterSelector_stencil_next_sweep_Main_pointer_focus_suspend_private_voice_BGM_focus_source_frozen_early_return_retirement=verified frames={} audio=default output",
         d.frames.frames
     );
 }
 
 #[test]
-#[ignore = "live backlog defaultNo/cancel/failed and successful memory-only jump publication on Metal/exact Loopback Audio; temporary progress"]
+#[ignore = "live backlog defaultNo/cancel/failed and successful memory-only jump publication on Metal/the default audio output; temporary progress"]
 fn ger_app_backlog_jump_preserves_old_source_until_memory_destination_succeeds() {
     let gpu = Offscreen::new();
     let gate = live::measurement::Gate::new(100);
@@ -524,13 +524,13 @@ fn ger_app_backlog_jump_preserves_old_source_until_memory_destination_succeeds()
     d.draw();
     assert!(d.app.host.as_ref().unwrap().scene.system_menu_allowed());
     println!(
-        "GER_BACKLOG_JUMP_APP row={expected} old_saved={saved} defaultNo_cancel_failure_retains_scope_and_source_measurement_100_to_150_fresh_token_retry_memory_pair_freshADV_mode0_publication=verified frames={} audio=Loopback Audio",
+        "GER_BACKLOG_JUMP_APP row={expected} old_saved={saved} defaultNo_cancel_failure_retains_scope_and_source_measurement_100_to_150_fresh_token_retry_memory_pair_freshADV_mode0_publication=verified frames={} audio=default output",
         d.frames.frames
     );
 }
 
 #[test]
-#[ignore = "actual incremental backlog publication/growth/cancellation on Metal/exact Loopback Audio; temporary progress"]
+#[ignore = "actual incremental backlog publication/growth/cancellation on Metal/the default audio output; temporary progress"]
 fn ger_app_backlog_incremental_measurement_publishes_grows_and_retires_worker() {
     let gpu = Offscreen::new();
     let gate = live::measurement::Gate::new(100);
@@ -606,7 +606,7 @@ fn ger_app_backlog_incremental_measurement_publishes_grows_and_retires_worker() 
     assert_eq!(d.app.modal.conceal_depth, 0);
     d.draw();
     println!(
-        "GER_BACKLOG_INCREMENTAL_APP metadata_over300_ready100_busy_growth150_fixed_rows_selection_Chapter_close_flash_Exit_cancel_worker_retired=verified frames={} audio=Loopback Audio",
+        "GER_BACKLOG_INCREMENTAL_APP metadata_over300_ready100_busy_growth150_fixed_rows_selection_Chapter_close_flash_Exit_cancel_worker_retired=verified frames={} audio=default output",
         d.frames.frames
     );
 }

@@ -8,7 +8,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires copied progress, supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires copied progress, supplied ROM, Metal and the default audio output"]
 fn reference_continue_restarts_saved_sentence_and_voice() {
     assert!(std::env::var_os("SHIN_REFERENCE_CONTINUE_MESSAGE_ONLY").is_some());
     std::thread::Builder::new()

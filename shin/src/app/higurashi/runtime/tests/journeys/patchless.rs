@@ -108,7 +108,7 @@ fn evidence(j: &mut Journey, name: &str) {
 }
 
 #[test]
-#[ignore = "actual base/update ROM discovery, supplied v1 save, normal startup/TIPS/Config/story;offscreen Metal/exact Loopback Audio; isolated temporary storage"]
+#[ignore = "actual base/update ROM discovery, supplied v1 save, normal startup/TIPS/Config/story;offscreen Metal/the default audio output; isolated temporary storage"]
 fn patchless_runtime_old_save_boot_menus_and_first_authored_message() {
     let old = std::fs::read(concat!(
         env!("CARGO_MANIFEST_DIR"),

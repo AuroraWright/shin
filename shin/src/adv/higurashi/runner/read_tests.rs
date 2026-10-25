@@ -167,7 +167,7 @@ fn max_pump(
 }
 
 #[test]
-#[ignore = "native-policy host frame/input with offscreen Metal and exact Loopback Audio"]
+#[ignore = "native-policy host frame/input with offscreen Metal and the default audio output"]
 fn higurashi_host_native_read_frame_and_input_use_owned_vm_state() {
     use super::super::{
         audio::{AudioFramePolicy, HigurashiAudio},
@@ -288,6 +288,6 @@ fn higurashi_host_native_read_frame_and_input_use_owned_vm_state() {
         vec![Checkpoint::Message, Checkpoint::EventEnd]
     );
     println!(
-        "Higurashi native-read host:4 real VM/message/WAIT/event commands, three-tick clamp, owned read flags override conflicting input context, glyph/message-first confirm then exact WAIT interrupt, native zero-based completion ID; exact Loopback/offscreen Metal pass"
+        "Higurashi native-read host:4 real VM/message/WAIT/event commands, three-tick clamp, owned read flags override conflicting input context, glyph/message-first confirm then exact WAIT interrupt, native zero-based completion ID; audio/offscreen Metal pass"
     );
 }

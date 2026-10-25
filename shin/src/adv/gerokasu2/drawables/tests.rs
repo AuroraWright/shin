@@ -69,7 +69,7 @@ fn complete(controller: &mut LayerLoadController, backend: &mut BasicLoadBackend
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn retained_basic_load_owners_reuse_keep_reset_error_retry_and_runner() {
     let gpu = Offscreen::new();
     let mut parsed = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -343,7 +343,7 @@ fn retained_basic_load_owners_reuse_keep_reset_error_retry_and_runner() {
             .is_some()
     );
     println!(
-        "GEROKASU2_LOAD_GPU retained_tile_PIC_UTF8_BUP_reuse_keep_reset_error_explicit_retry_transition_gate_runner_real_publication=verified frames=1 channels=921600 audio=Loopback Audio"
+        "GEROKASU2_LOAD_GPU retained_tile_PIC_UTF8_BUP_reuse_keep_reset_error_explicit_retry_transition_gate_runner_real_publication=verified frames=1 channels=921600 audio=default output"
     );
 }
 

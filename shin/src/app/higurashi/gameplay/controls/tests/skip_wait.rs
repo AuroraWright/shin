@@ -18,7 +18,7 @@ struct Case {
 }
 
 #[test]
-#[ignore = "actual Host/Controls post-poll WAIT0 versus manual A, read/auto/protected gates; offscreen Metal and exact Loopback Audio"]
+#[ignore = "actual Host/Controls post-poll WAIT0 versus manual A, read/auto/protected gates; offscreen Metal and the default audio output"]
 fn higurashi_origin_autoskip_host_waits_preserve_native_gates_and_next_poll_order() {
     let (_, _, assets) = reference_gpu_assets();
     let assets = Arc::new(assets);

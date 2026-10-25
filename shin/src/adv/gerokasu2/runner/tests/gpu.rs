@@ -164,7 +164,7 @@ fn policy() -> FramePolicy {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn retained_runner_waits_feedback_retry_message_voice_and_offscreen_frames() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -393,12 +393,12 @@ fn retained_runner_waits_feedback_retry_message_voice_and_offscreen_frames() {
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_RUNNER_GPU synthetic_commands=9 frames={frames} channels={channels} audio=Loopback Audio feedback_once_wait_pause_notification_retry_message_voice_external_layers_exit=verified"
+        "GEROKASU2_RUNNER_GPU synthetic_commands=9 frames={frames} channels={channels} audio=default output feedback_once_wait_pause_notification_retry_message_voice_external_layers_exit=verified"
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn supplied_runner_prefix_retains_external_owners_and_real_message_continuations() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);

@@ -385,7 +385,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted cumulative Tarai disk/normalRuntime/Chart5/Day3 originals0,1/committedDay4/menu4Chart26/CHARSELECT original3/Movie7naturalEOF/protectedpreview5/fullSome+all-sixepilogue/EXIT5cb04 save+Title;realassets/offscreenMetal/exactLoopbackAudio;temporaryPaths only;twohour observation allowance"]
+#[ignore = "actual accepted cumulative Tarai disk/normalRuntime/Chart5/Day3 originals0,1/committedDay4/menu4Chart26/CHARSELECT original3/Movie7naturalEOF/protectedpreview5/fullSome+all-sixepilogue/EXIT5cb04 save+Title;realassets/offscreenMetal/audio output;temporaryPaths only;twohour observation allowance"]
 fn higurashi_runtime_sustained_earned_day3_chart_natsumi_reaches_full_someutsushi_epilogue_and_title()
  {
     let (saved, initial_file) = earned();

@@ -36,7 +36,7 @@ fn update(
 }
 
 #[test]
-#[ignore = "actual Gameplay zero EXIT retains command/ordered closing/30-tick clock/commits and full native destinations on offscreen Metal/exact Loopback Audio;fragment returns dispatch real Kakera,no window/saves"]
+#[ignore = "actual Gameplay zero EXIT retains command/ordered closing/30-tick clock/commits and full native destinations on offscreen Metal/the default audio output;fragment returns dispatch real Kakera,no window/saves"]
 fn higurashi_gameplay_exit_closes_waits_commits_and_dispatches_fragments() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

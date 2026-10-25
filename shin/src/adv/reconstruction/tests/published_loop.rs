@@ -25,7 +25,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROMs, Metal, exact Loopback Audio and SHIN_REFERENCE_PUBLISHED_LOOP_ONLY"]
+#[ignore = "requires supplied ROMs, Metal, the default audio output and SHIN_REFERENCE_PUBLISHED_LOOP_ONLY"]
 fn reference_published_loop_worker_retirement() {
     assert!(std::env::var_os("SHIN_REFERENCE_PUBLISHED_LOOP_ONLY").is_some());
     std::thread::Builder::new()
@@ -38,7 +38,7 @@ fn reference_published_loop_worker_retirement() {
 }
 
 #[test]
-#[ignore = "requires supplied ROMs, Metal, exact Loopback Audio and SHIN_REFERENCE_PUBLISHED_HANDOFF_ONLY"]
+#[ignore = "requires supplied ROMs, Metal, the default audio output and SHIN_REFERENCE_PUBLISHED_HANDOFF_ONLY"]
 fn reference_published_loop_queued_and_transferred_retirement() {
     assert!(std::env::var_os("SHIN_REFERENCE_PUBLISHED_HANDOFF_ONLY").is_some());
     std::thread::Builder::new()

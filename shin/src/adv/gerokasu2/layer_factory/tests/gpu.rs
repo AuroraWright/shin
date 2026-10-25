@@ -12,7 +12,7 @@ use shin_core::vm::command::types::LayerProperty;
 use shin_render::PassKind;
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn basic_gerokasu2_factories_acquire_retained_utf8_assets_and_draw() {
     let gpu = Offscreen::new();
     let scenario = scenario();
@@ -117,6 +117,6 @@ fn basic_gerokasu2_factories_acquire_retained_utf8_assets_and_draw() {
         "Ger type9 must not construct an Umineko interactive layer"
     );
     println!(
-        "GEROKASU2_BASIC_FACTORY_GPU kinds=4 frames={frames} channels={channels} actual_PIC_UTF8_BUP_typed_owner_cache_null_quality_no_fallback=verified audio=Loopback Audio"
+        "GEROKASU2_BASIC_FACTORY_GPU kinds=4 frames={frames} channels={channels} actual_PIC_UTF8_BUP_typed_owner_cache_null_quality_no_fallback=verified audio=default output"
     );
 }

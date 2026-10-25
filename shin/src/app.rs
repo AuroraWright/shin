@@ -380,10 +380,6 @@ impl ShinApp for App {
     type EventType = ();
     type ActionType = AppAction;
 
-    fn run_in_background(&self) -> bool {
-        self.shutdown.active() || self.scenes.run_in_background()
-    }
-
     fn focus_lost(&mut self) {
         self.scenes.suspend_event_input();
         self.touch_effect.cancel_contact();
@@ -413,14 +409,7 @@ impl ShinApp for App {
             cli.game == crate::cli::Game::Umineko,
             "Umineko application requires an Umineko launch"
         );
-        #[cfg(not(test))]
-        let audio_manager = Arc::new(if cli.loopback_audio() {
-            AudioManager::new_for_tests()
-        } else {
-            AudioManager::new()
-        });
-        #[cfg(test)]
-        let audio_manager = Arc::new(AudioManager::new_for_tests());
+        let audio_manager = Arc::new(AudioManager::new());
 
         let asset_io = locate_assets_for_game(cli.game, &cli.assets_dir()).context("Failed to locate assets. Consult the README for instructions on how to set up the game.")?;
 

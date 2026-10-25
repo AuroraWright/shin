@@ -105,7 +105,7 @@ fn broken_title_assets(
 }
 
 #[test]
-#[ignore = "actual saved Load and SystemMenu Title publication/failure recovery on Metal/exact Loopback Audio; isolated files"]
+#[ignore = "actual saved Load and SystemMenu Title publication/failure recovery on Metal/the default audio output; isolated files"]
 fn ger_app_load_and_title_destinations_preserve_source_until_success() {
     let gpu = Offscreen::new();
     let (temporary, path, mut d) = driver(&gpu, true);
@@ -310,13 +310,13 @@ fn ger_app_load_and_title_destinations_preserve_source_until_success() {
     assert!(saves::read(&path).unwrap().manual_save_slots[0].is_some());
     d.draw();
     println!(
-        "GER_APP_DESTINATIONS failed_Load_source_voice_SE_BGM_retained_valid_Load_retires_and_restores_Title_failure_retry_snapshot_write_Title_ready=verified frames={} audio=Loopback Audio",
+        "GER_APP_DESTINATIONS failed_Load_source_voice_SE_BGM_retained_valid_Load_retires_and_restores_Title_failure_retry_snapshot_write_Title_ready=verified frames={} audio=default output",
         d.frames.frames
     );
 }
 
 #[test]
-#[ignore = "actual app script EXIT write/focus/capture/Title path on Metal/exact Loopback Audio; isolated progress"]
+#[ignore = "actual app script EXIT write/focus/capture/Title path on Metal/the default audio output; isolated progress"]
 fn ger_app_script_exit_waits_for_write_and_publishes_title() {
     let gpu = Offscreen::new();
     let (_temporary, path, mut d) = driver(&gpu, false);
@@ -361,7 +361,7 @@ fn ger_app_script_exit_waits_for_write_and_publishes_title() {
     assert!(saves::read(&path).unwrap().auto_save_slot.is_some());
     d.draw();
     println!(
-        "GER_APP_SCRIPT_EXIT wait_write_final_callback_capture_publication_old_owner_drop_Title_ready=verified frames={} audio=Loopback Audio",
+        "GER_APP_SCRIPT_EXIT wait_write_final_callback_capture_publication_old_owner_drop_Title_ready=verified frames={} audio=default output",
         d.frames.frames
     );
 }

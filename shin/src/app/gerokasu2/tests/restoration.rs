@@ -2,7 +2,7 @@ use super::*;
 use shin_core::format::save::gerokasu2::{GameData, Progress, SaveData, SaveDate};
 
 #[test]
-#[ignore = "actual RESUME mode3 worker/publication, Metal and exact Loopback Audio"]
+#[ignore = "actual RESUME mode3 worker/publication, Metal and the default audio output"]
 fn ger_app_resume_reconstructs_bookmark_and_keeps_constructor_boundary_once() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -77,13 +77,13 @@ fn ger_app_resume_reconstructs_bookmark_and_keeps_constructor_boundary_once() {
     let pixels = frames.draw(&gpu, &mut host);
     assert!(pixels.chunks_exact(4).any(|p| p[..3] != [0, 0, 0]));
     println!(
-        "GEROKASU2_RESUME_APP mode3_native_bookmark_targets_tile_hydration_retained_constructor_once_same_frame_WAIT=verified frames={} audio=Loopback Audio",
+        "GEROKASU2_RESUME_APP mode3_native_bookmark_targets_tile_hydration_retained_constructor_once_same_frame_WAIT=verified frames={} audio=default output",
         frames.frames
     );
 }
 
 #[test]
-#[ignore = "actual native-codec save import, restored tile/message handoff, Metal and exact Loopback Audio"]
+#[ignore = "actual native-codec save import, restored tile/message handoff, Metal and the default audio output"]
 fn ger_app_native_saved_progress_hydrates_and_resumes_without_recapturing_constructor() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -152,7 +152,7 @@ fn ger_app_native_saved_progress_hydrates_and_resumes_without_recapturing_constr
     let pixels = frames.draw(&gpu, &mut host);
     assert!(pixels.chunks_exact(4).any(|pixel| pixel[..3] != [0, 0, 0]));
     println!(
-        "GEROKASU2_SAVE_RESTORATION_APP native_codec_slot0_tile_message_VM_feedback_globals_raw_tails_constructor_once=verified frames={} audio=Loopback Audio",
+        "GEROKASU2_SAVE_RESTORATION_APP native_codec_slot0_tile_message_VM_feedback_globals_raw_tails_constructor_once=verified frames={} audio=default output",
         frames.frames
     );
 }

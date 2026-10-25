@@ -97,7 +97,7 @@ fn higurashi_startup_transition_matches_native_loaded_globals_notice_and_title_q
 }
 
 #[test]
-#[ignore = "actual mandatory startup notice,loaded settings and final-stage TitleDemo request;offscreen Metal plus exact Loopback Audio"]
+#[ignore = "actual mandatory startup notice,loaded settings and final-stage TitleDemo request;offscreen Metal plus the default audio output"]
 fn higurashi_startup_auto_sleep_notice_gates_title_and_retains_global_cues() {
     use crate::adv::higurashi::{
         reference_gpu_assets as gpu_assets, reference_render_to_texture as render_to_texture,
@@ -295,7 +295,7 @@ fn higurashi_startup_auto_sleep_notice_gates_title_and_retains_global_cues() {
 }
 
 #[test]
-#[ignore = "actual Higurashi startup/save child/questions/GPU publication/retirement;offscreen Metal and exact Loopback Audio"]
+#[ignore = "actual Higurashi startup/save child/questions/GPU publication/retirement;offscreen Metal and the default audio output"]
 fn higurashi_startup_load_game_retains_real_questions_and_publishes_loaded_data() {
     use crate::adv::higurashi::{
         reference_gpu_assets as gpu_assets, reference_render_to_texture as render_to_texture,

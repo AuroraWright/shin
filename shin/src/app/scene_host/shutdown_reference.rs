@@ -27,7 +27,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; isolated temporary saves only"]
 fn reference_shutdown_failure_retry_cancel_and_pending_save_owners() {
     run_shutdown_failure(false);
 }
@@ -405,12 +405,10 @@ pub(super) fn run_shutdown_failure(bad_notice: bool) {
             vm.save_revision += 1;
         }
         let original = fs::read(&path).unwrap();
-        assert!(!app.run_in_background());
         if !pending || fail_pending {
             fs::set_permissions(&directory, fs::Permissions::from_mode(0o555)).unwrap();
         }
         assert!(!app.close_requested());
-        assert!(app.run_in_background());
         if pending {
             let deadline = Instant::now() + Duration::from_secs(10);
             let mut observed = 0;

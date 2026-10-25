@@ -263,7 +263,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "actual accepted-cumulative-Watanagashi disk/normal Runtime/earned Chart5/Day3 actual choices/CHARSELECT original2/Movie7 natural EOF/full Tatar/EXIT1f997 real save+Title;real assets/offscreen Metal/exact Loopback Audio;temporary writes only;up to two hours"]
+#[ignore = "actual accepted-cumulative-Watanagashi disk/normal Runtime/earned Chart5/Day3 actual choices/CHARSELECT original2/Movie7 natural EOF/full Tatar/EXIT1f997 real save+Title;real assets/offscreen Metal/the default audio output;temporary writes only;up to two hours"]
 fn higurashi_runtime_sustained_earned_chart_satoko_reaches_full_tatarigoroshi_exit_and_title() {
     let (saved, initial_file) = earned();
     let started = Instant::now();

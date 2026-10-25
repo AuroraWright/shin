@@ -7,7 +7,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires copied progress, supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires copied progress, supplied ROM, Metal and the default audio output"]
 fn reference_chapter_prompt_and_reloaded_continue() {
     assert!(std::env::var_os("SHIN_REFERENCE_CHAPTER_CONTINUE_ONLY").is_some());
     std::thread::Builder::new()

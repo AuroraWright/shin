@@ -116,7 +116,7 @@ pub(super) fn accept(
 }
 
 #[test]
-#[ignore = "real SystemMenu item6/No-default and A-No/B-cancel early reopening,stage1 Yes complete active1-to0 return without completion/EXIT,original owners and composed captures at720p/1080p;offscreen Metal/exact Loopback Audio,no window/saves"]
+#[ignore = "real SystemMenu item6/No-default and A-No/B-cancel early reopening,stage1 Yes complete active1-to0 return without completion/EXIT,original owners and composed captures at720p/1080p;offscreen Metal/the default audio output,no window/saves"]
 fn higurashi_system_menu_tips_returns_unfinished_secondary_without_marking_completion() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

@@ -1,5 +1,5 @@
 //! Unregistered concrete Chart-owner acceptance candidates. Parent alone runs
-//! these with real assets, offscreen GPU and exact Loopback Audio. The draws
+//! these with real assets, offscreen GPU and the default audio output. The draws
 //! below check resource/owner transport, not independent native shader math.
 use super::{
     catalog::Catalog,
@@ -85,7 +85,6 @@ impl Fixture {
             .max()
             .unwrap();
         let unlocks = vec![u32::MAX; max_id / 32 + 1];
-        // new_for_tests requires the EXACT Loopback Audio device, without fallback.
         let manager = Arc::new(shin_audio::AudioManager::new_for_tests());
         let mut sounds = SystemSoundPlayer::new(manager.clone());
         sounds.bank = Some(common.sysse.clone());
@@ -388,7 +387,7 @@ fn assert_adv(request: &Request, expected: &RuntimeGameData) {
 }
 
 #[test]
-#[ignore = "real Chart atlas worker publication/cancel/join/prune;offscreen GPU/exact Loopback Audio"]
+#[ignore = "real Chart atlas worker publication/cancel/join/prune;offscreen GPU/the default audio output"]
 fn higurashi_chart_owner_real_atlas_publication_cancel_and_first_prune() {
     let fixture = Fixture::new();
     for extent in EXTENTS {
@@ -471,7 +470,7 @@ fn higurashi_chart_owner_real_atlas_publication_cancel_and_first_prune() {
 }
 
 #[test]
-#[ignore = "real Chart preflight and actual native close-flash/source callback stages;offscreen GPU/exact Loopback Audio"]
+#[ignore = "real Chart preflight and actual native close-flash/source callback stages;offscreen GPU/the default audio output"]
 fn higurashi_chart_owner_preflight_and_two_source_return_stages() {
     let fixture = Fixture::new();
     let (next_seed, count) = seeds();
@@ -555,7 +554,7 @@ fn higurashi_chart_owner_preflight_and_two_source_return_stages() {
 }
 
 #[test]
-#[ignore = "real authored Chart labels/actual Question No/cancel/Yes stage1/full ADV payload;offscreen GPU/exact Loopback Audio"]
+#[ignore = "real authored Chart labels/actual Question No/cancel/Yes stage1/full ADV payload;offscreen GPU/the default audio output"]
 fn higurashi_chart_owner_real_question_stage1_and_full_selected_payload_once() {
     let fixture = Fixture::new();
     for initial_extent in EXTENTS {
@@ -664,7 +663,7 @@ fn higurashi_chart_owner_real_question_stage1_and_full_selected_payload_once() {
 }
 
 #[test]
-#[ignore = "real Chart signed sticks/held D-pad/contact/permission/resize;offscreen GPU/exact Loopback Audio"]
+#[ignore = "real Chart signed sticks/held D-pad/contact/permission/resize;offscreen GPU/the default audio output"]
 fn higurashi_chart_owner_signed_axes_pointer_priority_and_resize_boundaries() {
     let fixture = Fixture::new();
     for mut extent in EXTENTS {

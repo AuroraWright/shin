@@ -272,7 +272,7 @@ fn draw(
 }
 
 #[test]
-#[ignore = "real browser Yes/queue/source worker retirement/fresh reconstruction/masked fade/resume on offscreen Metal and exact Loopback Audio"]
+#[ignore = "real browser Yes/queue/source worker retirement/fresh reconstruction/masked fade/resume on offscreen Metal and the default audio output"]
 fn higurashi_browser_jump_replaces_adv_and_resumes_after_native_fade() {
     use crate::adv::higurashi::{choice::ChoiceHistory, replay::tests::scenario};
     use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};

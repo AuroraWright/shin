@@ -76,7 +76,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "complete fresh authored first book via Runtime/raw input/Movie0+7 natural EOF/event voices/TIPS+OTSUGET/natural EXIT1f997 real SaveThenTitle;real assets/offscreen Metal/exact Loopback Audio;temporary progress only;up to two hours"]
+#[ignore = "complete fresh authored first book via Runtime/raw input/Movie0+7 natural EOF/event voices/TIPS+OTSUGET/natural EXIT1f997 real SaveThenTitle;real assets/offscreen Metal/the default audio output;temporary progress only;up to two hours"]
 fn higurashi_runtime_sustained_fresh_first_book_reaches_natural_exit_and_title() {
     let mut saved = initial();
     // Unrelated disk data detects losing either record or any vector. This

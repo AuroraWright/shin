@@ -61,7 +61,7 @@ fn same_globals(slot: &TitleSlot, data: &SaveData, rows: &Slots) {
 }
 
 #[test]
-#[ignore = "actual Title/Music scenes,full globals/rows,capture/source-death retry,offscreen Metal/exact Loopback Audio;no window/user saves"]
+#[ignore = "actual Title/Music scenes,full globals/rows,capture/source-death retry,offscreen Metal/the default audio output;no window/user saves"]
 fn higurashi_music_scene_transfer_retains_full_rows_capture_and_constructor_retry() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

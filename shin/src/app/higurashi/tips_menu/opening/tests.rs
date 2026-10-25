@@ -83,7 +83,7 @@ fn ready(opening: &mut Opening, number: &mut u32) {
 }
 
 #[test]
-#[ignore = "real TIPS atlas/default mask/First/controller/contact/full payload/audio and producer retirement on offscreen Metal/exact Loopback Audio;no window/saves"]
+#[ignore = "real TIPS atlas/default mask/First/controller/contact/full payload/audio and producer retirement on offscreen Metal/the default audio output;no window/saves"]
 fn higurashi_tips_opening_loads_resources_and_owns_live_input_audio_and_requests() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -314,6 +314,6 @@ fn higurashi_tips_opening_loads_resources_and_owns_live_input_audio_and_requests
     }
     device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
     eprintln!(
-        "TIPS opening:{owners} real owners/{renders}720p-1080p parents;real atlas/mask/First-retirement/input-next-frame/BGM77-168/scrollbar pre-clock/controller-contact/native cues/full requests and fresh-source services;pending producers retired,exact Loopback Audio,no window/saves"
+        "TIPS opening:{owners} real owners/{renders}720p-1080p parents;real atlas/mask/First-retirement/input-next-frame/BGM77-168/scrollbar pre-clock/controller-contact/native cues/full requests and fresh-source services;pending producers retired,the default audio output,no window/saves"
     );
 }

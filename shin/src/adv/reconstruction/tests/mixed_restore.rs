@@ -354,7 +354,7 @@ pub(super) fn verify<'a>(
         "Mixed Picture/Bustup/Movie+linked still: prepared identity, pending input gate, publication and replacement retirement pass"
     );
     // Cancel the actual Adv loader while its CPU job is active, both before
-    // and after real FFmpeg/Metal/Loopback player creation. The helper only
+    // and after real FFmpeg/Metal/audio player creation. The helper only
     // releases gates; retirement runs through the normal caller on this thread.
     for after_preparation in [false, true] {
         for shutdown in [false, true] {
@@ -410,7 +410,7 @@ pub(super) fn verify<'a>(
             assert!(!premature, "Caller must wait for the active producer, not only its future");
             assert!(movie.upgrade().is_none(), "Caller returns after late Movie input retires");
             assert!(player.upgrade().is_none(), "Caller returns after late decoder/player retires");
-            eprintln!("Active Movie cancellation after_preparation={after_preparation} shutdown={shutdown}: actual Adv caller drains late FFmpeg/Metal/Loopback owner and leaves I/O available");
+            eprintln!("Active Movie cancellation after_preparation={after_preparation} shutdown={shutdown}: actual Adv caller drains late FFmpeg/Metal/audio owner and leaves I/O available");
         }
     }
     // Exercise the real capacity gate after the task output moves into ready.

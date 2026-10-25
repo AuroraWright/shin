@@ -219,7 +219,7 @@ fn choose(j: &mut Journey, vp: InputViewport, deadline: Instant, pc: u32, origin
 }
 
 #[test]
-#[ignore = "Ordinary Category2row2/302; choices0,1,1/TIPSContinue0/SEVOL4 actual tween lifecycle/protectedBGM93scroll/fullEND/thirdcollection/EXITsaveTitle; immutable unlocked fixture, exactLoopback/Metal; explicit opt-in full-route test"]
+#[ignore = "Ordinary Category2row2/302; choices0,1,1/TIPSContinue0/SEVOL4 actual tween lifecycle/protectedBGM93scroll/fullEND/thirdcollection/EXITsaveTitle; immutable unlocked fixture, audio/Metal; explicit opt-in full-route test"]
 fn higurashi_runtime_yoigoshi_unlocked_template_full_good_end() {
     let (saved, initial) = template();
     let out = PathBuf::from(

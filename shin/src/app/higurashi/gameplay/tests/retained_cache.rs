@@ -243,7 +243,7 @@ fn changed(a: &[u8], b: &[u8], description: &str) {
 }
 
 #[test]
-#[ignore = "actual Gameplay message/TIPS child0/cache/admission/menu/55548 at720p/1080p; offscreen Metal/exact Loopback Audio; no windows/saves"]
+#[ignore = "actual Gameplay message/TIPS child0/cache/admission/menu/55548 at720p/1080p; offscreen Metal/the default audio output; no windows/saves"]
 fn higurashi_gameplay_adv_cache_reuses_composed_message_and_child() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -512,7 +512,7 @@ fn higurashi_gameplay_adv_cache_reuses_composed_message_and_child() {
 }
 
 #[test]
-#[ignore = "real Gameplay previous-message request/reconstruction capture gates; offscreen Metal/exact Loopback Audio; no windows/saves"]
+#[ignore = "real Gameplay previous-message request/reconstruction capture gates; offscreen Metal/the default audio output; no windows/saves"]
 fn higurashi_gameplay_navigation_captures_last_cache_without_preparing() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -600,7 +600,7 @@ fn higurashi_gameplay_navigation_captures_last_cache_without_preparing() {
 }
 
 #[test]
-#[ignore = "actual generic Character11 setting changes before eager cache preparation; Metal/exact Loopback Audio"]
+#[ignore = "actual generic Character11 setting changes before eager cache preparation; Metal/the default audio output"]
 fn higurashi_gameplay_adv_cache_uses_current_generic_character_route_setting() {
     use crate::layer::user::higurashi::HigurashiLayerKind;
     let (device, queue, server) = reference_gpu_assets();

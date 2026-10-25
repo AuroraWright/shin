@@ -238,7 +238,7 @@ impl PlainDrawHost {
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
-#[ignore = "requires supplied Quiz/Cake executables/atlases, Metal and Loopback Audio"]
+#[ignore = "requires supplied Quiz/Cake executables/atlases, Metal and the default audio output"]
 fn reference_plain_quiz_cake_native_draws_and_properties() {
     use std::{io::Write, process::{Command, Stdio},
     };

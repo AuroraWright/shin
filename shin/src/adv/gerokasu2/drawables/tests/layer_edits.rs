@@ -136,7 +136,7 @@ impl Drop for Native {
 }
 
 #[test]
-#[ignore = "requires supplied ROM/native edit oracle,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM/native edit oracle,Metal and the default audio output"]
 fn ger_layer_edits_real_groups_match_native_swap_unload_countdowns_clear_and_fast_forward() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -324,7 +324,7 @@ fn ger_layer_edits_real_groups_match_native_swap_unload_countdowns_clear_and_fas
     assert_eq!(retained_flags, flags);
     frames.draw(&gpu, &mut backend, PlaneId::new(0));
     println!(
-        "GEROKASU2_LAYER_EDITS_GPU snapshots={} words={} real_shared_groups_native_vectors_delays_swap_ids_clear_forward=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_LAYER_EDITS_GPU snapshots={} words={} real_shared_groups_native_vectors_delays_swap_ids_clear_forward=verified frames={} channels={} audio=default output",
         native.snapshots, native.words, frames.frames, frames.channels
     );
 }
@@ -385,7 +385,7 @@ fn scene(gpu: &Offscreen, scenario: Arc<Gerokasu2Scenario>) -> Gerokasu2PlayScen
     .unwrap()
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_layer_edits_decoded_commands_reuse_retained_bank_clear_other_plane_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -466,12 +466,12 @@ fn ger_layer_edits_decoded_commands_reuse_retained_bank_clear_other_plane_and_ex
             .all(|p| p == [0, 0, 0, 255])
     );
     println!(
-        "GEROKASU2_LAYER_EDITS_RUNNER commands=17 delayed_bank_reuse_swap_plane_clear_selected_negative_delay_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_LAYER_EDITS_RUNNER commands=17 delayed_bank_reuse_swap_plane_clear_selected_negative_delay_EXIT=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_layer_edits_supplied_opening_initializes_six_owned_banks() {
     let gpu = Offscreen::new();
     let scenario = Arc::new(Gerokasu2Scenario::new(bytes().into()).unwrap());
@@ -501,6 +501,6 @@ fn ger_layer_edits_supplied_opening_initializes_six_owned_banks() {
         assert!(scene.backend().layer(PlaneId::new(0), bank).is_some());
     }
     println!(
-        "GEROKASU2_AUTHORED_INITIALIZATION six_owned_banks no_external_acknowledgements supplied_ROM_unchanged=verified audio=Loopback Audio"
+        "GEROKASU2_AUTHORED_INITIALIZATION six_owned_banks no_external_acknowledgements supplied_ROM_unchanged=verified audio=default output"
     );
 }

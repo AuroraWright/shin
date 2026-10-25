@@ -651,7 +651,7 @@ mod tests {
     use super::*;
 
     #[test]
-    #[ignore = "requires supplied ROM, ffmpeg, GPU and Loopback Audio (SHIN_REFERENCE_ROM)"]
+    #[ignore = "requires supplied ROM, ffmpeg, GPU and the default audio output (SHIN_REFERENCE_ROM)"]
     fn reference_aac_input_failure_is_terminal_while_voice_remains_owned() {
         use crate::test_support::{FaultingReader, opening_bytes};
         use std::{

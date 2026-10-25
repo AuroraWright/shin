@@ -66,7 +66,7 @@ fn copied(
 }
 
 #[test]
-#[ignore = "real Title/ADV manual Load flags0,next-frame transfer,full two-record payload,global/manual/autosave/read/choice preservation,preflight retry and exact720p/1080p capture on offscreen Metal/exact Loopback Audio;no window/user saves"]
+#[ignore = "real Title/ADV manual Load flags0,next-frame transfer,full two-record payload,global/manual/autosave/read/choice preservation,preflight retry and exact720p/1080p capture on offscreen Metal/the default audio output;no window/user saves"]
 fn higurashi_manual_load_scene_transfer_preserves_full_data_and_globals() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -302,6 +302,6 @@ fn higurashi_manual_load_scene_transfer_preserves_full_data_and_globals() {
         }
     }
     eprintln!(
-        "Manual Load live scene transfer:{profiles} Title/ADV profiles,both active records,exact720p/1080p composed captures,full flags0 payload/global101 slots/read-choice owners,preflight source retention and retirement-before-constructor pass;offscreen Metal/exact Loopback Audio,no window/user saves"
+        "Manual Load live scene transfer:{profiles} Title/ADV profiles,both active records,exact720p/1080p composed captures,full flags0 payload/global101 slots/read-choice owners,preflight source retention and retirement-before-constructor pass;offscreen Metal/the default audio output,no window/user saves"
     );
 }

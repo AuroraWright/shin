@@ -9,21 +9,21 @@ use crate::render::PreRenderContext;
 use shin_core::{format::save::SaveData, primitives::color::UnormColor, time::Ticks};
 use std::sync::Arc;
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn reference_dialogue_window_gpu_indexed_strip() {
     assert!(std::env::var_os("SHIN_REFERENCE_DIALOGUE_WINDOW_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, Metal and the default audio output"]
 fn reference_render_debug_groups_submit_balanced() {
     assert!(std::env::var_os("SHIN_REFERENCE_DEBUG_GROUPS_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM, copied progress, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM, copied progress, Metal and the default audio output"]
 fn reference_saved_load_mask_and_thumbnail_reuse() {
     assert!(std::env::var_os("SHIN_REFERENCE_LOAD_FEEDBACK_ONLY").is_some());
     std::thread::Builder::new().stack_size(16 * 1024 * 1024)
@@ -31,7 +31,7 @@ fn reference_saved_load_mask_and_thumbnail_reuse() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; isolated temporary saves"]
 fn reference_pause_menu_load_mask_and_preview_invalidation() {
     assert!(std::env::var_os("SHIN_REFERENCE_ADV_LOAD_MENU_ONLY").is_some());
     std::thread::Builder::new().stack_size(16 * 1024 * 1024)
@@ -39,7 +39,7 @@ fn reference_pause_menu_load_mask_and_preview_invalidation() {
 }
 
 #[test]
-#[ignore = "requires supplied1.03 ROM, copied progress, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied1.03 ROM, copied progress, Metal and the default audio output"]
 fn reference_authored_sequential_load_wipe() {
     assert!(std::env::var_os("SHIN_REFERENCE_SEQUENTIAL_LOAD_SAVE").is_some());
     std::thread::Builder::new().stack_size(16 * 1024 * 1024)
@@ -499,7 +499,7 @@ fn reference_skip_indicator_actual_adv_root_and_native_artwork_gpu() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_EVENT_SKIP_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_EVENT_SKIP_ONLY"]
 fn reference_event_skip_artwork_and_live_movie() {
     assert!(std::env::var_os("SHIN_REFERENCE_EVENT_SKIP_ONLY").is_some());
     std::thread::Builder::new()
@@ -512,7 +512,7 @@ fn reference_event_skip_artwork_and_live_movie() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, copied Episode8 progress, Metal and Loopback Audio"]
+#[ignore = "requires supplied ROM, copied Episode8 progress, Metal and the default audio output"]
 fn reference_episode8_trick_ending_returns_to_title() {
     assert!(std::env::var_os("SHIN_REFERENCE_ENDING_ONLY").is_some());
     std::thread::Builder::new()
@@ -525,7 +525,7 @@ fn reference_episode8_trick_ending_returns_to_title() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_MSGSET_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_MSGSET_ONLY"]
 fn reference_msgset_install_skip_read_transitions_and_waits() {
     assert!(std::env::var_os("SHIN_REFERENCE_MSGSET_ONLY").is_some());
     std::thread::Builder::new()
@@ -538,7 +538,7 @@ fn reference_msgset_install_skip_read_transitions_and_waits() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_TEXT_COLORS_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_TEXT_COLORS_ONLY"]
 fn reference_authored_red_truth_and_blue_text_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_TEXT_COLORS_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
@@ -552,70 +552,70 @@ fn reference_murderer_red_and_purple_transcript_colors_gpu() {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_MURDERER_PARENT_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_MURDERER_PARENT_ONLY"]
 fn reference_murderer_parent_properties_capture_and_retained_wipes_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_PARENT_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_MURDERER_FAST_FORWARD_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_MURDERER_FAST_FORWARD_ONLY"]
 fn reference_murderer_fast_forward_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_FAST_FORWARD_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, Loopback Audio and SHIN_REFERENCE_MURDERER_RULE_ONLY"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output and SHIN_REFERENCE_MURDERER_RULE_ONLY"]
 fn reference_murderer_native_rule_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_RULE_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires original/1.03 ROM, Metal, Loopback Audio and SHIN_REFERENCE_MURDERER_TOP_ONLY"]
+#[ignore = "requires original/1.03 ROM, Metal, the default audio output and SHIN_REFERENCE_MURDERER_TOP_ONLY"]
 fn reference_murderer_native_top_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_TOP_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_MURDERER_REPLAY_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_MURDERER_REPLAY_ONLY"]
 fn reference_murderer_native_replay_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_REPLAY_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, Loopback Audio and SHIN_REFERENCE_MURDERER_HINTS_ONLY"]
+#[ignore = "requires supplied ROM, Metal, the default audio output and SHIN_REFERENCE_MURDERER_HINTS_ONLY"]
 fn reference_murderer_native_hints_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_HINTS_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM/Metal/Loopback and SHIN_REFERENCE_MURDERER_CAPTURE_ONLY"]
+#[ignore = "requires supplied ROM/Metal/audio and SHIN_REFERENCE_MURDERER_CAPTURE_ONLY"]
 fn reference_murderer_native_capture_lifecycle_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_CAPTURE_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM/Metal/Loopback and SHIN_REFERENCE_MURDERER_PURPLE_ONLY"]
+#[ignore = "requires supplied ROM/Metal/audio and SHIN_REFERENCE_MURDERER_PURPLE_ONLY"]
 fn reference_murderer_native_purple_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_PURPLE_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "requires supplied ROM/Metal/Loopback and SHIN_REFERENCE_MURDERER_ACCUSATION_ONLY"]
+#[ignore = "requires supplied ROM/Metal/audio and SHIN_REFERENCE_MURDERER_ACCUSATION_ONLY"]
 fn reference_murderer_native_accusation_child_draw_gpu() {
     assert!(std::env::var_os("SHIN_REFERENCE_MURDERER_ACCUSATION_ONLY").is_some());
     reference_save_menu_gpu_window_and_artwork();
 }
 
 #[test]
-#[ignore = "actual Episode2 movie skip/reveal/post-message contact; offscreen Metal/exact Loopback, no user saves"]
+#[ignore = "actual Episode2 movie skip/reveal/post-message contact; offscreen Metal/audio, no user saves"]
 fn reference_episode2_touch_after_movie_skip() {
     assert!(std::env::var_os("SHIN_REFERENCE_POST_MOVIE_TOUCH_ONLY").is_some());
     std::thread::Builder::new()

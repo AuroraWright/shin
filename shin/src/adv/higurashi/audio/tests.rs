@@ -23,7 +23,7 @@ fn policy() -> Policy {
     }
 }
 #[test]
-#[ignore = "loads actual authored BGM through retained VM and shared audio on offscreen Metal/exact Loopback Audio"]
+#[ignore = "loads actual authored BGM through retained VM and shared audio on offscreen Metal/the default audio output"]
 fn higurashi_audio_runs_authored_bgm_and_retains_music_waits() {
     let (_, _, assets) = super::super::message_glyphs::tests::gpu::gpu_assets();
     let assets = Arc::new(assets);
@@ -200,7 +200,7 @@ fn higurashi_audio_runs_authored_bgm_and_retains_music_waits() {
     assert_eq!(audio.bgm_status(), 0);
     audio.update(Ticks::from_f32(100.0), false);
     println!(
-        "Higurashi BGM audio: exact Loopback Audio; unchanged authored PLAY at2545e loads HM20_A5;11 real VM commands, async load/paused zero clock, native microsecond SYNC, queued volumes/status waits, pause/skip/PC retention, same-ID reuse/original loop policy, stop notifications, canceled load, missing asset and invalid-ID retirement pass; native title policy remains host work"
+        "Higurashi BGM audio: the default audio output; unchanged authored PLAY at2545e loads HM20_A5;11 real VM commands, async load/paused zero clock, native microsecond SYNC, queued volumes/status waits, pause/skip/PC retention, same-ID reuse/original loop policy, stop notifications, canceled load, missing asset and invalid-ID retirement pass; native title policy remains host work"
     );
 }
 

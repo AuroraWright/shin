@@ -1,5 +1,5 @@
 //! Unregistered concrete-owner checks. Parent runs these serialized, with the
-//! exact Loopback device and supplied assets; this agent executes none of them.
+//! audio device and supplied assets; this agent executes none of them.
 //! Native model/parent/literal-Sprite acceptance remains independently required.
 use super::*;
 use crate::{
@@ -179,7 +179,7 @@ impl Drop for HeldDrop {
 }
 
 #[test]
-#[ignore = "Movie actual atlas/mask worker publication, pending/finished-unobserved cancellation,8 offscreen720p1080p frames; exact Loopback fixture; no playback/window/user saves"]
+#[ignore = "Movie actual atlas/mask worker publication, pending/finished-unobserved cancellation,8 offscreen720p1080p frames; audio fixture; no playback/window/user saves"]
 fn higurashi_movie_owner_publication_and_join_resource_order() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -279,7 +279,7 @@ fn higurashi_movie_owner_publication_and_join_resource_order() {
 }
 
 #[test]
-#[ignore = "actual Movie First fallible parent-service prefix and synchronous fault retirement; exact Loopback fixture, no movie playback/window/user saves"]
+#[ignore = "actual Movie First fallible parent-service prefix and synchronous fault retirement; audio fixture, no movie playback/window/user saves"]
 fn higurashi_movie_owner_fault_is_latched_without_later_clocks_or_false_completion() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -453,7 +453,7 @@ fn native_title_return() -> Vec<Action> {
 }
 
 #[test]
-#[ignore = "actual Movie grid/private Viewer/Player with2 short silent/AAC fixtures,physical pointer,4 offscreen720p1080p frames;exact Loopback; no window/user saves"]
+#[ignore = "actual Movie grid/private Viewer/Player with2 short silent/AAC fixtures,physical pointer,4 offscreen720p1080p frames;audio; no window/user saves"]
 fn higurashi_movie_owner_real_viewer_returns_retained_grid_then_native_title17() {
     let (device, queue, base_server) = reference_gpu_assets();
     let base_server = Arc::new(base_server);

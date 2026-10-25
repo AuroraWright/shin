@@ -90,7 +90,7 @@ fn story_step(j:&mut Journey,viewport:InputViewport,deadline:Instant,enter_was_d
 }
 
 #[test]
-#[ignore="DRAFT exact fixture-unlocked template, normalCategory2/picker2row3/303, deliberateSELECT0 and naturalFakeSelect voice sequence/endTIP143/EXITTitle; requires review, getter, registration and current build; offscreenMetal/exactLoopback"]
+#[ignore="DRAFT exact fixture-unlocked template, normalCategory2/picker2row3/303, deliberateSELECT0 and naturalFakeSelect voice sequence/endTIP143/EXITTitle; requires review, getter, registration and current build; offscreenMetal/audio"]
 fn higurashi_runtime_minagoroshi_unlocked_template_observes_automatic_selection_and_full_end(){
     let(saved,initial)=template();
     let capture_dir=PathBuf::from(std::env::var("SHIN_HIGURASHI_MINAGO_CAPTURE")

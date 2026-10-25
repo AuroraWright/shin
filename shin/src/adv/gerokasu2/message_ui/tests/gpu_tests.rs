@@ -138,7 +138,7 @@ impl MessageEffects for Effects {
 }
 
 #[test]
-#[ignore = "requires supplied ROM/executable, Metal GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM/executable, Metal GPU and the default audio output"]
 fn supplied_message_resources_shared_font_and_composed_windows_cursors_text_match_native_packets() {
     let gpu = Offscreen::new();
     let path = std::path::PathBuf::from(std::env::var_os("SHIN_GEROKASU2_ROM").unwrap());
@@ -320,12 +320,12 @@ fn supplied_message_resources_shared_font_and_composed_windows_cursors_text_matc
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_MESSAGE_UI_GPU modes=5 states=3 sizes=640x360,1280x720 frames={frames} channels={channels} audio=Loopback Audio shared_medium_font_resources_native_UI_matrix_replay_composed_text_stencil_pass=verified"
+        "GEROKASU2_MESSAGE_UI_GPU modes=5 states=3 sizes=640x360,1280x720 frames={frames} channels={channels} audio=default output shared_medium_font_resources_native_UI_matrix_replay_composed_text_stencil_pass=verified"
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM/executable, Metal GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM/executable, Metal GPU and the default audio output"]
 fn evaluated_message_owner_commands_preserve_windows_text_and_portrait_requests() {
     use crate::adv::gerokasu2::{
         message_commands::{MessageCommandContext, MessageCommandStatus},
@@ -591,6 +591,6 @@ fn evaluated_message_owner_commands_preserve_windows_text_and_portrait_requests(
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_MESSAGE_OWNER_GPU modes=5 frames={frames} channels={channels} audio=Loopback Audio evaluated_commands_waits_close_replacement_portrait_requests_native_UI_replay=verified"
+        "GEROKASU2_MESSAGE_OWNER_GPU modes=5 frames={frames} channels={channels} audio=default output evaluated_commands_waits_close_replacement_portrait_requests_native_UI_replay=verified"
     );
 }

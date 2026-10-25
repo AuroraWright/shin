@@ -33,7 +33,7 @@ fn policy() -> FramePolicy {
     }
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_event_variables_scene_live_pending_commit_message_gate_route_bookmark_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -142,7 +142,7 @@ fn ger_event_variables_scene_live_pending_commit_message_gate_route_bookmark_and
         save.progress.active_entry().responses
     );
     println!(
-        "GEROKASU2_EVENT_VARIABLES_SCENE commands=12 message_input_gated=1 full32_before_commit=65537 signed16_after_commit=-32768 boundaries=4 bookmark=3 route_bits=36 captures=2 external_acknowledgements=0 frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_EVENT_VARIABLES_SCENE commands=12 message_input_gated=1 full32_before_commit=65537 signed16_after_commit=-32768 boundaries=4 bookmark=3 route_bits=36 captures=2 external_acknowledgements=0 frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }

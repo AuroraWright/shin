@@ -29,7 +29,7 @@ fn policy() -> FramePolicy {
     }
 }
 #[test]
-#[ignore = "requires original card atlas,Metal and exact Loopback Audio"]
+#[ignore = "requires original card atlas,Metal and the default audio output"]
 fn ger_card_scene_real_resource_pointer_quiz_feedback_save_route_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -186,7 +186,7 @@ fn ger_card_scene_real_resource_pointer_quiz_feedback_save_route_and_exit() {
         2
     );
     println!(
-        "GEROKASU2_CARD_SCENE commands=4 pointer_result=2 missing_result=0 boundaries=4 captures=4 route_bits=12 external_acknowledgements=0 frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_CARD_SCENE commands=4 pointer_result=2 missing_result=0 boundaries=4 captures=4 route_bits=12 external_acknowledgements=0 frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }

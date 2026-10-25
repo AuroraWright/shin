@@ -1,4 +1,4 @@
-//! Real NXA requests/decoder failures and same-player retries on Loopback Audio.
+//! Real NXA requests/decoder failures and same-player retries on the default audio output.
 use super::*;
 use crate::audio::{BgmPlayer, SePlayer, VoicePlayFlags, VoicePlayer};
 use shin_audio::{AudioFile, AudioManager};
@@ -167,7 +167,7 @@ fn valid_playback(player: &mut Player) -> Option<u64> {
         player.update();
         assert!(
             std::time::Instant::now() < deadline,
-            "Retry did not advance on exact Loopback Audio"
+            "Retry did not advance on the default audio output"
         );
         std::thread::sleep(std::time::Duration::from_millis(2));
     }
@@ -183,7 +183,7 @@ fn assert_no_live_file(server: &AssetServer) {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary NXA files only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary NXA files only"]
 fn reference_nxa_player_failure_recovery() {
     crate::init_test_task_pools();
     let output = PathBuf::from(std::env::var_os("SHIN_REFERENCE_NXA_RECOVERY_OUTPUT").unwrap());
@@ -273,9 +273,9 @@ fn reference_nxa_player_failure_recovery() {
         }
     }
     assert_eq!(cases.len(), 22);
-    std::fs::write(output.join("nxa-recovery.json"), serde_json::to_vec_pretty(&serde_json::json!({"cases_passed":cases.len(),"cases":cases,"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"audio_device":"exact Loopback Audio","window_created":false,"archives_modified":false,"working_progress_written":false})).unwrap()).unwrap();
+    std::fs::write(output.join("nxa-recovery.json"), serde_json::to_vec_pretty(&serde_json::json!({"cases_passed":cases.len(),"cases":cases,"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"audio_device":"default output","window_created":false,"archives_modified":false,"working_progress_written":false})).unwrap()).unwrap();
     println!(
-        "{} malformed NXA request/decoder profiles clear wait bits and retry on the same players; BGM/SE/Voice clocks advance on exact Loopback Audio",
+        "{} malformed NXA request/decoder profiles clear wait bits and retry on the same players; BGM/SE/Voice clocks advance on the default audio output",
         cases.len()
     );
 }

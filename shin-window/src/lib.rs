@@ -77,12 +77,7 @@ pub trait ShinApp: Sized {
     /// Raw pointer and analog input in addition to the lowered actions.
     fn raw_input(&mut self, _state: &shin_input::RawInputState) {}
 
-    /// Continue playback without focus; OS lifecycle suspension still pauses.
-    fn run_in_background(&self) -> bool {
-        false
-    }
-
-    /// Cancel captured input when focus leaves, including during background play.
+    /// Cancel captured input when focus leaves; playback continues.
     fn focus_lost(&mut self) {}
 
     /// Freeze platform-owned playback while the effective policy is suspended.
@@ -232,62 +227,54 @@ impl SurfaceAvailability {
     }
 }
 
+/// Playback runs whether or not the window has focus; only OS lifecycle
+/// suspension pauses it. Focus decides whether input reaches the game.
 struct PlatformSuspension {
     focused: bool,
     /// macOS may never activate an app launched from a terminal, leaving its
     /// window unfocused until the user switches away and back. Until the
-    /// window has had focus once, play as if it had it.
+    /// window has had focus once, take input as if it had it.
     ever_focused: bool,
     lifecycle_suspended: bool,
-    background_allowed: bool,
     last_update: Instant,
 }
 impl PlatformSuspension {
+    /// A stalled frame (the machine waking, a blocked present) counts at most
+    /// this much, so fixed-step clocks do not run a long burst to catch up.
+    const MAX_FRAME_TIME: Duration = Duration::from_millis(100);
+
     fn new(focused: bool, now: Instant) -> Self {
         Self {
             focused,
             ever_focused: true,
             lifecycle_suspended: false,
-            background_allowed: false,
             last_update: now,
         }
     }
-    /// A newly created window, which plays until it first gains focus.
+    /// A newly created window, which takes input until it first gains focus.
     fn launching(focused: bool, now: Instant) -> Self {
         Self {
             ever_focused: focused,
             ..Self::new(focused, now)
         }
     }
-    /// Focus for playback and input: the window is treated as focused until
-    /// it first gains focus.
+    /// Focus for input: the window is treated as focused until it first
+    /// gains focus.
     fn plays_focused(&self) -> bool {
         self.focused || !self.ever_focused
     }
     fn is_suspended(&self) -> bool {
-        (!self.plays_focused() && !self.background_allowed) || self.lifecycle_suspended
+        self.lifecycle_suspended
     }
-    fn is_background_running(&self) -> bool {
-        !self.plays_focused() && !self.is_suspended()
-    }
+    /// A fully covered or minimized window gets no redraws: frames run on a
+    /// timer and nothing is presented.
     fn updates_without_presentation(&self, surface: &SurfaceAvailability) -> bool {
-        !self.is_suspended() && (self.is_background_running() || surface.is_occluded())
+        !self.is_suspended() && surface.is_occluded()
     }
-
-    #[cfg(test)]
     fn change(
         &mut self,
         focused: Option<bool>,
         lifecycle: Option<bool>,
-        now: Instant,
-    ) -> Option<bool> {
-        self.change_policy(focused, lifecycle, None, now)
-    }
-    fn change_policy(
-        &mut self,
-        focused: Option<bool>,
-        lifecycle: Option<bool>,
-        background_allowed: Option<bool>,
         now: Instant,
     ) -> Option<bool> {
         let previous = self.is_suspended();
@@ -297,9 +284,6 @@ impl PlatformSuspension {
         }
         if let Some(lifecycle) = lifecycle {
             self.lifecycle_suspended = lifecycle;
-        }
-        if let Some(background_allowed) = background_allowed {
-            self.background_allowed = background_allowed;
         }
         let suspended = self.is_suspended();
         if previous != suspended {
@@ -312,7 +296,7 @@ impl PlatformSuspension {
     fn elapsed(&mut self, now: Instant) -> Option<Duration> {
         let elapsed = now.duration_since(self.last_update);
         self.last_update = now;
-        (!self.is_suspended()).then_some(elapsed)
+        (!self.is_suspended()).then_some(elapsed.min(Self::MAX_FRAME_TIME))
     }
 }
 
@@ -362,15 +346,15 @@ mod suspension_tests {
     }
 
     #[test]
-    fn enabled_background_play_keeps_elapsed_time_across_focus_changes() {
+    fn focus_changes_never_pause_playback() {
         let initial = Instant::now();
         let mut state = PlatformSuspension::new(true, initial);
-        assert_eq!(state.change_policy(None, None, Some(true), initial), None);
         assert_eq!(
             state.change(Some(false), None, initial + Duration::from_millis(8)),
             None
         );
-        assert!(state.is_background_running());
+        assert!(!state.is_suspended());
+        assert!(!state.plays_focused(), "Input stops");
         assert_eq!(
             state.elapsed(initial + Duration::from_millis(16)),
             Some(Duration::from_millis(16))
@@ -379,7 +363,7 @@ mod suspension_tests {
             state.change(Some(true), None, initial + Duration::from_millis(24)),
             None
         );
-        assert!(!state.is_background_running());
+        assert!(state.plays_focused());
         assert_eq!(
             state.elapsed(initial + Duration::from_millis(32)),
             Some(Duration::from_millis(16))
@@ -387,62 +371,20 @@ mod suspension_tests {
     }
 
     #[test]
-    fn background_option_changes_and_lifecycle_do_not_catch_up_paused_time() {
+    fn lifecycle_suspension_discards_paused_time() {
         let initial = Instant::now();
         let mut state = PlatformSuspension::new(false, initial);
         assert_eq!(
-            state.change_policy(None, None, Some(true), initial + Duration::from_secs(30)),
-            Some(false)
-        );
-        assert_eq!(
-            state.elapsed(initial + Duration::from_secs(31)),
-            Some(Duration::from_secs(1))
-        );
-        assert_eq!(
-            state.change(None, Some(true), initial + Duration::from_secs(32)),
-            Some(true)
-        );
-        assert!(!state.is_background_running());
-        assert_eq!(state.elapsed(initial + Duration::from_secs(90)), None);
-        assert_eq!(
-            state.change(None, Some(false), initial + Duration::from_secs(120)),
-            Some(false)
-        );
-        assert_eq!(
-            state.elapsed(initial + Duration::from_secs(121)),
-            Some(Duration::from_secs(1))
-        );
-        assert_eq!(
-            state.change_policy(None, None, Some(false), initial + Duration::from_secs(122)),
-            Some(true)
-        );
-        assert_eq!(state.elapsed(initial + Duration::from_secs(180)), None);
-    }
-
-    #[test]
-    fn overlapping_focus_and_lifecycle_suspension_discards_background_elapsed() {
-        let initial = Instant::now();
-        let mut state = PlatformSuspension::new(true, initial);
-        assert_eq!(
-            state.elapsed(initial + Duration::from_millis(16)),
-            Some(Duration::from_millis(16))
-        );
-        assert_eq!(
-            state.change(Some(false), None, initial + Duration::from_secs(1)),
+            state.change(None, Some(true), initial + Duration::from_secs(1)),
             Some(true)
         );
         assert_eq!(
-            state.change(None, Some(true), initial + Duration::from_secs(2)),
-            None
-        );
-        assert_eq!(
-            state.change(Some(true), None, initial + Duration::from_secs(3)),
+            state.change(Some(true), None, initial + Duration::from_secs(2)),
             None,
-            "Focus alone cannot override lifecycle suspension"
+            "Focus cannot override lifecycle suspension"
         );
         assert_eq!(state.elapsed(initial + Duration::from_secs(60)), None);
-        // No redraw occurs during the next sixty seconds. The same transition
-        // used by the event handler must discard this interval itself.
+        // No redraw occurs meanwhile; the transition itself restarts the clock.
         assert_eq!(
             state.change(None, Some(false), initial + Duration::from_secs(120)),
             Some(false)
@@ -451,33 +393,24 @@ mod suspension_tests {
             state.elapsed(initial + Duration::from_secs(120) + Duration::from_millis(16)),
             Some(Duration::from_millis(16))
         );
+        assert_eq!(
+            state.change(None, Some(false), initial + Duration::from_secs(121)),
+            None,
+            "Duplicate active events cannot reset elapsed time"
+        );
     }
 
     #[test]
-    fn initially_unfocused_and_duplicate_events_preserve_the_right_clock() {
+    fn stalled_frames_count_at_most_100_ms() {
         let initial = Instant::now();
-        let mut state = PlatformSuspension::new(false, initial);
-        assert_eq!(state.elapsed(initial + Duration::from_secs(30)), None);
+        let mut state = PlatformSuspension::new(true, initial);
         assert_eq!(
-            state.change(Some(true), None, initial + Duration::from_secs(60)),
-            Some(false)
+            state.elapsed(initial + Duration::from_secs(5)),
+            Some(Duration::from_millis(100))
         );
         assert_eq!(
-            state.elapsed(initial + Duration::from_secs(60) + Duration::from_millis(16)),
+            state.elapsed(initial + Duration::from_secs(5) + Duration::from_millis(16)),
             Some(Duration::from_millis(16))
-        );
-        assert_eq!(
-            state.change(
-                Some(true),
-                Some(false),
-                initial + Duration::from_secs(60) + Duration::from_millis(18)
-            ),
-            None
-        );
-        assert_eq!(
-            state.elapsed(initial + Duration::from_secs(60) + Duration::from_millis(20)),
-            Some(Duration::from_millis(4)),
-            "Duplicate active events cannot reset elapsed time"
         );
     }
 }
@@ -542,77 +475,40 @@ mod surface_availability_tests {
     }
 
     #[test]
-    fn unactivated_launch_plays_until_first_focus_then_pauses_on_focus_loss() {
+    fn unactivated_launch_takes_input_until_first_focus() {
         let initial = Instant::now();
         let mut state = PlatformSuspension::launching(false, initial);
         assert!(!state.is_suspended());
-        assert!(!state.is_background_running(), "Renders and presents");
         assert!(state.plays_focused(), "Accepts input");
-        assert_eq!(
-            state.change(Some(false), None, initial + Duration::from_millis(8)),
-            None
-        );
-        assert!(!state.is_suspended());
-        assert_eq!(
-            state.change(Some(true), None, initial + Duration::from_secs(1)),
-            None
-        );
-        assert_eq!(
-            state.change(Some(false), None, initial + Duration::from_secs(2)),
-            Some(true)
-        );
+        state.change(Some(false), None, initial + Duration::from_millis(8));
+        assert!(state.plays_focused());
+        state.change(Some(true), None, initial + Duration::from_secs(1));
+        state.change(Some(false), None, initial + Duration::from_secs(2));
         assert!(!state.plays_focused());
+        assert!(!state.is_suspended(), "Playback continues");
     }
 
     #[test]
-    fn occluded_updates_preserve_focus_background_and_lifecycle_clock_policy() {
+    fn occluded_windows_update_without_presenting_unless_suspended() {
         let initial = Instant::now();
         let mut state = PlatformSuspension::new(true, initial);
         let mut surface = SurfaceAvailability::default();
+        assert!(!state.updates_without_presentation(&surface));
         surface.occluded(initial);
         assert!(state.updates_without_presentation(&surface));
+        state.change(Some(false), None, initial + Duration::from_secs(1));
         assert!(
-            !state.is_background_running(),
-            "Focus is still owned by the game"
+            state.updates_without_presentation(&surface),
+            "Focus does not matter"
         );
-        assert_eq!(
-            state.elapsed(initial + Duration::from_millis(17)),
-            Some(Duration::from_millis(17))
-        );
-        assert_eq!(
-            state.change(Some(false), None, initial + Duration::from_secs(1)),
-            Some(true)
-        );
-        assert!(!state.updates_without_presentation(&surface));
-        assert_eq!(
-            state.change_policy(None, None, Some(true), initial + Duration::from_secs(30)),
-            Some(false)
-        );
-        assert!(state.updates_without_presentation(&surface));
-        assert_eq!(
-            state.elapsed(initial + Duration::from_secs(30) + Duration::from_millis(17)),
-            Some(Duration::from_millis(17))
-        );
-        assert_eq!(
-            state.change(None, Some(true), initial + Duration::from_secs(31)),
-            Some(true)
-        );
+        state.change(None, Some(true), initial + Duration::from_secs(2));
         assert!(
             !state.updates_without_presentation(&surface),
-            "Lifecycle suspension still wins"
+            "Lifecycle suspension wins"
         );
-        assert_eq!(
-            state.change(Some(true), Some(false), initial + Duration::from_secs(60)),
-            Some(false)
-        );
-        assert!(state.updates_without_presentation(&surface));
-        assert_eq!(
-            state.elapsed(initial + Duration::from_secs(60) + Duration::from_millis(17)),
-            Some(Duration::from_millis(17))
-        );
+        state.change(None, Some(false), initial + Duration::from_secs(3));
         surface.visible();
         assert!(!state.updates_without_presentation(&surface));
-        assert!(!state.is_suspended());
     }
 }
 
@@ -895,12 +791,9 @@ fn finish_wgpu_init<A: ShinApp>(
         .expect("App initialization failed");
     // AppKit may make the window key during synchronous GPU/asset setup.
     // The construction-time snapshot must not outlive initialization.
-    winit.suspension.change_policy(
-        Some(winit.window.has_focus()),
-        None,
-        Some(app.run_in_background()),
-        Instant::now(),
-    );
+    winit
+        .suspension
+        .change(Some(winit.window.has_focus()), None, Instant::now());
     info!(
         focused = winit.window.has_focus(),
         suspended = winit.suspension.is_suspended(),
@@ -1016,8 +909,6 @@ impl<A: ShinApp> WinitAppState<A> {
         if close {
             event_loop.exit();
         } else {
-            // Deferred saves must advance even if Quit was requested unfocused.
-            self.change_suspension(None, None);
             if let Some(winit) = self.winit() {
                 winit.window.request_redraw();
             }
@@ -1027,10 +918,6 @@ impl<A: ShinApp> WinitAppState<A> {
     fn change_suspension(&mut self, focused: Option<bool>, lifecycle: Option<bool>) {
         // Unattended playtests behave as if the window always had focus.
         let focused = focused.map(|focused| focused || debug_capture::keep_rendering());
-        let background_allowed = match self {
-            Self::Operational { app, .. } => app.run_in_background(),
-            _ => false,
-        };
         if let Self::Operational {
             context,
             app,
@@ -1050,16 +937,10 @@ impl<A: ShinApp> WinitAppState<A> {
             }
             Self::Operational { context, .. } => &mut context.winit,
         };
-        if let Some(suspended) = winit.suspension.change_policy(
-            focused,
-            lifecycle,
-            Some(background_allowed),
-            Instant::now(),
-        ) {
+        if let Some(suspended) = winit.suspension.change(focused, lifecycle, Instant::now()) {
             debug!(
                 ?focused,
                 ?lifecycle,
-                background_allowed,
                 suspended,
                 "Platform playback suspension changed"
             );
@@ -1384,11 +1265,7 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                 };
 
                 let size = winit.window.inner_size();
-                if size.width == 0
-                    || size.height == 0
-                    || winit.suspension.is_suspended()
-                    || winit.suspension.is_background_running()
-                {
+                if size.width == 0 || size.height == 0 || winit.suspension.is_suspended() {
                     return;
                 }
                 let keep_rendering = debug_capture::keep_rendering();
@@ -1603,15 +1480,9 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
                 render.dynamic_buffer.finish(&mut dynamic);
                 wgpu.queue.submit([dynamic.finish(), update.finish()]);
                 render.dynamic_buffer.recall();
-                if winit.suspension.is_background_running() {
-                    debug!(?elapsed, "Background playback tick");
-                } else {
-                    debug!(?elapsed, "Occluded playback tick");
-                }
+                debug!(?elapsed, "Occluded playback tick");
             }
-            if !winit.suspension.is_background_running()
-                && winit.surface_availability.request_probe(Instant::now())
-            {
+            if winit.surface_availability.request_probe(Instant::now()) {
                 winit.window.request_redraw();
             }
             _event_loop.set_control_flow(winit::event_loop::ControlFlow::WaitUntil(

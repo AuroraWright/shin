@@ -153,7 +153,7 @@ pub(crate) fn save(dir: &std::path::Path, name: &str, pixels: &[u8]) {
 }
 
 #[test]
-#[ignore = "requires game-data/gerokasu/data.rom, Metal and exact Loopback Audio; writes review frames"]
+#[ignore = "requires game-data/gerokasu/data.rom, Metal and the default audio output; writes review frames"]
 fn gerokasu_card_select_review_frames() {
     let dir = std::path::PathBuf::from(
         std::env::var_os("SHIN_GEROKASU_CARD_FRAMES").expect("SHIN_GEROKASU_CARD_FRAMES"),

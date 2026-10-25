@@ -320,7 +320,7 @@ impl SceneHost {
         assert_eq!(disk.settings.v3_sysvol, 45);
         std::fs::remove_dir_all(folder).unwrap();
         println!(
-            "Updated live picker on Loopback: default No unchanged, final Yes zero-only writes, deferred fresh picker/selection reset/four groups, retained global clock/audio tracks, {changed} removed hint pixels confined to native footer box, disabled repeat shortcut and shutdown save roundtrip pass"
+            "Updated live picker on audio: default No unchanged, final Yes zero-only writes, deferred fresh picker/selection reset/four groups, retained global clock/audio tracks, {changed} removed hint pixels confined to native footer box, disabled repeat shortcut and shutdown save roundtrip pass"
         );
     }
 }

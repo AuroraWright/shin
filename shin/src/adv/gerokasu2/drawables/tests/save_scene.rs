@@ -50,7 +50,7 @@ fn text(data: &mut Vec<u8>, text: &str) {
     data.push(0);
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_save_scene_decoded_metadata_autosave_real_message_capture_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -126,12 +126,12 @@ fn ger_save_scene_decoded_metadata_autosave_real_message_capture_and_exit() {
     let pixels = frames.draw_scene(&gpu, scene.backend_mut());
     assert!(pixels.chunks_exact(4).any(|p| p[..3] != [0, 0, 0]));
     println!(
-        "GEROKASU2_SAVE_SCENE commands=8 captures=2 title=1 boundary=2 real_UTF8_message_autosave_checkpoint_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_SAVE_SCENE commands=8 captures=2 title=1 boundary=2 real_UTF8_message_autosave_checkpoint_EXIT=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn ger_save_scene_supplied_prologue_owns_save_and_message_progress_without_external_ack() {
     let gpu = Offscreen::new();
     let mut scene = scene(
@@ -193,7 +193,7 @@ fn ger_save_scene_supplied_prologue_owns_save_and_message_progress_without_exter
     assert!(!save.checkpoints.is_empty());
     frames.draw_scene(&gpu, scene.backend_mut());
     println!(
-        "GEROKASU2_SAVE_PROLOGUE commands={} messages={} captures={} titles={} external_acknowledgements=0 owned_SAVEINFO_AUTOSAVE_real_PIC_UTF8_text_voice_progress=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_SAVE_PROLOGUE commands={} messages={} captures={} titles={} external_acknowledgements=0 owned_SAVEINFO_AUTOSAVE_real_PIC_UTF8_text_voice_progress=verified frames={} channels={} audio=default output",
         scene.runner().completed_commands(),
         messages,
         captures,
@@ -204,7 +204,7 @@ fn ger_save_scene_supplied_prologue_owns_save_and_message_progress_without_exter
 }
 
 #[test]
-#[ignore = "supplied authored-path diagnostic;requires Metal and exact Loopback Audio"]
+#[ignore = "supplied authored-path diagnostic;requires Metal and the default audio output"]
 fn ger_save_scene_authored_path_reaches_next_owner_boundary() {
     let gpu = Offscreen::new();
     let mut scene = scene(

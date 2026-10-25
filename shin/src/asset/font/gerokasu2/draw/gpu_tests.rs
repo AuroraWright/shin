@@ -29,7 +29,6 @@ pub(crate) struct Offscreen {
 
 impl Offscreen {
     pub(crate) fn new() -> Self {
-        // Honor the repository's hardware-test device policy, with no fallback.
         let audio = shin_audio::AudioManager::new_for_tests();
         crate::init_test_task_pools();
         let instance = wgpu::Instance::default();
@@ -37,7 +36,7 @@ impl Offscreen {
             shin_tasks::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
                 .unwrap();
         println!(
-            "GEROKASU2_FONT_GPU adapter={:?} audio=Loopback Audio",
+            "GEROKASU2_FONT_GPU adapter={:?} audio=default output",
             adapter.get_info()
         );
         let (device, queue) =
@@ -297,7 +296,7 @@ fn snorm(byte: u8) -> f32 {
 }
 
 #[test]
-#[ignore = "requires GPU and exact Loopback Audio output"]
+#[ignore = "requires GPU and the default audio output"]
 fn signed_samples_smoothstep_discard_gradient_and_legacy_coverage_render_offscreen() {
     let mut gpu = Offscreen::new();
     let colors = [
@@ -423,7 +422,7 @@ fn signed_samples_smoothstep_discard_gradient_and_legacy_coverage_render_offscre
         2.0 / 127.0
     );
     println!(
-        "GEROKASU2_FONT_SDF_GPU constant_cases={cases} bilinear_cases=9 legacy_cases=1 pixels_per_case=64 channels_per_pixel=4 audio=Loopback Audio"
+        "GEROKASU2_FONT_SDF_GPU constant_cases={cases} bilinear_cases=9 legacy_cases=1 pixels_per_case=64 channels_per_pixel=4 audio=default output"
     );
 }
 
@@ -445,7 +444,7 @@ fn linear_sample(dimensions: (u32, u32), pixels: &[u8], uv: Vec2) -> f32 {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, GPU and exact Loopback Audio output"]
+#[ignore = "requires supplied ROM, GPU and the default audio output"]
 fn supplied_async_glyphs_upload_padding_and_draw_both_sdf_passes_offscreen() {
     use super::super::GpuGerokasu2Font;
     use shin_core::{
@@ -570,6 +569,6 @@ fn supplied_async_glyphs_upload_padding_and_draw_both_sdf_passes_offscreen() {
         2.0 / 127.0
     );
     println!(
-        "GEROKASU2_FONT_UPLOAD_GPU fonts=2 requested_glyphs=12 draw_cases={cases} warm_glyphs=12 pixels_per_case=64 channels_per_pixel=4 audio=Loopback Audio"
+        "GEROKASU2_FONT_UPLOAD_GPU fonts=2 requested_glyphs=12 draw_cases={cases} warm_glyphs=12 pixels_per_case=64 channels_per_pixel=4 audio=default output"
     );
 }

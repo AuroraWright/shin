@@ -217,7 +217,7 @@ fn exact_pixels(actual: &[u8], expected: &[u8], label: &str) {
 }
 
 #[test]
-#[ignore = "real H264/AAC retained RGBA, literal Sprite2 at720p/1080p and pause/EOF; offscreen Metal and exact Loopback Audio, no windows/saves"]
+#[ignore = "real H264/AAC retained RGBA, literal Sprite2 at720p/1080p and pause/EOF; offscreen Metal and the default audio output, no windows/saves"]
 fn higurashi_standalone_movie_real_transport_and_literal_sprite_pixels() {
     let (device, queue, _) = reference_gpu_assets();
     let manager = Arc::new(AudioManager::new_for_tests());
@@ -343,7 +343,7 @@ fn higurashi_standalone_movie_real_transport_and_literal_sprite_pixels() {
     }
     assert_eq!(comparisons, 12);
     eprintln!(
-        "Standalone Movie:2 real silent/AAC opens; readiness before main poll, paused conversion,12 literal Sprite2 full720p/1080p comparisons with explicit visible-descriptor seam, retained pause/final frame, actual PCM-drained EOF, shutdown joins work while facade/RGBA/desired remain until external release; exact Loopback Audio"
+        "Standalone Movie:2 real silent/AAC opens; readiness before main poll, paused conversion,12 literal Sprite2 full720p/1080p comparisons with explicit visible-descriptor seam, retained pause/final frame, actual PCM-drained EOF, shutdown joins work while facade/RGBA/desired remain until external release; the default audio output"
     );
 }
 
@@ -378,7 +378,7 @@ impl Drop for ReleaseGate {
 }
 
 #[test]
-#[ignore = "real silent/AAC prepare cancellation and pre-completion publication; offscreen Metal and exact Loopback Audio, no windows/saves"]
+#[ignore = "real silent/AAC prepare cancellation and pre-completion publication; offscreen Metal and the default audio output, no windows/saves"]
 fn higurashi_standalone_movie_publication_cancellation_and_suspension() {
     let (device, queue, _) = reference_gpu_assets();
     let manager = Arc::new(AudioManager::new_for_tests());
@@ -552,6 +552,6 @@ fn higurashi_standalone_movie_publication_cancellation_and_suspension() {
     }
     assert_eq!(owners, 4);
     eprintln!(
-        "Standalone Movie:4 real silent/AAC cancellation gates before prepare/publication and after publication before executor completion; early desired flag/gain retained, topfuture joined before published codec/PCM drop, all descendant scopes drained; silent focus-loss clock frozen without any update; exact Loopback Audio"
+        "Standalone Movie:4 real silent/AAC cancellation gates before prepare/publication and after publication before executor completion; early desired flag/gain retained, topfuture joined before published codec/PCM drop, all descendant scopes drained; silent focus-loss clock frozen without any update; the default audio output"
     );
 }

@@ -166,7 +166,7 @@ const BRANCHES: [(i32, u32, &str); 4] = [
 ];
 
 #[test]
-#[ignore = "ordinaryCategory3row7/407; realRND0..3 branchvoice/naturalVOICEWAIT/fullEND418/EXIT+saveTitle; immutableunlockedtemplate/exactLoopback/Metal"]
+#[ignore = "ordinaryCategory3row7/407; realRND0..3 branchvoice/naturalVOICEWAIT/fullEND418/EXIT+saveTitle; immutableunlockedtemplate/audio/Metal"]
 fn higurashi_runtime_hajisarashi_unlocked_template_full_random_voice_and_end() {
     let (saved, initial) = template();
     let out = PathBuf::from(

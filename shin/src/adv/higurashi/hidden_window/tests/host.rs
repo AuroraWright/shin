@@ -13,7 +13,7 @@ use shin_render::shaders::types::texture::{TextureTarget,TextureTargetKind};
 use std::sync::Arc;
 
 #[test]
-#[ignore = "real hidden message/modal clocks and pixels on offscreen Metal/exact Loopback Audio"]
+#[ignore = "real hidden message/modal clocks and pixels on offscreen Metal/the default audio output"]
 fn higurashi_host_hidden_window_retires_before_restore_and_keeps_message_resources() {
     let (device,queue,assets)=gpu_assets();let assets=Arc::new(assets);
     let script=scenario(&[0x86,1,0,0,1,0x7f,2,0,b'A',0,0,0,0]);

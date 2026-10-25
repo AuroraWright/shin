@@ -415,7 +415,7 @@ fn unchanged_vm(slot: &TitleSlot, data: &RuntimeGameData, commands: u64) {
 }
 
 #[test]
-#[ignore = "actual SystemMenu5/7 default-No/A and B rejection,early reopening/no VM commits/save writes at720p1080p;offscreen Metal/exact Loopback,no window/user saves"]
+#[ignore = "actual SystemMenu5/7 default-No/A and B rejection,early reopening/no VM commits/save writes at720p1080p;offscreen Metal/audio,no window/user saves"]
 fn higurashi_system_menu_title_and_fragment_rejections_reopen_before_question_prune() {
     let fixture = Fixture::new();
     let mut rejections = 0;
@@ -509,7 +509,7 @@ fn higurashi_system_menu_title_and_fragment_rejections_reopen_before_question_pr
 }
 
 #[test]
-#[ignore = "actual SystemMenu7 Yes copies complete active0/1 data,12049 stays Kakera49,32700 restore,next-frame source death/capture/all101 rows at720p1080p;offscreen Metal/exact Loopback,no window/user saves"]
+#[ignore = "actual SystemMenu7 Yes copies complete active0/1 data,12049 stays Kakera49,32700 restore,next-frame source death/capture/all101 rows at720p1080p;offscreen Metal/audio,no window/user saves"]
 fn higurashi_system_menu_fragment_yes_retains_full_scene_and_ignores_exit_special_routes() {
     let fixture = Fixture::new();
     let mut captures = 0;
@@ -631,7 +631,7 @@ fn higurashi_system_menu_fragment_yes_retains_full_scene_and_ignores_exit_specia
 }
 
 #[test]
-#[ignore = "actual SystemMenu5 Yes/global flag1 SaveGame/held atomic temporary writer/minimum one second/notice/freshTitle(-1,-1),all101 full rows+source capture720p1080p;exact Loopback,no window/user saves"]
+#[ignore = "actual SystemMenu5 Yes/global flag1 SaveGame/held atomic temporary writer/minimum one second/notice/freshTitle(-1,-1),all101 full rows+source capture720p1080p;audio,no window/user saves"]
 fn higurashi_system_menu_title_yes_saves_full_globals_before_retiring_adv() {
     let fixture = Fixture::new();
     for size in [(1280, 720), (1920, 1080)] {

@@ -24,7 +24,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROMs, explicit syscall interposer, Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROMs, explicit syscall interposer, Metal and the default audio output"]
 fn reference_authored_saved_scene_io_error_recovery() {
     assert!(std::env::var_os("SHIN_REFERENCE_SAVED_IO_ERRORS_ONLY").is_some());
     std::thread::Builder::new()

@@ -330,7 +330,7 @@ pub(super) fn driver_with_scenario(
 }
 
 #[test]
-#[ignore = "real native-art SystemMenu/Save/Delete/Config/Manual and ADV pause on Metal/exact Loopback Audio; temporary progress only"]
+#[ignore = "real native-art SystemMenu/Save/Delete/Config/Manual and ADV pause on Metal/the default audio output; temporary progress only"]
 fn ger_app_system_menu_manual_writes_child_returns_and_closing_fade_gate() {
     let gpu = Offscreen::new();
     let (temporary, path, mut d) = driver(&gpu, false);
@@ -583,7 +583,7 @@ fn ger_app_system_menu_manual_writes_child_returns_and_closing_fade_gate() {
             > completed
     );
     println!(
-        "GER_SYSTEM_MENU_APP Save_No_Yes_IO_Failure_Delete_Config_Manual_wait_owner_parent_returns_frozen_VM_closing_gate_resume=verified frames={} audio=Loopback Audio",
+        "GER_SYSTEM_MENU_APP Save_No_Yes_IO_Failure_Delete_Config_Manual_wait_owner_parent_returns_frozen_VM_closing_gate_resume=verified frames={} audio=default output",
         d.frames.frames
     );
 }

@@ -26,7 +26,7 @@ fn solid(pixels: &[u8], color: [f32; 4]) {
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn actual_pageback_promotion_all_scene_wipers_and_copied_bank_retirement() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -161,13 +161,13 @@ fn actual_pageback_promotion_all_scene_wipers_and_copied_bank_retirement() {
         [0.0, 0.0, 0.0, 255.0],
     );
     println!(
-        "GEROKASU2_SCENE_GPU kinds=10 frames={} channels={} active_vs_pending_actual_Screen_Page_promotion_wipe_wait_Default_blend_copied_bank_stop_fresh_page=verified audio=Loopback Audio",
+        "GEROKASU2_SCENE_GPU kinds=10 frames={} channels={} active_vs_pending_actual_Screen_Page_promotion_wipe_wait_Default_blend_copied_bank_stop_fresh_page=verified audio=default output",
         frames.frames, frames.channels
     );
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn decoded_pageback_wipe_dont_wait_and_wipewait_run_to_exit() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -335,13 +335,13 @@ fn decoded_pageback_wipe_dont_wait_and_wipewait_run_to_exit() {
         [0.0, 0.0, 255.0, 255.0],
     );
     println!(
-        "GEROKASU2_SCENE_RUNNER commands=7 frames={} channels={} decoded_repeated_PAGEBACK_LayerLoad_WIPE_DONT_WAIT_WIPEWAIT_FrameId_promotion_retirement_EXIT=verified audio=Loopback Audio",
+        "GEROKASU2_SCENE_RUNNER commands=7 frames={} channels={} decoded_repeated_PAGEBACK_LayerLoad_WIPE_DONT_WAIT_WIPEWAIT_FrameId_promotion_retirement_EXIT=verified audio=default output",
         frames.frames, frames.channels
     );
 }
 
 #[test]
-#[ignore = "requires Metal and exact Loopback Audio;legacy default Screen/Page regression"]
+#[ignore = "requires Metal and the default audio output;legacy default Screen/Page regression"]
 fn legacy_default_screen_nested_copy_render_and_motion_regression() {
     use shin_render::{
         dynamic_buffer::DynamicBuffer,
@@ -397,6 +397,6 @@ fn legacy_default_screen_nested_copy_render_and_motion_regression() {
         .poll(wgpu::PollType::wait_indefinitely())
         .unwrap();
     println!(
-        "GEROKASU2_SCENE_LEGACY default_UserLayer_Screen_Page_nested_copies_motion_capture_pixels_retirement=verified audio=Loopback Audio"
+        "GEROKASU2_SCENE_LEGACY default_UserLayer_Screen_Page_nested_copies_motion_capture_pixels_retirement=verified audio=default output"
     );
 }

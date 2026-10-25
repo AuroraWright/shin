@@ -222,7 +222,7 @@ impl Trace {
 }
 
 #[test]
-#[ignore = "original combined AArch64 mode/menu/task dispatch, real cached capture/view and exact Loopback Audio"]
+#[ignore = "original combined AArch64 mode/menu/task dispatch, real cached capture/view and the default audio output"]
 fn higurashi_host_system_menu_owns_modal_tasks_children_and_global_cues() {
     let (device, queue, assets) = gpu_assets();
     let assets = Arc::new(assets);
@@ -514,11 +514,11 @@ fn higurashi_host_system_menu_owns_modal_tasks_children_and_global_cues() {
     while sounds.lock().sounds.last().unwrap().position_samples() == 0 {
         assert!(
             std::time::Instant::now() < deadline,
-            "Global UI cue did not advance on Loopback Audio"
+            "Global UI cue did not advance on the default audio output"
         );
         std::thread::sleep(std::time::Duration::from_millis(5));
     }
     println!(
-        "Higurashi global SYSSE: supplied move/cancel/decide bank reused; cue source advances on exact Loopback Audio after host retirement"
+        "Higurashi global SYSSE: supplied move/cancel/decide bank reused; cue source advances on the default audio output after host retirement"
     );
 }

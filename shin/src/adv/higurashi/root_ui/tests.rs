@@ -257,7 +257,7 @@ fn higurashi_root_ui_packets_match_updated_executable() {
     );
 }
 #[test]
-#[ignore = "native root UI sprite replay with actual adv.txa at720p/1080p;offscreen Metal/exact Loopback Audio"]
+#[ignore = "native root UI sprite replay with actual adv.txa at720p/1080p;offscreen Metal/the default audio output"]
 fn higurashi_root_ui_pixels_match_native_at_720p_and_1080p() {
     let states = (0..30)
         .map(|i| {

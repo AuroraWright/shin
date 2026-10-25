@@ -90,7 +90,7 @@ impl InputOverlay for Replacement {
     fn cancel(&mut self) {}
 }
 #[test]
-#[ignore = "actual Gameplay CHARSELECT atlas worker/scene/input wrapper/controller/contact/cues/11780/result/conditional retirement and unanswered reconstruction at720p/1080p on exact Loopback Audio"]
+#[ignore = "actual Gameplay CHARSELECT atlas worker/scene/input wrapper/controller/contact/cues/11780/result/conditional retirement and unanswered reconstruction at720p/1080p on the default audio output"]
 fn higurashi_gameplay_character_selection_returns_original_index_and_retires_scene_and_wrapper() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -492,7 +492,7 @@ fn higurashi_gameplay_character_selection_returns_original_index_and_retires_sce
 }
 
 #[test]
-#[ignore = "real retained character atlas producer held at delivery,runner reconstruction and cancellation on offscreen Metal/exact Loopback Audio;no window/saves"]
+#[ignore = "real retained character atlas producer held at delivery,runner reconstruction and cancellation on offscreen Metal/the default audio output;no window/saves"]
 fn higurashi_character_loader_retirement_drains_pending_output_without_copy_or_result() {
     let (_, _, server) = reference_gpu_assets();
     let server = Arc::new(server);

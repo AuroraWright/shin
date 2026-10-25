@@ -32,7 +32,7 @@ impl Frames {
     }
 }
 #[test]
-#[ignore = "actual Gameplay SELECT/filter/controller/contact/hide/autosave/script feedback on offscreen Metal/exact Loopback Audio"]
+#[ignore = "actual Gameplay SELECT/filter/controller/contact/hide/autosave/script feedback on offscreen Metal/the default audio output"]
 fn higurashi_gameplay_selection_returns_original_index_and_retires_overlay() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

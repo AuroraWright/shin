@@ -728,8 +728,8 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "requires the Loopback Audio system output device"]
-    fn reference_loopback_nxa_failure_and_voice_segment_ownership() {
+    #[ignore = "requires the default audio output"]
+    fn reference_nxa_failure_and_voice_segment_ownership() {
         use crate::{AudioManager, AudioSegment};
         use shin_core::format::audio::AudioDecoder;
         let manager = AudioManager::new_for_tests();
@@ -784,7 +784,7 @@ mod tests {
             );
         }
         println!(
-            "Loopback Audio: NXA and voice-segment decode errors freeze samples, clear waits, retain ownership through controls, and retire on Stop"
+            "NXA and voice-segment decode errors freeze samples, clear waits, retain ownership through controls, and retire on Stop"
         );
     }
 

@@ -217,7 +217,7 @@ fn state(
     words.join(" ")
 }
 #[test]
-#[ignore = "supplied ROM,exact Loopback Audio,native Movie traces and Metal;no window/saves"]
+#[ignore = "supplied ROM,the default audio output,native Movie traces and Metal;no window/saves"]
 fn reference_native_movie_composed_clone_and_final_owners() {
     crate::init_test_task_pools();
     let workspace = Path::new(env!("CARGO_MANIFEST_DIR")).parent().unwrap();

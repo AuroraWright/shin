@@ -237,7 +237,7 @@ fn confirm(f: &mut Fixture) {
 }
 
 #[test]
-#[ignore = "real TIPS widget/Choice/font/callback/fullscene data at720p/1080p, offscreen Metal and exact Loopback Audio; no windows/saves"]
+#[ignore = "real TIPS widget/Choice/font/callback/fullscene data at720p/1080p, offscreen Metal and the default audio output; no windows/saves"]
 fn higurashi_gameplay_tips_notification_preserves_source_and_delivers_original_choice() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -486,7 +486,7 @@ impl InputOverlay for Replacement {
     fn cancel(&mut self) {}
 }
 #[test]
-#[ignore = "real Otsu/Kakera/skip VOID notification jobs and identity retirement at720p/1080p, offscreen Metal/exact Loopback Audio;no windows/saves"]
+#[ignore = "real Otsu/Kakera/skip VOID notification jobs and identity retirement at720p/1080p, offscreen Metal/the default audio output;no windows/saves"]
 fn higurashi_gameplay_void_notifications_preserve_data_and_retire_by_identity() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -652,7 +652,7 @@ fn higurashi_gameplay_void_notifications_preserve_data_and_retire_by_identity() 
 }
 
 #[test]
-#[ignore = "actual First/replay retained TIPS stop0/full constructorflags and real nested Choice at720p/1080p;exact Loopback Audio/offscreen Metal"]
+#[ignore = "actual First/replay retained TIPS stop0/full constructorflags and real nested Choice at720p/1080p;the default audio output/offscreen Metal"]
 fn higurashi_gameplay_replayed_tips_stop_zero_retains_constructor_flags() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

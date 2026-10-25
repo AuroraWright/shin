@@ -10,7 +10,7 @@ fn loaded(audio: &mut HigurashiAudio, slot: i32) {
     }
 }
 #[test]
-#[ignore = "real Higurashi descriptor restoration on offscreen Metal and exact Loopback Audio"]
+#[ignore = "real Higurashi descriptor restoration on offscreen Metal and the default audio output"]
 fn higurashi_audio_reconstruction_preserves_matching_sources_and_loader_ownership() {
     let (_, _, assets) = super::super::super::message_glyphs::tests::gpu::gpu_assets();
     let assets = Arc::new(assets);
@@ -103,6 +103,6 @@ fn higurashi_audio_reconstruction_preserves_matching_sources_and_loader_ownershi
     audio.stop_all_effects(0).unwrap();
     audio.stop_bgm(0);
     println!(
-        "Higurashi audio reconstruction:exact Loopback Audio; matching BGM and active/negative SE clocks, matching loader ownership, inactive loader cancellation, stopping-tail four-tick retirement, matching stopping repeat revival and restored32 descriptors pass"
+        "Higurashi audio reconstruction:the default audio output; matching BGM and active/negative SE clocks, matching loader ownership, inactive loader cancellation, stopping-tail four-tick retirement, matching stopping repeat revival and restored32 descriptors pass"
     );
 }

@@ -135,7 +135,7 @@ fn higurashi_title_demo_selection_unlocks_and_absent_movie_follow_older_schema()
 }
 
 #[test]
-#[ignore = "actual updated opening MP4,FFmpeg,offscreen GPU at720p/1080p and exact Loopback Audio"]
+#[ignore = "actual updated opening MP4,FFmpeg,offscreen GPU at720p/1080p and the default audio output"]
 fn higurashi_title_demo_plays_real_movie_and_retires_decoders() {
     use crate::adv::higurashi::{
         reference_gpu_assets as gpu_assets, reference_render_to_texture as render_to_texture,

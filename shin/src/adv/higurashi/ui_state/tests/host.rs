@@ -19,7 +19,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "real host reconstruction UI/input clocks on offscreen Metal and exact Loopback Audio"]
+#[ignore = "real host reconstruction UI/input clocks on offscreen Metal and the default audio output"]
 fn higurashi_host_owns_reconstruction_resets_and_detached_vm_input() {
     let (device, queue, assets) = gpu_assets();
     let assets = Arc::new(assets);

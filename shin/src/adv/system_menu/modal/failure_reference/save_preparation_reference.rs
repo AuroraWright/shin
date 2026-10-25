@@ -4,7 +4,7 @@ use crate::adv::{config::ConfigPhase, dialog::view::DialogTextures, save_menu::S
 use shin_core::format::save::{GameData, SaveData};
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary saves/assets only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary saves/assets only"]
 fn reference_menu_save_preparation_failures_keep_owners_and_retry() {
     std::thread::Builder::new()
         .name("menu-save-preparation".into())
@@ -422,7 +422,7 @@ fn run_callers() {
             "caller_waiting_state_released":true,"same_owner_repaired_retry":true,"slot99_preserved":true}));
     }
     std::fs::write(output.join("save-caller-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({
-        "cases":cases,"profiles_passed":cases.len(),"audio_device":"exact Loopback Audio",
+        "cases":cases,"profiles_passed":cases.len(),"audio_device":"default output",
         "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"window_created":false,
         "working_progress_written":false,"authored_asset_corruption_claim":false
     })).unwrap()).unwrap();

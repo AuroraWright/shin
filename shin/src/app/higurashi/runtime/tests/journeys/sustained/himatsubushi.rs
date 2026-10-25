@@ -267,7 +267,7 @@ struct ExitBoundary {
 }
 
 #[test]
-#[ignore = "CONDITIONAL unregistered draft: requires actual accepted Some output+PASS;ordinary Category1/scenario1/Movie8 naturalEOF/SNRSEL1 row1/201/three original0 choices/fullHima/TIP49/Otsu4/EXIT1f997 retainedsave+Title;real assets/offscreenMetal/exactLoopbackAudio;temporaryPaths only;twohour observation allowance"]
+#[ignore = "CONDITIONAL unregistered draft: requires actual accepted Some output+PASS;ordinary Category1/scenario1/Movie8 naturalEOF/SNRSEL1 row1/201/three original0 choices/fullHima/TIP49/Otsu4/EXIT1f997 retainedsave+Title;real assets/offscreenMetal/audio output;temporaryPaths only;twohour observation allowance"]
 fn higurashi_runtime_sustained_earned_category_reaches_full_himatsubushi_exit_and_title() {
     let (saved, initial_file) = earned();
     let started = Instant::now();

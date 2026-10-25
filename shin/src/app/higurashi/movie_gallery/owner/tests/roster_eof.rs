@@ -12,7 +12,7 @@ fn hash(bytes: &[u8]) -> String {
 }
 
 #[test]
-#[ignore = "all12 supplied MP4s at natural wall-clock speed through actual Movie Owner/Player/video EOF+PCM drain/private retirement; offscreen Metal/exact Loopback Audio; no user saves, no controller testing; about25minutes"]
+#[ignore = "all12 supplied MP4s at natural wall-clock speed through actual Movie Owner/Player/video EOF+PCM drain/private retirement; offscreen Metal/the default audio output; no user saves, no controller testing; about25minutes"]
 fn higurashi_movie_roster_natural_eof_drains_and_restores_gallery() {
     let metadata: serde_json::Value = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -135,5 +135,5 @@ fn higurashi_movie_roster_natural_eof_drains_and_restores_gallery() {
     drop(owner);
     assert!(resources.atlas.upgrade().is_none());
     assert!(resources.mask.is_none_or(|m|m.upgrade().is_none()));
-    emit(serde_json::json!({"event":"pass","movies":12,"settings_unchanged":true,"storage":null,"user_saves_written":false,"scope":"desktop actual Owner/FFmpeg/Metal/Loopback natural EOF and retirement; no Nintendo decoder/framebuffer equivalence"}));
+    emit(serde_json::json!({"event":"pass","movies":12,"settings_unchanged":true,"storage":null,"user_saves_written":false,"scope":"desktop actual Owner/FFmpeg/Metal/audio natural EOF and retirement; no Nintendo decoder/framebuffer equivalence"}));
 }

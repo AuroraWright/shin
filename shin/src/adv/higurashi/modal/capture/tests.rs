@@ -459,7 +459,7 @@ fn screen_context<'a>(
 }
 
 #[test]
-#[ignore = "real cached screen/transition capture and host entry on Metal/exact Loopback Audio"]
+#[ignore = "real cached screen/transition capture and host entry on Metal/the default audio output"]
 fn higurashi_modal_capture_uses_cached_screen_and_keeps_snapshot_across_resize() {
     use crate::adv::higurashi::{
         audio::HigurashiAudio,
@@ -657,6 +657,6 @@ fn higurashi_modal_capture_uses_cached_screen_and_keeps_snapshot_across_resize()
     assert_eq!(host.modal_pause_depth(), 0);
     assert!(!host.runner.frame().message.playback.hidden);
     println!(
-        "Higurashi modal cached-screen host:real Tile midpoint/endpoint, supplied prepared cache without redraw/message, failed preparation, nested entry, fixed960x540 snapshot across720p/1080p resize/source refresh and counted conceal restoration pass; exact Loopback Audio; native root cache traversal and ordinary menu attachment remain outside fixture"
+        "Higurashi modal cached-screen host:real Tile midpoint/endpoint, supplied prepared cache without redraw/message, failed preparation, nested entry, fixed960x540 snapshot across720p/1080p resize/source refresh and counted conceal restoration pass; the default audio output; native root cache traversal and ordinary menu attachment remain outside fixture"
     );
 }

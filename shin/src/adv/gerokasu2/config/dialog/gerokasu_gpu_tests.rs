@@ -16,7 +16,7 @@ use shin_render::{
 };
 
 #[test]
-#[ignore = "requires game-data/gerokasu/data.rom, Metal and exact Loopback Audio; writes a review frame"]
+#[ignore = "requires game-data/gerokasu/data.rom, Metal and the default audio output; writes a review frame"]
 fn gerokasu_dialog_reserves_and_paints_logo_strip() {
     let out = std::env::var_os("SHIN_GEROKASU_DIALOG_FRAME").map(std::path::PathBuf::from);
     let gpu = Offscreen::new();

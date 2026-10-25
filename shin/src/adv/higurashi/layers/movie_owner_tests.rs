@@ -409,7 +409,7 @@ fn tick_until(
 }
 
 #[test]
-#[ignore = "actual short H264/AAC owners, headless GPU and exact Loopback Audio; unique temporary asset storage, no window/save"]
+#[ignore = "actual short H264/AAC owners, headless GPU and the default audio output; unique temporary asset storage, no window/save"]
 fn higurashi_live_movie_owner_publication_reconstruction_and_scoped_retirement() {
     let (device, queue, _) = crate::adv::higurashi::reference_gpu_assets();
     let scenario = scenario();
@@ -813,7 +813,7 @@ fn json_words(value: &serde_json::Value) -> Vec<u32> {
 }
 
 #[test]
-#[ignore = "two real8-frame H264/AAC live lifecycles, original program20 cache, headless720p/1080p and exact Loopback Audio; no window/save"]
+#[ignore = "two real8-frame H264/AAC live lifecycles, original program20 cache, headless720p/1080p and the default audio output; no window/save"]
 fn higurashi_live_movie_owner_ready_eof_retained_cache_and_captured_wait() {
     use shin_render::shaders::types::texture::{TextureTarget, TextureTargetKind};
     let (device, queue, _) = crate::adv::higurashi::reference_gpu_assets();
@@ -1051,6 +1051,6 @@ fn higurashi_live_movie_owner_ready_eof_retained_cache_and_captured_wait() {
     }
     assert_eq!(rendered, 8);
     eprintln!(
-        "Live Higurashi Movie:two real silent/AAC8-frame lifecycles/eight720p1080p retained RGBA captures; pending0→ready1→EOF+PCMdrain2,cache converted during update before render,captured wait bank,base-only skip,external suspension,NULLcopy/outgoing retention,scoped retirement; exact Loopback only,no original SDK codec/audio-source allocation claim"
+        "Live Higurashi Movie:two real silent/AAC8-frame lifecycles/eight720p1080p retained RGBA captures; pending0→ready1→EOF+PCMdrain2,cache converted during update before render,captured wait bank,base-only skip,external suspension,NULLcopy/outgoing retention,scoped retirement; audio only,no original SDK codec/audio-source allocation claim"
     );
 }

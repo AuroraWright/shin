@@ -13,7 +13,7 @@ use shin_render::{
 use std::path::PathBuf;
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary assets only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary assets only"]
 fn reference_particle_artwork_consumer_and_replacement_recovery() {
     std::thread::Builder::new()
         .name("particle-artwork-recovery".into())
@@ -300,7 +300,7 @@ fn run() {
         );
         cases.push(serde_json::json!({"layer":"Animation","mode":mode,"profile":"invalid-mode-no-resource-control"}));
     }
-    std::fs::write(output.join("particle-artwork-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({"cases":cases,"cases_passed":cases.len(),"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"window_created":false,"working_progress_written":false,"audio_device":"exact Loopback Audio","scope":"Actual prepare_checked/load_checked producers and singleton replacement,not full ADV error-notice dispatch"})).unwrap()).unwrap();
+    std::fs::write(output.join("particle-artwork-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({"cases":cases,"cases_passed":cases.len(),"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"window_created":false,"working_progress_written":false,"audio_device":"default output","scope":"Actual prepare_checked/load_checked producers and singleton replacement,not full ADV error-notice dispatch"})).unwrap()).unwrap();
 }
 fn render(
     layer: &mut UserLayer,

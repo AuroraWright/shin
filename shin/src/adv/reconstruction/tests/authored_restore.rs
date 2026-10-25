@@ -23,7 +23,7 @@ use std::{
 // Bridges native authored VM replay to actual desktop resource publication.
 // Native asset loading/scheduling and independent NVN pixels remain separate.
 #[test]
-#[ignore = "requires supplied executable/ROMs, Metal, exact Loopback Audio and SHIN_REFERENCE_AUTHORED_RESTORE_ONLY"]
+#[ignore = "requires supplied executable/ROMs, Metal, the default audio output and SHIN_REFERENCE_AUTHORED_RESTORE_ONLY"]
 fn reference_authored_native_saved_scene_publication() {
     assert!(std::env::var_os("SHIN_REFERENCE_AUTHORED_RESTORE_ONLY").is_some());
     std::thread::Builder::new()

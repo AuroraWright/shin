@@ -14,7 +14,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio;temporary assets/progress only"]
+#[ignore = "requires supplied ROM,Metal and the default audio output;temporary assets/progress only"]
 fn reference_common_effects_mandatory_artwork_recovery() {
     std::thread::Builder::new()
         .name("common-effects-recovery".into())
@@ -194,13 +194,13 @@ fn common_effects_recovery() {
     }
     std::fs::write(output.join("common-effects-recovery.json"), serde_json::to_vec_pretty(&serde_json::json!({
         "cases":cases,"cases_passed":cases.len(),"window_created":false,"working_progress_written":false,
-        "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"audio_device":"exact Loopback Audio",
+        "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"audio_device":"default output",
         "lookup_scope":"Mandatory App breakup lookup used after real effects publication;no full App instance"
     })).unwrap()).unwrap();
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary assets/save only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary assets/save only"]
 fn reference_font_metrics_startup_and_notice_error_recovery() {
     crate::init_test_task_pools();
     let output = PathBuf::from(std::env::var_os("SHIN_REFERENCE_STARTUP_UI_OUTPUT").unwrap());
@@ -356,7 +356,7 @@ fn reference_font_metrics_startup_and_notice_error_recovery() {
     std::fs::write(
         output.join("startup-ui-recovery.json"),
         serde_json::to_vec_pretty(&serde_json::json!({
-            "cases_passed":cases.len(),"cases":cases,"audio_device":"exact Loopback Audio",
+            "cases_passed":cases.len(),"cases":cases,"audio_device":"default output",
             "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
             "window_created":false,"archives_modified":false,"working_progress_written":false
         }))

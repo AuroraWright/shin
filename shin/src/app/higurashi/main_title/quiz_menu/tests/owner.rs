@@ -51,7 +51,7 @@ fn enter_quiz(o: &mut Opening, number: &mut u32) {
     assert_eq!(o.quiz.as_ref().unwrap().state.phase, 2);
 }
 #[test]
-#[ignore = "real retained startup/Top-Quiz-Top/720p-1080p held physical input/fresh extra-word0 scenarios/90-frame ADV gate;offscreen Metal and exact Loopback Audio,no window/saves"]
+#[ignore = "real retained startup/Top-Quiz-Top/720p-1080p held physical input/fresh extra-word0 scenarios/90-frame ADV gate;offscreen Metal and the default audio output,no window/saves"]
 fn higurashi_title_quiz_real_owner_preserves_contact_and_starts_authored_adv() {
     let (device, queue, server) = gpu_assets();
     let server = Arc::new(server);
@@ -227,6 +227,6 @@ fn higurashi_title_quiz_real_owner_preserves_contact_and_starts_authored_adv() {
     }
     device.poll(wgpu::PollType::wait_indefinitely()).unwrap();
     println!(
-        "Title QuizMenu:two real720p/1080p owners;Top7 cancel/borrowed snapshot/physical held contact across unchanged resize/controller capture/fresh extra-word0 scenario5 and12/one fresh seed/90-frame pre-clock flags0 ADV request/actual title artwork and system cue bank pass;exact Loopback Audio,no window/saves"
+        "Title QuizMenu:two real720p/1080p owners;Top7 cancel/borrowed snapshot/physical held contact across unchanged resize/controller capture/fresh extra-word0 scenario5 and12/one fresh seed/90-frame pre-clock flags0 ADV request/actual title artwork and system cue bank pass;the default audio output,no window/saves"
     );
 }

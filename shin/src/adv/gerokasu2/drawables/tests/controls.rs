@@ -48,7 +48,7 @@ fn translated_green(pixels: &[u8], black_columns: usize) {
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn actual_gerokasu2_control_properties_page_copies_and_fresh_policy() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -172,7 +172,7 @@ fn actual_gerokasu2_control_properties_page_copies_and_fresh_policy() {
             .all(|p| p == [0, 0, 0, 255])
     );
     println!(
-        "GEROKASU2_CONTROL_GPU copied_pending_queues_active_render_fresh_page_policy_atomic_validation=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_CONTROL_GPU copied_pending_queues_active_render_fresh_page_policy_atomic_validation=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }
@@ -280,7 +280,7 @@ fn policy(paused: bool) -> FramePolicy {
 }
 
 #[test]
-#[ignore = "requires supplied ROM,Metal and exact Loopback Audio"]
+#[ignore = "requires supplied ROM,Metal and the default audio output"]
 fn decoded_gerokasu2_controls_retained_waits_retry_transwait_and_exit() {
     let gpu = Offscreen::new();
     let assets = assets(&gpu);
@@ -480,7 +480,7 @@ fn decoded_gerokasu2_controls_retained_waits_retry_transwait_and_exit() {
             .all(|p| p == [0, 0, 255, 255])
     );
     println!(
-        "GEROKASU2_CONTROL_RUNNER commands=23 motion_frames=4 wait_owners=4 retry_once_pause_animation_gate_TRANSWAIT_EXIT=verified frames={} channels={} audio=Loopback Audio",
+        "GEROKASU2_CONTROL_RUNNER commands=23 motion_frames=4 wait_owners=4 retry_once_pause_animation_gate_TRANSWAIT_EXIT=verified frames={} channels={} audio=default output",
         frames.frames, frames.channels
     );
 }

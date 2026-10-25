@@ -197,7 +197,7 @@ fn copy(pass: &mut RenderPass, source: TextureSource) {
 }
 
 #[test]
-#[ignore = "real host/root/message/backdrop composition against original1382c packets on Metal/exact Loopback Audio"]
+#[ignore = "real host/root/message/backdrop composition against original1382c packets on Metal/the default audio output"]
 fn higurashi_host_modal_backdrop_composes_native_packets_at_720p_and_1080p() {
     use crate::adv::higurashi::{
         audio::{AudioFramePolicy, HigurashiAudio},
@@ -402,6 +402,6 @@ fn higurashi_host_modal_backdrop_composes_native_packets_at_720p_and_1080p() {
         }
     }
     println!(
-        "Higurashi modal host rendering:{frames} exact whole RGBA frames at720p/1080p; actual retained message/root, mixed-alpha960x540 snapshots, native packed tint/blend/root suppression and fade/retirement pass; exact Loopback Audio; optional hint/indicator/mode drawing remains a caller service"
+        "Higurashi modal host rendering:{frames} exact whole RGBA frames at720p/1080p; actual retained message/root, mixed-alpha960x540 snapshots, native packed tint/blend/root suppression and fade/retirement pass; the default audio output; optional hint/indicator/mode drawing remains a caller service"
     );
 }

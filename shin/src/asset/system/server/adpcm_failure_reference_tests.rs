@@ -8,7 +8,7 @@ fn word(bytes: &[u8], offset: usize) -> usize {
 }
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; temporary bank only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; temporary bank only"]
 fn reference_system_sound_adpcm_error_recovery() {
     crate::init_test_task_pools();
     let output = PathBuf::from(std::env::var_os("SHIN_REFERENCE_ADPCM_OUTPUT").unwrap());
@@ -128,7 +128,7 @@ fn reference_system_sound_adpcm_error_recovery() {
     std::fs::write(
         output.join("adpcm-recovery.json"),
         serde_json::to_vec_pretty(&serde_json::json!({
-            "cases_passed":cases.len(),"cases":cases,"audio_device":"exact Loopback Audio",
+            "cases_passed":cases.len(),"cases":cases,"audio_device":"default output",
             "patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),
             "window_created":false,"archives_modified":false,"working_progress_written":false
         }))
@@ -136,7 +136,7 @@ fn reference_system_sound_adpcm_error_recovery() {
     )
     .unwrap();
     println!(
-        "{} malformed ADPCM profiles return before queuing and retry on exact Loopback Audio",
+        "{} malformed ADPCM profiles return before queuing and retry on the default audio output",
         cases.len()
     );
 }

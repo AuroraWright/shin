@@ -111,7 +111,7 @@ pub(super) fn render_captured_draw_packets<'a>(
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 #[test]
-#[ignore = "requires supplied original/1.03 Last executable/atlas, Metal and Loopback Audio"]
+#[ignore = "requires supplied original/1.03 Last executable/atlas, Metal and the default audio output"]
 fn reference_last_native_draw_commands_and_full_atlas_frames() {
     use shin_core::{format::rom::RomReader, primitives::stateless_reader::StatelessFile};
     use std::{

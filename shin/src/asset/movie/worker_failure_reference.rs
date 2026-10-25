@@ -8,7 +8,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal, ffmpeg and exact Loopback Audio; no working progress writes"]
+#[ignore = "requires supplied ROM, Metal, ffmpeg and the default audio output; no working progress writes"]
 fn reference_movie_player_worker_limits_and_device_errors_recover() {
     crate::init_test_task_pools();
     let output = PathBuf::from(std::env::var_os("SHIN_REFERENCE_MOVIE_WORKER_OUTPUT").unwrap());
@@ -124,7 +124,7 @@ fn reference_movie_player_worker_limits_and_device_errors_recover() {
             cases.push(serde_json::json!({"api":api,"fault":fault,"error":error,"same_parsed_movie_retry":true,"frame_uploaded":true,"audio_retired":true}));
         }
     }
-    std::fs::write(output.join("movie-worker-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({"cases":cases,"cases_passed":cases.len(),"path":path,"metadata_size":metadata,"device_limit":limited.limits().max_texture_dimension_2d,"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"audio_device":"exact Loopback Audio","window_created":false,"working_progress_written":false,"scope":"Actual public Movie factories on compute workers; not full scene/ADV dispatch"})).unwrap()).unwrap();
+    std::fs::write(output.join("movie-worker-recovery.json"),serde_json::to_vec_pretty(&serde_json::json!({"cases":cases,"cases_passed":cases.len(),"path":path,"metadata_size":metadata,"device_limit":limited.limits().max_texture_dimension_2d,"patch_mounted":std::env::var_os("SHIN_REFERENCE_PATCH_ROM").is_some(),"audio_device":"default output","window_created":false,"working_progress_written":false,"scope":"Actual public Movie factories on compute workers; not full scene/ADV dispatch"})).unwrap()).unwrap();
 }
 fn create(
     api: &str,

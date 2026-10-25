@@ -22,7 +22,7 @@ use std::{
 };
 
 #[test]
-#[ignore = "requires supplied ROM, Metal and exact Loopback Audio; isolated temporary saves only"]
+#[ignore = "requires supplied ROM, Metal and the default audio output; isolated temporary saves only"]
 fn reference_startup_storage_failure_visible_and_retry_preserves_save() {
     run_startup_storage_failure(false);
 }

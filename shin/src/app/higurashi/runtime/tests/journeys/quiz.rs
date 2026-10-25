@@ -141,7 +141,7 @@ fn pure_composition(journey: &mut Journey, visible: bool) {
 }
 
 #[test]
-#[ignore = "actual Runtime Top7/QuizMenu0/authored scenario5/ten real question outcomes/natural BGM+voice EOF/score replay;real assets/offscreen Metal/exact Loopback Audio;temporary progress only"]
+#[ignore = "actual Runtime Top7/QuizMenu0/authored scenario5/ten real question outcomes/natural BGM+voice EOF/score replay;real assets/offscreen Metal/the default audio output;temporary progress only"]
 fn higurashi_runtime_authored_quiz_returns_score_through_actual_scene_factories() {
     let saved = initial();
     let file = saved.encode().unwrap();

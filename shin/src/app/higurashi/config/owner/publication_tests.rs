@@ -1,6 +1,6 @@
 //! Actual decoded assets and scoped jobs resolve the publication interval that
 //! the frozen native model transport does not execute concurrently. Parent runs
-//! these serially on offscreen GPU/exact Loopback; no window or user save.
+//! these serially on offscreen GPU/audio; no window or user save.
 use super::*;
 use crate::{
     adv::higurashi::{reference_gpu_assets, reference_render_to_texture},
@@ -189,7 +189,7 @@ fn pure_render(device: &wgpu::Device, queue: &wgpu::Queue, owner: &Owner, extent
 }
 
 #[test]
-#[ignore = "actual Config atlas publication before completion,real First/Open/Input/unchanged B close,offscreen720p1080p/exact Loopback;no window/user saves"]
+#[ignore = "actual Config atlas publication before completion,real First/Open/Input/unchanged B close,offscreen720p1080p/audio;no window/user saves"]
 fn higurashi_config_owner_early_publication_keeps_first_completion_and_prune_order() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -326,7 +326,7 @@ fn higurashi_config_owner_early_publication_keeps_first_completion_and_prune_ord
 }
 
 #[test]
-#[ignore = "actual Config worker publication between scope and clock/render,offscreen/exact Loopback fixture,no window/user saves"]
+#[ignore = "actual Config worker publication between scope and clock/render,offscreen/audio fixture,no window/user saves"]
 fn higurashi_config_owner_resamples_publication_after_scope_and_before_render() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

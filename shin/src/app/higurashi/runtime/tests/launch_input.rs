@@ -78,8 +78,6 @@ impl Launch {
             writes: StdMutex::new(Vec::new()),
         });
         let (device, queue, server) = crate::adv::higurashi::reference_gpu_assets();
-        // new_for_tests requires the exact Loopback Audio device and never
-        // falls back to the default system output.
         let manager = Arc::new(shin_audio::AudioManager::new_for_tests());
         let sounds = Arc::new(Mutex::new(SystemSoundPlayer::new(manager.clone())));
         let mut runtime = Runtime::new(Arc::new(server), manager, sounds, storage.clone());
@@ -128,7 +126,7 @@ impl Launch {
 }
 
 #[test]
-#[ignore = "real Runtime Startup/notice/TitleDemo permission propagation; offscreen Metal and exact Loopback Audio; temporary Paths only"]
+#[ignore = "real Runtime Startup/notice/TitleDemo permission propagation; offscreen Metal and the default audio output; temporary Paths only"]
 fn higurashi_runtime_denied_input_keeps_boot_and_accepted_transitions_advancing() {
     let mut saved = SaveData::default();
     saved.play_seconds = 123;
@@ -308,7 +306,7 @@ fn higurashi_runtime_denied_input_keeps_boot_and_accepted_transitions_advancing(
 }
 
 #[test]
-#[ignore = "pristine missing-file normal Runtime boot and successful deferred close; offscreen Metal and exact Loopback Audio; temporary Paths only"]
+#[ignore = "pristine missing-file normal Runtime boot and successful deferred close; offscreen Metal and the default audio output; temporary Paths only"]
 fn higurashi_runtime_pristine_boot_defers_its_first_progress_write_until_close() {
     let mut launch = Launch::new("pristine", None);
     let deadline = Instant::now() + Duration::from_secs(90);

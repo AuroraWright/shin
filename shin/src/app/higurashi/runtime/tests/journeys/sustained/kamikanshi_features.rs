@@ -138,7 +138,7 @@ fn story_step(j: &mut Journey, vp: InputViewport, deadline: Instant) {
 }
 
 #[test]
-#[ignore = "Ordinary full-route fixture; ordinary Category4/SNRSEL4 row1/501 from immutable unlocked template; protected BGM154 ending/fullEND433/commonEXIT+saveTitle; idempotent UNLOCK1[143,144]; exactLoopback/Metal, no earned or HID claim"]
+#[ignore = "Ordinary full-route fixture; ordinary Category4/SNRSEL4 row1/501 from immutable unlocked template; protected BGM154 ending/fullEND433/commonEXIT+saveTitle; idempotent UNLOCK1[143,144]; audio/Metal, no earned or HID claim"]
 fn higurashi_runtime_kamikanshi_unlocked_template_full_protected_end() {
     let (saved, initial) = template();
     let out = PathBuf::from(

@@ -16,7 +16,6 @@ anyhow = { workspace = true }
 tracing = { workspace = true }
 
 kira = { workspace = true, features = ["cpal"] }
-cpal = "0.18.2"
 ringbuf = "0.5.3"
 
 parking_lot = { workspace = true }

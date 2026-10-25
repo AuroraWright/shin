@@ -1,5 +1,5 @@
 //! Source-only acceptance candidates for the original EXIT12049 Bonus factory.
-//! Parent owns compilation and real offscreen Metal/exact Loopback execution.
+//! Parent owns compilation and real offscreen Metal/audio execution.
 //! Frame markers test whole-composition transport, not native fragment math.
 use super::*;
 use crate::{
@@ -105,7 +105,7 @@ impl Fixture {
         ];
         let (_, common) =
             crate::app::higurashi::gameplay::tests::character::common(&self.server, &code);
-        let manager = Arc::new(shin_audio::AudioManager::new_for_tests()); // Exact Loopback Audio.
+        let manager = Arc::new(shin_audio::AudioManager::new_for_tests()); // the default audio output.
         let io = Arc::new(NoWrites::default());
         let mut saved = SaveData::default();
         saved.persist_data.0 = vec![1; 192];
@@ -491,7 +491,7 @@ fn rows_equal(actual: &Slots, expected: &Slots) {
 }
 
 #[test]
-#[ignore = "actual decoded EXIT12049/11a94/30tick gates/one global MT seed at dispatch,fresh10010 flags0,both active records and negative route controls;real assets/offscreen Metal/exact Loopback,no storage writes/window"]
+#[ignore = "actual decoded EXIT12049/11a94/30tick gates/one global MT seed at dispatch,fresh10010 flags0,both active records and negative route controls;real assets/offscreen Metal/audio,no storage writes/window"]
 fn higurashi_bonus_exit_emits_once_after_committed_byte_and_native_wait_gates() {
     let fixture = Fixture::new();
     let mut bonus = 0;
@@ -573,7 +573,7 @@ fn higurashi_bonus_exit_emits_once_after_committed_byte_and_native_wait_gates() 
 }
 
 #[test]
-#[ignore = "actual EXIT Bonus next-frame fullADV/capture/all101 rows/preflight+post-retirement failure/retry/frozen MT+Globals/save snapshot/real First at720p1080p;offscreen Metal/exact Loopback,no user saves/window;Runtime quarantine evidence reused"]
+#[ignore = "actual EXIT Bonus next-frame fullADV/capture/all101 rows/preflight+post-retirement failure/retry/frozen MT+Globals/save snapshot/real First at720p1080p;offscreen Metal/audio,no user saves/window;Runtime quarantine evidence reused"]
 fn higurashi_bonus_scene_transfer_retains_full_globals_and_frozen_seed_across_factory_retry() {
     let fixture = Fixture::new();
     let mut profiles = 0;

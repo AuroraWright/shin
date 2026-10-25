@@ -29,7 +29,7 @@ fn until(slot: &mut TitleSlot, number: &mut u32, ready: impl Fn(&Gameplay) -> bo
     }
 }
 #[test]
-#[ignore = "real Gameplay/SystemMenu/SaveMenu factories,Back0/1 source resumption,paused VM/pending commit isolation and Load final full flags0,next-frame dispatch at720p/1080p on offscreen Metal/exact Loopback Audio;no window/user writes"]
+#[ignore = "real Gameplay/SystemMenu/SaveMenu factories,Back0/1 source resumption,paused VM/pending commit isolation and Load final full flags0,next-frame dispatch at720p/1080p on offscreen Metal/the default audio output;no window/user writes"]
 fn higurashi_gameplay_manual_children_preserve_source_until_back_or_load() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

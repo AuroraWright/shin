@@ -626,4 +626,4 @@ fn require_top(snapshot: &Snapshot, selected: i32) -> Result<()> {
     );
     Ok(())
 }
-// The parent owns compilation and actual-window execution on exact Loopback Audio.
+// The parent owns compilation and actual-window execution on the default audio output.

@@ -142,7 +142,7 @@ fn pure_composition(journey: &mut Journey, size: (u32, u32), visible: bool) -> V
 }
 
 #[test]
-#[ignore = "real Runtime boot/raw keys+pointer/actual manual Save+Load/authored message rewind/backlog B return at720p/1080p;offscreen Metal/exact Loopback Audio;temporary Paths only"]
+#[ignore = "real Runtime boot/raw keys+pointer/actual manual Save+Load/authored message rewind/backlog B return at720p/1080p;offscreen Metal/the default audio output;temporary Paths only"]
 fn higurashi_runtime_save_load_and_backlog_return_preserve_complete_owners() {
     for size in [(1280, 720), (1920, 1080)] {
         let saved = initial();

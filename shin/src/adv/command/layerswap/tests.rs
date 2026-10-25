@@ -340,6 +340,6 @@ pub(crate) fn reference_live_layerswap<'a>(
     adv.allow_running_animations = true;
     adv.plane_layer_group_mut(plane).clear_layers();
     eprintln!(
-        "Native LAYERSWAP: mappings, captured plane, fixed bank/property owners, first back root, empty target and red/blue draw-order pixels pass on Loopback Audio"
+        "Native LAYERSWAP: mappings, captured plane, fixed bank/property owners, first back root, empty target and red/blue draw-order pixels pass on the default audio output"
     );
 }

@@ -42,7 +42,7 @@ fn until(title: &mut Opening, number: &mut u32, ready: impl Fn(&Opening) -> bool
     }
 }
 #[test]
-#[ignore = "real retained Title Top/SaveMenu/Question children,Back stage1/return_id1 blackout and snapshot ordering,full Load flags0 without story90/BGM-stop at720p/1080p on offscreen Metal/exact Loopback Audio;no window/writes"]
+#[ignore = "real retained Title Top/SaveMenu/Question children,Back stage1/return_id1 blackout and snapshot ordering,full Load flags0 without story90/BGM-stop at720p/1080p on offscreen Metal/the default audio output;no window/writes"]
 fn higurashi_title_manual_menu_back_and_load_preserve_native_parent_order() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

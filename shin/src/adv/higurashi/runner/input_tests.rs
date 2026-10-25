@@ -37,7 +37,7 @@ fn remaining(host: &HigurashiHost) -> f32 {
 }
 
 #[test]
-#[ignore = "real message and WAIT owners on offscreen Metal and exact Loopback Audio"]
+#[ignore = "real message and WAIT owners on offscreen Metal and the default audio output"]
 fn higurashi_host_input_drives_retained_message_before_wait() {
     use shin_core::layout::commands::{Command, Wait as MessageWait};
     let (_, _, assets) = super::super::message_glyphs::tests::gpu::gpu_assets();

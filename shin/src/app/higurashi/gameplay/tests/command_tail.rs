@@ -380,7 +380,7 @@ impl InputOverlay for Replacement {
 }
 
 #[test]
-#[ignore = "actual Gameplay five-command tail, supplied autonomous FakeSelect/fonts/two NXA EOF, offscreen Metal and exact Loopback Audio; no windows or saves"]
+#[ignore = "actual Gameplay five-command tail, supplied autonomous FakeSelect/fonts/two NXA EOF, offscreen Metal and the default audio output; no windows or saves"]
 fn higurashi_gameplay_command_tail_preserves_read_state_and_autonomous_child_ownership() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);
@@ -721,7 +721,7 @@ fn higurashi_gameplay_command_tail_preserves_read_state_and_autonomous_child_own
 }
 
 #[test]
-#[ignore = "actual Gameplay FakeSelect post-attachment clock failure retaining child/cache, offscreen Metal/exact Loopback Audio; no desktop recovery claim"]
+#[ignore = "actual Gameplay FakeSelect post-attachment clock failure retaining child/cache, offscreen Metal/the default audio output; no desktop recovery claim"]
 fn higurashi_gameplay_fake_select_clock_fault_retains_published_child_without_reconstruction() {
     let (device, queue, server) = reference_gpu_assets();
     let server = Arc::new(server);

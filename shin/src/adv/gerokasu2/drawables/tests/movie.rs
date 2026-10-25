@@ -96,7 +96,7 @@ impl Drop for Native {
     }
 }
 #[test]
-#[ignore = "requires original op2.mp4,FFmpeg,Metal and exact Loopback Audio"]
+#[ignore = "requires original op2.mp4,FFmpeg,Metal and the default audio output"]
 fn ger_movie_scene_original_h264_aac_wait_render_copy_skip_unload_and_exit() {
     let gpu = Offscreen::new();
     let original = Gerokasu2Scenario::new(bytes().into()).unwrap();
@@ -246,7 +246,7 @@ fn ger_movie_scene_original_h264_aac_wait_render_copy_skip_unload_and_exit() {
     let (plane, bank) = target.unwrap();
     assert!(scene.backend().layer(plane, bank).is_none());
     println!(
-        "GEROKASU2_MOVIE_SCENE commands=4 original_op2_h264_aac=1 native_lease_snapshots=4 wait_mask=3 independent_clone_skip=1 explicit_primary_skip=1 visible=1 external_acknowledgements=0 frames={} channels={} audio=Loopback Audio playback={playback}",
+        "GEROKASU2_MOVIE_SCENE commands=4 original_op2_h264_aac=1 native_lease_snapshots=4 wait_mask=3 independent_clone_skip=1 explicit_primary_skip=1 visible=1 external_acknowledgements=0 frames={} channels={} audio=default output playback={playback}",
         frames.frames, frames.channels
     );
 }
