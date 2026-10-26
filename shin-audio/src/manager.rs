@@ -68,6 +68,40 @@ impl Sound for SuspendedSound {
 
 type Backend = kira::backend::cpal::CpalBackend;
 
+/// Frames the native audio thread mixes per AudioOut buffer: Higurashi's
+/// sub_2A630 opens a 48 kHz stereo AudioOut with two 1024-byte PCM16
+/// buffers, and sub_2A830 refills each released one with 256 frames, taking
+/// the sounds' state once per buffer.
+const NATIVE_MIX_FRAMES: u32 = 256;
+const NATIVE_SAMPLE_RATE: u32 = 48000;
+
+/// The output stream in buffers of the native mix length (5.3 ms), so
+/// sounds start, stop and change on the same grid. kira takes new commands
+/// once a device buffer, which is 512 frames (10.7 ms) by default on macOS.
+fn backend_settings() -> kira::backend::cpal::CpalBackendSettings {
+    use kira::backend::cpal::cpal::{
+        BufferSize, SupportedBufferSize,
+        traits::{DeviceTrait, HostTrait},
+    };
+    let config = kira::backend::cpal::cpal::default_host()
+        .default_output_device()
+        .and_then(|device| device.default_output_config().ok())
+        .map(|supported| {
+            let frames = (supported.sample_rate() * NATIVE_MIX_FRAMES).div_ceil(NATIVE_SAMPLE_RATE);
+            let mut config = supported.config();
+            if let SupportedBufferSize::Range { min, max } = *supported.buffer_size()
+                && (min..=max).contains(&frames)
+            {
+                config.buffer_size = BufferSize::Fixed(frames);
+            }
+            config
+        });
+    kira::backend::cpal::CpalBackendSettings {
+        device: None,
+        config,
+    }
+}
+
 pub struct AudioManager {
     manager: Mutex<kira::AudioManager<Backend>>,
     suspension: AudioSuspension,
@@ -76,8 +110,11 @@ pub struct AudioManager {
 impl AudioManager {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
-        let manager = kira::AudioManager::new(AudioManagerSettings::default())
-            .expect("Failed to create kira audio manager");
+        let manager = kira::AudioManager::new(AudioManagerSettings {
+            backend_settings: backend_settings(),
+            ..Default::default()
+        })
+        .expect("Failed to create kira audio manager");
 
         Self {
             manager: Mutex::new(manager),

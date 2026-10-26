@@ -151,8 +151,9 @@ impl<S: AudioFrameSource + Send> SampleProvider<S> {
         if self.source.inner().is_failed() {
             return Frame::ZERO;
         }
-        let out = self.resampler.get(self.fractional_position as f32);
-        self.fractional_position += dt * self.source.sample_rate() as f64;
+        let step = dt * self.source.sample_rate() as f64;
+        let out = self.resampler.get(self.fractional_position, step);
+        self.fractional_position += step;
         while self.fractional_position >= 1.0 {
             self.fractional_position -= 1.0;
             self.push_frame_to_resampler();
@@ -1028,7 +1029,9 @@ mod tests {
             data.source.ramp = true;
             data.settings.playback_rate = rate;
             let handle = manager.play(data).unwrap();
-            let first = advance(&mut manager, 800);
+            // past the resampler window's start, where its taps still hold silence
+            let lead = 800.0f32.max(40.0 / rate).ceil();
+            let first = advance(&mut manager, lead as u32);
             let second = advance(&mut manager, 40);
             let expected_delta = 40.0 * rate * 0.00001;
             assert!(
@@ -1036,7 +1039,7 @@ mod tests {
                 "rate{rate}: {first:?}->{second:?}"
             );
             assert!((second.right - first.right - expected_delta).abs() < 0.000002);
-            assert!((handle.position_millis() as f32 - 840.0 * rate).abs() <= rate + 1.0);
+            assert!((handle.position_millis() as f32 - (lead + 40.0) * rate).abs() <= rate + 1.0);
 
             let mut manager = self::manager();
             let mut data = sound(100, 0.0);
@@ -1044,7 +1047,8 @@ mod tests {
             let handle = manager.play(data).unwrap();
             advance(&mut manager, (50.0 / rate) as u32);
             assert!(handle.get_wait_status().contains(AudioWaitStatus::PLAYING));
-            advance(&mut manager, (60.0 / rate).ceil() as u32 + 5);
+            // 100 samples, then the resampler window drains
+            advance(&mut manager, (80.0 / rate).ceil() as u32 + 5);
             assert!(
                 handle.get_wait_status().is_empty(),
                 "rate{rate} must finish according to source time"
@@ -1167,7 +1171,8 @@ mod tests {
                 .get_wait_status()
                 .contains(AudioWaitStatus::VOLUME_TWEENING | AudioWaitStatus::PANNING_TWEENING)
         );
-        advance(&mut manager, 32);
+        // 16 samples, then the resampler window drains
+        advance(&mut manager, 40);
         assert!(handle.get_wait_status().is_empty());
     }
 

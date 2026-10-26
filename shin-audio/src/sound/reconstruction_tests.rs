@@ -57,7 +57,8 @@ fn older_skip_finishes_volume_and_pan_while_speed_continues() {
     handle
         .set_playback_rate(2.0, Tween::linear(Ticks::from_millis(200.0)))
         .unwrap();
-    advance(&mut manager, 20);
+    // past the resampler window's start, where its taps still hold silence
+    advance(&mut manager, 30);
     handle.finish_volume_and_pan().unwrap();
     let output = advance(&mut manager, 1);
     assert!(

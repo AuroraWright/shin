@@ -298,7 +298,8 @@ fn zero_duration_replacement_retains_the_native_four_tick_tail() {
     })
     .unwrap();
     let mut old = Some(manager.play(audio(true)).unwrap());
-    for _ in 0..12 {
+    // past the resampler window's start, so the old source is audible
+    for _ in 0..24 {
         let backend = manager.backend_mut();
         backend.on_start_processing();
         backend.process();

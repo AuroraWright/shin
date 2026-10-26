@@ -141,7 +141,8 @@ fn finite_repeat_settings_survive_pause_and_volume_retarget_then_clear_waits() {
     assert_eq!(handle.position_samples(), position);
     handle.set_volume(Volume(0.5), Tween::IMMEDIATE).unwrap();
     handle.set_paused(false);
-    advance(&mut manager, 100); // Total playback is73 +2*(37-13) =121 samples.
+    // Total playback is73 +2*(37-13) =121 samples, then the resampler window drains.
+    advance(&mut manager, 110);
     assert!(handle.get_wait_status().is_empty());
     assert_eq!(handle.position_samples(), 73);
 }
