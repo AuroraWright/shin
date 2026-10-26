@@ -19,6 +19,8 @@ pr-run-mode = "plan"
 install-updater = false
 # Path that installers should place binaries in
 install-path = "CARGO_HOME"
+# Publish "-fork" versions as normal, latest releases instead of pre-releases
+force-latest = true
 
 # build the aarch64 linux release on an aarch64 runner
 [dist.github-custom-runners]
