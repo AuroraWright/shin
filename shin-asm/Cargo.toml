@@ -1,6 +1,6 @@
 [package]
 name = "shin-asm"
-version = "1.0.6-fork"
+version = "1.0.7-fork"
 edition = "2024"
 description = "Assembler and disassembler library for the shin VM"
 repository = "https://github.com/AuroraWright/shin"
