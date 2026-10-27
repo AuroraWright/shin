@@ -6,7 +6,7 @@ use shin_render_shader_types::{
     texture::TextureSamplerStore,
     vertices::VertexType,
 };
-use tracing::info_span;
+use tracing::trace_span;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ShaderBindingGroupDescriptor {
@@ -199,7 +199,7 @@ impl<'a, S: Shader> TypedRenderPipeline<'a, S> {
         vertices: VertexSource<S::Vertex>,
     ) {
         render_pass.set_pipeline(self.pipeline);
-        info_span!("set_bindings").in_scope(|| {
+        trace_span!("set_bindings").in_scope(|| {
             S::set_bindings(
                 device,
                 dynamic_buffer,

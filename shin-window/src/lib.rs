@@ -657,7 +657,7 @@ impl WindowState {
             #[cfg(target_os = "macos")]
             quit_handler: None,
             suspension: PlatformSuspension::launching(
-                window.has_focus() || debug_capture::keep_rendering(),
+                window.has_focus(),
                 Instant::now(),
             ),
             surface_availability: SurfaceAvailability::default(),
@@ -726,7 +726,7 @@ fn start_wgpu_init<A: ShinApp>(
             // however if we have to choose async init is a bit nicer because we can continue handling events
             let proxy_clone = proxy.clone();
             let task = shin_tasks::async_io::spawn(async move {
-                let result = shin_render::init::init_wgpu(window, surface_resize_handle, None).await;
+                let result = shin_render::init::init_wgpu(window, surface_resize_handle).await;
 
                 proxy_clone
                     .send_event(ShinAppEventImpl::WgpuInitDone(result))
@@ -748,7 +748,6 @@ fn start_wgpu_init<A: ShinApp>(
             let result = shin_tasks::block_on(shin_render::init::init_wgpu(
                 window,
                 surface_resize_handle,
-                None,
             ));
             finish_wgpu_init(event_loop, proxy, raw_input_state, params, winit, result)
         }
@@ -916,8 +915,6 @@ impl<A: ShinApp> WinitAppState<A> {
     }
 
     fn change_suspension(&mut self, focused: Option<bool>, lifecycle: Option<bool>) {
-        // Unattended playtests behave as if the window always had focus.
-        let focused = focused.map(|focused| focused || debug_capture::keep_rendering());
         if let Self::Operational {
             context,
             app,
@@ -1500,11 +1497,16 @@ pub fn init_tracing() {
             console_error_panic_hook::set_once();
             tracing_wasm::set_as_global_default();
         } else {
-            // tracy_client::Client::start();
+            // Without the `tracy` feature the layer would still create every
+            // shin span, per-draw ones included, for a profiler that is absent.
+            #[cfg(feature = "tracy")]
+            let tracy = Some(tracing_tracy::TracyLayer::default()
+                .with_filter(tracing_subscriber::filter::filter_fn(|m| m.module_path().is_some_and(|v| v.starts_with("shin")))));
+            #[cfg(not(feature = "tracy"))]
+            let tracy: Option<tracing_subscriber::layer::Identity> = None;
 
             tracing_subscriber::registry()
-                .with(tracing_tracy::TracyLayer::default()
-                    .with_filter(tracing_subscriber::filter::filter_fn(|m| m.module_path().is_some_and(|v| v.starts_with("shin")))))
+                .with(tracy)
                 .with(tracing_subscriber::fmt::layer()
                     .with_filter(tracing_subscriber::EnvFilter::builder().from_env_lossy())
                 )

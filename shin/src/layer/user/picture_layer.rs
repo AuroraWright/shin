@@ -92,7 +92,7 @@ fn cull_block(_block: &GpuPictureBlock, _transform: Mat4) -> bool {
 }
 
 // TODO: make this a method of GpuPictureBlock?
-#[tracing::instrument(skip_all)]
+#[tracing::instrument(level = "trace", skip_all)]
 pub fn render_block(
     block: &GpuPictureBlock,
     pass: &mut RenderPass,

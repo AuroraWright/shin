@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeMap,
     io::{Read, Seek, SeekFrom},
+    mem::ManuallyDrop,
     sync::Arc,
 };
 
@@ -26,11 +27,28 @@ pub struct GpuPictureBlock {
     pub native_format: u16,
     /// Original block+8/+a/+c/+e: signed origins, unsigned texture extents.
     pub native_bounds: [u16; 4],
-    pub vertex_buffer: OwnedVertexBuffer<PosTexVertex>,
-    pub index_buffer: OwnedIndexBuffer,
+    pub vertex_buffer: ManuallyDrop<OwnedVertexBuffer<PosTexVertex>>,
+    pub index_buffer: ManuallyDrop<OwnedIndexBuffer>,
     pub opaque_rect_count: usize,
     pub transparent_rect_count: usize,
-    pub texture: GpuTexture,
+    pub texture: ManuallyDrop<GpuTexture>,
+}
+
+impl Drop for GpuPictureBlock {
+    /// Releasing a block's Metal texture and buffers takes milliseconds, and a
+    /// scene change (most visibly while skipping) drops many blocks at once,
+    /// so release them on a compute thread instead of the caller's.
+    fn drop(&mut self) {
+        // SAFETY: each field is taken exactly once and never used again.
+        let resources = unsafe {
+            (
+                ManuallyDrop::take(&mut self.vertex_buffer),
+                ManuallyDrop::take(&mut self.index_buffer),
+                ManuallyDrop::take(&mut self.texture),
+            )
+        };
+        shin_tasks::compute::spawn_and_forget(move || drop(resources));
+    }
 }
 
 impl GpuPictureBlock {
@@ -66,11 +84,11 @@ impl GpuPictureBlock {
                 block.data.width() as u16,
                 block.data.height() as u16,
             ],
-            vertex_buffer,
-            index_buffer,
+            vertex_buffer: ManuallyDrop::new(vertex_buffer),
+            index_buffer: ManuallyDrop::new(index_buffer),
             opaque_rect_count: block.opaque_rects.len(),
             transparent_rect_count: block.transparent_rects.len(),
-            texture,
+            texture: ManuallyDrop::new(texture),
         }
     }
 }

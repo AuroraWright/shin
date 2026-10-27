@@ -41,10 +41,9 @@ pub mod tips;
 mod title_return;
 mod vm_state;
 
-use std::{borrow::Cow, sync::Arc};
+use std::sync::Arc;
 
 pub use command::{CommandStartResult, ExecutingCommand, StartableCommand, UpdatableCommand};
-use egui::Window;
 use enum_map::{Enum, EnumMap, enum_map};
 use futures::FutureExt as _;
 use glam::Mat4;
@@ -87,10 +86,7 @@ use crate::{
         RootLayerGroup, ScreenLayer, message_layer::MessageLayer, render_layer_without_bg,
         render_params::TransformParams, user::UserLayer,
     },
-    render::{
-        PreRenderContext,
-        overlay::{OverlayCollector, OverlayVisitable},
-    },
+    render::PreRenderContext,
     update::{AdvUpdatable, AdvUpdateContext, Updatable, UpdateContext},
 };
 
@@ -2189,63 +2185,6 @@ impl Drop for Adv {
 //
 //     fn resize(&mut self, resources: &GpuCommonResources) {
 //         self.adv_state.resize(resources);
-//     }
-// }
-
-// impl OverlayVisitable for Adv {
-//     fn visit_overlay(&self, collector: &mut OverlayCollector) {
-//         collector.subgroup(
-//             "ADV",
-//             |collector| {
-//                 collector.overlay(
-//                     "Command",
-//                     |_ctx, top_left| {
-//                         let command = if let Some(command) = &self.current_command {
-//                             Cow::Owned(format!("{:?}", command))
-//                         } else {
-//                             Cow::Borrowed("None")
-//                         };
-//                         top_left.label(format!(
-//                             "Command: {:08x} {}",
-//                             self.scripter.position().0,
-//                             command
-//                         ));
-//                     },
-//                     true,
-//                 );
-//                 self.adv_state
-//                     .root_layer_group
-//                     .message_layer()
-//                     .visit_overlay(collector);
-//                 collector.overlay(
-//                     "User Layers",
-//                     |ctx, _top_left| {
-//                         let page_layer =
-//                             self.adv_state.root_layer_group.screen_layer().page_layer();
-//                         Window::new("User Layers").show(ctx, |ui| {
-//                             for plane in 0..PLANES_COUNT {
-//                                 let layer_group = page_layer.plane(plane as u32);
-//                                 let layer_ids =
-//                                     layer_group.get_layer_ids().sorted().collect::<Vec<_>>();
-//                                 if !layer_ids.is_empty() {
-//                                     ui.monospace(format!("Plane {}:", plane));
-//                                     for layer_id in layer_ids {
-//                                         let layer = layer_group.get_layer(layer_id).unwrap();
-//                                         ui.monospace(format!(
-//                                             "  {:>2}: {:?}",
-//                                             layer_id.raw(),
-//                                             layer
-//                                         ));
-//                                     }
-//                                 }
-//                             }
-//                         });
-//                     },
-//                     false,
-//                 );
-//             },
-//             true,
-//         );
 //     }
 // }
 

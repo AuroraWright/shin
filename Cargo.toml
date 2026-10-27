@@ -31,12 +31,8 @@ smallvec = { version = "1.16.3", features = ["const_generics"] }
 heapless = "0.9.3"
 indexmap = "2.14.2"
 
-wgpu = { version = "30.0.1", features = ["trace"] }
+wgpu = "30.0.1"
 winit = "0.30.13"
-
-# egui used for debug overlays
-egui = "0.36.2"
-egui-wgpu = "0.36.2"
 
 kira = { version = "0.12.5", default-features = false }
 

@@ -224,7 +224,6 @@ impl WgpuInitResult<'static> {
 pub async fn init_wgpu<'window>(
     surface_target: impl Into<SurfaceTarget<'window>>,
     surface_resize_handle: ResizeHandle<SurfaceSize>,
-    trace_path: Option<&std::path::Path>,
 ) -> anyhow::Result<WgpuInitResult<'window>> {
     info!("Initializing wgpu...");
 
@@ -274,9 +273,6 @@ pub async fn init_wgpu<'window>(
                 required_limits: wgpu::Limits::downlevel_webgl2_defaults()
                     .using_resolution(adapter.limits()),
                 memory_hints: Default::default(),
-            trace: trace_path.map_or(wgpu::Trace::Off, |path| {
-                wgpu::Trace::Directory(path.to_owned())
-            }),
             ..Default::default()
         })
         .await

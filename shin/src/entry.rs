@@ -9,8 +9,6 @@ mod asset;
 mod audio;
 mod cli;
 mod engine_random;
-#[expect(unused)]
-mod fps_counter;
 #[cfg(debug_assertions)]
 mod game_inspection;
 mod layer;

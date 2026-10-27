@@ -15,8 +15,6 @@ use winit::dpi::PhysicalSize;
 
 #[cfg(test)]
 pub(crate) mod native_gpu_state;
-#[expect(unused)]
-pub mod overlay;
 pub mod render_texture_holder;
 
 pub const VIRTUAL_CANVAS_SIZE: PhysicalSize<u32> = PhysicalSize::new(1920, 1080);

@@ -273,25 +273,6 @@ impl RawInputState {
 //     }
 // }
 
-// impl OverlayVisitable for RawInputState {
-//     fn visit_overlay(&self, collector: &mut crate::render::overlay::OverlayCollector) {
-//         collector.overlay(
-//             "Input State",
-//             |_ctx, top_left| {
-//                 top_left.label(format!(
-//                     "Input State: [{}] [{}]",
-//                     self.mouse_buttons
-//                         .iter()
-//                         .filter_map(|(but, state)| state.then(|| format!("{:?}", but)))
-//                         .join(", "),
-//                     self.keyboard.iter().map(|v| format!("{:?}", v)).join(", ")
-//                 ));
-//             },
-//             true,
-//         );
-//     }
-// }
-
 #[inline]
 fn convert_winit_mouse_button(winit: winit::event::MouseButton) -> Option<MouseButton> {
     match winit {

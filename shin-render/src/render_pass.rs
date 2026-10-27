@@ -175,7 +175,7 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
         )
     }
 
-    #[tracing::instrument(skip_all, fields(shader = ?request.program.get_shader_name()))]
+    #[tracing::instrument(level = "trace", skip_all, fields(shader = ?request.program.get_shader_name()))]
     pub fn run(&mut self, request: RenderRequest) {
         let pass = &mut self.pass;
 
@@ -798,7 +798,7 @@ impl<'pipelines, 'dynbuffer, 'sampler, 'device, 'encoder>
         }
     }
 
-    #[tracing::instrument(skip_all)]
+    #[tracing::instrument(level = "trace", skip_all)]
     pub fn clear(&mut self, color: Option<UnormColor>, stencil: Option<u8>, depth: Option<f32>) {
         // Clear's shader writes clip coordinates directly. wgpu accepts
         // depth in 0..1; converting zero to OpenGL's -1 clips the triangle

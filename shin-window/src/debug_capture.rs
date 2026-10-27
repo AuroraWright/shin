@@ -7,8 +7,9 @@
 //! `SHIN_DEBUG_CAPTURE_AFTER_SECS` earlier wall-clock time, and
 //! `SHIN_DEBUG_CAPTURE_LIMIT` caps the number of dumps.
 //! `SHIN_DEBUG_KEEP_RENDERING=1` keeps updating and rendering while the
-//! window is unfocused, hidden or offscreen (occluded frames render into an
-//! offscreen texture, so captures continue) for unattended playtests.
+//! window is hidden or covered (occluded frames render into an offscreen
+//! texture, so captures continue) for unattended playtests. Unfocused windows
+//! keep playing without it.
 //! Release builds and unset variables do nothing.
 use std::{
     path::PathBuf,
@@ -63,7 +64,7 @@ fn settings() -> Option<&'static Settings> {
         .as_ref()
 }
 
-/// Playtest switch: ignore focus loss and render occluded frames offscreen.
+/// Playtest switch: render occluded frames offscreen.
 pub fn keep_rendering() -> bool {
     static KEEP: OnceLock<bool> = OnceLock::new();
     *KEEP.get_or_init(|| {
