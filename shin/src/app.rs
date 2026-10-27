@@ -83,8 +83,10 @@ pub enum AppAction {
     ToggleAuto,
 }
 
-/// Project the complete keyboard contract into controller input once, so every
-/// scene receives the same buttons and axes regardless of the input device.
+/// Project the complete keyboard contract, and the right mouse button as B,
+/// into controller input once, so every scene receives the same buttons and
+/// axes regardless of the input device. Focus, permission and held-button
+/// quarantine then apply to them exactly as to the controller's own buttons.
 pub(crate) fn keyboard_as_controller(raw: &RawInputState) -> RawInputState {
     let mut mapped = raw.clone();
     for (key, button) in [
@@ -103,6 +105,7 @@ pub(crate) fn keyboard_as_controller(raw: &RawInputState) -> RawInputState {
     ] {
         mapped.gamepads.unified.buttons[button] |= raw.keyboard.contains(&key);
     }
+    mapped.gamepads.unified.buttons[GamepadButton::B] |= raw.mouse.buttons[MouseButton::Right];
     let up = raw.keyboard.contains(&KeyCode::KeyK);
     let down = raw.keyboard.contains(&KeyCode::KeyL);
     if up || down {
@@ -149,9 +152,7 @@ impl Action for AppAction {
             AppAction::Act => held(GamepadButton::A) || mapped.mouse.buttons[MouseButton::Left],
             AppAction::Enter | AppAction::ReplayVoice => held(GamepadButton::A),
             AppAction::Cancel => held(GamepadButton::B),
-            AppAction::HideMessage => {
-                held(GamepadButton::B) || mapped.mouse.buttons[MouseButton::Right]
-            }
+            AppAction::HideMessage => held(GamepadButton::B),
             AppAction::AnyDown => direction(GamepadButton::Down, VirtualGamepadButton::StickLDown),
             AppAction::Up | AppAction::PreviousScene => {
                 direction(GamepadButton::Up, VirtualGamepadButton::StickLUp)
@@ -690,6 +691,21 @@ mod controller_tests {
         assert_eq!(
             keyboard_as_controller(&raw).gamepads.unified.axes[GamepadAxis::RightStickY],
             0.0
+        );
+    }
+
+    #[test]
+    fn right_mouse_is_controller_b_in_every_action() {
+        let mut mouse = RawInputState::new();
+        mouse.mouse.buttons[MouseButton::Right] = true;
+        let mut controller = RawInputState::new();
+        controller.gamepads.unified.buttons[GamepadButton::B] = true;
+        assert_eq!(AppAction::lower(&mouse), AppAction::lower(&controller));
+        assert!(AppAction::lower(&mouse)[AppAction::Cancel]);
+        assert!(
+            keyboard_as_controller(&mouse)
+                .gamepads
+                .is_held(GamepadButton::B)
         );
     }
 

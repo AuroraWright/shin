@@ -159,7 +159,8 @@ keyboard maps to controller buttons the same way on every screen:
 | F | Toggle fullscreen |
 | Left Ctrl (hold) | Skip text while held |
 
-The mouse wheel and trackpad scroll wherever the right stick does.
+A right click acts as B on every screen. The mouse wheel and trackpad scroll
+wherever the right stick does.
 
 ## What else is in the box
 

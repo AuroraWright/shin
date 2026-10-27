@@ -557,6 +557,42 @@ fn temporary_ctrl_skip_is_separate_and_quarantined_until_physical_release() {
 }
 
 #[test]
+fn right_mouse_is_controller_b_and_quarantined_like_it() {
+    let mut right = RawInputState::new();
+    right.mouse.buttons[MouseButton::Right] = true;
+    let mut mouse = Input::default();
+    let mut controller = Input::default();
+    mouse.raw_input(&right);
+    controller.raw_input(&raw_button(GamepadButton::B));
+    for _ in 0..75 {
+        let a = words(mouse.update(FRAME));
+        assert_eq!(a, words(controller.update(FRAME)));
+        assert_eq!(a[0], 0x0200_4000);
+    }
+    assert!(
+        !mouse.mouse_left_held(),
+        "B never fabricates a touch contact"
+    );
+    mouse.flush();
+    mouse.raw_input(&right);
+    assert_eq!(words(mouse.update(FRAME)), [0; 4]);
+    mouse.focus_lost();
+    mouse.raw_input(&RawInputState::new());
+    mouse.update(FRAME);
+    mouse.set_focused(true);
+    mouse.raw_input(&right);
+    assert_eq!(
+        words(mouse.update(FRAME)),
+        [0; 4],
+        "Unfocused blank samples are not physical release"
+    );
+    mouse.raw_input(&RawInputState::new());
+    mouse.update(FRAME);
+    mouse.raw_input(&right);
+    assert_eq!(words(mouse.update(FRAME))[1], 0x0200_4000);
+}
+
+#[test]
 fn higurashi_wheel_is_fractional_frame_displacement_and_never_a_button_or_stick() {
     let mut input = Input::default();
     let mut raw = RawInputState::new();
