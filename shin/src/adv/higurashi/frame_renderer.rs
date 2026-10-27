@@ -73,6 +73,18 @@ impl FrameRenderer {
             screens,
         })
     }
+    /// Render `frame` at `extent`, the window's canvas. Returns whether an
+    /// already prepared frame must be prepared again at the new extent.
+    pub(crate) fn fit(&mut self, frame: &HigurashiFrame, extent: [u32; 2]) -> bool {
+        if frame.cache.extent() == extent {
+            return false;
+        }
+        self.resize
+            .resize(ViewportParams::both(winit::dpi::PhysicalSize::new(
+                extent[0], extent[1],
+            )));
+        frame.cache.fit(extent)
+    }
     pub(crate) fn prepare(
         &mut self,
         frame: &HigurashiFrame,

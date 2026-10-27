@@ -63,24 +63,28 @@ fn color(device: &wgpu::Device, extent: [u32; 2], id: u64, known_pixels: bool) -
         known_pixels,
     }
 }
+fn depth(device: &wgpu::Device, extent: [u32; 2]) -> (wgpu::Texture, wgpu::TextureView) {
+    let depth = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Higurashi Screen14a8 depth"),
+        size: wgpu::Extent3d {
+            width: extent[0],
+            height: extent[1],
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: shin_render::DEPTH_STENCIL_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let view = depth.create_view(&Default::default());
+    (depth, view)
+}
 impl Graphics {
     fn new(device: &wgpu::Device, queue: &wgpu::Queue, extent: [u32; 2]) -> Self {
         let current = color(device, extent, 1, true);
-        let depth = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Higurashi Screen14a8 depth"),
-            size: wgpu::Extent3d {
-                width: extent[0],
-                height: extent[1],
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: shin_render::DEPTH_STENCIL_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
-        });
-        let depth_view = depth.create_view(&Default::default());
+        let (depth, depth_view) = depth(device, extent);
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Higurashi Screen constructor black clear"),
         });
@@ -113,6 +117,24 @@ impl Graphics {
             outgoing: None,
             extent,
             next_id: 3,
+        }
+    }
+    /// The same images at `extent`, for a resized desktop window. Their pixels
+    /// are not carried over: the next prepare draws current1498 again.
+    fn resized(&self, extent: [u32; 2]) -> Self {
+        let device = &self.device;
+        let (depth, depth_view) = depth(device, extent);
+        Self {
+            device: device.clone(),
+            _depth: depth,
+            depth_view,
+            images: self
+                .images
+                .resized(extent, |image| color(device, extent, image.id, false)),
+            incoming: None,
+            outgoing: None,
+            extent,
+            next_id: self.next_id,
         }
     }
     fn after_update(&mut self, sampled39: f32) -> Result<()> {
@@ -179,7 +201,7 @@ impl ScreenHistory {
         let mut state = self.state.lock();
         if state.graphics.is_some() {
             return Ok(());
-        } // Stored constructor extent never follows host resize.
+        } // A bound Screen follows host resizes only through `fit`.
         ensure!(
             extent[0] > 0 && extent[1] > 0,
             "Higurashi Screen constructor requires a nonempty physical extent"
@@ -195,6 +217,21 @@ impl ScreenHistory {
             "Higurashi deferred history journal lost ordered allocation/swap ownership"
         );
         state.graphics = Some(graphics);
+        Ok(())
+    }
+    /// The native Screen keeps its constructor extent; the desktop follows the
+    /// window's canvas, as the other games render, re-creating bound graphics.
+    pub(crate) fn fit(&self, extent: [u32; 2]) -> Result<()> {
+        ensure!(
+            extent[0] > 0 && extent[1] > 0,
+            "Higurashi Screen requires a nonempty physical extent"
+        );
+        let mut state = self.state.lock();
+        if let Some(graphics) = &mut state.graphics
+            && graphics.extent != extent
+        {
+            *graphics = graphics.resized(extent);
+        }
         Ok(())
     }
     pub(crate) fn after_update(&self, sampled39: f32) -> Result<()> {

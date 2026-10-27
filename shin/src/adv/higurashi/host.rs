@@ -473,6 +473,16 @@ impl HigurashiHost {
         }
         Ok(())
     }
+    /// Render the ADV frame at `extent`, the window's canvas, preparing an
+    /// already prepared frame again at the new extent.
+    pub(crate) fn fit_graphics(&mut self, extent: [u32; 2]) -> Result<()> {
+        if let Some(graphics) = &mut self.graphics
+            && graphics.fit(self.runner.frame(), extent)
+        {
+            graphics.prepare(self.runner.frame(), self.touch_overlay.as_deref())?;
+        }
+        Ok(())
+    }
     fn prepare_admitted_frame(&mut self, before: u64) -> Result<()> {
         if before != self.runner.frame().visual_epoch() {
             if let Some(graphics) = &mut self.graphics {

@@ -44,7 +44,6 @@ use std::{sync::Arc, time::Duration};
 /// Original cc9c0/cc9d0 touch domain. InputArea subsequently maps these physical
 /// touch coordinates to authored1920x1080, exactly once within each owner.
 const TOUCH_EXTENT: (u16, u16) = (1280, 720);
-const COMPOSED_EXTENT: (u32, u32) = (1920, 1080);
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(super) struct InputViewport {
@@ -69,6 +68,7 @@ impl InputViewport {
     }
 }
 struct Composition {
+    extent: (u32, u32),
     resize: SurfaceResizeSource,
     color: RenderTexture,
     // Scene factories/save previews retain the clean color above. Global touch
@@ -77,32 +77,41 @@ struct Composition {
     _depth: wgpu::Texture,
     depth_view: wgpu::TextureView,
 }
+fn depth(device: &wgpu::Device, extent: (u32, u32)) -> (wgpu::Texture, wgpu::TextureView) {
+    let depth = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Higurashi whole platform depth"),
+        size: wgpu::Extent3d {
+            width: extent.0,
+            height: extent.1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: shin_render::DEPTH_STENCIL_FORMAT,
+        usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+        view_formats: &[],
+    });
+    let view = depth.create_view(&Default::default());
+    (depth, view)
+}
+/// The host's canvas extent: the window's 16:9 area, as the other games render.
+fn canvas_extent(context: &PreRenderContext) -> (u32, u32) {
+    let size = context.resize_source.canvas_handle().get();
+    (size.width.max(1), size.height.max(1))
+}
 impl Composition {
     fn new(context: &mut PreRenderContext) -> Self {
+        let extent = canvas_extent(context);
         let resize = SurfaceResizeSource::new(ViewportParams::both(winit::dpi::PhysicalSize::new(
-            COMPOSED_EXTENT.0,
-            COMPOSED_EXTENT.1,
+            extent.0, extent.1,
         )));
         let mut color = RenderTexture::new(
             context.device.clone(),
             resize.handle(),
             "Higurashi whole platform composition".into(),
         );
-        let depth = context.device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Higurashi whole platform depth"),
-            size: wgpu::Extent3d {
-                width: COMPOSED_EXTENT.0,
-                height: COMPOSED_EXTENT.1,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: shin_render::DEPTH_STENCIL_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
-            view_formats: &[],
-        });
-        let depth_view = depth.create_view(&Default::default());
+        let (depth, depth_view) = depth(context.device, extent);
         context
             .begin_pass(
                 color.as_texture_target(),
@@ -111,12 +120,27 @@ impl Composition {
             )
             .clear(Some(UnormColor::BLACK), None, None);
         Self {
+            extent,
             resize,
             color,
             presentation: None,
             _depth: depth,
             depth_view,
         }
+    }
+    /// Follow a window resize. Every target made from `resize` takes the new
+    /// extent the next time it is drawn into; the frame is composed afresh.
+    fn fit(&mut self, context: &PreRenderContext) {
+        let extent = canvas_extent(context);
+        if extent == self.extent {
+            return;
+        }
+        self.extent = extent;
+        self.resize
+            .resize(ViewportParams::both(winit::dpi::PhysicalSize::new(
+                extent.0, extent.1,
+            )));
+        (self._depth, self.depth_view) = depth(context.device, extent);
     }
     fn displayed(&self) -> &RenderTexture {
         self.presentation.as_ref().unwrap_or(&self.color)
@@ -367,6 +391,7 @@ impl Runtime {
         let composition = self
             .composition
             .get_or_insert_with(|| Composition::new(context));
+        composition.fit(context);
         let mut native = PreRenderContext {
             device: context.device,
             queue: context.queue,

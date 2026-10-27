@@ -1087,6 +1087,8 @@ impl Gameplay {
     }
     pub fn prepare(&mut self, context: &mut PreRenderContext) -> Result<()> {
         if let Some(host) = &mut self.host {
+            let size = context.resize_source.canvas_handle().get();
+            host.fit_graphics([size.width.max(1), size.height.max(1)])?;
             host.prepare_save_modes(context);
             host.prepare_menu_questions(context);
             if self.screens.is_none() {

@@ -60,6 +60,7 @@ impl HigurashiSceneTextures {
             .clone();
         let size = context.resize_source.canvas_handle().get();
         history.bind(context.device, context.queue, [size.width, size.height])?;
+        history.fit([size.width, size.height])?;
         self.history = Some(history.weak());
         self.prepare_groups(context, layers, Some(transition), &history)
     }
@@ -70,6 +71,7 @@ impl HigurashiSceneTextures {
     ) -> Result<()> {
         let size = context.resize_source.canvas_handle().get();
         scene.bind_history(context.device, context.queue, [size.width, size.height])?;
+        scene.history().fit([size.width, size.height])?;
         self.standalone_history = None;
         self.history = Some(scene.history().weak());
         self.prepare_groups(context, scene.layers(), scene.transition(), scene.history())

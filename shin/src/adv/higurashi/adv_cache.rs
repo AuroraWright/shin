@@ -98,6 +98,18 @@ impl AdvCache {
     pub(crate) fn extent(&self) -> [u32; 2] {
         self.state.lock().extent
     }
+    /// The desktop renders at the window's canvas rather than the literal
+    /// extent: a resize releases color/depth, which the next prepare creates
+    /// at `extent`. Returns whether the cache held a prepared color.
+    pub(crate) fn fit(&self, extent: [u32; 2]) -> bool {
+        let mut state = self.state.lock();
+        if state.extent == extent {
+            return false;
+        }
+        state.extent = extent;
+        state.depth = None;
+        state.color.take().is_some()
+    }
     pub(crate) fn capture(&self, context: &mut PreRenderContext) -> RenderTexture {
         self.state
             .lock()

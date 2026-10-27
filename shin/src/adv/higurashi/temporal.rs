@@ -38,6 +38,18 @@ impl<T> Afterimages<T> {
     pub(crate) fn current(&self) -> &T {
         &self.current
     }
+    /// The same images, re-created at `extent` for a resized desktop window.
+    pub(crate) fn resized<U>(
+        &self,
+        extent: [u32; 2],
+        mut image: impl FnMut(&T) -> U,
+    ) -> Afterimages<U> {
+        Afterimages {
+            extent,
+            previous: self.previous.as_ref().map(&mut image),
+            current: image(&self.current),
+        }
+    }
     pub(crate) fn previous(&self) -> Option<&T> {
         self.previous.as_ref()
     }
