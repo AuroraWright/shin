@@ -66,6 +66,11 @@ pub trait ShinApp: Sized {
         Self::WINDOW_TITLE
     }
 
+    /// Whether the new window starts in fullscreen.
+    fn start_fullscreen(_parameters: &Self::Parameters) -> bool {
+        false
+    }
+
     fn init(context: AppContext<Self>, parameters: Self::Parameters) -> anyhow::Result<Self>;
 
     fn map_canvas_size(window_size: PhysicalSize<u32>) -> ViewportParams {
@@ -1006,6 +1011,9 @@ impl<A: ShinApp> ApplicationHandler<ShinAppEventImpl<A::EventType>> for WinitApp
             } => {
                 #[allow(unused_mut)]
                 let mut winit = WindowState::new::<A>(event_loop);
+                if A::start_fullscreen(&params) {
+                    winit.toggle_fullscreen();
+                }
                 #[cfg(target_os = "macos")]
                 {
                     let quit_proxy = proxy.clone();

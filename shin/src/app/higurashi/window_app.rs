@@ -113,6 +113,9 @@ impl ShinApp for HigurashiApp {
     type EventType = ();
     // raw_input owns the one canonical projection/native repeat clock.
     type ActionType = DummyAction;
+    fn start_fullscreen(cli: &Cli) -> bool {
+        cli.fullscreen
+    }
     fn init(context: AppContext<Self>, mut cli: Cli) -> Result<Self> {
         let PreparedLaunch { progress, assets } = take_launch(&mut cli)?;
         let manager = Arc::new(shin_audio::AudioManager::new());

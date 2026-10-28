@@ -66,6 +66,9 @@ pub struct Cli {
     /// Umineko's character, tip and purple-statement descriptions.
     #[clap(short, long, value_name = "HOST:PORT")]
     pub text_websocket: Option<String>,
+    /// Start in fullscreen
+    #[clap(short, long)]
+    pub fullscreen: bool,
 }
 
 impl Cli {
@@ -189,12 +192,15 @@ mod tests {
             "127.0.0.1:9001",
             "-a",
             "assets",
+            "-f",
         ])
         .unwrap();
         assert_eq!(cli.game, Game::Higurashi);
         assert_eq!(cli.save_file, Some(PathBuf::from("SAVEDATA")));
         assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
         assert_eq!(cli.assets_dir, Some(PathBuf::from("assets")));
+        assert!(cli.fullscreen);
+        assert!(!Cli::try_parse_from(["shin"]).unwrap().fullscreen);
     }
     #[test]
     fn save_file_defaults_to_savedata_in_the_app_data_directory() {
@@ -237,6 +243,7 @@ mod tests {
         let folder = Path::new("/games/shin");
         let text = "\u{feff}; comment\n# comment\n[shin]\ngame = gerokasu\nassets-dir = \"assets dir\"\n\
                     save_file=/abs/progress.dat\ninspect-assets = false\n--text-websocket = 127.0.0.1:9001\n\
+                    fullscreen = true\n\
                     save-file-unused-check =\n";
         assert!(ini::to_args(text, folder, &[]).is_err(), "unknown key");
         let text = text.replace("save-file-unused-check =\n", "");
@@ -249,6 +256,7 @@ mod tests {
         assert_eq!(cli.save_file(), Path::new("/abs/progress.dat"));
         assert!(!cli.inspect_assets());
         assert_eq!(cli.text_websocket.as_deref(), Some("127.0.0.1:9001"));
+        assert!(cli.fullscreen);
 
         // Options on the command line replace the ini's; empty values stay unset.
         let explicit = ["game".to_owned(), "assets-dir".to_owned()];

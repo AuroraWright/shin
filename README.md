@@ -72,6 +72,7 @@ on `PATH` or next to the engine.
 | `-a`, `--assets-dir <DIR>` | Folder containing `data.rom` (or a `data` folder). Defaults to `assets` next to the executable. |
 | `-s`, `--save-file <FILE>` | Save file. Defaults to `shin/<game>/SAVEDATA` in the system application data folder. |
 | `-t`, `--text-websocket <HOST:PORT>` | Serve the displayed text over WebSocket, for example to a text hooker or translation tool. |
+| `-f`, `--fullscreen` | Start in fullscreen. |
 
 The default save file is in:
 
@@ -95,7 +96,8 @@ text-websocket = 127.0.0.1:9001
 ```
 
 Lines starting with `;` or `#` are comments, an empty value leaves an option
-unset, and relative paths are resolved from the folder containing `shin.ini`.
+unset, on/off options such as `fullscreen` take `true` or `false`, and relative
+paths are resolved from the folder containing `shin.ini`.
 Options given on the command line take precedence. See
 [`shin.ini.example`](shin.ini.example).
 

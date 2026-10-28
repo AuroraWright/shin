@@ -914,6 +914,9 @@ impl ShinApp for Gerokasu2App {
     type ActionType = AppAction;
     const FULLSCREEN_SHORTCUT: Option<winit::keyboard::KeyCode> =
         Some(winit::keyboard::KeyCode::KeyF);
+    fn start_fullscreen(cli: &Cli) -> bool {
+        cli.fullscreen
+    }
     fn init(ctx: AppContext<Self>, cli: Cli) -> Result<Self> {
         validate_options(&cli)?;
         let save_store = Some(saves::Store::load(saves::progress_path(&cli)?)?);

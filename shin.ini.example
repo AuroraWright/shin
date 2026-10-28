@@ -24,3 +24,6 @@ save-file =
 
 ; Serve displayed text over WebSocket at HOST:PORT.
 text-websocket = 127.0.0.1:9001
+
+; Start in fullscreen.
+fullscreen = false

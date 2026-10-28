@@ -381,6 +381,10 @@ impl ShinApp for App {
     type EventType = ();
     type ActionType = AppAction;
 
+    fn start_fullscreen(cli: &Cli) -> bool {
+        cli.fullscreen
+    }
+
     fn focus_lost(&mut self) {
         self.scenes.suspend_event_input();
         self.touch_effect.cancel_contact();
