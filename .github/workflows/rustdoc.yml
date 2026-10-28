@@ -2,7 +2,7 @@
 #
 # * builds rust docs
 # * adds a dummy index.html file
-# * publishes the docs to gitHub pages using actions/deploy-pages@v1 action
+# * publishes the docs to gitHub pages using actions/deploy-pages
 
 name: Rustdoc CI
 
@@ -16,11 +16,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
+      # rustup installs the toolchain pinned in rust-toolchain.toml
+      - uses: actions/checkout@v5
       - uses: rui314/setup-mold@v1 # we use mold on Linux and rustdoc wants to have a linker for some reason
         if: runner.os == 'Linux'
         with:
@@ -28,10 +25,7 @@ jobs:
       - name: Install packages (Linux)
         run: sudo apt-get update && sudo apt-get install libasound2-dev libudev-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev
       - name: cargo doc --no-deps
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-          args: --no-deps --document-private-items
+        run: cargo doc --no-deps --document-private-items
       - name: Create dummy index.html
         run: |
           echo "<meta http-equiv=refresh content=0;url=shin/index.html>" > target/doc/index.html
@@ -44,7 +38,7 @@ jobs:
               echo "::warning title=Invalid file permissions automatically fixed::$line"
           done
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: target/doc
   deploy:
@@ -63,4 +57,4 @@ jobs:
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
