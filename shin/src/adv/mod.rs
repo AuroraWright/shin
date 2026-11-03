@@ -186,6 +186,14 @@ pub(crate) fn reference_saved_backlog_latency<'a>(
     backlog::screen::reference_saved_backlog_latency(server, context);
 }
 
+/// Message work held back until a saved-scene load wipe has finished.
+enum DeferredMessage {
+    /// The saved boundary is a MSGSET: start it (text box, text and voice).
+    Start(shin_core::vm::command::RuntimeCommand),
+    /// Re-show the already displayed message without replaying its voice.
+    Restore,
+}
+
 pub struct Adv {
     assets: AdvAssets,
     persistence: Option<persistence::SaveStore>,
@@ -227,6 +235,7 @@ pub struct Adv {
     event_skip: event_skip::EventSkip,
     story_touch: story_touch::StoryTouch,
     pending_event_skip: bool,
+    deferred_message: Option<DeferredMessage>,
 }
 
 impl Adv {
@@ -306,6 +315,7 @@ impl Adv {
             event_skip: event_skip::EventSkip::new(),
             story_touch: story_touch::StoryTouch::new(),
             pending_event_skip: false,
+            deferred_message: None,
         }
     }
 
@@ -509,6 +519,7 @@ impl Adv {
         let audio = self.adv_state.audio_manager.clone();
         // Retire the previous loader before scheduling its replacement.
         self.pending_restore = None;
+        self.deferred_message = None;
         let reused = if kind == SceneLoadKind::Saved {
             Vec::new()
         } else {
@@ -810,6 +821,13 @@ impl Adv {
     fn update_saved_scene_load(&mut self, context: &mut UpdateContext) -> bool {
         if self.pending_restore.is_none() && self.adv_state.scene_load_fade.is_some() {
             self.update_loading_scene(context);
+            if self.adv_state.scene_load_fade.is_none() {
+                self.start_deferred_message(context);
+            }
+            return true;
+        }
+        if self.pending_restore.is_none() && self.deferred_message.is_some() {
+            self.start_deferred_message(context);
             return true;
         }
         let Some(pending) = self.pending_restore.as_mut() else {
@@ -890,8 +908,24 @@ impl Adv {
             context.asset_server.clone(),
             self.assets.clone(),
         );
-        let mut loaded_audio =
-            loaded.install(&mut fresh, &scene.state, &self.scenario, context.pre_render);
+        // A saved Load reveals the scene through a wipe. The message box (text,
+        // text box and voice) must only appear once that wipe has completed.
+        let defer_message = kind == SceneLoadKind::Saved
+            && source.is_some()
+            && matches!(
+                &scene.stop,
+                reconstruction::ReconstructionStop::Response(_)
+                    | reconstruction::ReconstructionStop::Command(
+                        shin_core::vm::command::RuntimeCommand::MSGSET(_)
+                    )
+            );
+        let mut loaded_audio = loaded.install_with_message(
+            &mut fresh,
+            &scene.state,
+            &self.scenario,
+            context.pre_render,
+            !defer_message,
+        );
         if kind != SceneLoadKind::Resume {
             // Prepare a candidate before reconstructed commands enqueue new
             // notices. Keep the source intact until start validation succeeds.
@@ -905,9 +939,19 @@ impl Adv {
                 shin_core::vm::command::RuntimeCommand::MSGSET(_)
             )
         );
+        let mut deferred_message = None;
         let start = match scene.stop {
             reconstruction::ReconstructionStop::Response(result) => {
+                if defer_message {
+                    deferred_message = Some(DeferredMessage::Restore);
+                }
                 Ok(CommandStartResult::Continue(result))
+            }
+            reconstruction::ReconstructionStop::Command(command) if defer_message => {
+                deferred_message = Some(DeferredMessage::Start(command));
+                Ok(CommandStartResult::Continue(
+                    shin_core::vm::command::CommandResult::None,
+                ))
             }
             reconstruction::ReconstructionStop::Command(command) => {
                 command::start_reconstructed_command(
@@ -958,7 +1002,7 @@ impl Adv {
         // MSGSET installs a fresh sentence at the saved command boundary.
         // Reinstalling the static snapshot here fast-forwards that sentence
         // and suppresses its voice before its first ordinary update.
-        if !starts_message {
+        if !starts_message && !defer_message {
             restoration::restore_message(
                 &mut fresh,
                 &scene.state,
@@ -1039,6 +1083,7 @@ impl Adv {
             CommandStartResult::Yield(command) => self.current_command = Some(command),
             CommandStartResult::Exit => self.finished = true,
         }
+        self.deferred_message = deferred_message;
         self.adv_state.update(context);
         // A saved Load becomes visible only after publication. Its current
         // delta still belongs to outgoing capture/resource preparation; the
@@ -1052,6 +1097,34 @@ impl Adv {
             "Saved scene published"
         );
         true
+    }
+
+    fn start_deferred_message(&mut self, context: &mut UpdateContext) {
+        let command = match self.deferred_message.take() {
+            None => return,
+            Some(DeferredMessage::Restore) => {
+                restoration::restore_message(
+                    &mut self.adv_state,
+                    &self.vm_state,
+                    &self.scenario,
+                    context.pre_render,
+                );
+                return;
+            }
+            Some(DeferredMessage::Start(command)) => command,
+        };
+        match command::start_reconstructed_command(
+            command,
+            context,
+            &self.scenario,
+            &self.vm_state,
+            &mut self.adv_state,
+        ) {
+            Ok(CommandStartResult::Continue(result)) => self.pending_result = result,
+            Ok(CommandStartResult::Yield(command)) => self.current_command = Some(command),
+            Ok(CommandStartResult::Exit) => self.finished = true,
+            Err(error) => self.report_scene_load_error(error, context),
+        }
     }
 
     fn update_loading_scene(&mut self, context: &mut UpdateContext) {

@@ -233,6 +233,17 @@ impl LoadedScene {
         scenario: &Arc<Scenario>,
         ctx: &PreRenderContext,
     ) -> LoadedAudio {
+        self.install_with_message(adv, state, scenario, ctx, true)
+    }
+
+    pub(super) fn install_with_message(
+        self,
+        adv: &mut AdvState,
+        state: &VmState,
+        scenario: &Arc<Scenario>,
+        ctx: &PreRenderContext,
+        restore_message_now: bool,
+    ) -> LoadedAudio {
         for (bank, mut layer) in self.layers {
             let saved = &state.layers.layerbanks[bank];
             // Native 1a754..1a778 restores completed interactive layers after
@@ -251,7 +262,9 @@ impl LoadedScene {
                 .set_mask_texture(mask, flags);
         }
         adv.apply_audio_settings(&state.settings);
-        restore_message(adv, state, scenario, ctx);
+        if restore_message_now {
+            restore_message(adv, state, scenario, ctx);
+        }
         LoadedAudio {
             bgm: self.bgm,
             effects: self.effects,
