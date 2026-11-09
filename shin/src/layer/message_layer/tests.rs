@@ -1,7 +1,8 @@
 use super::*;
 use shin_core::{primitives::update::FrameId, time::Tween, vm::command::types::LayerProperty};
 
-pub(crate) fn reference_saved_sentence_state(message: &MessageLayer, static_snapshot: bool) {
+/// `elapsed` bounds how far a restarted sentence's clock may have run.
+pub(crate) fn reference_saved_sentence_state(message: &MessageLayer, static_snapshot: bool, elapsed: f32) {
     assert_eq!(message.disable_voice, static_snapshot);
     assert!(message.recv_sync_is_waiting(-1));
     assert!(message.total_voices_count > 0);
@@ -10,13 +11,13 @@ pub(crate) fn reference_saved_sentence_state(message: &MessageLayer, static_snap
         assert!(message.wait_kind == Some(WaitKind::Last)
             || matches!(message.blocks[message.current_block_index].ty, BlockType::Sync(_)));
     } else {
-        assert_eq!(message.current_time, 0.0);
+        assert!(message.current_time <= elapsed);
         assert_eq!(message.voice_counter, 0);
         assert_eq!(message.completed_sections, 0);
         assert!(message.recv_sync_is_waiting(0));
         assert!(matches!(&message.blocks[message.voice_block_index].ty,
             BlockType::Voice(voice) if voice.filename == "10/10100035"));
-        assert!(message.chars.iter().all(|c| c.current_progress == 0.0));
+        assert!(message.chars.iter().all(|c| c.current_progress == 0.0 || c.time < message.current_time));
         assert!(message.current_block_index < message.blocks.len());
     }
 }

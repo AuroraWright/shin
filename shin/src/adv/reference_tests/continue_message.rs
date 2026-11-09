@@ -114,6 +114,43 @@ pub(crate) fn verify<'a>(
             }
         }
         assert!(live.saved_scene_load_error().is_none());
+        if kind == SceneLoadKind::Saved {
+            // Native keeps the script gated (ADV+0x471) until the load wipe
+            // ends, so the saved MSGSET and its voice start only then.
+            assert!(
+                live.adv_state
+                    .message_layer()
+                    .voice_player()
+                    .get_wait_status()
+                    .is_empty(),
+                "{name} voice must wait for the load wipe"
+            );
+            finish_load_wipe(&mut live, ctx, server, &mut frame, deadline);
+            // The message box then slides in before the sentence's clock and
+            // first voice block run.
+            while live
+                .adv_state
+                .message_layer()
+                .voice_player()
+                .get_wait_status()
+                .is_empty()
+            {
+                frame.advance();
+                live.adv_state.update(&mut UpdateContext {
+                    frame_started_at: Instant::now(),
+                    frame_id: frame,
+                    delta_ticks: Ticks::from_f32(1.0),
+                    asset_server: server,
+                    pre_render: ctx,
+                });
+                assert!(Instant::now() < deadline, "{name} message slide-in timeout");
+            }
+        }
+        let elapsed = if kind == SceneLoadKind::Saved {
+            Ticks::from_f32(1.0).as_seconds()
+        } else {
+            0.0
+        };
         assert_eq!(live.scripter.position(), original_pc);
         assert_eq!(
             live.vm_state.messagebox_state.text.as_deref(),
@@ -123,7 +160,7 @@ pub(crate) fn verify<'a>(
             live.current_command.is_none(),
             "Async MSGSET completes its token at installation"
         );
-        reference_saved_sentence_state(&live.adv_state.message_layer(), false);
+        reference_saved_sentence_state(&live.adv_state.message_layer(), false, elapsed);
         assert!(
             !live
                 .adv_state
@@ -171,7 +208,7 @@ pub(crate) fn verify<'a>(
                 &assets.scenario,
                 ctx,
             );
-            reference_saved_sentence_state(&live.adv_state.message_layer(), true);
+            reference_saved_sentence_state(&live.adv_state.message_layer(), true, 0.0);
             assert!(
                 live.adv_state
                     .message_layer()
@@ -220,7 +257,8 @@ pub(crate) fn verify<'a>(
             std::thread::sleep(Duration::from_millis(1));
         }
     }
-    reference_saved_sentence_state(&live.adv_state.message_layer(), true);
+    finish_load_wipe(&mut live, ctx, server, &mut frame, deadline);
+    reference_saved_sentence_state(&live.adv_state.message_layer(), true, 0.0);
     assert!(
         live.adv_state
             .message_layer()
@@ -248,4 +286,25 @@ fn submit(ctx: &mut PreRenderContext) {
     ctx.dynamic_buffer.finish(&mut upload);
     ctx.queue.submit([upload.finish(), encoder.finish()]);
     ctx.device.poll(wgpu::PollType::wait_indefinitely()).expect("GPU work must complete before readback or retirement");
+}
+
+fn finish_load_wipe<'a>(
+    live: &mut Adv,
+    ctx: &mut PreRenderContext<'a, '_, '_, '_>,
+    server: &'a Arc<crate::asset::system::AssetServer>,
+    frame: &mut FrameId,
+    deadline: Instant,
+) {
+    while live.is_loading_saved_scene() {
+        frame.advance();
+        live.update_saved_scene_load(&mut UpdateContext {
+            frame_started_at: Instant::now(),
+            frame_id: *frame,
+            delta_ticks: Ticks::from_f32(1.0),
+            asset_server: server,
+            pre_render: ctx,
+        });
+        submit(ctx);
+        assert!(Instant::now() < deadline, "load wipe timeout");
+    }
 }
