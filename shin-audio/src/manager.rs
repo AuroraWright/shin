@@ -2,6 +2,7 @@ use kira::{
     AudioManagerSettings, Frame,
     info::Info,
     sound::{Sound, SoundData},
+    track::MainTrackBuilder,
 };
 use parking_lot::Mutex;
 use std::sync::{
@@ -112,6 +113,7 @@ impl AudioManager {
     pub fn new() -> Self {
         let manager = kira::AudioManager::new(AudioManagerSettings {
             backend_settings: backend_settings(),
+            main_track_builder: MainTrackBuilder::new().volume(-6.0),
             ..Default::default()
         })
         .expect("Failed to create kira audio manager");
