@@ -414,7 +414,7 @@ impl ShinApp for App {
             cli.game == crate::cli::Game::Umineko,
             "Umineko application requires an Umineko launch"
         );
-        let audio_manager = Arc::new(AudioManager::new());
+        let audio_manager = Arc::new(AudioManager::with_output_gain(cli.game.audio_output_gain()));
 
         let asset_io = locate_assets_for_game(cli.game, &cli.assets_dir()).context("Failed to locate assets. Consult the README for instructions on how to set up the game.")?;
 

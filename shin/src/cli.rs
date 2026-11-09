@@ -29,6 +29,14 @@ impl Game {
     pub fn is_gerokasu_family(self) -> bool {
         matches!(self, Game::Gerokasu | Game::Gerokasu2)
     }
+    /// The native mixer multiplies each sound by 0.6 before summing it, except
+    /// in Higurashi (Umineko 1.03 0x2c0a0, Gerokasu2 0x158a38).
+    pub fn audio_output_gain(self) -> f32 {
+        match self {
+            Game::Higurashi => 1.0,
+            Game::Umineko | Game::Gerokasu | Game::Gerokasu2 => 0.6,
+        }
+    }
 }
 
 #[derive(Parser, Debug)]

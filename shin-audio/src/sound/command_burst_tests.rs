@@ -130,10 +130,9 @@ fn command_burst_ordered_appends_preserve_every_target_pcm() {
             let target = if reverse { 127 - index } else { index };
             let volume = 0.1 + (target % 7) as f32 * 0.1;
             let pan = ((target * 3) % 9) as f32 * 0.2 - 0.8;
-            let mix = (pan + 1.0) * 0.5;
             let expected = Frame::new(
-                0.25 * volume * (1.0 - mix).sqrt() * SQRT_2,
-                0.25 * volume * mix.sqrt() * SQRT_2,
+                0.25 * volume * (1.0 - pan.max(0.0)),
+                0.25 * volume * (1.0 + pan.min(0.0)),
             );
             assert!(
                 (frame.left - expected.left).abs() < 0.00002,

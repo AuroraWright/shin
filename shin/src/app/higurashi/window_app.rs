@@ -118,7 +118,9 @@ impl ShinApp for HigurashiApp {
     }
     fn init(context: AppContext<Self>, mut cli: Cli) -> Result<Self> {
         let PreparedLaunch { progress, assets } = take_launch(&mut cli)?;
-        let manager = Arc::new(shin_audio::AudioManager::new());
+        let manager = Arc::new(shin_audio::AudioManager::with_output_gain(
+            cli.game.audio_output_gain(),
+        ));
         let server = Arc::new(AssetServer::new(
             assets.into(),
             AssetLoadContext {

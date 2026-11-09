@@ -1,5 +1,4 @@
 use std::{
-    f32::consts::SQRT_2,
     sync::{
         Arc,
         mpsc::Receiver,
@@ -409,9 +408,10 @@ impl<S: AudioFrameSource + Send> AudioSound<S> {
         let volume = self.volume_fade.value() * self.volume.value();
 
         f *= volume;
+        // Native mixers attenuate only the far channel, linearly (Umineko
+        // 1.03 0x2c0a0, updated Higurashi 0x2b950).
         if pan != 0.0 {
-            let pan = (pan + 1.0) * 0.5;
-            f = Frame::new(f.left * (1.0 - pan).sqrt(), f.right * pan.sqrt()) * SQRT_2
+            f = Frame::new(f.left * (1.0 - pan.max(0.0)), f.right * (1.0 + pan.min(0.0)));
         }
 
         f
@@ -1128,9 +1128,11 @@ mod tests {
     #[test]
     fn signed_pan_reaches_both_channels_without_nan() {
         for (pan, left, right) in [
-            (-1.0, 0.25 * SQRT_2, 0.0),
+            (-1.0, 0.25, 0.0),
+            (-0.5, 0.25, 0.125),
             (0.0, 0.25, 0.25),
-            (1.0, 0.0, 0.25 * SQRT_2),
+            (0.5, 0.125, 0.25),
+            (1.0, 0.0, 0.25),
         ] {
             let mut manager = manager();
             manager.play(sound(100, pan)).unwrap();

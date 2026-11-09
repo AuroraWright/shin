@@ -939,7 +939,7 @@ impl ShinApp for Gerokasu2App {
                 font_cache: Default::default(),
             },
         ));
-        let audio = Arc::new(AudioManager::new());
+        let audio = Arc::new(AudioManager::with_output_gain(cli.game.audio_output_gain()));
         let menu_bgm = Arc::new(parking_lot::Mutex::new(menu_audio::MenuMusic::new(
             audio.clone(),
             &scenario,

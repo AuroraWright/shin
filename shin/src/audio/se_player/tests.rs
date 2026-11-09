@@ -113,7 +113,7 @@ fn pending_parameters_start_at_playback_and_preserve_queued_pan() {
     }
     assert_eq!(handle.get_wait_status(), AudioWaitStatus::PLAYING);
     let frame = manager.backend_mut().process();
-    assert!(frame.left > 0.08 && frame.right.abs() < 0.00001);
+    assert!((frame.left - 0.06).abs() < 0.00001 && frame.right.abs() < 0.00001);
 }
 
 #[test]
@@ -268,7 +268,7 @@ fn matching_repeat_retargets_live_pcm_without_restarting_the_source() {
             | AudioWaitStatus::PLAY_SPEED_TWEENING
     ));
     let frame = advance(&mut manager, 12);
-    assert!((frame.left - 0.05 * std::f32::consts::SQRT_2).abs() < 0.00001);
+    assert!((frame.left - 0.05).abs() < 0.00001);
     assert!(frame.right.abs() < 0.00001);
     assert_eq!(
         handle.as_ref().unwrap().get_wait_status(),

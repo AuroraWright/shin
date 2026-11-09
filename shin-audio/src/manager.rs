@@ -111,9 +111,14 @@ pub struct AudioManager {
 impl AudioManager {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
+        Self::with_output_gain(1.0)
+    }
+
+    /// `gain` scales every sound before the output, like the game's own mixer.
+    pub fn with_output_gain(gain: f32) -> Self {
         let manager = kira::AudioManager::new(AudioManagerSettings {
             backend_settings: backend_settings(),
-            main_track_builder: MainTrackBuilder::new().volume(-6.0),
+            main_track_builder: MainTrackBuilder::new().volume(crate::amplitude_to_decibels(gain)),
             ..Default::default()
         })
         .expect("Failed to create kira audio manager");

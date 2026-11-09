@@ -304,7 +304,7 @@ fn matched_voice_panning_changes_pcm_and_setting_centers_only_matches() {
         }
         (frame.left, frame.right)
     };
-    let hard = 0.25 * std::f32::consts::SQRT_2;
+    let hard = 0.25;
     for (id, pan, enabled, left, right) in [
         (19, -1.0, true, hard, 0.0),
         (7, 1.0, true, hard, 0.0),
