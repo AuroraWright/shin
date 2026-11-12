@@ -11,9 +11,9 @@ use std::{
 
 use anyhow::{Context, Result, anyhow};
 use dpi::PhysicalSize;
-use tracing::debug;
+use tracing::{debug, warn};
 
-use super::{DecoderPoll, FrameTiming, H264DecoderTrait, Nv12Frame};
+use super::{DecoderPoll, FrameTiming, H264DecoderTrait, Nv12Frame, nv12::SparePlanes};
 use crate::{mp4::Mp4TrackReader, mp4_bitstream_converter::Mp4BitstreamConverter};
 
 /// Decoded frames buffered ahead of the consumer.
@@ -35,7 +35,6 @@ pub(super) struct StreamInfo {
     #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub parameter_sets: Vec<Vec<u8>>,
     /// Presentation timestamp of every sample, in decode order.
-    #[cfg_attr(not(target_os = "macos"), allow(dead_code))]
     pub presentation_times: Vec<i64>,
 }
 
@@ -58,10 +57,20 @@ pub(super) struct Packet<'a> {
 pub(super) struct Output {
     frames: mpsc::SyncSender<Result<Nv12Frame>>,
     closed: bool,
+    /// Presentation position of the next frame emitted.
+    position: u32,
+    /// Frames sent so far. A software decoder taking over decodes some of
+    /// them again, which are passed over.
+    delivered: u32,
 }
 
 impl Output {
     pub fn emit(&mut self, frame: Nv12Frame) {
+        self.position += 1;
+        if self.position <= self.delivered {
+            return;
+        }
+        self.delivered = self.position;
         if !self.closed && self.frames.send(Ok(frame)).is_err() {
             debug!("Movie consumer closed the frame channel");
             self.closed = true;
@@ -79,27 +88,40 @@ pub(super) trait FrameDecoder: Sized {
 
     /// Emit every remaining frame after the last packet.
     fn finish(&mut self, output: &mut Output) -> Result<()>;
+
+    /// Whether this decoder runs on the GPU, with [`FrameDecoder::software`] to
+    /// take over when it fails.
+    fn hardware(&self) -> bool {
+        false
+    }
+
+    /// A decoder that does not use the GPU.
+    fn software(info: &StreamInfo) -> Result<Self> {
+        Self::new(info)
+    }
 }
 
 /// Copy a plane of `rows` rows of `width` bytes from a buffer whose rows are
-/// `stride` bytes apart.
+/// `stride` bytes apart into `plane`, replacing its contents and keeping its
+/// allocation (from [`Nv12Frame::spare_planes`]).
 ///
 /// # Safety
 /// `source` must be readable for `stride * (rows - 1) + width` bytes.
 pub(super) unsafe fn copy_plane(
+    plane: &mut Vec<u8>,
     source: *const u8,
     stride: usize,
     width: usize,
     rows: usize,
-) -> Vec<u8> {
-    let mut plane = Vec::with_capacity(width * rows);
+) {
+    plane.clear();
+    plane.reserve(width * rows);
     for row in 0..rows {
         // SAFETY: guaranteed by the caller.
         plane.extend_from_slice(unsafe {
             std::slice::from_raw_parts(source.add(row * stride), width)
         });
     }
-    plane
 }
 
 /// Presentation timestamps of all samples in decode order, from the MP4
@@ -137,8 +159,8 @@ pub struct ThreadedDecoder<D> {
 }
 
 fn run<D: FrameDecoder, S: Read + Seek>(
-    mut track: Mp4TrackReader<S>,
-    mut converter: Mp4BitstreamConverter,
+    track: Mp4TrackReader<S>,
+    converter: Mp4BitstreamConverter,
     info: StreamInfo,
     ready: mpsc::SyncSender<Result<()>>,
     output: &mut Output,
@@ -154,18 +176,114 @@ fn run<D: FrameDecoder, S: Read + Seek>(
             return Ok(());
         }
     };
+    let mut restart = track.clone();
+    let mut timed = 0;
+    let result = decode(
+        &mut decoder,
+        track,
+        converter,
+        output,
+        &timings,
+        0,
+        &mut timed,
+    );
+    let error = match result {
+        Err(error) if decoder.hardware() && !output.closed => error,
+        result => return result,
+    };
+    warn!(
+        "{} hardware decoding failed, decoding in software: {error:#}",
+        D::NAME
+    );
+    // The failed decoder's device and surfaces go before the software one starts.
+    drop(decoder);
+    let mut software = D::software(&info).map_err(|software_error| {
+        error.context(format!("Software decoding also failed: {software_error:#}"))
+    })?;
+    let sync = restart.get_mp4_track_info(|track| {
+        let stss = track.trak.mdia.minf.stbl.stss.as_ref();
+        stss.map(|stss| stss.entries.clone())
+    });
+    let first = resume_sample(&info.presentation_times, sync.as_deref(), output.delivered);
+    restart.seek(first);
+    output.position = first;
+    let converter = restart
+        .get_mp4_track_info(Mp4BitstreamConverter::for_mp4_track)
+        .context("Preparing AVC bitstream converter")?;
+    decode(
+        &mut software,
+        restart,
+        converter,
+        output,
+        &timings,
+        first,
+        &mut timed,
+    )
+}
+
+/// The sample a software decoder taking over resumes from: the last sync sample
+/// at or before the first frame not yet delivered whose frames present after
+/// every earlier sample's, so that it decodes the rest from there. The start
+/// otherwise.
+fn resume_sample(presentation_times: &[i64], sync: Option<&[u32]>, delivered: u32) -> u32 {
+    // the latest presentation before each sample, and the earliest from it on
+    let before: Vec<i64> = presentation_times
+        .iter()
+        .scan(i64::MIN, |latest, &time| {
+            let before = *latest;
+            *latest = (*latest).max(time);
+            Some(before)
+        })
+        .collect();
+    let mut from: Vec<i64> = presentation_times
+        .iter()
+        .rev()
+        .scan(i64::MAX, |earliest, &time| {
+            *earliest = (*earliest).min(time);
+            Some(*earliest)
+        })
+        .collect();
+    from.reverse();
+    let candidates: Box<dyn Iterator<Item = u32>> = match sync {
+        // stss numbers samples from 1
+        Some(sync) => Box::new(sync.iter().rev().map(|&number| number.saturating_sub(1))),
+        // without one every sample is a sync sample
+        None => Box::new((0..=delivered).rev()),
+    };
+    candidates
+        .filter(|&index| index <= delivered)
+        .find(|&index| {
+            let index = index as usize;
+            index < presentation_times.len() && before[index] < from[index]
+        })
+        .unwrap_or(0)
+}
+
+/// Decode `track` from the sample at `frame_number` to its end into `output`,
+/// publishing the timings of samples from `timed` on.
+fn decode<D: FrameDecoder, S: Read + Seek>(
+    decoder: &mut D,
+    mut track: Mp4TrackReader<S>,
+    mut converter: Mp4BitstreamConverter,
+    output: &mut Output,
+    timings: &mpsc::Sender<FrameTiming>,
+    mut frame_number: u32,
+    timed: &mut u32,
+) -> Result<()> {
     let mut annex_b = Vec::new();
-    let mut frame_number = 0;
     while let Some(sample) = track.next_sample().context("Reading MP4 video sample")? {
-        if timings
-            .send(FrameTiming {
-                frame_number,
-                start_time: sample.start_time,
-                duration: sample.duration,
-            })
-            .is_err()
-        {
-            return Ok(());
+        if frame_number >= *timed {
+            if timings
+                .send(FrameTiming {
+                    frame_number,
+                    start_time: sample.start_time,
+                    duration: sample.duration,
+                })
+                .is_err()
+            {
+                return Ok(());
+            }
+            *timed = frame_number + 1;
         }
         frame_number += 1;
         converter
@@ -209,9 +327,12 @@ impl<D: FrameDecoder + 'static> H264DecoderTrait for ThreadedDecoder<D> {
         std::thread::Builder::new()
             .name(format!("movie decoder ({})", D::NAME))
             .spawn(move || {
+                let _spares = SparePlanes::hold();
                 let mut output = Output {
                     frames: frame_sender,
                     closed: false,
+                    position: 0,
+                    delivered: 0,
                 };
                 let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
                     run::<D, S>(
@@ -308,5 +429,27 @@ impl<D> ThreadedDecoder<D> {
             "Movie decoder ended before decoding all MP4 video samples"
         );
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod resume_tests {
+    use super::resume_sample;
+
+    #[test]
+    fn software_resumes_at_the_last_sync_sample_before_undelivered_frames() {
+        // I P B B | I P B B in decode order, presenting I B B P each.
+        let times = [0, 3, 1, 2, 4, 7, 5, 6];
+        let sync = [1, 5];
+        assert_eq!(resume_sample(&times, Some(&sync), 0), 0);
+        assert_eq!(resume_sample(&times, Some(&sync), 3), 0);
+        assert_eq!(resume_sample(&times, Some(&sync), 4), 4);
+        assert_eq!(resume_sample(&times, Some(&sync), 7), 4);
+        // Without sync samples listed, every sample is one, but not one that
+        // presents after a later sample (the second B frame).
+        assert_eq!(resume_sample(&times, None, 3), 1);
+        assert_eq!(resume_sample(&times, None, 5), 5);
+        // A sync sample with a later sample presenting before it is passed over.
+        assert_eq!(resume_sample(&[0, 2, 3, 1], Some(&[1, 3]), 3), 0);
     }
 }

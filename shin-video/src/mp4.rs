@@ -51,6 +51,11 @@ impl<S: Read + Seek> Mp4TrackReader<S> {
         self.samples_position = 1;
     }
 
+    /// Continue from the sample at `index` (counting from 0).
+    pub fn seek(&mut self, index: u32) {
+        self.samples_position = index + 1;
+    }
+
     pub fn next_sample(&mut self) -> Result<Option<Mp4Sample>> {
         if self.samples_position > self.samples_count {
             return Ok(None);

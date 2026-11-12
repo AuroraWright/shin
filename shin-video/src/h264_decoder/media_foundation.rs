@@ -1,21 +1,37 @@
 //! Decodes H.264 with the Media Foundation decoder that ships with Windows.
 //! Windows "N" editions only have it with the Media Feature Pack installed.
+//!
+//! The decoder runs on the GPU's video engine (DXVA, through a Direct3D 11
+//! device) when it can, else on the CPU. Either way the frames are read back as
+//! NV12: H.264 decoding is exact, so both give the same pixels.
 
 use std::{mem::ManuallyDrop, ptr};
 
 use anyhow::{Context, Result, bail, ensure};
 use dpi::PhysicalSize;
+use tracing::info;
 use windows::{
     Win32::{
+        Foundation::HMODULE,
+        Graphics::{
+            Direct3D::D3D_DRIVER_TYPE_HARDWARE,
+            Direct3D11::{
+                D3D11_CREATE_DEVICE_VIDEO_SUPPORT, D3D11_SDK_VERSION, D3D11_TEXTURE2D_DESC,
+                D3D11CreateDevice, ID3D11Device, ID3D11Multithread, ID3D11Texture2D,
+            },
+            Dxgi::IDXGIAdapter,
+        },
         Media::MediaFoundation::{
-            CLSID_MSH264DecoderMFT, IMF2DBuffer, IMFMediaBuffer, IMFSample, IMFTransform,
-            MF_E_NO_MORE_TYPES, MF_E_NOTACCEPTING, MF_E_TRANSFORM_NEED_MORE_INPUT,
-            MF_E_TRANSFORM_STREAM_CHANGE, MF_MT_DEFAULT_STRIDE, MF_MT_FRAME_SIZE,
-            MF_MT_INTERLACE_MODE, MF_MT_MAJOR_TYPE, MF_MT_MINIMUM_DISPLAY_APERTURE, MF_MT_SUBTYPE,
-            MF_VERSION, MFCreateMediaType, MFCreateMemoryBuffer, MFCreateSample, MFMediaType_Video,
-            MFSTARTUP_NOSOCKET, MFShutdown, MFStartup, MFT_MESSAGE_COMMAND_DRAIN,
-            MFT_MESSAGE_NOTIFY_BEGIN_STREAMING, MFT_MESSAGE_NOTIFY_END_OF_STREAM,
-            MFT_MESSAGE_NOTIFY_START_OF_STREAM, MFT_OUTPUT_DATA_BUFFER,
+            CLSID_MSH264DecoderMFT, IMF2DBuffer2, IMFDXGIBuffer, IMFDXGIDeviceManager,
+            IMFMediaBuffer, IMFSample, IMFTransform, MF_E_NO_MORE_TYPES, MF_E_NOTACCEPTING,
+            MF_E_TRANSFORM_NEED_MORE_INPUT, MF_E_TRANSFORM_STREAM_CHANGE, MF_MT_DEFAULT_STRIDE,
+            MF_MT_FRAME_SIZE, MF_MT_INTERLACE_MODE, MF_MT_MAJOR_TYPE,
+            MF_MT_MINIMUM_DISPLAY_APERTURE, MF_MT_SUBTYPE, MF_SA_D3D11_AWARE, MF_VERSION,
+            MF2DBuffer_LockFlags_Read, MFCreateDXGIDeviceManager, MFCreateMediaType,
+            MFCreateMemoryBuffer, MFCreateSample, MFMediaType_Video, MFSTARTUP_NOSOCKET,
+            MFShutdown, MFStartup, MFT_MESSAGE_COMMAND_DRAIN, MFT_MESSAGE_NOTIFY_BEGIN_STREAMING,
+            MFT_MESSAGE_NOTIFY_END_OF_STREAM, MFT_MESSAGE_NOTIFY_START_OF_STREAM,
+            MFT_MESSAGE_SET_D3D_MANAGER, MFT_OUTPUT_DATA_BUFFER,
             MFT_OUTPUT_STREAM_CAN_PROVIDE_SAMPLES, MFT_OUTPUT_STREAM_PROVIDES_SAMPLES, MFVideoArea,
             MFVideoFormat_H264, MFVideoFormat_NV12, MFVideoInterlace_Progressive,
         },
@@ -82,12 +98,123 @@ struct Layout {
     stride: usize,
 }
 
+/// The Direct3D 11 video device and DXGI device manager the hardware decoders
+/// share, made once: making them takes tens of ms, which each movie loop would
+/// otherwise wait for.
+struct Device {
+    manager: IMFDXGIDeviceManager,
+    _device: ID3D11Device,
+}
+
+// SAFETY: the device is multithread protected (`ID3D11Multithread`), and the
+// device manager is made to be used from several threads: each decoder opens
+// its own handle to the device through it.
+unsafe impl Send for Device {}
+unsafe impl Sync for Device {}
+
+impl Device {
+    /// The shared device, made on first use (None without a hardware video device).
+    fn shared() -> Option<&'static Self> {
+        static SHARED: std::sync::OnceLock<Option<Device>> = std::sync::OnceLock::new();
+        SHARED
+            .get_or_init(|| {
+                Self::create()
+                    .inspect_err(|e| info!("No Direct3D 11 video device for movies: {e:#}"))
+                    .ok()
+            })
+            .as_ref()
+    }
+
+    fn create() -> Result<Self> {
+        // SAFETY: COM calls on objects created here.
+        unsafe {
+            // Media Foundation stays started for the device manager, past the
+            // decoders' runtimes.
+            MFStartup(MF_VERSION, MFSTARTUP_NOSOCKET).context("Starting Media Foundation")?;
+            let mut device = None;
+            D3D11CreateDevice(
+                None::<&IDXGIAdapter>,
+                D3D_DRIVER_TYPE_HARDWARE,
+                HMODULE::default(),
+                D3D11_CREATE_DEVICE_VIDEO_SUPPORT,
+                None,
+                D3D11_SDK_VERSION,
+                Some(&mut device),
+                None,
+                None,
+            )
+            .context("Creating a Direct3D 11 video device")?;
+            let device = device.context("Direct3D 11 returned no device")?;
+            // The decoders use the device from threads of their own.
+            let _ = device
+                .cast::<ID3D11Multithread>()?
+                .SetMultithreadProtected(true);
+            let mut token = 0;
+            let mut manager = None;
+            MFCreateDXGIDeviceManager(&mut token, &mut manager)
+                .context("Creating a DXGI device manager")?;
+            let manager = manager.context("Media Foundation returned no device manager")?;
+            manager.ResetDevice(&device, token)?;
+            Ok(Self {
+                manager,
+                _device: device,
+            })
+        }
+    }
+
+    /// Give `transform` the shared Direct3D 11 video device, which makes it
+    /// decode with DXVA.
+    fn attach(transform: &IMFTransform) -> Result<()> {
+        // SAFETY: COM calls on a valid transform and the shared manager.
+        unsafe {
+            let aware = transform
+                .GetAttributes()?
+                .GetUINT32(&MF_SA_D3D11_AWARE)
+                .unwrap_or(0);
+            ensure!(aware != 0, "The decoder cannot use Direct3D 11");
+            let device = Self::shared().context("No Direct3D 11 video device")?;
+            transform
+                .ProcessMessage(
+                    MFT_MESSAGE_SET_D3D_MANAGER,
+                    device.manager.as_raw() as usize,
+                )
+                .context("Handing the device to the decoder")?;
+        }
+        Ok(())
+    }
+}
+
+/// The luma plane's rows in a Direct3D surface's buffer: the texture's height,
+/// which drivers may align past the coded height (None for a system-memory
+/// buffer).
+///
+/// # Safety
+/// `buffer` must be a valid media buffer.
+unsafe fn luma_rows(buffer: &IMFMediaBuffer) -> Option<usize> {
+    // SAFETY: COM calls on a valid buffer; GetResource returns an owned
+    // reference, which `from_raw` takes.
+    unsafe {
+        let dxgi = buffer.cast::<IMFDXGIBuffer>().ok()?;
+        let mut texture = ptr::null_mut();
+        dxgi.GetResource(&ID3D11Texture2D::IID, &mut texture).ok()?;
+        if texture.is_null() {
+            return None;
+        }
+        let texture = ID3D11Texture2D::from_raw(texture);
+        let mut desc = D3D11_TEXTURE2D_DESC::default();
+        texture.GetDesc(&mut desc);
+        Some(desc.Height as usize)
+    }
+}
+
 pub struct MediaFoundation {
     transform: IMFTransform,
     layout: Layout,
     provides_samples: bool,
     output_size: u32,
     timescale: u64,
+    /// Decoding on the GPU ([`Device`]).
+    hardware: bool,
     // Declared last so it is dropped after the transform.
     _runtime: Runtime,
 }
@@ -169,21 +296,31 @@ impl MediaFoundation {
     /// Copy the visible area of a decoded NV12 sample into packed planes.
     fn copy(&self, sample: &IMFSample) -> Result<Nv12Frame> {
         let layout = &self.layout;
+        let (mut y_plane, mut uv_plane) = Nv12Frame::spare_planes();
         // SAFETY: COM calls on a valid sample; the buffer is locked while read.
         unsafe {
             let buffer: IMFMediaBuffer = sample.ConvertToContiguousBuffer()?;
-            let two_d = buffer.cast::<IMF2DBuffer>().ok();
+            let rows = luma_rows(&buffer).unwrap_or(0).max(layout.coded_height);
+            let two_d = buffer.cast::<IMF2DBuffer2>().ok();
             let mut base = ptr::null_mut();
-            let mut length = 0;
-            let stride = match &two_d {
+            // `length` bytes are readable from `base` on.
+            let (stride, length) = match &two_d {
                 Some(two_d) => {
-                    let mut pitch = 0;
-                    two_d.Lock2D(&mut base, &mut pitch)?;
-                    pitch
+                    let (mut pitch, mut start, mut size) = (0, ptr::null_mut(), 0u32);
+                    two_d.Lock2DSize(
+                        MF2DBuffer_LockFlags_Read,
+                        &mut base,
+                        &mut pitch,
+                        &mut start,
+                        &mut size,
+                    )?;
+                    let end = start.add(size as usize) as usize;
+                    (pitch, end.saturating_sub(base as usize))
                 }
                 None => {
-                    buffer.Lock(&mut base, None, Some(&mut length))?;
-                    layout.stride as i32
+                    let mut size = 0;
+                    buffer.Lock(&mut base, None, Some(&mut size))?;
+                    (layout.stride as i32, size as usize)
                 }
             };
             let result = (|| {
@@ -193,21 +330,20 @@ impl MediaFoundation {
                     stride >= layout.x + layout.width,
                     "Decoder rows are too short"
                 );
-                let chroma = base.add(stride * layout.coded_height);
-                if two_d.is_none() {
-                    let needed = stride * (layout.coded_height + layout.coded_height / 2);
-                    ensure!(
-                        length as usize >= needed,
-                        "Decoded frame buffer is too small"
-                    );
-                }
-                let y_plane = copy_plane(
+                // The chroma plane follows the luma plane's rows, which a
+                // Direct3D surface may pad past the coded height.
+                let chroma = base.add(stride * rows);
+                let needed = stride * (rows + (layout.y + layout.height).div_ceil(2));
+                ensure!(length >= needed, "Decoded frame buffer is too small");
+                copy_plane(
+                    &mut y_plane,
                     base.add(stride * layout.y + layout.x),
                     stride,
                     layout.width,
                     layout.height,
                 );
-                let uv_plane = copy_plane(
+                copy_plane(
+                    &mut uv_plane,
                     chroma.add(stride * (layout.y / 2) + layout.x),
                     stride,
                     layout.width,
@@ -267,10 +403,9 @@ impl MediaFoundation {
     }
 }
 
-impl FrameDecoder for MediaFoundation {
-    const NAME: &'static str = "Media Foundation";
-
-    fn new(info: &StreamInfo) -> Result<Self> {
+impl MediaFoundation {
+    /// A decoder on the GPU (`hardware`) or the CPU.
+    fn create(info: &StreamInfo, hardware: bool) -> Result<Self> {
         let runtime = Runtime::start()?;
         // SAFETY: COM calls on objects created here.
         let transform: IMFTransform = unsafe {
@@ -279,6 +414,9 @@ impl FrameDecoder for MediaFoundation {
                  (Windows N editions need the Media Feature Pack)",
             )?
         };
+        if hardware {
+            Device::attach(&transform)?;
+        }
         // SAFETY: as above.
         unsafe {
             let input = MFCreateMediaType()?;
@@ -299,6 +437,7 @@ impl FrameDecoder for MediaFoundation {
             provides_samples: false,
             output_size: 0,
             timescale: u64::from(info.timescale).max(1),
+            hardware,
             _runtime: runtime,
         };
         decoder.select_output()?;
@@ -312,6 +451,27 @@ impl FrameDecoder for MediaFoundation {
                 .ProcessMessage(MFT_MESSAGE_NOTIFY_START_OF_STREAM, 0)?;
         }
         Ok(decoder)
+    }
+}
+
+impl FrameDecoder for MediaFoundation {
+    const NAME: &'static str = "Media Foundation";
+
+    fn new(info: &StreamInfo) -> Result<Self> {
+        Self::create(info, true).or_else(|error| {
+            info!(
+                "Media Foundation hardware decoding unavailable, decoding in software: {error:#}"
+            );
+            Self::software(info)
+        })
+    }
+
+    fn hardware(&self) -> bool {
+        self.hardware
+    }
+
+    fn software(info: &StreamInfo) -> Result<Self> {
+        Self::create(info, false)
     }
 
     fn decode(&mut self, packet: &Packet, output: &mut Output) -> Result<()> {

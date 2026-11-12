@@ -68,22 +68,25 @@ fn copy_frame(image: &CVImageBuffer) -> Result<Nv12Frame> {
     )?;
     let width = CVPixelBufferGetWidthOfPlane(image, 0);
     let height = CVPixelBufferGetHeightOfPlane(image, 0);
-    let planes = (0..2).map(|plane| {
-        let base = CVPixelBufferGetBaseAddressOfPlane(image, plane);
-        let stride = CVPixelBufferGetBytesPerRowOfPlane(image, plane);
-        let rows = CVPixelBufferGetHeightOfPlane(image, plane);
-        // The chroma plane interleaves Cb and Cr, so its rows are as many
-        // bytes wide as the luma plane's.
-        (!base.is_null() && stride >= width)
-            // SAFETY: the plane is locked and holds `rows` rows `stride` apart.
-            .then(|| unsafe { copy_plane(base.cast(), stride, width, rows) })
-    });
-    let planes: Option<Vec<_>> = planes.collect();
+    let (mut y_plane, mut uv_plane) = Nv12Frame::spare_planes();
+    let readable = [(0, &mut y_plane), (1, &mut uv_plane)]
+        .into_iter()
+        .all(|(plane, out)| {
+            let base = CVPixelBufferGetBaseAddressOfPlane(image, plane);
+            let stride = CVPixelBufferGetBytesPerRowOfPlane(image, plane);
+            let rows = CVPixelBufferGetHeightOfPlane(image, plane);
+            // The chroma plane interleaves Cb and Cr, so its rows are as many
+            // bytes wide as the luma plane's.
+            let readable = !base.is_null() && stride >= width;
+            if readable {
+                // SAFETY: the plane is locked and holds `rows` rows `stride` apart.
+                unsafe { copy_plane(out, base.cast(), stride, width, rows) };
+            }
+            readable
+        });
     // SAFETY: balanced with the lock above.
     unsafe { CVPixelBufferUnlockBaseAddress(image, CVPixelBufferLockFlags::ReadOnly) };
-    let [y_plane, uv_plane] =
-        <[Vec<u8>; 2]>::try_from(planes.context("VideoToolbox returned an unreadable frame")?)
-            .unwrap();
+    ensure!(readable, "VideoToolbox returned an unreadable frame");
     ensure!(
         uv_plane.len() == width * height / 2,
         "VideoToolbox returned an unexpected chroma plane size"
